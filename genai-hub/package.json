@@ -1,0 +1,20 @@
+{
+  "name": "aita-genai-hub",
+  "version": "1.0.0",
+  "description": "Subsystem 3: GenAI Core & Review Hub for AITA Intelligent Autograding Platform",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "demo": "ts-node demo.ts",
+    "test": "ts-node test/run-all-tests.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
