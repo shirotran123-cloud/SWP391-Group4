@@ -1,0 +1,13 @@
+FROM python:3.11-slim
+
+# Set working directory
+WORKDIR /app
+
+# Create a non-root user for executing code safely
+RUN useradd -m sandboxuser
+
+# Set user
+USER sandboxuser
+
+# Command to run (will be overridden by worker)
+CMD ["python3"]

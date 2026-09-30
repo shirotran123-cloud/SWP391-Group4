@@ -1,0 +1,19 @@
+{
+  "name": "sandbox-worker",
+  "version": "1.0.0",
+  "description": "Docker Sandbox Worker for AITA",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "ts-node index.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "dockerode": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^3.3.29",
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  }
+}
