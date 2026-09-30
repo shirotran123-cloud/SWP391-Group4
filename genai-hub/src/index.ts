@@ -18,6 +18,7 @@ export * from "./services/key-rotator.service";
 export * from "./services/code-reviewer.service";
 export * from "./services/exam-generator.service";
 export * from "./services/compiler-explainer.service";
+export * from "./workers/submission-consumer";
 
 /**
  * Factory creating an initialized GenAI Hub container with configured providers.

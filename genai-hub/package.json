@@ -6,6 +6,7 @@
   "scripts": {
     "build": "tsc",
     "start": "ts-node src/index.ts",
+    "server": "ts-node src/server.ts",
     "demo": "ts-node demo.ts",
     "test": "ts-node test/run-all-tests.ts"
   },

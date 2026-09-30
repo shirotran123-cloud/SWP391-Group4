@@ -16,7 +16,7 @@ export class PromptSanitizer {
   // Common adversarial injection patterns targeted at LLM evaluators
   private static readonly INJECTION_PATTERNS: Array<{ regex: RegExp; name: string }> = [
     {
-      regex: /(ignore|disregard|forget)\s+(all\s+)?(previous|prior|above)\s+(instructions|directives|prompts|rules)/i,
+      regex: /(ignore|disregard|forget)\s+(all\s+)?(previous\s+|prior\s+|above\s+)?(instructions|directives|prompts|rules|guidelines)/i,
       name: "IGNORE_PREVIOUS_INSTRUCTIONS",
     },
     {
