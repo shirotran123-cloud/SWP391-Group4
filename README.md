@@ -1,5 +1,5 @@
-# SWP391-Group4
-AITA-Intelligent — Master Project Context & AI Guidance
+# SWP391-Group4 AITA-Intelligent — Master Project Context & AI Guidance
+
 
 Các thành viên trong nhóm:
 
