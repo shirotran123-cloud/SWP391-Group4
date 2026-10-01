@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2021",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "strictNullChecks": false,
+    "noImplicitAny": false,
+    "resolveJsonModule": true,
+    "typeRoots": ["./node_modules/@types", "./api-gateway/node_modules/@types"]
+  },
+  "include": ["database/**/*.ts"],
+  "exclude": ["node_modules", "api-gateway/node_modules"]
+}
