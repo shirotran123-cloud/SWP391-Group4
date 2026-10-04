@@ -2,6 +2,9 @@ import * as http from "http";
 import { createGenAIHub } from "./index";
 import { ReviewRequest } from "./types/review.types";
 import { ExamGenerateRequest } from "./types/exam.types";
+import { ASTNormalizer } from "./ast-engine/ast-normalizer";
+import { WinnowingEngine } from "./ast-engine/winnowing";
+import { ASTPlagiarismEngine, CodeSubmission } from "./ast-engine/plagiarism-engine";
 
 const PORT = Number(process.env.PORT) || 3001;
 
@@ -59,7 +62,7 @@ export function createServer(customHub?: ReturnType<typeof createGenAIHub>): htt
         const statsGemini = hub.keyRotator.getPoolStats("gemini");
         return sendJson(res, 200, {
           status: "UP",
-          subsystem: "Subsystem 3: GenAI Core & Review Hub",
+          subsystem: "Subsystem 3 & 4: GenAI Core & AST Plagiarism Hub",
           activeProvider: hub.provider.providerName,
           keyPools: {
             openai: statsOpenAI,
@@ -115,7 +118,7 @@ export function createServer(customHub?: ReturnType<typeof createGenAIHub>): htt
         return sendJson(res, 200, exam);
       }
 
-      // 5. Prompt Injection Sanitizer check endpoint (R03)
+      // 5. Prompt Injection Sanitizer check endpoint
       if (method === "POST" && url === "/api/v1/ai/sanitize") {
         const payload = await parseJsonBody<{ code: string; maxChars?: number }>(req);
         if (typeof payload.code !== "string") {
@@ -123,6 +126,45 @@ export function createServer(customHub?: ReturnType<typeof createGenAIHub>): htt
         }
         const sanitized = hub.promptSanitizer.sanitize(payload.code, payload.maxChars);
         return sendJson(res, 200, sanitized);
+      }
+
+      // 6. RBL AST Normalizer API
+      if (method === "POST" && url === "/api/v1/ast/normalize") {
+        const payload = await parseJsonBody<{ code: string; language?: string }>(req);
+        if (!payload.code) {
+          return sendJson(res, 400, { error: "Bad Request: 'code' string is required." });
+        }
+        const normalized = ASTNormalizer.normalize(payload.code, payload.language || "python");
+        const fingerprints = WinnowingEngine.computeFingerprints(normalized.tokens);
+        return sendJson(res, 200, {
+          normalized,
+          fingerprintsCount: fingerprints.length,
+          fingerprints,
+        });
+      }
+
+      // 7. RBL AST Pairwise Plagiarism Comparison API
+      if (method === "POST" && url === "/api/v1/ast/compare") {
+        const payload = await parseJsonBody<{ submissionA: CodeSubmission; submissionB: CodeSubmission }>(req);
+        if (!payload.submissionA?.sourceCode || !payload.submissionB?.sourceCode) {
+          return sendJson(res, 400, {
+            error: "Bad Request: Both 'submissionA' and 'submissionB' object with 'sourceCode' are required.",
+          });
+        }
+        const comparison = ASTPlagiarismEngine.compareSubmissions(payload.submissionA, payload.submissionB);
+        return sendJson(res, 200, comparison);
+      }
+
+      // 8. RBL AST Class Similarity Matrix API
+      if (method === "POST" && url === "/api/v1/ast/matrix") {
+        const payload = await parseJsonBody<{ submissions: CodeSubmission[]; assignmentId?: string }>(req);
+        if (!payload.submissions || !Array.isArray(payload.submissions) || payload.submissions.length < 2) {
+          return sendJson(res, 400, {
+            error: "Bad Request: 'submissions' array with at least 2 elements is required.",
+          });
+        }
+        const matrixReport = ASTPlagiarismEngine.computeClassSimilarityMatrix(payload.submissions, payload.assignmentId);
+        return sendJson(res, 200, matrixReport);
       }
 
       // 404 Route Not Found
@@ -148,7 +190,7 @@ if (require.main === module) {
   const server = createServer(hub);
   server.listen(PORT, () => {
     console.log(`\n======================================================`);
-    console.log(`  AITA GenAI Core & Review Hub REST Server`);
+    console.log(`  AITA Core & AST Plagiarism Hub REST Server`);
     console.log(`  Listening on: http://localhost:${PORT}`);
     console.log(`  Provider:     ${hub.provider.providerName}`);
     console.log(`======================================================\n`);
