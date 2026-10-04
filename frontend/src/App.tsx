@@ -75,24 +75,128 @@ const initialSteps: GradingStep[] = [
   { id: '6', label: 'GenAI Review (GPT-4o/Gemini)', status: 'pending', detail: 'Đánh giá Clean Code & SOLID' },
 ];
 
+import { useEffect, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
+
+const API_BASE_URL = 'http://localhost:3000';
+
 export function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [steps, setSteps] = useState<GradingStep[]>(initialSteps);
   const [isCompleted, setIsCompleted] = useState(false);
   const [submissionId, setSubmissionId] = useState('');
+  const [isSocketConnected, setIsSocketConnected] = useState(false);
   
   const [aiRating, setAiRating] = useState<AIRating | undefined>(undefined);
   const [plagiarismMatch, setPlagiarismMatch] = useState<PlagiarismMatch | undefined>(undefined);
+  const socketRef = useRef<Socket | null>(null);
 
-  const handleSubmission = (_file: File) => {
-    const subId = `SUB-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
-    setSubmissionId(subId);
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    const socket = io(API_BASE_URL, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 5,
+    });
+
+    socket.on('connect', () => {
+      console.log('[Socket.IO] Connected to NestJS Gateway:', socket.id);
+      setIsSocketConnected(true);
+    });
+
+    socket.on('disconnect', () => {
+      console.log('[Socket.IO] Disconnected from NestJS Gateway');
+      setIsSocketConnected(false);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.warn('[Socket.IO] Gateway not reachable, fallback mode ready:', err.message);
+      setIsSocketConnected(false);
+    });
+
+    socketRef.current = socket;
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  const handleSubmission = async (file: File) => {
+    // Reset modal state
     setSteps(initialSteps.map((s) => ({ ...s, status: 'pending' })));
     setIsCompleted(false);
     setAiRating(undefined);
     setPlagiarismMatch(undefined);
     setIsModalOpen(true);
 
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('studentId', 'SE170000');
+    formData.append('assignmentId', 'TASK-SWP391-SPRINT2');
+    formData.append('language', 'java');
+
+    try {
+      // 1. Call API Gateway: POST /api/v1/submissions
+      const response = await fetch(`${API_BASE_URL}/api/v1/submissions`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.status === 202) {
+        const result = await response.json();
+        const subId = result.data.submissionId;
+        setSubmissionId(subId);
+        console.log(`[Gateway] Submission 202 Accepted! ID: ${subId}, Latency: ${result.data.processingTimeMs}ms`);
+
+        // 2. Join Socket.IO Room for real-time streaming
+        if (socketRef.current && socketRef.current.connected) {
+          socketRef.current.emit('join_submission', { submissionId: subId });
+
+          // Listen for step progress
+          socketRef.current.off('grading:progress');
+          socketRef.current.on('grading:progress', (data: { stepId: string; stepName: string; status: any; detail?: string }) => {
+            setSteps((prev) =>
+              prev.map((s) =>
+                s.id === data.stepId ? { ...s, status: data.status, detail: data.detail || s.detail } : s
+              )
+            );
+          });
+
+          // Listen for testcase evaluated
+          socketRef.current.off('testcase:evaluated');
+          socketRef.current.on('testcase:evaluated', (data: { testcaseIndex: number; totalTestcases: number; status: string; timeMs: number }) => {
+            const stepId = data.testcaseIndex === 1 ? '3' : '4';
+            setSteps((prev) =>
+              prev.map((s) =>
+                s.id === stepId
+                  ? {
+                      ...s,
+                      status: data.status === 'PASSED' ? 'passed' : 'failed',
+                      detail: `TC ${data.testcaseIndex}/${data.totalTestcases}: ${data.status} (${data.timeMs}ms)`,
+                    }
+                  : s
+              )
+            );
+          });
+
+          // Listen for grading completed
+          socketRef.current.off('grading:completed');
+          socketRef.current.on('grading:completed', (data: any) => {
+            if (data.aiRating) setAiRating(data.aiRating);
+            if (data.plagiarismMatch) setPlagiarismMatch(data.plagiarismMatch);
+            setSteps((prev) => prev.map((s) => ({ ...s, status: 'passed' })));
+            setIsCompleted(true);
+          });
+
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('[Gateway] API Gateway connection error, falling back to simulation:', err);
+    }
+
+    // Graceful fallback simulation if server is offline
+    const subId = `SUB-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    setSubmissionId(subId);
     simulateSocketGradingEvents();
   };
 
@@ -164,8 +268,18 @@ export function App() {
               <span>Sinh viên: <strong>Vạn Thái Trung (SE170000)</strong></span>
             </div>
             <span style={{ width: '1px', height: '20px', backgroundColor: 'var(--border-color)' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '4px 10px', borderRadius: '20px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-emerald)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-              <Shield size={14} /> WebSocket Connected
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '12px',
+              padding: '4px 10px',
+              borderRadius: '20px',
+              backgroundColor: isSocketConnected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+              color: isSocketConnected ? 'var(--accent-emerald)' : '#eab308',
+              border: `1px solid ${isSocketConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
+            }}>
+              <Shield size={14} /> {isSocketConnected ? 'Gateway WebSocket Connected' : 'Gateway Connecting / Fallback'}
             </div>
           </div>
         </div>
