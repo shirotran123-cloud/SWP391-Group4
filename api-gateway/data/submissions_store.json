@@ -1,0 +1,65 @@
+[
+  {
+    "submissionId": "SUB-270782-579IZL",
+    "studentId": "SE170000",
+    "assignmentId": "TASK-SWP391-SPRINT2",
+    "language": "java",
+    "fileName": "Solution_SE170000.zip",
+    "fileSizeBytes": 525,
+    "sha256Hash": "3e5be8e8c41d8f0f31574334d0d089837abc64a19d0b055e3651ac5339c71640",
+    "filePath": "D:\\download\\SWP391-Group4-main\\SWP391-Group4-main\\api-gateway\\uploads\\submissions\\SUB-270782-579IZL.zip",
+    "status": "COMPLETED",
+    "createdAt": "2026-10-04T08:41:10.783Z",
+    "updatedAt": "2026-10-04T08:41:15.085Z",
+    "queueJobId": "mem_SUB-270782-579IZL_1791103270784",
+    "details": {
+      "submissionId": "SUB-270782-579IZL",
+      "status": "COMPLETED",
+      "overallResult": "PASSED",
+      "score": 9.5,
+      "maxScore": 10,
+      "passedTestcases": 2,
+      "totalTestcases": 2,
+      "executionTimeMs": 226,
+      "aiRating": {
+        "cleanCodeScore": 8.5,
+        "solidScore": {
+          "s": 7,
+          "o": 9,
+          "l": 8.5,
+          "i": 9,
+          "d": 8
+        },
+        "codeSmells": [
+          {
+            "line": 15,
+            "rule": "Single Responsibility Principle",
+            "description": "Phương thức `sortAndPrintAndSaveToDatabase` đang gánh vác nhiều trách nhiệm: vừa sắp xếp vừa in kết quả."
+          }
+        ],
+        "explanation": "Mã nguồn có cấu trúc chặt chẽ, tối ưu độ phức tạp thuật toán O(N log N). Nên phân tách tầng xuất dữ liệu khỏi logic thuật toán cốt lõi."
+      },
+      "plagiarismMatch": {
+        "matchedStudentName": "Trần Thanh Nguyên",
+        "matchedStudentId": "SE170123",
+        "similarityRate": 24.2,
+        "sourceCodeA": "// Student solution\nclass Solution { ... }",
+        "sourceCodeB": "// Compared benchmark\nclass ReferenceSolution { ... }",
+        "matchedTokens": [
+          {
+            "lineA": [
+              12,
+              18
+            ],
+            "lineB": [
+              12,
+              18
+            ]
+          }
+        ]
+      },
+      "completedAt": "2026-10-04T08:41:15.085Z"
+    },
+    "score": 9.5
+  }
+]
