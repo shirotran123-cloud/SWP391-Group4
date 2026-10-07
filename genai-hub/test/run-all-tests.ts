@@ -23,7 +23,7 @@ function assert(condition: boolean, testName: string, details?: string) {
 
 async function runTests() {
   console.log("\n=======================================================");
-  console.log("   AITA GenAI Core & Review Hub - Test Suite (Tuần 3 & 4)");
+  console.log("   AITA GenAI Core & Review Hub - Test Suite (Tuáº§n 3 & 4)");
   console.log("=======================================================\n");
 
   // ------------------------------------------------------------------
@@ -162,7 +162,7 @@ async function runTests() {
   assert(generatedExam.referenceSolution.length > 0, "Generates complete reference solution");
 
   // ------------------------------------------------------------------
-  // SUITE 6: Submission Consumer Worker (Phân hệ 2 & 5 Integration)
+  // SUITE 6: Submission Consumer Worker (PhÃ¢n há»‡ 2 & 5 Integration)
   // ------------------------------------------------------------------
   console.log("\n\x1b[36m[SUITE 6]\x1b[0m Submission Consumer Worker Pipeline");
 
@@ -242,6 +242,64 @@ async function runTests() {
   assert(true, "HTTP server shuts down cleanly");
 
   // ------------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // SUITE 8: SOLID Radar Breakdown & AIRating Payload Converter
+  // ------------------------------------------------------------------
+  console.log("\n\x1b[36m[SUITE 8]\x1b[0m SOLID Radar Breakdown & Frontend AIRating Adapter");
+
+  const solidResult = await reviewer.reviewCode({
+    submissionId: "SUBM-SOLID-TEST-001",
+    language: "cpp",
+    sourceFiles: [{ filename: "calc.cpp", content: "class Calc { public: int add(int a, int b) { return a + b; } };" }],
+  });
+
+  assert(solidResult.solid_breakdown !== undefined, "Produces solid_breakdown object");
+  assert(typeof solidResult.solid_breakdown.srp === "number", "Breakdown contains valid srp score");
+  assert(typeof solidResult.solid_breakdown.ocp === "number", "Breakdown contains valid ocp score");
+  assert(typeof solidResult.solid_breakdown.lsp === "number", "Breakdown contains valid lsp score");
+  assert(typeof solidResult.solid_breakdown.isp === "number", "Breakdown contains valid isp score");
+  assert(typeof solidResult.solid_breakdown.dip === "number", "Breakdown contains valid dip score");
+
+  const { toAIRatingPayload } = await import("../src/types/review.types");
+  const radarPayload = toAIRatingPayload(solidResult);
+  assert(radarPayload.solidScore.s === solidResult.solid_breakdown.srp, "toAIRatingPayload maps srp to s");
+  assert(radarPayload.solidScore.d === solidResult.solid_breakdown.dip, "toAIRatingPayload maps dip to d");
+
+  // ------------------------------------------------------------------
+  // SUITE 9: Review Response Validator & Markdown Stripping
+  // ------------------------------------------------------------------
+  console.log("\n\x1b[36m[SUITE 9]\x1b[0m Review Response Validator & Resilience");
+
+  const { ReviewResponseValidator } = await import("../src/validation/review-response.validator");
+
+  // 9.1 Markdown wrapped JSON string
+    const markdownJson = "```json\n" + JSON.stringify({ clean_code_score: 8.0, solid_score: 8.5, code_smells: [] }) + "\n```";
+  const validOutcome = ReviewResponseValidator.validate(markdownJson);
+  assert(validOutcome.valid === true, "Validator un-wraps markdown json fences", validOutcome.errors?.join("; "));
+
+  // 9.2 Out of range scores
+  const outOfRange = { clean_code_score: 15.0, solid_score: 9.0, code_smells: [] };
+  const invalidOutcome = ReviewResponseValidator.validate(outOfRange);
+  assert(invalidOutcome.valid === false, "Validator rejects out-of-range scores (> 10.0)");
+
+  // ------------------------------------------------------------------
+  // SUITE 10: Multi-Provider Fallback Chain Resiliency
+  // ------------------------------------------------------------------
+  console.log("\n\x1b[36m[SUITE 10]\x1b[0m Multi-Provider Fallback Chain (DEP-02)");
+
+  const { FallbackProvider } = await import("../src/providers/fallback.provider");
+
+  // Primary mock provider that throws an intentional 429
+  const failingProvider = {
+    providerName: "FailingRemoteProvider",
+    generateCompletion: async () => { throw new Error("HTTP 429 Rate Limit Exceeded"); },
+  };
+
+  const fallback = new FallbackProvider([failingProvider as any], true);
+  const fallbackRes = await fallback.generateCompletion([{ role: "user", content: "int a = 1;" }]);
+  assert(fallbackRes.content.length > 0, "Fallback cascades to offline engine on primary outage");
+  assert(fallbackRes.model.includes("Offline Fallback"), "Fallback tags model with offline recovery status");
+
   // SUMMARY REPORT
   // ------------------------------------------------------------------
   console.log("\n-------------------------------------------------------");
