@@ -47,7 +47,7 @@ export interface PairwisePlagiarismResult {
   commonFingerprintsCount: number;
   totalUniqueFingerprints: number;
   isFlagged: boolean; // >= 70% threshold
-  status: "CLEAN" | "SUSPECTED" | "FLAGGED_HIGH";
+  status: "CLEAN" | "SUSPECTED" | "FLAGGED_PLAGIARISM" | "FLAGGED_HIGH";
   matchedTokensJson: MatchedTokensJson;
   executionTimeMs: number;
 }
@@ -141,7 +141,7 @@ export class ASTPlagiarismEngine {
     }
 
     const isFlagged = similarityRate >= this.PLAGIARISM_THRESHOLD;
-    const status = isFlagged ? "FLAGGED_HIGH" : similarityRate >= 40.0 ? "SUSPECTED" : "CLEAN";
+    const status = isFlagged ? "FLAGGED_PLAGIARISM" : similarityRate >= 40.0 ? "SUSPECTED" : "CLEAN";
 
     const matchedTokensJson: MatchedTokensJson = {
       submissionAId: subA.submissionId,
