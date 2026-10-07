@@ -1,6 +1,7 @@
 import { ILLMProvider } from "./llm-provider.interface";
 import { LLMMessage, LLMOptions, LLMResponse } from "../types/provider.types";
 import { KeyRotatorService } from "../services/key-rotator.service";
+import { adaptSchemaForOpenAI } from "../schemas/schema-adapter";
 
 export class OpenAIProvider implements ILLMProvider {
   public readonly providerName = "OpenAI";
@@ -37,7 +38,7 @@ export class OpenAIProvider implements ILLMProvider {
             json_schema: {
               name: options.schemaName || "structured_output",
               strict: true,
-              schema: options.jsonSchema,
+              schema: adaptSchemaForOpenAI(options.jsonSchema),
             },
           };
         }

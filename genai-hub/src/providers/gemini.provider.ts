@@ -1,6 +1,7 @@
 import { ILLMProvider } from "./llm-provider.interface";
 import { LLMMessage, LLMOptions, LLMResponse } from "../types/provider.types";
 import { KeyRotatorService } from "../services/key-rotator.service";
+import { adaptSchemaForGemini } from "../schemas/schema-adapter";
 
 export class GeminiProvider implements ILLMProvider {
   public readonly providerName = "Google Gemini";
@@ -40,7 +41,7 @@ export class GeminiProvider implements ILLMProvider {
 
         if (options?.jsonSchema) {
           generationConfig.responseMimeType = "application/json";
-          generationConfig.responseSchema = options.jsonSchema;
+          generationConfig.responseSchema = adaptSchemaForGemini(options.jsonSchema);
         }
 
         const requestBody: Record<string, unknown> = {
