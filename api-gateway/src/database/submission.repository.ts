@@ -4,6 +4,13 @@ import { SUBMISSION_STATUS } from '../common/constants/queue.constants';
 import * as fs from 'fs';
 import * as path from 'path';
 
+export interface SubmissionQueryFilter {
+  studentId?: string;
+  assignmentId?: string;
+  status?: SubmissionRecord['status'];
+  limit?: number;
+}
+
 @Injectable()
 export class SubmissionRepository {
   private readonly logger = new Logger(SubmissionRepository.name);
@@ -74,10 +81,26 @@ export class SubmissionRepository {
     return null;
   }
 
-  public async findAll(): Promise<SubmissionRecord[]> {
-    return Array.from(this.records.values()).sort(
-      (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
-    );
+  public async findAll(filter?: SubmissionQueryFilter): Promise<SubmissionRecord[]> {
+    let list = Array.from(this.records.values());
+
+    if (filter?.studentId) {
+      list = list.filter((r) => r.studentId === filter.studentId);
+    }
+    if (filter?.assignmentId) {
+      list = list.filter((r) => r.assignmentId === filter.assignmentId);
+    }
+    if (filter?.status) {
+      list = list.filter((r) => r.status === filter.status);
+    }
+
+    list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    if (filter?.limit && filter.limit > 0) {
+      return list.slice(0, filter.limit);
+    }
+
+    return list;
   }
 
   public async updateStatus(
@@ -109,5 +132,35 @@ export class SubmissionRepository {
       existing.updatedAt = new Date();
       this.persist();
     }
+  }
+
+  public async delete(submissionId: string): Promise<boolean> {
+    const deleted = this.records.delete(submissionId);
+    if (deleted) {
+      this.persist();
+    }
+    return deleted;
+  }
+
+  public getStats(): { total: number; queued: number; inProgress: number; completed: number; failed: number } {
+    let queued = 0;
+    let inProgress = 0;
+    let completed = 0;
+    let failed = 0;
+
+    for (const r of this.records.values()) {
+      if (r.status === SUBMISSION_STATUS.QUEUED) queued++;
+      else if (r.status === SUBMISSION_STATUS.IN_PROGRESS) inProgress++;
+      else if (r.status === SUBMISSION_STATUS.COMPLETED) completed++;
+      else if (r.status === SUBMISSION_STATUS.FAILED) failed++;
+    }
+
+    return {
+      total: this.records.size,
+      queued,
+      inProgress,
+      completed,
+      failed,
+    };
   }
 }

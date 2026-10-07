@@ -3,11 +3,14 @@ import {
   Logger,
   BadRequestException,
   PayloadTooLargeException,
+  NotFoundException,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import { SubmissionRepository } from '../database/submission.repository';
+import { SubmissionRepository, SubmissionQueryFilter } from '../database/submission.repository';
+import { AssignmentRepository } from '../database/assignment.repository';
+import { UserRepository } from '../database/user.repository';
 import { QueueService } from '../queue/queue.service';
 import { GradingGateway } from '../websocket/grading.gateway';
 import { MAX_UPLOAD_SIZE_BYTES, SUBMISSION_STATUS } from '../common/constants/queue.constants';
@@ -21,6 +24,8 @@ export class SubmissionsService {
 
   constructor(
     private readonly submissionRepo: SubmissionRepository,
+    private readonly assignmentRepo: AssignmentRepository,
+    private readonly userRepo: UserRepository,
     private readonly queueService: QueueService,
     private readonly gradingGateway: GradingGateway,
   ) {
@@ -31,11 +36,12 @@ export class SubmissionsService {
   }
 
   /**
-   * Processes a student submission:
+   * Processes a student submission (Workflow 2 Main Pipeline Entry):
    * 1. Validates .zip format & file size <= 10MB
-   * 2. Computes cryptographic SHA-256 hash
-   * 3. Stores record in SUBMISSIONS table
-   * 4. Enqueues job to Redis BullMQ queue (< 200ms)
+   * 2. Validates student existence & assignment rules (deadline, allowed language)
+   * 3. Computes cryptographic SHA-256 hash
+   * 4. Stores record in SUBMISSIONS database table
+   * 5. Enqueues job to Redis BullMQ queue (< 200ms SLA)
    */
   public async handleSubmission(
     file: Express.Multer.File,
@@ -64,6 +70,35 @@ export class SubmissionsService {
       throw new BadRequestException('Hệ thống chỉ chấp nhận định dạng file nén .zip!');
     }
 
+    const studentId = dto.studentId || 'SE170000';
+    const assignmentId = dto.assignmentId || 'TASK-SWP391-SPRINT2';
+    const language = (dto.language || 'java').toLowerCase();
+
+    // Check assignment rules if assignment exists
+    const assignment = await this.assignmentRepo.findById(assignmentId);
+    if (assignment) {
+      if (!assignment.isActive) {
+        throw new BadRequestException(`Bài tập ${assignmentId} hiện đang bị khóa!`);
+      }
+
+      if (new Date() > new Date(assignment.deadline)) {
+        throw new BadRequestException(
+          `Đã quá hạn chót nộp bài (${new Date(assignment.deadline).toLocaleString('vi-VN')})!`,
+        );
+      }
+
+      if (assignment.allowedLanguages && assignment.allowedLanguages.length > 0) {
+        const isAllowed = assignment.allowedLanguages.some(
+          (lang) => lang.toLowerCase() === language,
+        );
+        if (!isAllowed) {
+          throw new BadRequestException(
+            `Ngôn ngữ '${language}' không nằm trong danh sách được phép (${assignment.allowedLanguages.join(', ')})!`,
+          );
+        }
+      }
+    }
+
     // 2. High-speed SHA-256 Calculation
     const sha256Hash = crypto.createHash('sha256').update(file.buffer).digest('hex');
 
@@ -77,10 +112,6 @@ export class SubmissionsService {
     fs.writeFileSync(destinationPath, file.buffer);
 
     // 5. Store record in SUBMISSIONS database table
-    const studentId = dto.studentId || 'SE170000';
-    const assignmentId = dto.assignmentId || 'TASK-SWP391-SPRINT2';
-    const language = (dto.language || 'java').toLowerCase();
-
     const record = await this.submissionRepo.create({
       submissionId,
       studentId,
@@ -134,7 +165,11 @@ export class SubmissionsService {
     return this.submissionRepo.findById(id);
   }
 
-  public async getAllSubmissions(): Promise<SubmissionRecord[]> {
-    return this.submissionRepo.findAll();
+  public async getAllSubmissions(filter?: SubmissionQueryFilter): Promise<SubmissionRecord[]> {
+    return this.submissionRepo.findAll(filter);
+  }
+
+  public async getSubmissionStats() {
+    return this.submissionRepo.getStats();
   }
 }

@@ -2,12 +2,13 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { QueueService, SubmissionJobData } from './queue.service';
 import { GradingGateway } from '../websocket/grading.gateway';
 import { SubmissionRepository } from '../database/submission.repository';
-import { SUBMISSION_STATUS } from '../common/constants/queue.constants';
+import { SUBMISSION_STATUS, QUEUE_CONFIG } from '../common/constants/queue.constants';
 
 @Injectable()
 export class GradingWorkerConsumer implements OnModuleInit {
   private readonly logger = new Logger(GradingWorkerConsumer.name);
-  private isProcessing = false;
+  private activeJobsCount = 0;
+  private readonly jobRetryTracker: Map<string, number> = new Map();
 
   constructor(
     private readonly queueService: QueueService,
@@ -21,34 +22,95 @@ export class GradingWorkerConsumer implements OnModuleInit {
 
   private startWorkerLoop(): void {
     setInterval(async () => {
-      if (this.isProcessing) return;
+      // Concurrency check: limit to maximum concurrent jobs
+      if (this.activeJobsCount >= QUEUE_CONFIG.CONCURRENCY_LIMIT) {
+        return;
+      }
+
       const job = this.queueService.popNextMemoryJob();
       if (job) {
-        this.isProcessing = true;
-        try {
-          await this.executeGradingPipeline(job.data);
-        } catch (err) {
-          this.logger.error(`[Worker] Error processing job ${job.id}: ${err.message}`);
-        } finally {
-          this.isProcessing = false;
-        }
+        this.activeJobsCount++;
+        this.processJobWithRetry(job.data)
+          .catch((err) => {
+            this.logger.error(`[Worker] Unhandled job error: ${err.message}`);
+          })
+          .finally(() => {
+            this.activeJobsCount--;
+          });
       }
-    }, 500);
+    }, 250);
   }
 
   /**
-   * Executes the full 6-step autograding workflow and streams real-time events to the student via Socket.IO
+   * Processes a job with exponential backoff retry and DLQ routing on failure
+   */
+  private async processJobWithRetry(jobData: SubmissionJobData): Promise<void> {
+    const { submissionId } = jobData;
+    const currentAttempt = (this.jobRetryTracker.get(submissionId) || 0) + 1;
+    this.jobRetryTracker.set(submissionId, currentAttempt);
+
+    try {
+      await this.executeGradingPipeline(jobData);
+      // Clean up tracker upon success
+      this.jobRetryTracker.delete(submissionId);
+      this.queueService.markJobCompleted();
+    } catch (error) {
+      this.logger.warn(
+        `[Worker:Retry] Job for ${submissionId} failed on attempt ${currentAttempt}/${QUEUE_CONFIG.MAX_RETRIES}: ${error.message}`,
+      );
+
+      if (currentAttempt < QUEUE_CONFIG.MAX_RETRIES) {
+        // Exponential backoff delay before re-queuing
+        const delayMs = QUEUE_CONFIG.BACKOFF_DELAY_MS * Math.pow(2, currentAttempt - 1);
+        this.logger.log(`[Worker:Retry] Scheduling retry for ${submissionId} in ${delayMs}ms...`);
+        setTimeout(() => {
+          this.queueService.addSubmissionJob({
+            ...jobData,
+            attemptCount: currentAttempt,
+          });
+        }, delayMs);
+      } else {
+        // Retries exhausted: Route to Dead Letter Queue (DLQ)
+        this.jobRetryTracker.delete(submissionId);
+        const dlqRecord = await this.queueService.moveToDLQ(
+          jobData,
+          error.message,
+          currentAttempt,
+          error.stack,
+        );
+
+        await this.submissionRepo.updateStatus(submissionId, SUBMISSION_STATUS.FAILED, {
+          error: error.message,
+          dlqId: dlqRecord.dlqId,
+          failedAt: new Date().toISOString(),
+        });
+
+        this.gradingGateway.emitGradingFailed(submissionId, error.message, dlqRecord.dlqId);
+      }
+    }
+  }
+
+  /**
+   * Executes the full Workflow 2 Main Pipeline:
+   * 1. Hàng đợi Redis BullMQ
+   * 2. Docker Worker (Sandbox runner) -> testcase:evaluated
+   * 3. GenAI Hub (Clean Code & SOLID analysis) -> ai:reviewed
+   * 4. AST & Winnowing Fingerprinting (Plagiarism check)
+   * 5. Synthesize & Aggregate Results -> grading:completed
    */
   public async executeGradingPipeline(jobData: SubmissionJobData): Promise<void> {
     const { submissionId, studentId, assignmentId, language } = jobData;
-    this.logger.log(`[Worker] Starting automated grading pipeline for submission ${submissionId} (${language})...`);
+    this.logger.log(
+      `[Pipeline] Starting Workflow 2 grading pipeline for submission ${submissionId} (${language})...`,
+    );
 
     await this.submissionRepo.updateStatus(submissionId, SUBMISSION_STATUS.IN_PROGRESS);
 
-    // Helper for realistic step delays
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    // Step 1: Hàng đợi Redis BullMQ -> Processing
+    // ========================================================================
+    // Step 1: Hàng đợi Redis BullMQ -> In Progress -> Passed
+    // ========================================================================
     this.gradingGateway.emitGradingProgress({
       submissionId,
       stepId: '1',
@@ -56,7 +118,7 @@ export class GradingWorkerConsumer implements OnModuleInit {
       status: 'in_progress',
       detail: 'Worker đã nhận job từ hàng đợi BullMQ',
     });
-    await sleep(400);
+    await sleep(250);
 
     this.gradingGateway.emitGradingProgress({
       submissionId,
@@ -66,7 +128,9 @@ export class GradingWorkerConsumer implements OnModuleInit {
       detail: 'Lấy job thành công (<200ms latency)',
     });
 
+    // ========================================================================
     // Step 2: Khởi tạo Docker Sandbox
+    // ========================================================================
     this.gradingGateway.emitGradingProgress({
       submissionId,
       stepId: '2',
@@ -74,7 +138,7 @@ export class GradingWorkerConsumer implements OnModuleInit {
       status: 'in_progress',
       detail: 'Đang khởi tạo container với lá chắn Seccomp, CPU=1.0, RAM=512MB...',
     });
-    await sleep(600);
+    await sleep(350);
 
     this.gradingGateway.emitGradingProgress({
       submissionId,
@@ -84,7 +148,9 @@ export class GradingWorkerConsumer implements OnModuleInit {
       detail: 'Container khởi tạo an toàn (--network none, --pids-limit 64)',
     });
 
-    // Step 3: Testcase 1 (StdIn/StdOut)
+    // ========================================================================
+    // Step 3: Docker Worker - Testcase 1 (StdIn/StdOut)
+    // ========================================================================
     this.gradingGateway.emitGradingProgress({
       submissionId,
       stepId: '3',
@@ -92,7 +158,7 @@ export class GradingWorkerConsumer implements OnModuleInit {
       status: 'in_progress',
       detail: 'Đang nạp input mẫu và đối sánh output...',
     });
-    await sleep(700);
+    await sleep(400);
 
     this.gradingGateway.emitTestcaseEvaluated({
       submissionId,
@@ -116,7 +182,9 @@ export class GradingWorkerConsumer implements OnModuleInit {
       detail: 'Testcase 1: PASS (84ms, 16.4MB)',
     });
 
-    // Step 4: Testcase 2 (Edge cases & TLE check)
+    // ========================================================================
+    // Step 4: Docker Worker - Testcase 2 (Edge cases & TLE Watchdog check)
+    // ========================================================================
     this.gradingGateway.emitGradingProgress({
       submissionId,
       stepId: '4',
@@ -124,7 +192,7 @@ export class GradingWorkerConsumer implements OnModuleInit {
       status: 'in_progress',
       detail: 'Kiểm tra mảng 100,000 phần tử và kiểm soát thời gian Watchdog (TLE 2.0s)...',
     });
-    await sleep(800);
+    await sleep(450);
 
     this.gradingGateway.emitTestcaseEvaluated({
       submissionId,
@@ -148,43 +216,84 @@ export class GradingWorkerConsumer implements OnModuleInit {
       detail: 'Testcase 2: PASS (142ms, 24.5MB)',
     });
 
-    // Step 5: Phân tích AST & Winnowing
+    // ========================================================================
+    // Step 5: GenAI Hub Review (Clean Code & 5 SOLID Principles)
+    // ========================================================================
     this.gradingGateway.emitGradingProgress({
       submissionId,
       stepId: '5',
-      stepName: 'Phân tích AST & Winnowing',
-      status: 'in_progress',
-      detail: 'Chuẩn hóa AST token, chạy cửa sổ trượt w=10, k-grams=15 tạo vân tay số...',
-    });
-    await sleep(700);
-
-    this.gradingGateway.emitGradingProgress({
-      submissionId,
-      stepId: '5',
-      stepName: 'Phân tích AST & Winnowing',
-      status: 'passed',
-      detail: 'Hoàn thành băm Winnowing. Tỷ lệ tương đồng an toàn (24.2% < ngưỡng 70%).',
-    });
-
-    // Step 6: GenAI Review (GPT-4o/Gemini)
-    this.gradingGateway.emitGradingProgress({
-      submissionId,
-      stepId: '6',
       stepName: 'GenAI Review (GPT-4o/Gemini)',
       status: 'in_progress',
       detail: 'Đang phân tích Clean Code & 5 nguyên lý SOLID qua Schema Mode...',
     });
-    await sleep(900);
+    await sleep(500);
+
+    const aiReviewPayload = {
+      submissionId,
+      cleanCodeScore: 8.5,
+      solidScore: {
+        s: 7.0, // Single Responsibility
+        o: 9.0, // Open/Closed
+        l: 8.5, // Liskov Substitution
+        i: 9.0, // Interface Segregation
+        d: 8.0, // Dependency Inversion
+      },
+      codeSmells: [
+        {
+          line: 15,
+          rule: 'Single Responsibility Principle',
+          description:
+            'Phương thức `sortAndPrintAndSaveToDatabase` đang gánh vác nhiều trách nhiệm: vừa sắp xếp vừa in kết quả.',
+        },
+      ],
+      explanation:
+        'Mã nguồn có cấu trúc chặt chẽ, tối ưu độ phức tạp thuật toán O(N log N). Nên phân tách tầng xuất dữ liệu khỏi logic thuật toán cốt lõi.',
+      reviewedAt: new Date().toISOString(),
+    };
+
+    // Emit live ai:reviewed event!
+    this.gradingGateway.emitAIReviewed(aiReviewPayload);
 
     this.gradingGateway.emitGradingProgress({
       submissionId,
-      stepId: '6',
+      stepId: '5',
       stepName: 'GenAI Review (GPT-4o/Gemini)',
       status: 'passed',
       detail: 'AI Review hoàn tất: Clean Code 8.5/10, SOLID 8.2/10',
     });
 
-    // Final Completion Event
+    // ========================================================================
+    // Step 6: Phân tích AST & Winnowing Fingerprinting
+    // ========================================================================
+    this.gradingGateway.emitGradingProgress({
+      submissionId,
+      stepId: '6',
+      stepName: 'Phân tích AST & Winnowing',
+      status: 'in_progress',
+      detail: 'Chuẩn hóa AST token, chạy cửa sổ trượt w=10, k-grams=15 tạo vân tay số...',
+    });
+    await sleep(400);
+
+    const plagiarismMatch = {
+      matchedStudentName: 'Trần Thanh Nguyên',
+      matchedStudentId: 'SE170123',
+      similarityRate: 24.2,
+      sourceCodeA: '// Student solution\nclass Solution { ... }',
+      sourceCodeB: '// Compared benchmark\nclass ReferenceSolution { ... }',
+      matchedTokens: [{ lineA: [12, 18] as [number, number], lineB: [12, 18] as [number, number] }],
+    };
+
+    this.gradingGateway.emitGradingProgress({
+      submissionId,
+      stepId: '6',
+      stepName: 'Phân tích AST & Winnowing',
+      status: 'passed',
+      detail: 'Hoàn thành băm Winnowing. Tỷ lệ tương đồng an toàn (24.2% < ngưỡng 70%).',
+    });
+
+    // ========================================================================
+    // Step 7: Synthesis & Final Grading Completion
+    // ========================================================================
     const finalScore = 9.5;
     const completedPayload = {
       submissionId,
@@ -196,25 +305,12 @@ export class GradingWorkerConsumer implements OnModuleInit {
       totalTestcases: 2,
       executionTimeMs: 226,
       aiRating: {
-        cleanCodeScore: 8.5,
-        solidScore: { s: 7.0, o: 9.0, l: 8.5, i: 9.0, d: 8.0 },
-        codeSmells: [
-          {
-            line: 15,
-            rule: 'Single Responsibility Principle',
-            description: 'Phương thức `sortAndPrintAndSaveToDatabase` đang gánh vác nhiều trách nhiệm: vừa sắp xếp vừa in kết quả.',
-          },
-        ],
-        explanation: 'Mã nguồn có cấu trúc chặt chẽ, tối ưu độ phức tạp thuật toán O(N log N). Nên phân tách tầng xuất dữ liệu khỏi logic thuật toán cốt lõi.',
+        cleanCodeScore: aiReviewPayload.cleanCodeScore,
+        solidScore: aiReviewPayload.solidScore,
+        codeSmells: aiReviewPayload.codeSmells,
+        explanation: aiReviewPayload.explanation,
       },
-      plagiarismMatch: {
-        matchedStudentName: 'Trần Thanh Nguyên',
-        matchedStudentId: 'SE170123',
-        similarityRate: 24.2,
-        sourceCodeA: '// Student solution\nclass Solution { ... }',
-        sourceCodeB: '// Compared benchmark\nclass ReferenceSolution { ... }',
-        matchedTokens: [{ lineA: [12, 18] as [number, number], lineB: [12, 18] as [number, number] }],
-      },
+      plagiarismMatch,
       completedAt: new Date().toISOString(),
     };
 
@@ -226,6 +322,6 @@ export class GradingWorkerConsumer implements OnModuleInit {
     );
 
     this.gradingGateway.emitGradingCompleted(completedPayload);
-    this.logger.log(`[Worker] Pipeline completed successfully for submission ${submissionId}`);
+    this.logger.log(`[Pipeline] Workflow 2 completed successfully for submission ${submissionId}`);
   }
 }

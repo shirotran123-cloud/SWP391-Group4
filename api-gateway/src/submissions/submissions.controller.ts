@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Body,
+  Query,
   UseInterceptors,
   UploadedFile,
   HttpCode,
@@ -14,6 +15,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { SubmissionsService } from './submissions.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { GradingWorkerConsumer } from '../queue/grading-worker.consumer';
+import { SubmissionRecord } from '../database/submission.entity';
 
 @Controller('api/v1/submissions')
 export class SubmissionsController {
@@ -64,9 +66,29 @@ export class SubmissionsController {
     };
   }
 
+  @Get('stats')
+  public async getSubmissionStats() {
+    const stats = await this.submissionsService.getSubmissionStats();
+    return {
+      statusCode: HttpStatus.OK,
+      data: stats,
+    };
+  }
+
   @Get()
-  public async getAllSubmissions() {
-    const submissions = await this.submissionsService.getAllSubmissions();
+  public async getAllSubmissions(
+    @Query('studentId') studentId?: string,
+    @Query('assignmentId') assignmentId?: string,
+    @Query('status') status?: SubmissionRecord['status'],
+    @Query('limit') limit?: string,
+  ) {
+    const parsedLimit = limit ? parseInt(limit, 10) : undefined;
+    const submissions = await this.submissionsService.getAllSubmissions({
+      studentId,
+      assignmentId,
+      status,
+      limit: parsedLimit,
+    });
     return {
       statusCode: HttpStatus.OK,
       total: submissions.length,
