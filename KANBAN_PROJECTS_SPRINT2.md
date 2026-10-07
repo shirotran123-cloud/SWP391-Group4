@@ -25,8 +25,13 @@ Hệ thống quản lý công việc theo mô hình Kanban tinh gọn trên GitH
 - **[AITA-101]** Kiến trúc cầu nối trung tâm NestJS API Gateway (Phân hệ 1 & 5). `[Done]`
 - **[AITA-102]** Phát triển endpoint tiếp nhận bài nộp `POST /api/v1/submissions` (multipart/form-data, $\le 10$MB, SHA-256 hash). `[Done]`
 - **[AITA-103]** Tích hợp hàng đợi phân tán Redis BullMQ với SLA phản hồi $< 200$ms. `[Done]`
-- **[AITA-104]** Xây dựng WebSocket Socket.IO Gateway stream sự kiện `testcase:evaluated`, `grading:progress`, `grading:completed`. `[Done]`
+- **[AITA-104]** Xây dựng WebSocket Socket.IO Gateway stream sự kiện `testcase:evaluated`, `ai:reviewed`, `grading:completed`. `[Done]`
 - **[AITA-105]** Thiết lập GitHub Actions CI/CD Quality Gate, commitlint và Branch Protection rules. `[Done]`
+- **[AITA-106]** Hoàn thiện bảng `USERS`, `COURSES`, `ASSIGNMENTS`, `SUBMISSIONS` và CRUD APIs trong `api-gateway` (Workflow 0). `[Done]`
+- **[AITA-107]** Xây dựng Workflow 2 Main Pipeline điều phối: nhận zip $\rightarrow$ Docker Worker $\rightarrow$ GenAI & AST $\rightarrow$ tổng hợp kết quả. `[Done]`
+- **[AITA-108]** Xử lý ngoại lệ hàng đợi: BullMQ Exponential Backoff Retry & Dead Letter Queue (DLQ) Management APIs. `[Done]`
+- **[AITA-109]** Phân quyền phòng WebSocket (Room Authorization) và cơ chế dọn dẹp chống rò rỉ RAM (Leak Prevention). `[Done]`
+- **[AITA-110]** Tài liệu hóa 6 phiên AI Debugging Logs chuyên sâu phục vụ đánh giá Milestone 2. `[Done]`
 
 ### 🥈 Tasks - Đồng đội (Co-workers)
 - **[AITA-201] (Vạn Thái Trung):** Docker Sandbox Container Isolation, Seccomp BPF filters, cgroups CPU/RAM constraints. `[In Progress]`
