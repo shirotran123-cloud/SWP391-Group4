@@ -57,3 +57,38 @@ export interface ReviewRequest {
   assignmentTopic?: string;
   learningOutcomes?: string[];
 }
+
+/**
+ * Direct payload contract for the frontend SolidRadarChart and NestJS Gateway.
+ */
+export interface AIRatingPayload {
+  cleanCodeScore: number;
+  solidScore: {
+    s: number;
+    o: number;
+    l: number;
+    i: number;
+    d: number;
+  };
+  codeSmells: Array<{ line: number; rule: string; description: string }>;
+  explanation: string;
+}
+
+export function toAIRatingPayload(review: AIReviewResult): AIRatingPayload {
+  return {
+    cleanCodeScore: review.clean_code_score,
+    solidScore: {
+      s: review.solid_breakdown.srp,
+      o: review.solid_breakdown.ocp,
+      l: review.solid_breakdown.lsp,
+      i: review.solid_breakdown.isp,
+      d: review.solid_breakdown.dip,
+    },
+    codeSmells: review.feedback_json.map((s) => ({
+      line: s.line_start,
+      rule: s.rule,
+      description: s.suggestion,
+    })),
+    explanation: review.overall_summary || review.compiler_explanation || "Code evaluated successfully.",
+  };
+}
