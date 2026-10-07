@@ -184,3 +184,24 @@ npm run build
 Mã nguồn migration nằm tại [`db/001_create_ai_review_tables.sql`](db/001_create_ai_review_tables.sql), bao gồm:
 1. Bảng `ai_review_results` (khóa ngoại `submission_id`, điểm `clean_code_score`, `solid_score`, `feedback_json`, `compiler_explanation`, `model_used`, `token_usage`).
 2. Bảng `ai_prompt_templates` cho phép quản trị viên cập nhật prompt/template trực tiếp mà không cần deploy lại code.
+---
+
+## 6. Cập Nhật Milestone 2 (Sprint 2 - Tuần 5 & 6)
+
+### 6.1. Chi Tiết Hóa 5 Trục Điểm SOLID (SolidRadarChart Integration)
+- Đầu ra đánh giá hiện bao gồm solid_breakdown với đầy đủ 5 tiêu chí: srp, ocp, lsp, isp, dip (thang 0.0 – 10.0).
+- Tiện ích 	oAIRatingPayload(reviewResult) chuyển đổi trực tiếp kết quả sang hợp đồng AIRating mà frontend React 19 (SolidRadarChart.tsx) và NestJS Gateway yêu cầu.
+
+### 6.2. Bộ Thích Ứng Schema Đa Nhà Cung Cấp (Provider Schema Adapter)
+- Module src/schemas/schema-adapter.ts giải quyết triệt để sự khác biệt cú pháp giữa các nhà cung cấp:
+  - daptSchemaForGemini(): Loại bỏ dditionalProperties: false, minimum, maximum tránh lỗi HTTP 400 của Google Gemini.
+  - daptSchemaForOpenAI(): Giữ dditionalProperties: false cho chế độ strict của OpenAI.
+  - ReviewResponseValidator: Kiểm tra miền giá trị [0.0, 10.0] và định dạng JSON sau khi nhận kết quả.
+
+### 6.3. Chuỗi Dự Phòng Nhiều Tầng (Multi-Provider Fallback Chain - DEP-02)
+- Lớp FallbackProvider kết nối luồng chuyển đổi dự phòng:
+  \text{Google Gemini} \xrightarrow{429} \text{OpenAI GPT-4o} \xrightarrow{\text{Mất mạng}} \text{Offline Heuristic Engine}
+- Đảm bảo tính sẵn sàng 100%, không bao giờ làm tắc nghẽn hàng đợi chấm thi tự động.
+
+### 6.4. Tài Liệu Gỡ Lỗi Bằng AI (AI Debugging Logs)
+- Toàn bộ 6 phiên gỡ lỗi kỹ thuật trong Sprint 2 của thành viên **Nguyễn Hoàng Vinh (AI Engineer)** được ghi chép đầy đủ tại [AI_Debugging_Logs.md](AI_Debugging_Logs.md).
