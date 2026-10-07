@@ -1,7 +1,15 @@
 /**
  * Strict JSON Schema definition for LLM structured outputs.
- * Compatible with OpenAI JSON Schema mode and Google Gemini responseSchema.
+ * Compatible with OpenAI JSON Schema mode and Google Gemini responseSchema
+ * (provider-specific adaptation is handled by schema-adapter.ts).
  */
+
+const SOLID_AXIS = (description: string) => ({
+  type: "number",
+  description,
+  minimum: 0.0,
+  maximum: 10.0,
+});
 
 export const CODE_REVIEW_JSON_SCHEMA = {
   type: "object",
@@ -14,9 +22,22 @@ export const CODE_REVIEW_JSON_SCHEMA = {
     },
     solid_score: {
       type: "number",
-      description: "SOLID principles rating from 0.0 to 10.0 assessing SRP, OCP, LSP, ISP, DIP.",
+      description: "Aggregate SOLID rating from 0.0 to 10.0 (average of the five principle scores).",
       minimum: 0.0,
       maximum: 10.0,
+    },
+    solid_breakdown: {
+      type: "object",
+      description: "Per-principle SOLID scores used to render the 5-axis radar chart.",
+      properties: {
+        srp: SOLID_AXIS("Single Responsibility Principle score (0.0 - 10.0)."),
+        ocp: SOLID_AXIS("Open/Closed Principle score (0.0 - 10.0)."),
+        lsp: SOLID_AXIS("Liskov Substitution Principle score (0.0 - 10.0)."),
+        isp: SOLID_AXIS("Interface Segregation Principle score (0.0 - 10.0)."),
+        dip: SOLID_AXIS("Dependency Inversion Principle score (0.0 - 10.0)."),
+      },
+      required: ["srp", "ocp", "lsp", "isp", "dip"],
+      additionalProperties: false,
     },
     overall_summary: {
       type: "string",
@@ -67,7 +88,14 @@ export const CODE_REVIEW_JSON_SCHEMA = {
       description: "Student-friendly explanation of any compiler/runtime errors, or empty string if code compiles cleanly.",
     },
   },
-  required: ["clean_code_score", "solid_score", "overall_summary", "code_smells", "compiler_explanation"],
+  required: [
+    "clean_code_score",
+    "solid_score",
+    "solid_breakdown",
+    "overall_summary",
+    "code_smells",
+    "compiler_explanation",
+  ],
   additionalProperties: false,
 };
 

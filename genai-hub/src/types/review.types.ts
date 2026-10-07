@@ -14,11 +14,25 @@ export interface CodeSmellFeedback {
   suggestion: string;
 }
 
+/**
+ * Per-principle SOLID scores (0.0 - 10.0).
+ * Consumed by the frontend SolidRadarChart (5 axes: S, O, L, I, D).
+ */
+export interface SolidBreakdown {
+  srp: number; // Single Responsibility
+  ocp: number; // Open/Closed
+  lsp: number; // Liskov Substitution
+  isp: number; // Interface Segregation
+  dip: number; // Dependency Inversion
+}
+
 export interface AIReviewResult {
   review_id?: string;
   submission_id: string;
   clean_code_score: number; // 0.0 to 10.0
-  solid_score: number;      // 0.0 to 10.0
+  solid_score: number;      // 0.0 to 10.0 (aggregate)
+  solid_breakdown: SolidBreakdown;
+  overall_summary?: string;
   feedback_json: CodeSmellFeedback[];
   compiler_explanation?: string;
   evaluated_at: string;

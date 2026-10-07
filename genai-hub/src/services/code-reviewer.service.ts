@@ -1,5 +1,5 @@
 import { ILLMProvider } from "../providers/llm-provider.interface";
-import { ReviewRequest, AIReviewResult, CodeSmellFeedback } from "../types/review.types";
+import { ReviewRequest, AIReviewResult, CodeSmellFeedback, SolidBreakdown } from "../types/review.types";
 import { PromptSanitizer } from "../security/prompt-sanitizer";
 import { CODE_REVIEW_JSON_SCHEMA } from "../schemas/code-review.schema";
 
@@ -172,11 +172,27 @@ Provide the deterministic evaluation conforming strictly to the JSON schema.`;
       submission_id: submissionId,
       clean_code_score: Number(Math.max(0, Math.min(10, parsed.clean_code_score || 0)).toFixed(1)),
       solid_score: Number(Math.max(0, Math.min(10, parsed.solid_score || 0)).toFixed(1)),
+      solid_breakdown: this.normalizeBreakdown(parsed.solid_breakdown, parsed.solid_score),
+      overall_summary: parsed.overall_summary,
       feedback_json: smells,
       compiler_explanation: parsed.compiler_explanation || (compilerOutput ? "Compilation finished with errors." : undefined),
       evaluated_at: new Date().toISOString(),
       model_used: response.model,
       token_usage: response.usage,
     };
+  }
+
+  /**
+   * Clamps each SOLID axis to [0, 10]. If the model omitted the breakdown,
+   * every axis falls back to the aggregate solid_score so the radar chart still renders.
+   */
+  private normalizeBreakdown(raw: any, aggregate: number): SolidBreakdown {
+    const fallback = Number.isFinite(Number(aggregate)) ? Number(aggregate) : 0;
+    const axis = (v: unknown) => {
+      const n = Number(v);
+      return Number(Math.max(0, Math.min(10, Number.isFinite(n) ? n : fallback)).toFixed(1));
+    };
+    const src = raw && typeof raw === "object" ? raw : {};
+    return { srp: axis(src.srp), ocp: axis(src.ocp), lsp: axis(src.lsp), isp: axis(src.isp), dip: axis(src.dip) };
   }
 }
