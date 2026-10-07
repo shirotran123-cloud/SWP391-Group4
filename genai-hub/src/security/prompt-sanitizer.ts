@@ -10,6 +10,7 @@ export interface SanitizationResult {
   originalLength: number;
   sanitizedLength: number;
   truncated: boolean;
+  estimatedTokens: number;
 }
 
 export class PromptSanitizer {
@@ -96,11 +97,19 @@ export class PromptSanitizer {
     let truncated = false;
     if (text.length > maxChars) {
       truncated = true;
-      const headLength = Math.floor(maxChars * 0.7);
-      const tailLength = Math.floor(maxChars * 0.25);
-      const head = text.substring(0, headLength);
-      const tail = text.substring(text.length - tailLength);
-      text = `${head}\n\n// --- [AITA NOTICE: Middle content truncated to fit 8K token context window] ---\n\n${tail}`;
+      const headTarget = Math.floor(maxChars * 0.7);
+      const tailTarget = Math.floor(maxChars * 0.25);
+
+      // Snap to nearest newline boundary to keep source code lines intact
+      const headBoundary = text.lastIndexOf("\n", headTarget);
+      const headEnd = headBoundary > 0 ? headBoundary : headTarget;
+
+      const tailBoundary = text.indexOf("\n", text.length - tailTarget);
+      const tailStart = tailBoundary > 0 ? tailBoundary + 1 : text.length - tailTarget;
+
+      const head = text.substring(0, headEnd);
+      const tail = text.substring(tailStart);
+      text = `${head}\n\n// --- [AITA NOTICE: Middle content truncated at line boundaries to fit 8K token window] ---\n\n${tail}`;
     }
 
     return {
@@ -110,6 +119,7 @@ export class PromptSanitizer {
       originalLength,
       sanitizedLength: text.length,
       truncated,
+      estimatedTokens: PromptSanitizer.estimateTokens(text),
     };
   }
 
@@ -117,6 +127,16 @@ export class PromptSanitizer {
    * Prepares code safely inside an XML-wrapped isolation block
    * so the LLM treats it purely as untrusted passive data.
    */
+  /**
+   * Fast BPE token count estimation (~4 characters per token for source code).
+   */
+  public static estimateTokens(text: string): number {
+    if (!text) return 0;
+    // Compress repeated whitespace for better subword estimation
+    const normalized = text.replace(/[ \t]+/g, " ");
+    return Math.ceil(normalized.length / 3.8);
+  }
+
   public static wrapInIsolationBoundary(filename: string, sanitizedCode: string): string {
     return `<student_submission_file name="${filename}">\n<![CDATA[\n${sanitizedCode}\n]]>\n</student_submission_file>`;
   }
