@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS plagiarism_reports (
     common_fingerprints_count INT NOT NULL DEFAULT 0,
     total_unique_fingerprints INT NOT NULL DEFAULT 0,
     matched_tokens_json JSONB NOT NULL DEFAULT '{}'::jsonb,
-    status VARCHAR(30) NOT NULL DEFAULT 'FLAGGED_HIGH' CHECK (status IN ('CLEAN', 'SUSPECTED', 'FLAGGED_HIGH', 'CONFIRMED', 'DISMISSED')),
+    status VARCHAR(30) NOT NULL DEFAULT 'FLAGGED_PLAGIARISM' CHECK (status IN ('CLEAN', 'SUSPECTED', 'FLAGGED_HIGH', 'FLAGGED_PLAGIARISM', 'CONFIRMED', 'DISMISSED')),
     evaluated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT unique_pairwise_submission UNIQUE (submission_a_id, submission_b_id)
@@ -50,3 +50,27 @@ CREATE INDEX IF NOT EXISTS idx_plagiarism_reports_assignment ON plagiarism_repor
 CREATE INDEX IF NOT EXISTS idx_plagiarism_reports_similarity ON plagiarism_reports(similarity_rate DESC);
 CREATE INDEX IF NOT EXISTS idx_plagiarism_reports_sub_a ON plagiarism_reports(submission_a_id);
 CREATE INDEX IF NOT EXISTS idx_plagiarism_reports_sub_b ON plagiarism_reports(submission_b_id);
+
+-- ----------------------------------------------------------------------------
+-- 3. Table: PLAGIARISM_MATCHES
+-- Stores granular line and token segment matches between plagiarized submissions
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS plagiarism_matches (
+    match_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    report_id UUID NOT NULL REFERENCES plagiarism_reports(report_id) ON DELETE CASCADE,
+    hash_value VARCHAR(64) NOT NULL,
+    line_start_a INT NOT NULL,
+    line_end_a INT NOT NULL,
+    line_start_b INT NOT NULL,
+    line_end_b INT NOT NULL,
+    token_start_a INT NOT NULL,
+    token_end_a INT NOT NULL,
+    token_start_b INT NOT NULL,
+    token_end_b INT NOT NULL,
+    token_count INT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_plagiarism_matches_report ON plagiarism_matches(report_id);
+CREATE INDEX IF NOT EXISTS idx_plagiarism_matches_hash ON plagiarism_matches(hash_value);
+
