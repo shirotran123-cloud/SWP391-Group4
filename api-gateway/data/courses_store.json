@@ -1,0 +1,44 @@
+[
+  {
+    "courseId": "COURSE-SWP391",
+    "courseCode": "SWP391",
+    "courseName": "Application Development Project",
+    "description": "Dự án Phát triển Ứng dụng - Kỹ thuật phần mềm",
+    "semester": "Fall 2026",
+    "instructorId": "GV001",
+    "isActive": true,
+    "createdAt": "2026-10-07T04:09:51.202Z",
+    "updatedAt": "2026-10-07T04:09:51.202Z"
+  },
+  {
+    "courseId": "COURSE-PRN211",
+    "courseCode": "PRN211",
+    "courseName": "Basic Cross-Platform .NET Application",
+    "description": "Lập trình ứng dụng đa nền tảng với .NET Core",
+    "semester": "Fall 2026",
+    "instructorId": "GV001",
+    "isActive": true,
+    "createdAt": "2026-10-07T04:09:51.202Z",
+    "updatedAt": "2026-10-07T04:09:51.202Z"
+  },
+  {
+    "courseId": "COURSE-TEST-1791346231189",
+    "courseCode": "CS1189",
+    "courseName": "Kiểm thử Phần mềm Tự động",
+    "semester": "Fall 2026",
+    "instructorId": "GV001",
+    "isActive": true,
+    "createdAt": "2026-10-07T04:10:31.191Z",
+    "updatedAt": "2026-10-07T04:10:31.191Z"
+  },
+  {
+    "courseId": "COURSE-TEST-1791346314698",
+    "courseCode": "CS4698",
+    "courseName": "Kiểm thử Phần mềm Tự động",
+    "semester": "Fall 2026",
+    "instructorId": "GV001",
+    "isActive": true,
+    "createdAt": "2026-10-07T04:11:54.700Z",
+    "updatedAt": "2026-10-07T04:11:54.700Z"
+  }
+]

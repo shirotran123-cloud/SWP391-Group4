@@ -1,0 +1,58 @@
+[
+  {
+    "userId": "ADMIN001",
+    "email": "admin@aita.fpt.edu.vn",
+    "fullName": "Hệ Thống Quản Trị AITA",
+    "role": "ADMIN",
+    "isActive": true,
+    "createdAt": "2026-10-07T04:09:51.200Z",
+    "updatedAt": "2026-10-07T04:09:51.200Z"
+  },
+  {
+    "userId": "GV001",
+    "email": "trungdt.teacher@aita.fpt.edu.vn",
+    "fullName": "ThS. Đinh Thành Trung (Giảng viên)",
+    "role": "INSTRUCTOR",
+    "isActive": true,
+    "createdAt": "2026-10-07T04:09:51.200Z",
+    "updatedAt": "2026-10-07T04:09:51.200Z"
+  },
+  {
+    "userId": "SE170000",
+    "email": "trungdt.student@aita.fpt.edu.vn",
+    "fullName": "Đinh Thành Trung (Sinh viên)",
+    "role": "STUDENT",
+    "isActive": true,
+    "createdAt": "2026-10-07T04:09:51.200Z",
+    "updatedAt": "2026-10-07T04:09:51.200Z"
+  },
+  {
+    "userId": "SE170123",
+    "email": "nguyentt@aita.fpt.edu.vn",
+    "fullName": "Trần Thanh Nguyên",
+    "role": "STUDENT",
+    "isActive": true,
+    "createdAt": "2026-10-07T04:09:51.200Z",
+    "updatedAt": "2026-10-07T04:09:51.200Z"
+  },
+  {
+    "userId": "TEST-USER-1791346230749",
+    "email": "test-user-1791346230749@aita.fpt.edu.vn",
+    "fullName": "Nguyễn Văn Test (Updated)",
+    "role": "STUDENT",
+    "passwordHash": "hashed_default",
+    "isActive": true,
+    "createdAt": "2026-10-07T04:10:31.177Z",
+    "updatedAt": "2026-10-07T04:10:31.185Z"
+  },
+  {
+    "userId": "TEST-USER-1791346314660",
+    "email": "test-user-1791346314660@aita.fpt.edu.vn",
+    "fullName": "Nguyễn Văn Test (Updated)",
+    "role": "STUDENT",
+    "passwordHash": "hashed_default",
+    "isActive": true,
+    "createdAt": "2026-10-07T04:11:54.686Z",
+    "updatedAt": "2026-10-07T04:11:54.694Z"
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "assignmentId": "TASK-SWP391-SPRINT2",
+    "courseId": "COURSE-SWP391",
+    "title": "Thuật toán Sắp xếp & Tối ưu hóa Bộ nhớ (Milestone 2)",
+    "description": "Xây dựng thuật toán sắp xếp mảng 100,000 phần tử, tối ưu O(N log N) và tuân thủ các nguyên lý SOLID.",
+    "allowedLanguages": [
+      "java",
+      "python",
+      "cpp",
+      "dotnet"
+    ],
+    "maxScore": 10,
+    "deadline": "2026-10-21T04:09:51.203Z",
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 512,
+    "testcasesCount": 2,
+    "isActive": true,
+    "createdAt": "2026-10-07T04:09:51.203Z",
+    "updatedAt": "2026-10-07T04:09:51.203Z"
+  },
+  {
+    "assignmentId": "TASK-PRN211-M1",
+    "courseId": "COURSE-PRN211",
+    "title": "Lập trình Cấu trúc dữ liệu & Thuật toán C# .NET",
+    "description": "Cài đặt Generic Binary Search Tree và xử lý ngoại lệ trong .NET 8.",
+    "allowedLanguages": [
+      "dotnet",
+      "java"
+    ],
+    "maxScore": 10,
+    "deadline": "2026-10-21T04:09:51.203Z",
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 512,
+    "testcasesCount": 3,
+    "isActive": true,
+    "createdAt": "2026-10-07T04:09:51.203Z",
+    "updatedAt": "2026-10-07T04:09:51.203Z"
+  },
+  {
+    "assignmentId": "TASK-TEST-1791346231198",
+    "courseId": "COURSE-SWP391",
+    "title": "Bài tập Thuật toán Kiểm thử Nhanh",
+    "allowedLanguages": [
+      "java",
+      "python"
+    ],
+    "maxScore": 10,
+    "deadline": "2026-10-17T04:10:31.198Z",
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 512,
+    "testcasesCount": 2,
+    "isActive": true,
+    "createdAt": "2026-10-07T04:10:31.202Z",
+    "updatedAt": "2026-10-07T04:10:31.202Z"
+  },
+  {
+    "assignmentId": "TASK-TEST-1791346314703",
+    "courseId": "COURSE-SWP391",
+    "title": "Bài tập Thuật toán Kiểm thử Nhanh",
+    "allowedLanguages": [
+      "java",
+      "python"
+    ],
+    "maxScore": 10,
+    "deadline": "2026-10-17T04:11:54.703Z",
+    "timeLimitMs": 2000,
+    "memoryLimitMb": 512,
+    "testcasesCount": 2,
+    "isActive": true,
+    "createdAt": "2026-10-07T04:11:54.705Z",
+    "updatedAt": "2026-10-07T04:11:54.705Z"
+  }
+]
