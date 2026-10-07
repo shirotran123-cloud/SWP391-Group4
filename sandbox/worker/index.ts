@@ -92,11 +92,13 @@ export async function runSandbox(language: string, codeContent: string) {
         console.log(`[Sandbox] Container removed.`);
         
         let finalStderr = result.StatusCode !== 0 ? output : '';
-        if (result.StatusCode === 139) {
+        if (time_ms >= 1900 && result.StatusCode !== 0) {
+            finalStderr = "[TLE] Time Limit Exceeded: Quá thời gian thực thi.\n" + finalStderr;
+        } else if (result.StatusCode === 139) {
             finalStderr = "[SIGSEGV] Segmentation fault: Lỗi truy cập bộ nhớ.\n" + finalStderr;
         } else if (result.StatusCode === 137) {
             finalStderr = "[MLE] Memory Limit Exceeded: Tràn bộ nhớ.\n" + finalStderr;
-        } else if (result.StatusCode === 138 || (time_ms >= 2000 && result.StatusCode !== 0)) {
+        } else if (result.StatusCode === 138) {
             finalStderr = "[TLE] Time Limit Exceeded: Quá thời gian thực thi.\n" + finalStderr;
         }
 
