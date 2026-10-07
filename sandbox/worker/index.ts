@@ -22,7 +22,16 @@ export async function runSandbox(language: string, codeContent: string) {
             filename = 'code.cpp';
             cmd = ['sh', '-c', `g++ /sandbox/${filename} -o /sandbox/a.out && /sandbox/a.out`];
             break;
-        // TODO: Bổ sung cho Java và .NET
+        case 'java':
+            image = 'openjdk:17-slim';
+            filename = 'Main.java';
+            cmd = ['sh', '-c', `javac /sandbox/${filename} && java -cp /sandbox Main`];
+            break;
+        case 'dotnet':
+            image = 'mcr.microsoft.com/dotnet/sdk:8.0';
+            filename = 'Program.cs';
+            cmd = ['sh', '-c', `mkdir -p /sandbox/app && cd /sandbox/app && dotnet new console && cp /sandbox/${filename} Program.cs && dotnet run`];
+            break;
         default:
             throw new Error("Language not supported");
     }
@@ -82,9 +91,18 @@ export async function runSandbox(language: string, codeContent: string) {
         
         console.log(`[Sandbox] Container removed.`);
         
+        let finalStderr = result.StatusCode !== 0 ? output : '';
+        if (result.StatusCode === 139) {
+            finalStderr = "[SIGSEGV] Segmentation fault: Lỗi truy cập bộ nhớ.\n" + finalStderr;
+        } else if (result.StatusCode === 137) {
+            finalStderr = "[MLE] Memory Limit Exceeded: Tràn bộ nhớ.\n" + finalStderr;
+        } else if (result.StatusCode === 138 || (time_ms >= 2000 && result.StatusCode !== 0)) {
+            finalStderr = "[TLE] Time Limit Exceeded: Quá thời gian thực thi.\n" + finalStderr;
+        }
+
         return {
             stdout: result.StatusCode === 0 ? output : '',
-            stderr: result.StatusCode !== 0 ? output : '',
+            stderr: finalStderr,
             time_ms,
             exitCode: result.StatusCode
         };
