@@ -26,8 +26,8 @@ export interface WinnowingOptions {
 }
 
 export class WinnowingEngine {
-  public static readonly DEFAULT_K = 5;
-  public static readonly DEFAULT_W = 3;
+  public static readonly DEFAULT_K = 15;
+  public static readonly DEFAULT_W = 10;
 
   /**
    * Generates Winnowing digital fingerprints from normalized AST tokens.
@@ -36,10 +36,16 @@ export class WinnowingEngine {
     tokens: NormalizedToken[],
     options?: WinnowingOptions
   ): Fingerprint[] {
-    const k = options?.kGramSize ?? this.DEFAULT_K;
-    const w = options?.windowSize ?? this.DEFAULT_W;
-
     if (tokens.length === 0) return [];
+
+    let k = options?.kGramSize ?? this.DEFAULT_K;
+    let w = options?.windowSize ?? this.DEFAULT_W;
+
+    // Adaptive k & w sizing for short token sequences to preserve local fingerprint granularity
+    if (tokens.length < k) {
+      k = Math.max(3, Math.min(k, Math.floor(tokens.length / 2) || 1));
+      w = Math.max(2, Math.min(w, Math.floor(k / 2) || 1));
+    }
 
     if (tokens.length < k) {
       const hashStr = tokens.map((t) => t.token).join("_");
