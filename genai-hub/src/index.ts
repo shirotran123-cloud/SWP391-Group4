@@ -54,3 +54,5 @@ export function createGenAIHub(providerOverride?: "gemini" | "openai" | "mock") 
 
 // Default export
 export default createGenAIHub();
+export * from "./errors/ai-review.error";
+export * from "./validation/review-response.validator";
