@@ -265,7 +265,7 @@ export function App() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-muted)' }}>
               <Users size={16} color="var(--accent-cyan)" />
-              <span>Sinh viên: <strong>Vạn Thái Trung (SE170000)</strong></span>
+              <span>Sinh viên: <strong>Văn Thái Trung (SE170000)</strong></span>
             </div>
             <span style={{ width: '1px', height: '20px', backgroundColor: 'var(--border-color)' }} />
             <div style={{
@@ -293,7 +293,7 @@ export function App() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         submissionId={submissionId}
-        studentName="Vạn Thái Trung"
+        studentName="Văn Thái Trung"
         steps={steps}
         isCompleted={isCompleted}
         aiRating={aiRating}

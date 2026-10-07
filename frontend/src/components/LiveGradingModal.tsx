@@ -163,6 +163,20 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
         )}
 
         {isCompleted && (
+          <div style={{ marginTop: '20px', padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.25)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+            <Sparkles size={20} color="var(--accent-primary)" style={{ marginTop: '2px', flexShrink: 0 }} />
+            <div>
+              <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '4px' }}>
+                💡 Socratic Hint Explainer (Exception Path Handling)
+              </h4>
+              <p style={{ fontSize: '13px', color: '#d1d5db', lineHeight: '1.5' }}>
+                Gợi ý sư phạm: Hàm <code style={{ backgroundColor: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px', color: '#f43f5e' }}>sortAndPrintAndSaveToDatabase</code> đang đảm nhận quá nhiều trách nhiệm (vừa sắp xếp, vừa hiển thị, vừa lưu DB). Hãy thử tách thành các phương thức độc lập để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isCompleted && (
           <MonacoDiffViewer
             studentName={studentName}
             sourceCode={sourceCode}

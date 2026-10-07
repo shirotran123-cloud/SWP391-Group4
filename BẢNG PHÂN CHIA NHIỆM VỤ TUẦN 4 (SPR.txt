@@ -7,7 +7,7 @@ BẢNG PHÂN CHIA NHIỆM VỤ TUẦN 4 (SPRINT 2 - PRE-MILESTONE 2)
          ┌────────────────────────┴────────┐           ┌────────┴────────────────────────┐
          ▼                                 ▼           ▼                                 ▼
 ┌──────────────────┐             ┌──────────────────┐┌──────────────────┐      ┌──────────────────┐
-│  TRẦN CÔNG TIẾN  │             │ TRẦN THANH NGUYÊN││ NGUYỄN HOÀNG VINH│      │  VẠN THÁI TRUNG  │
+│  TRẦN CÔNG TIẾN  │             │ TRẦN THANH NGUYÊN││ NGUYỄN HOÀNG VINH│      │  VĂN THÁI TRUNG  │
 │(DevOps & Sandbox)│             │  (RBL AST Lead)  ││  (AI Engineer)   │      │ (Frontend Lead)  │
 │Hoàn thiện Docker,│             │Lập trình thuật   ││Tích hợp GPT-4o / │      │Giao diện nộp bài,│
 │cài Seccomp và tự │             │toán Winnowing và ││Gemini, ép chuẩn  │      │kết nối WebSocket,│
@@ -67,7 +67,7 @@ Sản phẩm đầu ra (Definition of Done):
 Hàm reviewCode(sourceCode) trả về 100% định dạng JSON hợp lệ, lưu thẳng được vào bảng AI_REVIEW_RESULTS.
 Có cơ chế retry tự động 2 lần nếu API AI bị rớt mạng.
 
-5. Vạn Thái Trung – Frontend & UI/UX Lead
+5. Văn Thái Trung – Frontend & UI/UX Lead
 Trọng tâm: Hoàn thiện màn hình nộp bài của Sinh viên, hiển thị tiến độ chấm thời gian thực (WebSockets) và nhúng Monaco Diff Viewer.
 Nhiệm vụ cụ thể (Tasks):
 Màn hình Nộp bài (SubmissionView):
