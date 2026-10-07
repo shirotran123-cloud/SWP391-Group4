@@ -10,11 +10,11 @@ import { MockProvider } from "./mock.provider";
 export class FallbackProvider implements ILLMProvider {
   public readonly providerName: string;
   private providers: ILLMProvider[];
-  private offlineFallback: MockProvider;
+  private offlineFallback: MockProvider | null;
 
   constructor(providers: ILLMProvider[], enableOfflineFallback = true) {
     this.providers = providers.filter((p) => !!p);
-    this.offlineFallback = new MockProvider();
+    this.offlineFallback = enableOfflineFallback ? new MockProvider() : null;
     this.providerName = `FallbackChain[${this.providers.map((p) => p.providerName).join(" -> ")}]`;
   }
 

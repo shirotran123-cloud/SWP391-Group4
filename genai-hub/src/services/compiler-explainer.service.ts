@@ -77,9 +77,14 @@ Explain:
         { role: "user", content: userPrompt },
       ]);
 
+      const explanation = (response.content || "").trim();
+      if (!explanation || explanation.startsWith("{") || explanation.startsWith("[")) {
+        throw new Error("Explainer received structured/empty output instead of natural-language text");
+      }
+
       return {
         errorType: "Compiler Diagnostic",
-        simpleExplanation: response.content,
+        simpleExplanation: explanation,
         suspectedCause: "Syntax or type mismatch during compilation phase.",
         actionableHints: [
           "Read the line number indicated in the compiler log carefully.",

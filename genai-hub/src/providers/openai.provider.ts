@@ -46,17 +46,20 @@ export class OpenAIProvider implements ILLMProvider {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), options?.timeoutMs || 30000);
 
-        const response = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${apiKey}`,
-          },
-          body: JSON.stringify(body),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
+        let response: Response;
+        try {
+          response = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
 
         if (!response.ok) {
           this.keyRotator.reportError("openai", apiKey, response.status);
