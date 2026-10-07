@@ -47,12 +47,21 @@ export async function runSandbox(language: string, codeContent: string) {
         const container = await docker.createContainer({
             Image: image,
             Cmd: cmd,
+            Tty: true,                 // [Tối ưu] Bật TTY để output không bị chèn các ký tự rác (multiplex headers) của Docker
             HostConfig: {
                 Memory: 512 * 1024 * 1024, // RAM limit: 512MB
                 CpuQuota: 100000,          // CPU: 1.0 (1 core)
                 CpuPeriod: 100000,
                 PidsLimit: 64,             // PIDs limit: 64 (Defense-in-depth against fork bombs)
                 NetworkMode: 'none',       // No internet access
+                IpcMode: 'none',           // [Tối ưu] Disable IPC (ngăn tấn công shared memory)
+                ReadonlyRootfs: true,      // [Tối ưu] Khóa cứng RootFS (không cho sửa file hệ thống)
+                Tmpfs: { '/tmp': 'size=50m' }, // [Tối ưu] Cấp thư mục tạm cho compiler hoạt động
+                CapDrop: ['ALL'],          // [Tối ưu] Tước bỏ toàn bộ quyền Linux Capabilities
+                LogConfig: {               // [Tối ưu] Giới hạn dung lượng Log sinh ra (chống tràn ổ cứng)
+                    Type: 'json-file',
+                    Config: { 'max-size': '1m' }
+                },
                 SecurityOpt: [`seccomp=${seccompProfile}`], // Apply Seccomp profile
                 Binds: [`${tempDir}:/sandbox`] // Mount code to /sandbox
             }
@@ -79,9 +88,17 @@ export async function runSandbox(language: string, codeContent: string) {
         const time_ms = Date.now() - startTime;
         console.log(`[Sandbox] Container exited with code: ${result.StatusCode}`);
 
-        // Fetch logs
+        // Fetch logs (Tối ưu: Giới hạn độ dài để tránh crash RAM của Worker)
         const logs = await container.logs({ stdout: true, stderr: true });
-        const output = logs.toString('utf-8');
+        let output = '';
+        if (logs.length > 50000) {
+            output = logs.subarray(0, 50000).toString('utf-8') + '\n\n... [TRUNCATED] Output quá dài (Vượt quá 50KB)';
+        } else {
+            output = logs.toString('utf-8');
+        }
+
+        // Tối ưu: Lọc các ký tự điều khiển rác (nếu có) nhưng giữ lại Tab (\t) và NewLine (\n, \r)
+        output = output.replace(/[\x00-\x08\x0B-\x0C\x0E-\x1F\x7F]/g, '');
 
         // Dọn dẹp container thật nhanh (<= 1.0s)
         await container.remove({ force: true, v: true });
