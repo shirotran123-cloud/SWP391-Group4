@@ -21,6 +21,15 @@ export class MockProvider implements ILLMProvider {
       };
     }
 
+    if (userMsg.includes("Compiler / Runtime Diagnostic:")) {
+      const text = MockProvider.explainCompilerError(userMsg);
+      return {
+        content: text,
+        model: "aita-mock-explainer-v1",
+        usage: { prompt_tokens: 180, completion_tokens: 90, total_tokens: 270 },
+      };
+    }
+
     const result = MockProvider.analyzeCode(userMsg);
     return {
       content: JSON.stringify(result),
@@ -140,6 +149,22 @@ export class MockProvider implements ILLMProvider {
         ? "The build or execution failed. Check the line reported by the compiler, verify header inclusions, and make sure every pointer is initialized before use."
         : "",
     };
+  }
+
+  /**
+   * Plain-text Socratic hint for common compiler diagnostics (offline mode).
+   */
+  public static explainCompilerError(prompt: string): string {
+    if (/expected\s+['"`]?;/i.test(prompt)) {
+      return "Trình biên dịch đang chờ dấu chấm phẩy ';' ở cuối một câu lệnh. Hãy xem dòng được báo lỗi và dòng ngay phía trên nó để kiểm tra câu lệnh nào chưa được kết thúc.";
+    }
+    if (/was not declared|cannot find symbol|undeclared|NameError/i.test(prompt)) {
+      return "Bạn đang dùng một tên (biến, hàm hoặc lớp) mà trình biên dịch chưa thấy khai báo. Kiểm tra lỗi chính tả, phạm vi (scope) của biến và các thư viện/header cần include hoặc import.";
+    }
+    if (/incompatible types|cannot convert|invalid conversion|TypeError/i.test(prompt)) {
+      return "Có sự không khớp kiểu dữ liệu giữa giá trị và nơi nhận nó. Hãy so sánh kiểu của biến, tham số và giá trị trả về tại dòng được báo lỗi.";
+    }
+    return "Trình biên dịch đã dừng lại tại dòng được báo trong log. Hãy đọc kỹ thông báo lỗi đầu tiên (các lỗi phía sau thường là hệ quả của lỗi đầu tiên) và kiểm tra cú pháp quanh vị trí đó.";
   }
 
   private static buildMockExam() {

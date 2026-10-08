@@ -60,14 +60,17 @@ export class GeminiProvider implements ILLMProvider {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), options?.timeoutMs || 30000);
 
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal,
-        });
-
-        clearTimeout(timeoutId);
+        let response: Response;
+        try {
+          response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(requestBody),
+            signal: controller.signal,
+          });
+        } finally {
+          clearTimeout(timeoutId);
+        }
 
         if (!response.ok) {
           this.keyRotator.reportError("gemini", apiKey, response.status);

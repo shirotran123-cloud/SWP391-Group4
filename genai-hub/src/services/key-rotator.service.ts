@@ -50,9 +50,9 @@ export class KeyRotatorService {
       }
     }
 
-    // All keys in cooldown, return least recently used
-    pool.sort((a, b) => a.lastUsedAt - b.lastUsedAt);
-    return pool[0].key;
+    // All keys in cooldown: pick the least-recently-used key without mutating pool order
+    const lru = pool.reduce((min, cur) => (cur.lastUsedAt < min.lastUsedAt ? cur : min), pool[0]);
+    return lru.key;
   }
 
   /**
