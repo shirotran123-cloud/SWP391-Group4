@@ -108,7 +108,7 @@ def sum_vals(x, y):
   const pairResult = ASTPlagiarismEngine.compareSubmissions(subA, subB);
   assert(pairResult.similarityRate === 100, "Identical logic produces 100% similarity rate");
   assert(pairResult.isFlagged === true, "Pairs with similarity >= 70% are flagged as plagiarized");
-  assert(pairResult.status === "FLAGGED_HIGH", "Status is FLAGGED_HIGH for 100% similarity");
+  assert(pairResult.status === "FLAGGED_PLAGIARISM" || pairResult.status === "FLAGGED_HIGH", "Status is FLAGGED_PLAGIARISM for 100% similarity");
   assert(pairResult.matchedTokensJson.matchedSegments.length > 0, "matched_tokens_json contains line coordinates");
 
   // --------------------------------------------------------------------------

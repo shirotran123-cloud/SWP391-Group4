@@ -53,7 +53,7 @@ CREATE INDEX IF NOT EXISTS idx_plagiarism_reports_sub_b ON plagiarism_reports(su
 
 -- ----------------------------------------------------------------------------
 -- 3. Table: PLAGIARISM_MATCHES
--- Stores granular line and token segment matches between plagiarized submissions
+-- Relational mapping table for individual matched segments between submissions
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS plagiarism_matches (
     match_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -63,11 +63,7 @@ CREATE TABLE IF NOT EXISTS plagiarism_matches (
     line_end_a INT NOT NULL,
     line_start_b INT NOT NULL,
     line_end_b INT NOT NULL,
-    token_start_a INT NOT NULL,
-    token_end_a INT NOT NULL,
-    token_start_b INT NOT NULL,
-    token_end_b INT NOT NULL,
-    token_count INT NOT NULL,
+    token_count INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 

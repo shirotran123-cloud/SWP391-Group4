@@ -238,6 +238,35 @@ async function runTests() {
 
   assert(sanitizeResponse.isFlagged === true, "POST /api/v1/ai/sanitize flags injection attempt");
 
+  // 7.3 Test POST /api/v1/ast/compare
+  const astComparePostData = JSON.stringify({
+    submissionA: { submissionId: "S1", sourceCode: "def f(x):\n  return x + 1", language: "python" },
+    submissionB: { submissionId: "S2", sourceCode: "def calc(val):\n  # renamed\n  return val + 1", language: "python" },
+  });
+  const astCompareResponse = await new Promise<any>((resolve, reject) => {
+    const req = http.request(
+      "http://localhost:3002/api/v1/ast/compare",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Content-Length": Buffer.byteLength(astComparePostData),
+        },
+      },
+      (res) => {
+        let data = "";
+        res.on("data", (chunk) => (data += chunk));
+        res.on("end", () => resolve(JSON.parse(data)));
+        res.on("error", reject);
+      }
+    );
+    req.write(astComparePostData);
+    req.end();
+  });
+
+  assert(astCompareResponse.similarityRate >= 70.0, "POST /api/v1/ast/compare calculates AST similarity");
+  assert(astCompareResponse.isFlagged === true, "POST /api/v1/ast/compare flags high similarity");
+
   await new Promise<void>((resolve) => server.close(() => resolve()));
   assert(true, "HTTP server shuts down cleanly");
 
@@ -299,6 +328,29 @@ async function runTests() {
   const fallbackRes = await fallback.generateCompletion([{ role: "user", content: "int a = 1;" }]);
   assert(fallbackRes.content.length > 0, "Fallback cascades to offline engine on primary outage");
   assert(fallbackRes.model.includes("Offline Fallback"), "Fallback tags model with offline recovery status");
+
+  // ------------------------------------------------------------------
+  // SUITE 11: AST Normalizer, Winnowing & Plagiarism Engine
+  // ------------------------------------------------------------------
+  console.log("\n\x1b[36m[SUITE 11]\x1b[0m AST Normalizer, Winnowing & Plagiarism Engine (Milestone 2)");
+
+  const { ASTNormalizer } = await import("../src/ast-engine/ast-normalizer");
+  const { WinnowingEngine } = await import("../src/ast-engine/winnowing");
+  const { ASTPlagiarismEngine } = await import("../src/ast-engine/plagiarism-engine");
+
+  const pyNorm = ASTNormalizer.normalize("def add_numbers(x, y):\n    return x + y # add", "python");
+  assert(pyNorm.tokens.length > 0, "Python code produces non-empty AST token sequence");
+  assert(pyNorm.tokens.some((t) => t.token === "FUNC_DEF"), "Identifies FUNC_DEF keyword token");
+
+  const fpList = WinnowingEngine.computeFingerprints(pyNorm.tokens);
+  assert(fpList.length > 0, "Winnowing computes digital fingerprints array");
+
+  const codeSub1 = { submissionId: "SUBM-01", sourceCode: "def add_numbers(a, b):\n    total = a + b\n    return total", language: "python" };
+  const codeSub2 = { submissionId: "SUBM-02", sourceCode: "def calc_sum(x, y):\n    # Renamed variables\n    res = x + y\n    return res", language: "python" };
+
+  const plagRes = ASTPlagiarismEngine.compareSubmissions(codeSub1, codeSub2);
+  assert(plagRes.similarityRate >= 70.0, "Flags plagiarized submissions >= 70% threshold");
+  assert(plagRes.isFlagged === true, "isFlagged set to true for high similarity");
 
   // SUMMARY REPORT
   // ------------------------------------------------------------------

@@ -108,7 +108,7 @@ export class ASTNormalizer {
    * Tokenizes a single line of Python code into canonical AST tokens
    */
   private static tokenizePythonLine(line: string, lineNum: number, outTokens: NormalizedToken[]) {
-    const regex = /\b(def|class|if|elif|else|for|while|return|break|continue|try|except|finally|import|from|as|in|is|and|or|not|with|yield|pass|raise|lambda)\b|([0-9]+\.?[0-9]*|"[^"]*"|'[^']*')|([a-zA-Z_][a-zA-Z0-9_]*)|(\+=|-=|\*=|\/=|==|!=|<=|>=|\|\||&&|\+\+|--|=|\+|\-|\*|\/|%|<|>|!|\(|\)|\[\]|\{|\}|:|,)/g;
+    const regex = /\b(def|class|if|elif|else|for|while|return|break|continue|try|except|finally|import|from|as|in|is|and|or|not|with|yield|pass|raise|lambda)\b|([0-9]+\.?[0-9]*|"[^"]*"|'[^']*')|([a-zA-Z_][a-zA-Z0-9_]*)|(\+=|-=|\*=|\/=|==|!=|<=|>=|\|\||&&|=|\+|\-|\*|\/|%|<|>|\(|\)|\[\]|\{|\}|:|,)/g;
 
     let match: RegExpExecArray | null;
     let expectingFuncName = false;
@@ -184,9 +184,7 @@ export class ASTNormalizer {
       } else if (symbol) {
         if (["=", "+=", "-=", "*=", "/="].includes(symbol)) {
           outTokens.push({ token: "ASSIGN_OP", lineStart: lineNum, lineEnd: lineNum, colStart, colEnd, originalSnippet: symbol });
-        } else if (["++", "--", "!"].includes(symbol)) {
-          outTokens.push({ token: "UN_OP", lineStart: lineNum, lineEnd: lineNum, colStart, colEnd, originalSnippet: symbol });
-        } else if (["==", "!=", "<=", ">=", "+", "-", "*", "/", "%", "<", ">", "&&", "||"].includes(symbol)) {
+        } else if (["==", "!=", "<=", ">=", "+", "-", "*", "/", "%", "<", ">"].includes(symbol)) {
           outTokens.push({ token: "BIN_OP", lineStart: lineNum, lineEnd: lineNum, colStart, colEnd, originalSnippet: symbol });
         } else if (symbol === "{") {
           outTokens.push({ token: "BLOCK_OPEN", lineStart: lineNum, lineEnd: lineNum, colStart, colEnd });
@@ -240,7 +238,7 @@ export class ASTNormalizer {
   }
 
   private static tokenizeCStyleLine(line: string, lineNum: number, outTokens: NormalizedToken[]) {
-    const regex = /\b(function|def|class|public|private|protected|static|void|int|double|float|char|boolean|let|var|const|if|else|for|while|do|return|break|continue|try|catch|finally)\b|([0-9]+\.?[0-9]*|"[^"]*"|'[^']*')|([a-zA-Z_][a-zA-Z0-9_]*)|(\+=|-=|\*=|\/=|==|!=|<=|>=|&&|\|\||\+\+|--|=|\+|\-|\*|\/|%|<|>|!|\{|\}|\(|\)|\[\]|;)/g;
+    const regex = /\b(function|def|class|public|private|protected|static|void|int|double|float|char|boolean|let|var|const|if|else|for|while|do|return|break|continue|try|catch|finally)\b|([0-9]+\.?[0-9]*|"[^"]*"|'[^']*')|([a-zA-Z_][a-zA-Z0-9_]*)|(\+=|-=|\*=|\/=|==|!=|<=|>=|&&|\|\||=|\+|\-|\*|\/|%|<|>|\{|\}|\(|\)|\[\]|;)/g;
 
     let match: RegExpExecArray | null;
     let expectingFuncName = false;
@@ -308,8 +306,6 @@ export class ASTNormalizer {
       } else if (symbol) {
         if (["=", "+=", "-=", "*=", "/="].includes(symbol)) {
           outTokens.push({ token: "ASSIGN_OP", lineStart: lineNum, lineEnd: lineNum, colStart, colEnd, originalSnippet: symbol });
-        } else if (["++", "--", "!"].includes(symbol)) {
-          outTokens.push({ token: "UN_OP", lineStart: lineNum, lineEnd: lineNum, colStart, colEnd, originalSnippet: symbol });
         } else if (["==", "!=", "<=", ">=", "&&", "||", "+", "-", "*", "/", "%", "<", ">"].includes(symbol)) {
           outTokens.push({ token: "BIN_OP", lineStart: lineNum, lineEnd: lineNum, colStart, colEnd, originalSnippet: symbol });
         } else if (symbol === "{") {

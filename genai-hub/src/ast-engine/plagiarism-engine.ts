@@ -47,7 +47,7 @@ export interface PairwisePlagiarismResult {
   commonFingerprintsCount: number;
   totalUniqueFingerprints: number;
   isFlagged: boolean; // >= 70% threshold
-  status: "CLEAN" | "SUSPECTED" | "FLAGGED_PLAGIARISM" | "FLAGGED_HIGH";
+  status: "CLEAN" | "SUSPECTED" | "FLAGGED_HIGH" | "FLAGGED_PLAGIARISM";
   matchedTokensJson: MatchedTokensJson;
   executionTimeMs: number;
 }
@@ -247,27 +247,5 @@ export class ASTPlagiarismEngine {
       flaggedReports: flaggedReports.sort((a, b) => b.similarityRate - a.similarityRate),
       totalExecutionTimeMs,
     };
-  }
-
-  /**
-   * Helper utility to convert matched_tokens_json into Monaco Diff Viewer decoration ranges
-   */
-  public static exportMonacoDiffDecorations(matchedTokensJson: MatchedTokensJson): {
-    originalDecorations: { startLineNumber: number; endLineNumber: number; className: string }[];
-    modifiedDecorations: { startLineNumber: number; endLineNumber: number; className: string }[];
-  } {
-    const originalDecorations = matchedTokensJson.matchedSegments.map((s) => ({
-      startLineNumber: s.lineRangeA.start,
-      endLineNumber: s.lineRangeA.end,
-      className: "monaco-plagiarism-highlight-a",
-    }));
-
-    const modifiedDecorations = matchedTokensJson.matchedSegments.map((s) => ({
-      startLineNumber: s.lineRangeB.start,
-      endLineNumber: s.lineRangeB.end,
-      className: "monaco-plagiarism-highlight-b",
-    }));
-
-    return { originalDecorations, modifiedDecorations };
   }
 }
