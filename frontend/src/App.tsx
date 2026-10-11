@@ -1,3 +1,4 @@
+function generateFallbackSubId(): string { return "SUB-" + Date.now().toString(36).toUpperCase(); }
 import { useState } from 'react';
 import { SubmissionView } from './components/SubmissionView';
 import { LiveGradingModal } from './components/LiveGradingModal';
@@ -195,7 +196,7 @@ export function App() {
     }
 
     // Graceful fallback simulation if server is offline
-    const subId = `SUB-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    const subId = generateFallbackSubId();
     setSubmissionId(subId);
     simulateSocketGradingEvents();
   };
