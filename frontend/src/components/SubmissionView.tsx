@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { UploadCloud, FileArchive, AlertOctagon, X, Send } from 'lucide-react';
+import { UploadCloud, FileArchive, AlertOctagon, X, Send, Hash, ShieldCheck } from 'lucide-react';
 import { CountdownTimer } from './CountdownTimer';
 import type { Task } from '../types';
 
@@ -11,25 +11,43 @@ interface SubmissionViewProps {
 export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }) => {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [sha256Checksum, setSha256Checksum] = useState<string | null>(null);
+  const [isHashing, setIsHashing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = (file: File): boolean => {
+  const calculateSha256 = async (file: File): Promise<string> => {
+    const buffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  const processFile = async (file: File) => {
     setErrorMessage(null);
     const maxBytes = task.maxSizeMb * 1024 * 1024;
-    
+
     if (file.size > maxBytes) {
       setErrorMessage(`Dung lượng file vượt quá giới hạn ${task.maxSizeMb}MB! (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
-      return false;
+      return;
     }
 
     const isZip = file.name.endsWith('.zip') || file.type.includes('zip') || file.type.includes('compressed');
     if (!isZip) {
       setErrorMessage('Chỉ chấp nhận file định dạng nén (.zip)');
-      return false;
+      return;
     }
 
-    return true;
+    setSelectedFile(file);
+    setIsHashing(true);
+    try {
+      const hash = await calculateSha256(file);
+      setSha256Checksum(hash);
+    } catch {
+      setSha256Checksum(null);
+    } finally {
+      setIsHashing(false);
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -48,20 +66,14 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const file = e.dataTransfer.files[0];
-      if (validateFile(file)) {
-        setSelectedFile(file);
-      }
+      void processFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      if (validateFile(file)) {
-        setSelectedFile(file);
-      }
+      void processFile(e.target.files[0]);
     }
   };
 
@@ -131,12 +143,24 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
                 <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
                   Kích thước: {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                 </p>
+                {isHashing && (
+                  <p style={{ fontSize: '12px', color: 'var(--accent-primary)', marginTop: '4px' }}>
+                    Đang tính toán mã băm SHA-256...
+                  </p>
+                )}
+                {sha256Checksum && (
+                  <div style={{ marginTop: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)', fontSize: '12px', color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' }}>
+                    <ShieldCheck size={14} color="#10b981" />
+                    <span>SHA-256: {sha256Checksum.substring(0, 16)}...{sha256Checksum.substring(sha256Checksum.length - 8)}</span>
+                  </div>
+                )}
               </div>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setSelectedFile(null);
+                  setSha256Checksum(null);
                 }}
                 style={{
                   display: 'inline-flex',
@@ -165,9 +189,14 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
                   Hoặc click để duyệt file từ máy tính của bạn
                 </p>
               </div>
-              <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-dim)', border: '1px solid var(--border-color)' }}>
-                Giới hạn dung lượng: $\le {task.maxSizeMb}$MB
-              </span>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-dim)', border: '1px solid var(--border-color)' }}>
+                  Giới hạn dung lượng: ≤ {task.maxSizeMb}MB
+                </span>
+                <span style={{ fontSize: '12px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-dim)', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Hash size={12} /> Tự động xác thực SHA-256
+                </span>
+              </div>
             </>
           )}
         </div>
@@ -181,25 +210,25 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
 
         <button
           onClick={handleSubmit}
-          disabled={!selectedFile}
+          disabled={!selectedFile || isHashing}
           style={{
             marginTop: '24px',
             width: '100%',
             padding: '14px 24px',
             borderRadius: '12px',
             border: 'none',
-            background: selectedFile
+            background: selectedFile && !isHashing
               ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
               : 'var(--bg-card)',
-            color: selectedFile ? '#ffffff' : 'var(--text-dim)',
+            color: selectedFile && !isHashing ? '#ffffff' : 'var(--text-dim)',
             fontSize: '16px',
             fontWeight: 700,
-            cursor: selectedFile ? 'pointer' : 'not-allowed',
+            cursor: selectedFile && !isHashing ? 'pointer' : 'not-allowed',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '10px',
-            boxShadow: selectedFile ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none',
+            boxShadow: selectedFile && !isHashing ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none',
             transition: 'all 0.2s ease',
           }}
         >
