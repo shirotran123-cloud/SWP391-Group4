@@ -51,4 +51,8 @@ export interface User {
   fullName: string;
   role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
   token?: string;
+  avatarUrl?: string;
+  department?: string;
 }
+
+export type UserProfile = User;
