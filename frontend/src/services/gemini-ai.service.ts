@@ -47,23 +47,21 @@ export class GeminiAIService {
         return { success: false, message: 'Khóa API Key không được để trống.', latencyMs: 0 };
       }
 
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: 'Trả lời đúng 1 từ "OK" để xác nhận kết nối.' }],
-            },
-          ],
-          generationConfig: {
-            maxOutputTokens: 10,
-            temperature: 0.1,
-          },
-        }),
-      });
+      // Sử dụng HTTP GET kiểm tra metadata mô hình thay vì gọi generateContent nặng nề
+      // Giúp kiểm tra tính hợp lệ của API Key và Model trong 100 - 200ms mà không tốn quota
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}?key=${cleanKey}`;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method: 'GET',
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       const latencyMs = Date.now() - startTime;
 
@@ -83,15 +81,18 @@ export class GeminiAIService {
         };
       }
 
+      const data = await response.json();
+      const displayName = data.displayName || model;
+
       return {
         success: true,
-        message: `Kết nối thành công tới mô hình ${model}!`,
+        message: `Kết nối thành công tới ${displayName} (${model})!`,
         latencyMs,
       };
     } catch (err: any) {
       return {
         success: false,
-        message: `Lỗi mạng hoặc CORS: ${err.message || 'Không thể gửi yêu cầu'}`,
+        message: `Lỗi kết nối: ${err.name === 'AbortError' ? 'Hết thời gian chờ (Timeout)' : err.message || 'Không thể gửi yêu cầu'}`,
         latencyMs: Date.now() - startTime,
       };
     }
