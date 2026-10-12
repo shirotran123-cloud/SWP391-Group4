@@ -1,0 +1,26 @@
+{
+  "name": "aita-intelligent-monorepo",
+  "version": "1.0.0",
+  "description": "AITA-Intelligent - AI-Powered Teaching Assistant & AST Code Analytics Platform (SWP391 Group 4)",
+  "scripts": {
+    "db:up": "docker compose up -d",
+    "db:down": "docker compose down",
+    "start:gateway": "npm run start --prefix api-gateway",
+    "start:ai": "npm run server --prefix genai-hub",
+    "start:ui": "npm run dev --prefix frontend",
+    "test:gateway": "npm test --prefix api-gateway",
+    "test:ai": "npm test --prefix genai-hub",
+    "test:all": "npm test --prefix api-gateway && npm test --prefix genai-hub",
+    "build:ui": "npm run build --prefix frontend"
+  },
+  "keywords": [
+    "aita",
+    "autograding",
+    "ast",
+    "genai",
+    "docker-sandbox",
+    "swp391"
+  ],
+  "author": "SWP391 Group 4",
+  "license": "ISC"
+}
