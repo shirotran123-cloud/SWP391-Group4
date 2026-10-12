@@ -26,10 +26,39 @@ Khi thiết kế, truy vấn, kiểm thử hoặc trao đổi về Cơ sở dữ
 
 ---
 
-## 2. Nguyên Tắc Đối Chiếu Chéo (Cross-Verification Protocol)
+## 2. 12 Use Cases Chuẩn SRS IEEE Std 830-1998
 
-1. **Luôn kiểm tra SRS trước khi thực thi**: Trước khi trả lời câu hỏi về số lượng bảng, API, Use Case, hay mô hình hóa UML, Agent phải tự động kiểm tra `PROJECT_CONTEXT_AITA.md` và `database/README.md`.
-2. **Không bị "neo nhận thức" (Anchoring Bias)**: Yêu cầu của từng Milestone (ví dụ "tối thiểu 10 bảng cho Milestone 2") chỉ là tiêu chí chấm tạm thời, **KHÔNG ĐƯỢC** lấy đó làm giới hạn tổng thể của dự án thay cho tài liệu SRS 13 bảng.
-3. **Lưu trữ kép (Dual-Persistence)**:
-   - File JSON Store (`api-gateway/data/*.json`) phục vụ chạy test nhanh, độc lập.
-   - Master PostgreSQL Script: [`database/init_all_13_tables.sql`](file:///database/init_all_13_tables.sql) phục vụ triển khai thực tế.
+1. **UC-01**: Login via Google SSO (Domain Whitelist).
+2. **UC-02**: Bulk Import Students via Excel (100% ACID SQL Transaction Rollback).
+3. **UC-03**: Create Assignment & Configure Test Cases / Scoring Rubric.
+4. **UC-04**: Submit Assignment (.zip Package, SHA-256, < 10MB, BullMQ).
+5. **UC-05**: Real-time Grading Progress Tracking (WebSocket Socket.IO telemetry).
+6. **UC-06**: View Detailed Evaluation & Appeal Score (Dispute window <= 48h, max 2 appeals).
+7. **UC-07**: Isolated Code Execution (Docker 512MB Sandbox, 1 CPU, 2.0s TLE, Seccomp, no-network).
+8. **UC-08**: AI-Assisted Exam & Rubric Generation (Few-shot, structured JSON schema).
+9. **UC-09**: Semantic Clean Code & SOLID Review via GenAI (0.0-10.0, Temperature=0.2, prompt injection defense).
+10. **UC-10**: AST Source Code Normalization (Tree-sitter/ANTLR, strip identifiers & comments).
+11. **UC-11**: Winnowing Fingerprinting & Similarity Matrix Calculation (Jaccard index, >= 70% FLAGGED, >= 80% score 0).
+12. **UC-12**: Git-based Teamwork Analytics (Commit & LOC tracking, contribution < 10% free-rider flag).
+
+---
+
+## 3. Quy Tắc Nghiệp Vụ Cốt Lõi (Business Rules)
+
+- **BR-01**: Google SSO Whitelisting (@fpt.edu.vn / @fe.edu.vn cho Giảng viên/Admin, @gmail.com cho Sinh viên).
+- **BR-02**: Đóng cổng nộp khi quá `due_date`, bảo toàn nguyên vẹn mã băm SHA-256 cho mọi lần nộp.
+- **BR-03 (Công thức Điểm Tổng Hợp)**:
+  $$\text{Final Score} = 70\% \times \text{Testcase Score} + 30\% \times \text{GenAI Quality Score (Clean Code \& SOLID)}$$
+  - Lỗi biên dịch (CE) $\rightarrow$ Testcase = 0, AI chỉ giải thích lỗi tự nhiên mà không chấm Clean Code.
+  - Đạo văn AST $\ge 80\%$ xác nhận $\rightarrow$ Điểm = 0 không thể hoàn tác.
+- **BR-04**: Báo cáo đạo văn tuyệt đối không công khai cho sinh viên (chỉ dành cho Giảng viên/HOD).
+- **BR-05**: Phúc khảo điểm chỉ cho phép $\le 2$ lần/bài nộp trong vòng $48$ giờ sau khi công bố kết quả.
+
+---
+
+## 4. Ràng Buộc Kỹ Thuật (Constraints) & NFR
+
+- **Sandbox Boundary**: RAM $\le$ 512MB, Swap $\le$ 512MB, CPU $\le$ 1.0 core, `pids-limit` = 64, `--network none`, timeout 2.0s. Teardown container $\le$ 1.0s.
+- **Upload Limits**: File `.zip` bài nộp $\le$ 10MB; File Excel import $\le$ 5MB, $\le$ 500 dòng/batch.
+- **GenAI Ceiling**: Cửa sổ trượt tối đa 8,000 tokens, lọc bỏ mã nhị phân/thư viện ngoài trước khi gửi prompt.
+- **Hiệu năng & Độ tin cậy**: Phản hồi API có cache $< 100$ms, API thông thường $< 300$ms (p95), Uptime $\ge 99.5\%$, Retry BullMQ tối đa 3 lần qua DLQ.
