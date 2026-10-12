@@ -44,3 +44,11 @@ export interface PlagiarismMatch {
   astStructuralSimilarity?: number;
   status?: string;
 }
+
+export interface User {
+  userId: string;
+  email: string;
+  fullName: string;
+  role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
+  token?: string;
+}

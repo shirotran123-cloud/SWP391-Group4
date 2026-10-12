@@ -1,6 +1,7 @@
-import { Injectable, UnauthorizedException, ForbiddenException, Logger } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { UserRepository } from '../database/user.repository';
 import { UserRecord } from '../database/user.entity';
+import { MailService } from './mail.service';
 import * as crypto from 'crypto';
 
 export interface JwtPayload {
@@ -12,12 +13,24 @@ export interface JwtPayload {
   iat: number;
 }
 
+interface OtpEntry {
+  otp: string;
+  expiresAt: number;
+  password?: string;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
   private readonly jwtSecret = process.env.JWT_SECRET || 'aita_super_secret_jwt_key_swp391_2026';
 
-  constructor(private readonly userRepo: UserRepository) {}
+  // Lưu OTP trong bộ nhớ (In-memory storage) với thời gian hết hạn 5 phút
+  private readonly otpCache = new Map<string, OtpEntry>();
+
+  constructor(
+    private readonly userRepo: UserRepository,
+    private readonly mailService: MailService,
+  ) {}
 
   /**
    * Sinh token JWT ký bằng HMAC-SHA256 (chuẩn RFC 7519 không phụ thuộc thư viện ngoài).
@@ -69,34 +82,64 @@ export class AuthService {
   }
 
   /**
-   * Đăng nhập qua Google SSO (UC-01):
-   * Chỉ cho phép tài khoản trường (@fpt.edu.vn, @fe.edu.vn) hoặc email sinh viên đã có trong whitelist lớp học.
+   * Bước 1: Gửi mã OTP về email của người dùng khi đăng nhập
    */
-  public async loginWithGoogle(email: string, fullName?: string): Promise<{ token: string; user: UserRecord }> {
+  public async requestLoginOtp(email: string, password?: string): Promise<{ success: boolean; message: string; debugOtp?: string }> {
     const lowerEmail = email.toLowerCase().trim();
-    const isSchoolDomain = lowerEmail.endsWith('@fpt.edu.vn') || lowerEmail.endsWith('@fe.edu.vn') || lowerEmail.endsWith('@aita.fpt.edu.vn');
 
-    let user = await this.userRepo.findByEmail(lowerEmail);
+    // Sinh mã ngẫu nhiên 6 chữ số
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút hiệu lực
 
-    // Nếu không phải domain trường và cũng không nằm trong whitelist -> CHẶN
-    if (!isSchoolDomain && !user) {
-      this.logger.warn(`[AuthService] Chặn đăng nhập Google SSO từ domain trái phép: ${lowerEmail}`);
-      throw new ForbiddenException(
-        `Đăng nhập Google SSO bị từ chối! Email '${lowerEmail}' không thuộc tổ chức (@fpt.edu.vn / @fe.edu.vn) và chưa được giảng viên phân lớp.`,
-      );
+    this.otpCache.set(lowerEmail, {
+      otp,
+      expiresAt,
+      password,
+    });
+
+    // Gửi email qua MailService
+    await this.mailService.sendOtpEmail(lowerEmail, otp);
+
+    return {
+      success: true,
+      message: `Mã OTP đã được gửi về hòm thư ${lowerEmail}.`,
+      debugOtp: process.env.SMTP_USER ? undefined : otp,
+    };
+  }
+
+  /**
+   * Bước 2: Xác thực mã OTP và hoàn tất đăng nhập
+   */
+  public async verifyLoginOtp(email: string, otp: string): Promise<{ token: string; user: UserRecord }> {
+    const lowerEmail = email.toLowerCase().trim();
+    const entry = this.otpCache.get(lowerEmail);
+
+    if (!entry) {
+      throw new BadRequestException('Chưa có mã xác nhận nào được yêu cầu cho email này, hoặc mã đã bị hủy!');
     }
 
-    // Nếu là domain trường nhưng chưa có tài khoản, tự động khởi tạo
+    if (Date.now() > entry.expiresAt) {
+      this.otpCache.delete(lowerEmail);
+      throw new BadRequestException('Mã xác nhận OTP đã hết hạn! Vui lòng yêu cầu mã mới.');
+    }
+
+    if (entry.otp !== otp.trim()) {
+      throw new BadRequestException('Mã xác nhận OTP không chính xác!');
+    }
+
+    // Mã đúng -> Xóa OTP khỏi cache để tránh dùng lại (One-Time-Password)
+    this.otpCache.delete(lowerEmail);
+
+    let user = await this.userRepo.findByEmail(lowerEmail);
     if (!user) {
-      const generatedId = `SE${Math.floor(100000 + Math.random() * 900000)}`;
       user = await this.userRepo.create({
-        userId: generatedId,
+        userId: lowerEmail,
         email: lowerEmail,
-        fullName: fullName || lowerEmail.split('@')[0],
-        role: lowerEmail.includes('teacher') || lowerEmail.includes('gv') ? 'INSTRUCTOR' : 'STUDENT',
+        fullName: lowerEmail.split('@')[0],
+        role: 'STUDENT',
         isActive: true,
       });
-      this.logger.log(`[AuthService] Tự động khởi tạo tài khoản qua Google SSO: ${user.email} (${user.role})`);
+      this.logger.log(`[AuthService] Người dùng xác thực OTP tạo mới: ${user.email}`);
     }
 
     const token = this.signJwt({
@@ -110,12 +153,48 @@ export class AuthService {
   }
 
   /**
-   * Đăng nhập tiêu chuẩn bằng Email và Mật khẩu.
+   * Đăng nhập qua Google SSO (UC-01)
+   */
+  public async loginWithGoogle(email: string, fullName?: string): Promise<{ token: string; user: UserRecord }> {
+    const lowerEmail = email.toLowerCase().trim();
+    let user = await this.userRepo.findByEmail(lowerEmail);
+
+    if (!user) {
+      user = await this.userRepo.create({
+        userId: lowerEmail,
+        email: lowerEmail,
+        fullName: fullName || lowerEmail.split('@')[0],
+        role: 'STUDENT',
+        isActive: true,
+      });
+      this.logger.log(`[AuthService] Đăng ký tài khoản Google mới: ${user.email}`);
+    }
+
+    const token = this.signJwt({
+      userId: user.userId,
+      email: user.email,
+      role: user.role,
+      fullName: user.fullName,
+    });
+
+    return { token, user };
+  }
+
+  /**
+   * Đăng nhập tiêu chuẩn bằng Email và Mật khẩu (Direct login fallback nếu cần)
    */
   public async loginWithCredentials(email: string, password?: string): Promise<{ token: string; user: UserRecord }> {
-    const user = await this.userRepo.findByEmail(email.toLowerCase().trim());
+    const lowerEmail = email.toLowerCase().trim();
+    let user = await this.userRepo.findByEmail(lowerEmail);
     if (!user) {
-      throw new UnauthorizedException('Tài khoản hoặc mật khẩu không chính xác!');
+      user = await this.userRepo.create({
+        userId: lowerEmail,
+        email: lowerEmail,
+        fullName: lowerEmail.split('@')[0],
+        role: 'STUDENT',
+        isActive: true,
+      });
+      this.logger.log(`[AuthService] Đăng nhập tạo mới: ${user.email}`);
     }
 
     const token = this.signJwt({

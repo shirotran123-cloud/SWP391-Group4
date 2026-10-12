@@ -54,5 +54,50 @@
     "isActive": true,
     "createdAt": "2026-10-07T04:11:54.686Z",
     "updatedAt": "2026-10-07T04:11:54.694Z"
+  },
+  {
+    "userId": "SE201817",
+    "email": "user.student@gmail.com",
+    "fullName": "user.student",
+    "role": "STUDENT",
+    "isActive": true,
+    "createdAt": "2026-10-12T03:18:53.721Z",
+    "updatedAt": "2026-10-12T03:18:53.721Z"
+  },
+  {
+    "userId": "SE372411",
+    "email": "1@gmail.com",
+    "fullName": "1",
+    "role": "STUDENT",
+    "isActive": true,
+    "createdAt": "2026-10-12T03:29:08.336Z",
+    "updatedAt": "2026-10-12T03:29:08.336Z"
+  },
+  {
+    "userId": "SE712137",
+    "email": "vttrung2k6@gmail.com",
+    "fullName": "trung văn",
+    "role": "STUDENT",
+    "isActive": true,
+    "createdAt": "2026-10-12T03:38:06.823Z",
+    "updatedAt": "2026-10-12T03:38:06.823Z"
+  },
+  {
+    "userId": "vthaitrung2k6@gmail.com",
+    "email": "vthaitrung2k6@gmail.com",
+    "fullName": "vthaitrung2k6",
+    "role": "STUDENT",
+    "isActive": true,
+    "createdAt": "2026-10-12T04:22:11.513Z",
+    "updatedAt": "2026-10-12T04:22:11.513Z"
+  },
+  {
+    "userId": "vanthaitrung2k6@gmail.com",
+    "email": "vanthaitrung2k6@gmail.com",
+    "fullName": "vanthaitrung2k6",
+    "role": "STUDENT",
+    "isActive": true,
+    "createdAt": "2026-10-12T07:16:07.955Z",
+    "updatedAt": "2026-10-12T07:16:07.955Z"
   }
 ]

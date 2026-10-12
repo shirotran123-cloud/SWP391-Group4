@@ -7,6 +7,7 @@ import {
   HttpCode,
   HttpStatus,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 
@@ -14,16 +15,74 @@ import { AuthService } from './auth.service';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  /**
+   * API Yêu cầu gửi mã OTP về Gmail người dùng
+   */
+  @Post('request-otp')
+  @HttpCode(HttpStatus.OK)
+  public async requestOtp(
+    @Body('email') email: string,
+    @Body('password') password?: string,
+  ) {
+    if (!email || !email.trim()) {
+      throw new BadRequestException('Vui lòng cung cấp địa chỉ Email!');
+    }
+    const result = await this.authService.requestLoginOtp(email, password);
+    return {
+      statusCode: HttpStatus.OK,
+      message: result.message,
+      data: result,
+    };
+  }
+
+  /**
+   * API Xác thực mã OTP và nhận token đăng nhập
+   */
+  @Post('verify-otp')
+  @HttpCode(HttpStatus.OK)
+  public async verifyOtp(
+    @Body('email') email: string,
+    @Body('otp') otp: string,
+  ) {
+    if (!email || !otp) {
+      throw new BadRequestException('Thiếu email hoặc mã OTP xác nhận!');
+    }
+    const result = await this.authService.verifyLoginOtp(email, otp);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Xác thực OTP thành công, đăng nhập hoàn tất!',
+      data: result,
+    };
+  }
+
   @Post('google')
   @HttpCode(HttpStatus.OK)
   public async googleSsoLogin(
-    @Body('email') email: string,
+    @Body('email') email?: string,
     @Body('fullName') fullName?: string,
+    @Body('credential') credential?: string,
   ) {
-    if (!email) {
+    let resolvedEmail = email;
+    let resolvedName = fullName;
+
+    // Nếu gửi lên Google ID Token (credential từ Google Identity Services thật của trình duyệt)
+    if (credential) {
+      try {
+        const parts = credential.split('.');
+        if (parts.length >= 2) {
+          const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
+          resolvedEmail = payload.email;
+          resolvedName = payload.name || payload.email.split('@')[0];
+        }
+      } catch (e) {
+        // Fallback nếu parse lỗi
+      }
+    }
+
+    if (!resolvedEmail) {
       throw new UnauthorizedException('Thiếu địa chỉ email Google SSO!');
     }
-    const result = await this.authService.loginWithGoogle(email, fullName);
+    const result = await this.authService.loginWithGoogle(resolvedEmail, resolvedName);
     return {
       statusCode: HttpStatus.OK,
       message: 'Xác thực Google SSO thành công.',

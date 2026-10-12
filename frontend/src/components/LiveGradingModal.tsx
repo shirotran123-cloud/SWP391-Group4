@@ -14,6 +14,9 @@ interface LiveGradingModalProps {
   aiRating?: AIRating;
   plagiarismMatch?: PlagiarismMatch;
   sourceCode: string;
+  score?: number;
+  maxScore?: number;
+  executionTimeMs?: number;
 }
 
 export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
@@ -26,6 +29,9 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
   aiRating,
   plagiarismMatch,
   sourceCode,
+  score,
+  maxScore = 10,
+  executionTimeMs,
 }) => {
   useEffect(() => {
     if (!isOpen) return;
@@ -64,23 +70,47 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
             </h2>
           </div>
 
-          {isCompleted && (
-            <button
-              onClick={onClose}
-              style={{
-                padding: '8px 20px',
-                borderRadius: '10px',
-                border: 'none',
-                backgroundColor: 'var(--accent-primary)',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '14px',
-                cursor: 'pointer',
-              }}
-            >
-              Hoàn thành & Đóng (Esc)
-            </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {isCompleted && score !== undefined && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'baseline',
+                gap: '4px',
+                padding: '6px 16px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+              }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>Điểm:</span>
+                <span style={{ fontSize: '20px', fontWeight: 900, color: 'var(--accent-emerald)', fontFamily: 'var(--font-mono)' }}>
+                  {score.toFixed(1)}
+                </span>
+                <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>/{maxScore}</span>
+                {executionTimeMs !== undefined && (
+                  <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', marginLeft: '6px' }}>
+                    ({executionTimeMs}ms)
+                  </span>
+                )}
+              </div>
+            )}
+            {isCompleted && (
+              <button
+                onClick={onClose}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Hoàn thành & Đóng (Esc)
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ marginBottom: '28px' }}>
