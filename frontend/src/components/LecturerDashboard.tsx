@@ -161,6 +161,26 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   ]);
   const [createSuccessMsg, setCreateSuccessMsg] = useState<string | null>(null);
 
+  // Tính tổng trọng số testcases hiện tại (xử lý trường hợp tổng khác 10 hoặc bằng 14, 20...)
+  const totalTestcaseWeight = testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0);
+
+  // Chuẩn hóa tỷ lệ điểm các testcases về thang mong muốn (10.0đ hoặc 7.0đ theo Barem)
+  const handleNormalizeTestcases = (targetScore: number) => {
+    if (totalTestcaseWeight <= 0 || testCases.length === 0) return;
+    let accumulated = 0;
+    const normalized = testCases.map((tc, idx) => {
+      if (idx === testCases.length - 1) {
+        const finalWeight = Math.max(0.5, Math.round((targetScore - accumulated) * 10) / 10);
+        return { ...tc, weight: finalWeight };
+      }
+      const rawW = (tc.weight / totalTestcaseWeight) * targetScore;
+      const roundedW = Math.max(0.5, Math.round(rawW * 10) / 10);
+      accumulated += roundedW;
+      return { ...tc, weight: roundedW };
+    });
+    setTestCases(normalized);
+  };
+
   // Gemini AI Real State
   const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
     return localStorage.getItem('aita_gemini_api_key') || '';
@@ -951,25 +971,89 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             {/* Test cases */}
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Layers size={16} color="var(--accent-primary)" /> Bộ Test Cases Tự Động (StdIn / StdOut) - Tổng {testCases.length} Test
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => setTestCases([...testCases, { input: '', output: '', weight: 3.0, isHidden: false }])}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--accent-primary)',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  + Thêm Test Case Mới
-                </button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Layers size={16} color="var(--accent-primary)" /> Bộ Test Cases Tự Động (StdIn / StdOut) - Tổng {testCases.length} Test
+                  </h4>
+                  <span
+                    style={{
+                      fontSize: '12px',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      backgroundColor: totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                      color: totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? '#34d399' : '#fbbf24',
+                      fontWeight: 700,
+                      border: `1px solid ${totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
+                    }}
+                  >
+                    Tổng Điểm TC: {totalTestcaseWeight.toFixed(1)}đ {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 ? '(Tùy chỉnh tỷ lệ)' : '✅ Chuẩn'}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  {totalTestcaseWeight !== 10 && (
+                    <button
+                      type="button"
+                      onClick={() => handleNormalizeTestcases(10)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                        border: '1px solid var(--accent-primary)',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                      title="Tự động chuẩn hóa chia lại tỷ lệ để tổng điểm các testcases đúng bằng 10.0đ"
+                    >
+                      ⚡ Quy đổi về 10.0đ
+                    </button>
+                  )}
+                  {totalTestcaseWeight !== 7 && (
+                    <button
+                      type="button"
+                      onClick={() => handleNormalizeTestcases(7)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                        border: '1px solid var(--accent-cyan)',
+                        color: 'var(--accent-cyan)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                      title="Quy đổi về 7.0đ (theo Barem chuẩn AITA: 7đ Testcase + 3đ Clean Code & SOLID)"
+                    >
+                      ⚡ Quy đổi về 7.0đ (Barem)
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setTestCases([...testCases, { input: '', output: '', weight: 3.0, isHidden: false }])}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      backgroundColor: 'transparent',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      color: 'var(--accent-primary)',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Thêm Test Case
+                  </button>
+                </div>
               </div>
+
+              {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 && (
+                <div style={{ marginBottom: '10px', padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.2)', fontSize: '12px', color: '#fbbf24' }}>
+                  💡 <strong>Tổng điểm các testcase hiện là {totalTestcaseWeight.toFixed(1)}đ (khác 10đ):</strong> Khi chấm bài, hệ thống tự động chuẩn hóa theo tỷ lệ: <code>Điểm đạt = (Tổng điểm TC Pass / {totalTestcaseWeight.toFixed(1)}) × Thang Điểm Barem</code>. Hoặc Giảng viên có thể bấm nút <em>"Quy đổi về 10.0đ"</em> hoặc <em>"7.0đ (Barem)"</em> ở trên để chuẩn hóa tự động.
+                </div>
+              )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {testCases.map((tc, idx) => (
