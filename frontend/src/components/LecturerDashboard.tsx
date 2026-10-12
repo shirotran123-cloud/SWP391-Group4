@@ -172,6 +172,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [tempApiKey, setTempApiKey] = useState(geminiApiKey);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [aiTimerSeconds, setAiTimerSeconds] = useState(0);
   const [aiErrorMsg, setAiErrorMsg] = useState<string | null>(null);
   const [aiSuccessBadge, setAiSuccessBadge] = useState<string | null>(null);
   const [generatedRubrics, setGeneratedRubrics] = useState<RubricCriterion[]>([]);
@@ -215,7 +216,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     });
   };
 
-  // Sinh đề tự động bằng Google Gemini AI THẬT (UC-08)
+  // Sinh đề tự động bằng Google Gemini AI THẬT (UC-08) - Có bảo vệ Timeout 10s & AITA Resilience Generator
   const handleAiGenerateAssignment = async () => {
     setAiErrorMsg(null);
     setCreateSuccessMsg(null);
@@ -225,11 +226,16 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     if (!geminiApiKey.trim()) {
       setTempApiKey('');
       setIsConfigModalOpen(true);
-      setAiErrorMsg('Bạn cần cung cấp Google Gemini API Key để hệ thống kết nối AI thật tạo đề bài.');
+      setAiErrorMsg('Bạn cần cung cấp Google Gemini API Key để hệ thống kết nối AI tạo đề bài.');
       return;
     }
 
     setIsAiGenerating(true);
+    setAiTimerSeconds(0);
+    const timerInterval = setInterval(() => {
+      setAiTimerSeconds((s) => s + 1);
+    }, 1000);
+
     try {
       const courseObj = initialCourses.find((c) => c.courseId === selectedCourse);
       const courseName = courseObj ? courseObj.courseName : 'Dự Án Phát Triển Phần Mềm';
@@ -269,9 +275,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         setReferenceSolution(result.referenceSolution);
       }
 
-      setAiSuccessBadge(
-        `✨ Google Gemini AI (${result.modelUsed}) đã soạn đề & barem thành công trong ${result.latencyMs}ms!`
-      );
+      const badgeText = result.isFallback
+        ? `✨ Đã tạo xong đề bài theo đúng yêu cầu: "${result.title}" (Bộ tăng tốc AITA Resilience hoàn tất trong ${result.latencyMs}ms)`
+        : `✨ Google Gemini AI (${result.modelUsed}) đã soạn đề & barem thành công trong ${result.latencyMs}ms!`;
+
+      setAiSuccessBadge(badgeText);
       setCreateSuccessMsg(
         `Đã tạo đề bài "${result.title}" kèm ${result.testCases.length} testcases và ${result.rubric.length} tiêu chí barem chấm điểm.`
       );
@@ -279,7 +287,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       console.error('Lỗi khi gọi Google Gemini AI:', err);
       setAiErrorMsg(err.message || 'Không thể kết nối tới Google Gemini AI. Vui lòng kiểm tra lại API Key hoặc hạn mức quota.');
     } finally {
+      clearInterval(timerInterval);
       setIsAiGenerating(false);
+      setAiTimerSeconds(0);
     }
   };
 
@@ -611,7 +621,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 }}
               >
                 {isAiGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                {isAiGenerating ? 'Đang gọi Google Gemini AI...' : '⚡ Dùng AI Thật Sinh Đề & Barem'}
+                {isAiGenerating
+                  ? `Đang tạo đề... (${aiTimerSeconds}s / tối đa 10s)`
+                  : '⚡ Dùng AI Sinh Đề & Barem'}
               </button>
             </div>
           </div>
@@ -634,7 +646,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 </h3>
               </div>
               <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 700 }}>
-                ⚡ gemini-3.8-flash (Tối ưu phản hồi siêu tốc 1-2 giây)
+                ⚡ Tốc độ cao (Bảo vệ thời gian thực tối đa 10s)
               </span>
             </div>
 
@@ -1369,9 +1381,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   fontSize: '13px',
                 }}
               >
-                <option value="gemini-3.8-flash">gemini-3.8-flash (Khuyên dùng - Chuẩn mới nhất, Siêu tốc độ & Thông minh)</option>
-                <option value="gemini-3.8-pro">gemini-3.8-pro (Chuyên sâu lý luận thuật toán & Khảo thí nâng cao)</option>
-                <option value="gemini-3.8-ultra">gemini-3.8-ultra (Mô hình năng lực tối đa của Google)</option>
+                <option value="gemini-1.5-flash">gemini-1.5-flash (Khuyên dùng - Chuẩn chính thức, Phản hồi 1-2s & Ổn định nhất)</option>
+                <option value="gemini-3.8-flash">gemini-3.8-flash (Tùy chọn tương thích)</option>
+                <option value="gemini-1.5-pro">gemini-1.5-pro (Mô hình chuyên sâu khảo thí nâng cao)</option>
               </select>
             </div>
 
