@@ -165,7 +165,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
     return localStorage.getItem('aita_gemini_api_key') || '';
   });
-  const [selectedAiModel, setSelectedAiModel] = useState<string>('gemini-1.5-flash');
+  const [selectedAiModel, setSelectedAiModel] = useState<string>('gemini-3.8-flash');
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [tempApiKey, setTempApiKey] = useState(geminiApiKey);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
@@ -1296,9 +1296,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   fontSize: '13px',
                 }}
               >
-                <option value="gemini-1.5-flash">gemini-1.5-flash (Khuyên dùng - Nhanh, Tối ưu & Miễn phí)</option>
-                <option value="gemini-2.0-flash">gemini-2.0-flash (Thế hệ mới nhất - Phản hồi siêu tốc)</option>
-                <option value="gemini-1.5-pro">gemini-1.5-pro (Chuyên sâu lý luận thuật toán phức tạp)</option>
+                <option value="gemini-3.8-flash">gemini-3.8-flash (Khuyên dùng - Chuẩn mới nhất, Siêu tốc độ & Thông minh)</option>
+                <option value="gemini-3.8-pro">gemini-3.8-pro (Chuyên sâu lý luận thuật toán & Khảo thí nâng cao)</option>
+                <option value="gemini-3.8-ultra">gemini-3.8-ultra (Mô hình năng lực tối đa của Google)</option>
               </select>
             </div>
 

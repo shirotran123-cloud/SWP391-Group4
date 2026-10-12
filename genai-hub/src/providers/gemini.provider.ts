@@ -8,7 +8,7 @@ export class GeminiProvider implements ILLMProvider {
   private model: string;
   private keyRotator: KeyRotatorService;
 
-  constructor(keyRotator: KeyRotatorService, model = "gemini-1.5-flash") {
+  constructor(keyRotator: KeyRotatorService, model = "gemini-3.8-flash") {
     this.keyRotator = keyRotator;
     this.model = model;
   }

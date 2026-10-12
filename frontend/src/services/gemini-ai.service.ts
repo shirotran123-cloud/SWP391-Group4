@@ -38,7 +38,7 @@ export class GeminiAIService {
    */
   public static async pingKey(
     apiKey: string,
-    model: string = 'gemini-1.5-flash'
+    model: string = 'gemini-3.8-flash'
   ): Promise<{ success: boolean; message: string; latencyMs: number }> {
     const startTime = Date.now();
     try {
@@ -113,7 +113,7 @@ export class GeminiAIService {
   ): Promise<GeneratedAssignmentResult> {
     const startTime = Date.now();
     const cleanKey = apiKey.trim();
-    const model = options.model || 'gemini-1.5-flash';
+    const model = options.model || 'gemini-3.8-flash';
 
     if (!cleanKey) {
       throw new Error('Chưa cấu hình Google Gemini API Key. Vui lòng nhập Key trước khi tạo đề.');
