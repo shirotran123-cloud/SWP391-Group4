@@ -98,7 +98,7 @@ export class GeminiAIService {
   }
 
   /**
-   * Gọi AI Google Gemini thật để tạo đề bài và bộ Testcases, Rubrics
+   * Gọi AI Google Gemini siêu tốc theo mô tả và yêu cầu cụ thể của Giảng viên
    */
   public static async generateAssignment(
     apiKey: string,
@@ -106,6 +106,7 @@ export class GeminiAIService {
       courseName: string;
       courseCode: string;
       topicPrompt: string;
+      lecturerDescription?: string; // Yêu cầu mô tả cụ thể từ giảng viên
       difficulty?: string;
       allowedLanguages?: string[];
       model?: string;
@@ -119,74 +120,37 @@ export class GeminiAIService {
       throw new Error('Chưa cấu hình Google Gemini API Key. Vui lòng nhập Key trước khi tạo đề.');
     }
 
-    const systemPrompt = `Bạn là Giáo sư Khoa học Máy tính tại Đại học FPT kiêm chuyên gia khảo thí hệ thống chấm bài AITA.
-Nhiệm vụ của bạn là soạn thảo một đề bài tập lập trình học thuật, mang tính thực tiễn cao cho sinh viên.
-Đề bài cần tuân thủ cấu trúc dữ liệu, giải thuật tối ưu và các nguyên lý Mã Sạch (Clean Code) / SOLID.
-
-YÊU CẦU ĐẶC BIỆT VỀ ĐỊNH DẠNG ĐẦU RA:
-- Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ.
-- KHÔNG thêm markdown backticks (không dùng \`\`\`json hoặc \`\`\`), KHÔNG thêm lời giải thích bên ngoài JSON.
-- Cấu trúc JSON bắt buộc phải có các trường sau:
+    const systemPrompt = `Bạn là trợ lý AI khảo thí tạo đề bài lập trình cho Đại học FPT.
+Hãy trả về DUY NHẤT một chuỗi JSON hợp lệ (không dùng markdown backticks \`\`\`json, không viết chữ gì ngoài JSON).
+JSON cần ngắn gọn, xúc tích, sinh cực nhanh với cấu trúc:
 {
-  "title": "Tên bài tập ngắn gọn, học thuật bằng tiếng Việt",
-  "description": "Mô tả bài toán chi tiết, ngữ cảnh thực tế, định dạng đầu vào (Input), định dạng đầu ra (Output), giới hạn dữ liệu (Constraints) và yêu cầu thiết kế",
+  "title": "Tên bài tập ngắn gọn",
+  "description": "Mô tả đề bài, định dạng Input/Output và yêu cầu thuật toán",
   "timeLimitMs": 2000,
   "memoryLimitMb": 512,
   "testCases": [
-    {
-      "input": "Chuỗi dữ liệu đầu vào stdin (ví dụ: 5\\n1 2 3 4 5)",
-      "output": "Chuỗi kết quả đầu ra stdout mong muốn",
-      "weight": 2.5,
-      "isHidden": false,
-      "explanation": "Giải thích testcase mẫu"
-    },
-    {
-      "input": "Dữ liệu trường hợp biên/lớn hơn",
-      "output": "Kết quả chuẩn",
-      "weight": 2.5,
-      "isHidden": true,
-      "explanation": "Testcase ẩn kiểm tra thời gian TLE và trường hợp biên"
-    }
+    { "input": "input1", "output": "output1", "weight": 3.5, "isHidden": false },
+    { "input": "input2", "output": "output2", "weight": 3.5, "isHidden": false },
+    { "input": "input3", "output": "output3", "weight": 3.0, "isHidden": true }
   ],
   "rubric": [
-    {
-      "criterion": "Tính đúng đắn thuật toán & Vượt qua 100% Testcases",
-      "maxScore": 5.0,
-      "description": "Chương trình chạy đúng kết quả trong thời gian và bộ nhớ quy định",
-      "levels": [
-        { "scorePercent": 100, "description": "Pass toàn bộ testcases công khai và testcases ẩn" },
-        { "scorePercent": 60, "description": "Pass testcases cơ bản, bị TLE ở testcase lớn" },
-        { "scorePercent": 0, "description": "Lỗi biên dịch hoặc sai toàn bộ" }
-      ]
-    },
-    {
-      "criterion": "Chất lượng mã nguồn Clean Code & Tối ưu O(N log N)",
-      "maxScore": 2.5,
-      "description": "Đặt tên biến rõ nghĩa, cấu trúc hàm ngắn gọn, không trùng lặp (DRY)",
-      "levels": [
-        { "scorePercent": 100, "description": "Mã nguồn sạch, comment giải thuật rõ ràng" },
-        { "scorePercent": 50, "description": "Còn code thừa, tên biến viết tắt" }
-      ]
-    },
-    {
-      "criterion": "Thiết kế Hướng đối tượng & Nguyên lý SOLID",
-      "maxScore": 2.5,
-      "description": "Tuân thủ Single Responsibility (SRP) và Dependency Inversion (DIP)",
-      "levels": [
-        { "scorePercent": 100, "description": "Tách biệt rõ ràng các lớp dữ liệu và nghiệp vụ" }
-      ]
-    }
+    { "criterion": "Tính đúng đắn thuật toán & Vượt qua Testcases", "maxScore": 5.0, "description": "Pass 100% testcases" },
+    { "criterion": "Clean Code & Tối ưu O(N log N)", "maxScore": 2.5, "description": "Mã nguồn rõ ràng, đặt tên chuẩn" },
+    { "criterion": "Thiết kế Hướng đối tượng & SOLID", "maxScore": 2.5, "description": "Tuân thủ SRP và DIP" }
   ],
-  "starterCode": "// Khung mã nguồn mẫu cho sinh viên...",
-  "referenceSolution": "// Lời giải tham chiếu chuẩn xác..."
+  "starterCode": "// Khung mã nguồn mẫu ngắn gọn"
 }`;
 
-    const userPrompt = `Hãy tạo một đề bài tập cho học phần:
+    // Ưu tiên yêu cầu mô tả do Giảng viên trực tiếp nhập vào
+    const promptDetails = options.lecturerDescription?.trim()
+      ? `YÊU CẦU & MÔ TẢ CỤ THỂ TỪ GIẢNG VIÊN: "${options.lecturerDescription}"\nChủ đề: ${options.topicPrompt}`
+      : `Chủ đề: ${options.topicPrompt}`;
+
+    const userPrompt = `Tạo đề thi cho:
 - Môn học: ${options.courseCode} (${options.courseName})
-- Chủ đề mong muốn: ${options.topicPrompt || 'Cấu trúc dữ liệu và giải thuật nâng cao'}
-- Độ khó: ${options.difficulty || 'TRUNG BÌNH'}
-- Ngôn ngữ lập trình: ${(options.allowedLanguages || ['java', 'python', 'cpp']).join(', ')}
-- Hãy tạo tối thiểu 4 test cases (ít nhất 2 test case công khai và 2 test case ẩn).`;
+- ${promptDetails}
+- Ngôn ngữ: ${(options.allowedLanguages || ['java', 'python', 'cpp']).join(', ')}
+- Tạo 3 testcases (2 công khai, 1 ẩn). Hãy trả về JSON ngay lập tức.`;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${cleanKey}`;
 
@@ -197,14 +161,12 @@ YÊU CẦU ĐẶC BIỆT VỀ ĐỊNH DẠNG ĐẦU RA:
         contents: [
           {
             role: 'user',
-            parts: [
-              { text: systemPrompt + '\n\n' + userPrompt }
-            ],
+            parts: [{ text: systemPrompt + '\n\n' + userPrompt }],
           },
         ],
         generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 3000,
+          temperature: 0.2, // Nhiệt độ thấp giúp phản hồi nhanh và chuẩn xác
+          maxOutputTokens: 1200, // Rút gọn token để tốc độ sinh đạt 1 - 2 giây
         },
       }),
     });
@@ -230,7 +192,7 @@ YÊU CẦU ĐẶC BIỆT VỀ ĐỊNH DẠNG ĐẦU RA:
       throw new Error('Google Gemini không trả về nội dung.');
     }
 
-    // Clean JSON content if wrapped in markdown fences
+    // Làm sạch JSON nếu bị bọc trong markdown fences
     let cleanedJson = rawContent.trim();
     if (cleanedJson.startsWith('```json')) {
       cleanedJson = cleanedJson.replace(/^```json\s*/, '').replace(/\s*```$/, '');

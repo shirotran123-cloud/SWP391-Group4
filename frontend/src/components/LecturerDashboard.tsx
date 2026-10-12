@@ -166,6 +166,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     return localStorage.getItem('aita_gemini_api_key') || '';
   });
   const [selectedAiModel, setSelectedAiModel] = useState<string>('gemini-3.8-flash');
+  const [lecturerPrompt, setLecturerPrompt] = useState<string>(
+    'Tạo bài tập về Thuật toán Dijkstra tìm đường đi ngắn nhất, có tối ưu bằng Hàng đợi ưu tiên PriorityQueue, sinh viên phải áp dụng nguyên lý SOLID Single Responsibility (SRP).'
+  );
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [tempApiKey, setTempApiKey] = useState(geminiApiKey);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
@@ -236,6 +239,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         courseName,
         courseCode,
         topicPrompt: assignmentTitle || 'Cấu trúc dữ liệu và giải thuật nâng cao',
+        lecturerDescription: lecturerPrompt,
         difficulty: 'TRUNG BÌNH',
         allowedLanguages,
         model: selectedAiModel,
@@ -612,37 +616,106 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             </div>
           </div>
 
-          {/* Gợi ý chủ đề nhanh cho Giảng viên */}
-          <div style={{ marginBottom: '20px', padding: '14px 16px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
-              💡 Gợi ý chủ đề nhanh (Bấm để chọn và nhấn Tạo bằng AI):
-            </span>
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              {[
-                'Cây Tìm Kiếm Nhị Phân BST & Cân Bằng Cây AVL',
-                'Thuật Toán Dijkstra với Hàng Đợi Ưu Tiên Min-Heap',
-                'Sắp Xếp Nhanh Quicksort & Tối Ưu Phân Đoạn O(N log N)',
-                'Quy Hoạch Động Bài Toán Balo 0/1 (Knapsack DP)',
-                'Thiết Kế Mẫu Factory Method & Nguyên Lý SOLID',
-              ].map((topic) => (
-                <button
-                  key={topic}
-                  type="button"
-                  onClick={() => setAssignmentTitle(topic)}
-                  style={{
-                    fontSize: '12px',
-                    padding: '5px 12px',
-                    borderRadius: '8px',
-                    backgroundColor: assignmentTitle === topic ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.05)',
-                    border: `1px solid ${assignmentTitle === topic ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)'}`,
-                    color: assignmentTitle === topic ? '#ffffff' : 'var(--text-muted)',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  {topic}
-                </button>
-              ))}
+          {/* Card Nhập Yêu Cầu & Mô Tả Của Giảng Viên Cho AI */}
+          <div
+            style={{
+              marginBottom: '24px',
+              padding: '20px 24px',
+              borderRadius: '16px',
+              backgroundColor: 'rgba(99, 102, 241, 0.08)',
+              border: '1.5px solid rgba(99, 102, 241, 0.35)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Sparkles size={20} color="var(--accent-cyan)" />
+                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>
+                  Yêu Cầu & Ý Tưởng Cụ Thể Của Giảng Viên (Prompt Dành Cho AI Soạn Đề)
+                </h3>
+              </div>
+              <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 700 }}>
+                ⚡ gemini-3.8-flash (Tối ưu phản hồi siêu tốc 1-2 giây)
+              </span>
+            </div>
+
+            <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.5' }}>
+              Giảng viên nhập bất kỳ ý tưởng, nghiệp vụ hoặc ràng buộc thuật toán nào. AI sẽ bám sát 100% mô tả này để tạo đề bài, testcases và tiêu chí barem điểm tương ứng:
+            </p>
+
+            <textarea
+              rows={3}
+              value={lecturerPrompt}
+              onChange={(e) => setLecturerPrompt(e.target.value)}
+              placeholder="Ví dụ: 'Tạo bài tập về cây AVL, bắt buộc có hàm xoay trái và xoay phải, kiểm tra xem cây có cân bằng sau khi chèn 1000 phần tử không, dùng Java và tuân thủ SOLID'..."
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '10px',
+                backgroundColor: 'rgba(10, 15, 29, 0.8)',
+                border: '1px solid rgba(99, 102, 241, 0.35)',
+                color: '#ffffff',
+                fontSize: '14px',
+                lineHeight: '1.5',
+                outline: 'none',
+                marginBottom: '14px',
+              }}
+            />
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600 }}>Gợi ý mẫu:</span>
+                {[
+                  'Đồ thị Dijkstra với PriorityQueue & SRP',
+                  'Cây AVL cân bằng có phép xoay trái phải',
+                  'Sắp xếp Quicksort tối ưu O(N log N)',
+                  'Quy hoạch động Balo 0/1 tối ưu mảng 1D',
+                  'Thiết kế Factory Pattern & SOLID DIP',
+                ].map((suggest) => (
+                  <button
+                    key={suggest}
+                    type="button"
+                    onClick={() => {
+                      setLecturerPrompt(suggest);
+                      setAssignmentTitle(suggest);
+                    }}
+                    style={{
+                      fontSize: '11px',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      color: '#c7d2fe',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    + {suggest}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleAiGenerateAssignment}
+                disabled={isAiGenerating}
+                style={{
+                  padding: '10px 22px',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: isAiGenerating ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 4px 15px rgba(168, 85, 247, 0.35)',
+                }}
+              >
+                {isAiGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                {isAiGenerating ? 'Đang tạo siêu tốc bằng Gemini...' : '⚡ Sinh Đề Bằng AI Theo Yêu Cầu Này'}
+              </button>
             </div>
           </div>
 
