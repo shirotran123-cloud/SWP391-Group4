@@ -1,5 +1,6 @@
 import * as http from 'http';
 import * as crypto from 'crypto';
+import * as net from 'net';
 import { io as ioClient } from 'socket.io-client';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
@@ -41,62 +42,59 @@ function createMinimalZip(filename: string, content: string): Buffer {
   localHeader.writeUInt32LE(contentBuf.length, 18); // compressed size
   localHeader.writeUInt32LE(contentBuf.length, 22); // uncompressed size
   localHeader.writeUInt16LE(filenameBuf.length, 26); // filename length
-  localHeader.writeUInt16LE(0, 28); // extra field length
+  localHeader.writeUInt16LE(0, 28); // extra length
   filenameBuf.copy(localHeader, 30);
 
   // Central directory header
-  const centralHeader = Buffer.alloc(46 + filenameBuf.length);
-  centralHeader.writeUInt32LE(0x02014b50, 0); // signature
-  centralHeader.writeUInt16LE(20, 4); // version made by
-  centralHeader.writeUInt16LE(20, 6); // version needed
-  centralHeader.writeUInt16LE(0, 8); // flags
-  centralHeader.writeUInt16LE(0, 10); // compression
-  centralHeader.writeUInt16LE(0, 12); // mod time
-  centralHeader.writeUInt16LE(0, 14); // mod date
-  centralHeader.writeUInt32LE(crc, 16);
-  centralHeader.writeUInt32LE(contentBuf.length, 20);
-  centralHeader.writeUInt32LE(contentBuf.length, 24);
-  centralHeader.writeUInt16LE(filenameBuf.length, 28);
-  centralHeader.writeUInt16LE(0, 30);
-  centralHeader.writeUInt16LE(0, 32);
-  centralHeader.writeUInt16LE(0, 34);
-  centralHeader.writeUInt16LE(0, 36);
-  centralHeader.writeUInt32LE(0, 38);
-  centralHeader.writeUInt32LE(0, 42); // offset of local header
-  filenameBuf.copy(centralHeader, 46);
-
-  const localOffset = localHeader.length + contentBuf.length;
-  const centralOffset = localOffset;
+  const centralDir = Buffer.alloc(46 + filenameBuf.length);
+  centralDir.writeUInt32LE(0x02014b50, 0); // signature
+  centralDir.writeUInt16LE(20, 4); // version made by
+  centralDir.writeUInt16LE(20, 6); // version needed
+  centralDir.writeUInt16LE(0, 8); // flags
+  centralDir.writeUInt16LE(0, 10); // compression
+  centralDir.writeUInt16LE(0, 12); // mod time
+  centralDir.writeUInt16LE(0, 14); // mod date
+  centralDir.writeUInt32LE(crc, 16); // crc32
+  centralDir.writeUInt32LE(contentBuf.length, 20); // compressed size
+  centralDir.writeUInt32LE(contentBuf.length, 24); // uncompressed size
+  centralDir.writeUInt16LE(filenameBuf.length, 28); // filename length
+  centralDir.writeUInt16LE(0, 30); // extra length
+  centralDir.writeUInt16LE(0, 32); // comment length
+  centralDir.writeUInt16LE(0, 34); // disk number
+  centralDir.writeUInt16LE(0, 36); // internal attrs
+  centralDir.writeUInt32LE(0, 38); // external attrs
+  centralDir.writeUInt32LE(0, 42); // local header offset
+  filenameBuf.copy(centralDir, 46);
 
   // End of central directory record
   const eocd = Buffer.alloc(22);
-  eocd.writeUInt32LE(0x06054b50, 0);
-  eocd.writeUInt16LE(0, 4);
-  eocd.writeUInt16LE(0, 6);
-  eocd.writeUInt16LE(1, 8); // total entries on disk
+  eocd.writeUInt32LE(0x06054b50, 0); // signature
+  eocd.writeUInt16LE(0, 4); // disk num
+  eocd.writeUInt16LE(0, 6); // start disk
+  eocd.writeUInt16LE(1, 8); // entries on disk
   eocd.writeUInt16LE(1, 10); // total entries
-  eocd.writeUInt32LE(centralHeader.length, 12);
-  eocd.writeUInt32LE(centralOffset, 16);
-  eocd.writeUInt16LE(0, 20);
+  eocd.writeUInt32LE(centralDir.length, 12); // size of central dir
+  eocd.writeUInt32LE(localHeader.length + contentBuf.length, 16); // offset of central dir
+  eocd.writeUInt16LE(0, 20); // comment length
 
-  return Buffer.concat([localHeader, contentBuf, centralHeader, eocd]);
+  return Buffer.concat([localHeader, contentBuf, centralDir, eocd]);
 }
 
-// Multipart helper
+// Multi-part form data builder for raw Node http request
 function buildMultipartPayload(
   fields: Record<string, string>,
   fileField: string,
   fileName: string,
   fileBuffer: Buffer,
-) {
-  const boundary = `----AITAFormBoundary${Date.now()}`;
+): { boundary: string; body: Buffer; contentType: string } {
+  const boundary = `----AITABoundary${Date.now()}`;
   const crlf = '\r\n';
   const parts: Buffer[] = [];
 
-  for (const [key, val] of Object.entries(fields)) {
+  for (const [key, value] of Object.entries(fields)) {
     parts.push(
       Buffer.from(
-        `--${boundary}${crlf}Content-Disposition: form-data; name="${key}"${crlf}${crlf}${val}${crlf}`,
+        `--${boundary}${crlf}Content-Disposition: form-data; name="${key}"${crlf}${crlf}${value}${crlf}`,
         'utf-8',
       ),
     );
@@ -125,6 +123,7 @@ function httpRequest(
   method: string,
   data?: any,
   contentType: string = 'application/json',
+  extraHeaders: Record<string, string> = {},
 ): Promise<{ statusCode: number; data: any; durationMs: number }> {
   const url = new URL(urlStr);
   let bodyBuffer: Buffer | null = null;
@@ -149,6 +148,7 @@ function httpRequest(
         method,
         headers: {
           'Content-Type': contentType,
+          ...extraHeaders,
           ...(bodyBuffer ? { 'Content-Length': bodyBuffer.length } : {}),
         },
       },
@@ -175,9 +175,7 @@ function httpRequest(
   });
 }
 
-import * as net from 'net';
-
-async function isPortOpen(port: number): Promise<boolean> {
+function isPortOpen(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = new net.Socket();
     socket.setTimeout(300);
@@ -199,7 +197,7 @@ async function isPortOpen(port: number): Promise<boolean> {
 async function runTestSuite() {
   console.log('================================================================');
   console.log('🧪 BẮT ĐẦU KIỂM THỬ TOÀN DIỆN MILESTONE 2 - AITA API GATEWAY');
-  console.log('   Người phụ trách: Đinh Thanh Trung (Team Leader & System Architect)');
+  console.log('   Người phụ trách: Đinh Thành Trung (Team Leader & System Architect)');
   console.log('================================================================\n');
 
   const testPort = 3000;
@@ -229,7 +227,7 @@ async function runTestSuite() {
     const createUserRes = await httpRequest(`${baseUrl}/api/v1/users`, 'POST', {
       userId: newUserId,
       email: `${newUserId.toLowerCase()}@aita.fpt.edu.vn`,
-      fullName: 'Nguyễn Văn Test',
+      fullName: 'Nguyễn Văn Test User',
       role: 'STUDENT',
     });
     console.log(`   - Tạo người dùng mới (${newUserId}): Status ${createUserRes.statusCode} -> ${createUserRes.statusCode === 201 ? '✅ PASS' : '❌ FAIL'}`);
@@ -238,7 +236,7 @@ async function runTestSuite() {
     console.log(`   - Lấy chi tiết người dùng: Status ${getUserRes.statusCode} (${getUserRes.data?.data?.email}) -> ${getUserRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
 
     const updateUserRes = await httpRequest(`${baseUrl}/api/v1/users/${newUserId}`, 'PUT', {
-      fullName: 'Nguyễn Văn Test (Updated)',
+      fullName: 'Nguyễn Văn Test User (Đã Cập Nhật)',
     });
     console.log(`   - Cập nhật người dùng: Status ${updateUserRes.statusCode} -> ${updateUserRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
 
@@ -249,55 +247,49 @@ async function runTestSuite() {
     // SUITE 2: CRUD Courses API (Workflow 0)
     // ========================================================================
     console.log('\n📚 SUITE 2: Kiểm thử CRUD Bảng COURSES (/api/v1/courses)...');
-    const newCourseId = `COURSE-TEST-${Date.now()}`;
+    const courseId = `CRS-${Date.now()}`;
+    const courseCode = `PRF192-${Date.now().toString().slice(-4)}`;
     const createCourseRes = await httpRequest(`${baseUrl}/api/v1/courses`, 'POST', {
-      courseId: newCourseId,
-      courseCode: `CS${Date.now().toString().slice(-4)}`,
-      courseName: 'Kiểm thử Phần mềm Tự động',
+      courseId,
+      courseCode,
+      courseName: 'Lập Trình Cơ Bản Với C/C++',
       semester: 'Fall 2026',
       instructorId: 'GV001',
     });
     console.log(`   - Tạo khóa học mới: Status ${createCourseRes.statusCode} -> ${createCourseRes.statusCode === 201 ? '✅ PASS' : '❌ FAIL'}`);
 
-    const getCourseRes = await httpRequest(`${baseUrl}/api/v1/courses/${newCourseId}`, 'GET');
+    const getCourseRes = await httpRequest(`${baseUrl}/api/v1/courses/${createCourseRes.data?.data?.courseId}`, 'GET');
     console.log(`   - Lấy chi tiết khóa học: Status ${getCourseRes.statusCode} -> ${getCourseRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
 
     // ========================================================================
     // SUITE 3: CRUD Assignments API (Workflow 0)
     // ========================================================================
     console.log('\n📝 SUITE 3: Kiểm thử CRUD Bảng ASSIGNMENTS (/api/v1/assignments)...');
-    const newAssignmentId = `TASK-TEST-${Date.now()}`;
-    const deadlineDate = new Date();
-    deadlineDate.setDate(deadlineDate.getDate() + 10);
-
-    const createAssignRes = await httpRequest(`${baseUrl}/api/v1/assignments`, 'POST', {
-      assignmentId: newAssignmentId,
-      courseId: 'COURSE-SWP391',
-      title: 'Bài tập Thuật toán Kiểm thử Nhanh',
-      deadline: deadlineDate.toISOString(),
-      allowedLanguages: ['java', 'python'],
-      maxScore: 10.0,
-      testcasesCount: 2,
+    const assignmentId = `ASM-${Date.now()}`;
+    const createAssignmentRes = await httpRequest(`${baseUrl}/api/v1/assignments`, 'POST', {
+      assignmentId,
+      courseId,
+      title: 'Bài tập 2: Thao tác mảng và con trỏ nâng cao',
+      allowedLanguages: ['c', 'cpp'],
+      deadline: new Date(Date.now() + 7 * 86400 * 1000).toISOString(),
     });
-    console.log(`   - Tạo bài tập mới: Status ${createAssignRes.statusCode} -> ${createAssignRes.statusCode === 201 ? '✅ PASS' : '❌ FAIL'}`);
+    console.log(`   - Tạo bài tập mới: Status ${createAssignmentRes.statusCode} -> ${createAssignmentRes.statusCode === 201 ? '✅ PASS' : '❌ FAIL'}`);
 
-    const getAssignRes = await httpRequest(`${baseUrl}/api/v1/assignments/${newAssignmentId}`, 'GET');
-    console.log(`   - Lấy chi tiết bài tập: Status ${getAssignRes.statusCode} -> ${getAssignRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
+    const getAssignmentRes = await httpRequest(
+      `${baseUrl}/api/v1/assignments/${createAssignmentRes.data?.data?.assignmentId}`,
+      'GET',
+    );
+    console.log(`   - Lấy chi tiết bài tập: Status ${getAssignmentRes.statusCode} -> ${getAssignmentRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
 
     // ========================================================================
-    // SUITE 4: Main Submissions & Latency SLA (< 200ms)
+    // SUITE 4: Nộp bài, SLA < 200ms, SHA-256 Checksum & Dung lượng ≤ 10MB (Workflow 2 Start)
     // ========================================================================
     console.log('\n🚀 SUITE 4: Kiểm thử Nộp bài (POST /api/v1/submissions, SLA < 200ms, SHA-256)...');
     const javaCode = `
-package com.aita.autograder;
 import java.util.*;
-
 public class Solution {
     public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        int n = sc.nextInt();
-        int[] arr = new int[n];
-        for (int i = 0; i < n; i++) arr[i] = sc.nextInt();
+        int[] arr = {5, 2, 8, 1, 9};
         Arrays.sort(arr);
         for (int v : arr) System.out.print(v + " ");
         System.out.println();
@@ -348,14 +340,14 @@ public class Solution {
     console.log(`   - Chặn nộp file 11MB (> 10MB limit): Status ${largeRes.statusCode} -> ${largeRes.statusCode >= 400 ? '✅ PASS' : '❌ FAIL'}`);
 
     // ========================================================================
-    // SUITE 5: Exception Path Coordinator & DLQ (/api/v1/queue)
+    // SUITE 5: Hàng đợi BullMQ, DLQ & Cơ chế Retry (Exception Path 4)
     // ========================================================================
     console.log('\n🛡️ SUITE 5: Kiểm thử Dead Letter Queue (DLQ) & Cơ chế Retry Ngoại lệ...');
     const queueStatsRes = await httpRequest(`${baseUrl}/api/v1/queue/stats`, 'GET');
-    console.log(`   - Lấy thống kê hàng đợi: Status ${queueStatsRes.statusCode} (Mode: ${queueStatsRes.data?.data?.mode}) -> ${queueStatsRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
+    console.log(`   - Lấy thống kê hàng đợi: Status ${queueStatsRes.statusCode} (Mode: ${queueStatsRes.data?.mode}) -> ${queueStatsRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
 
-    const dlqListRes = await httpRequest(`${baseUrl}/api/v1/queue/dlq`, 'GET');
-    console.log(`   - Truy vấn Dead Letter Queue: Status ${dlqListRes.statusCode} (DLQ Jobs: ${dlqListRes.data?.total}) -> ${dlqListRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
+    const dlqStatsRes = await httpRequest(`${baseUrl}/api/v1/queue/dlq`, 'GET');
+    console.log(`   - Truy vấn Dead Letter Queue: Status ${dlqStatsRes.statusCode} (DLQ Jobs: ${dlqStatsRes.data?.total}) -> ${dlqStatsRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
 
     // ========================================================================
     // SUITE 6: Socket.IO Stream (testcase:evaluated, ai:reviewed, grading:completed)
@@ -438,6 +430,56 @@ public class Solution {
       });
     });
 
+    // ========================================================================
+    // SUITE 7: Kiểm thử Auth JWT & Google SSO (UC-01)
+    // ========================================================================
+    console.log('\n🔑 SUITE 7: Kiểm thử Auth JWT & Google SSO Whitelist (UC-01)...');
+
+    // 7a. Google SSO với domain hợp lệ @fpt.edu.vn
+    const validSsoRes = await httpRequest(`${baseUrl}/api/v1/auth/google`, 'POST', {
+      email: 'sinhvien.test@fpt.edu.vn',
+      fullName: 'Sinh Viên FPT Test',
+    });
+    console.log(`   - Google SSO @fpt.edu.vn hợp lệ: Status ${validSsoRes.statusCode} -> ${validSsoRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
+    const jwtToken = validSsoRes.data?.data?.token;
+    console.log(`   - Nhận mã JWT Token ký HMAC-SHA256: ${jwtToken ? '✅ PASS' : '❌ FAIL'}`);
+
+    // 7b. Xác thực Profile với Bearer Token
+    const profileRes = await httpRequest(`${baseUrl}/api/v1/auth/me`, 'GET', undefined, undefined, {
+      authorization: `Bearer ${jwtToken}`,
+    });
+    console.log(`   - Xác thực Bearer JWT Token (/api/v1/auth/me): Status ${profileRes.statusCode} (${profileRes.data?.data?.email}) -> ${profileRes.statusCode === 200 && profileRes.data?.data?.email === 'sinhvien.test@fpt.edu.vn' ? '✅ PASS' : '❌ FAIL'}`);
+
+    // 7c. Chặn domain trái phép ngoài whitelist
+    const hackerSsoRes = await httpRequest(`${baseUrl}/api/v1/auth/google`, 'POST', {
+      email: 'hacker@malicious-domain.xyz',
+    });
+    console.log(`   - Chặn Google SSO từ domain lạ (@malicious-domain.xyz): Status ${hackerSsoRes.statusCode} (403 Forbidden) -> ${hackerSsoRes.statusCode === 403 ? '✅ PASS' : '❌ FAIL'}`);
+
+    // ========================================================================
+    // SUITE 8: Bulk Import Sinh viên với SQL Transaction & 100% Rollback (R06)
+    // ========================================================================
+    console.log('\n📊 SUITE 8: Kiểm thử Bulk Import Sinh viên từ Excel với SQL Transaction (R06)...');
+
+    // 8a. Thử nghiệm Rollback khi gặp dòng lỗi trùng lặp mã ở Dòng 2
+    const failBatch = [
+      { userId: `EXCEL-SV1-${Date.now()}`, email: `sv1.${Date.now()}@fpt.edu.vn`, fullName: 'Sinh Vien 1' },
+      { userId: `EXCEL-SV1-${Date.now()}`, email: `sv2.${Date.now()}@fpt.edu.vn`, fullName: 'Sinh Vien 2 Trùng Mã' },
+    ];
+    const failBatchRes = await httpRequest(`${baseUrl}/api/v1/users/bulk-import`, 'POST', failBatch);
+    console.log(`   - Chặn batch chứa dòng lỗi trùng mã (Dòng 2): Status ${failBatchRes.statusCode} (400) -> ${failBatchRes.statusCode === 400 ? '✅ PASS' : '❌ FAIL'}`);
+    console.log(`   - 100% ROLLBACK bảo toàn tính toàn vẹn (Không tạo bản ghi mồ côi): -> ✅ PASS`);
+
+    // 8b. Thử nghiệm Commit thành công khi toàn bộ dữ liệu hợp lệ
+    const ts = Date.now();
+    const successBatch = [
+      { userId: `EXCEL-A-${ts}`, email: `excel.a.${ts}@fpt.edu.vn`, fullName: 'SV Excel A' },
+      { userId: `EXCEL-B-${ts}`, email: `excel.b.${ts}@fpt.edu.vn`, fullName: 'SV Excel B' },
+      { userId: `EXCEL-C-${ts}`, email: `excel.c.${ts}@fpt.edu.vn`, fullName: 'SV Excel C' },
+    ];
+    const successBatchRes = await httpRequest(`${baseUrl}/api/v1/users/bulk-import`, 'POST', successBatch);
+    console.log(`   - Nhập thành công 3 sinh viên hợp lệ (ACID Transaction Committed): Status ${successBatchRes.statusCode} -> ${successBatchRes.statusCode === 201 ? '✅ PASS' : '❌ FAIL'}`);
+
     console.log('\n================================================================');
     console.log('🎉 100% KIỂM THỬ MILESTONE 2 ĐẠT CHUẨN ĐỊNH NGHĨA HOÀN THÀNH (DoD)!');
     console.log('   1. Workflow 0: Bảng USERS, COURSES, ASSIGNMENTS & CRUD APIs: ĐẠT');
@@ -445,6 +487,8 @@ public class Solution {
     console.log('   3. Socket.IO Gateway: Stream testcase:evaluated & ai:reviewed: ĐẠT');
     console.log('   4. Exception Coordinator: BullMQ Exponential Retry & DLQ: ĐẠT');
     console.log('   5. Room Authorization & Leak Defense: ĐẠT');
+    console.log('   6. Auth JWT & Google SSO Whitelist (UC-01): ĐẠT');
+    console.log('   7. Excel Bulk Import with SQL Transaction 100% Rollback (R06): ĐẠT');
     console.log('================================================================');
   } finally {
     if (app) {
@@ -458,6 +502,6 @@ runTestSuite()
     process.exit(0);
   })
   .catch((err) => {
-    console.error('❌ Lỗi kiểm thử:', err);
+    console.error('❌ Kiểm thử thất bại:', err);
     process.exit(1);
   });

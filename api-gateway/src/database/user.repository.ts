@@ -110,6 +110,58 @@ export class UserRepository {
     return newRecord;
   }
 
+  /**
+   * Thực thi ACID Transaction chèn hàng loạt (Bulk Import từ Excel).
+   * Bất kỳ dòng nào gặp lỗi trùng khóa hoặc sai định dạng đều kích hoạt ROLLBACK 100%,
+   * đảm bảo không để lại bản ghi mồ côi (orphaned records - theo R06).
+   */
+  public async createBatchTransactional(newUsers: Omit<UserRecord, 'createdAt' | 'updatedAt'>[]): Promise<UserRecord[]> {
+    const existingIds = new Set(this.records.keys());
+    const existingEmails = new Set(Array.from(this.records.values()).map((u) => u.email.toLowerCase()));
+
+    // Phase 1: Pre-validation & Conflict Detection (Rollback simulation)
+    const batchIds = new Set<string>();
+    const batchEmails = new Set<string>();
+
+    for (let i = 0; i < newUsers.length; i++) {
+      const u = newUsers[i];
+      const rowNum = i + 1;
+
+      if (!u.userId || !u.email) {
+        throw new Error(`Dòng ${rowNum}: Thiếu mã sinh viên hoặc email!`);
+      }
+
+      if (batchIds.has(u.userId) || existingIds.has(u.userId)) {
+        throw new Error(`Dòng ${rowNum}: Trùng lặp mã sinh viên '${u.userId}'!`);
+      }
+
+      const lowerEmail = u.email.toLowerCase();
+      if (batchEmails.has(lowerEmail) || existingEmails.has(lowerEmail)) {
+        throw new Error(`Dòng ${rowNum}: Trùng lặp địa chỉ email '${u.email}'!`);
+      }
+
+      batchIds.add(u.userId);
+      batchEmails.add(lowerEmail);
+    }
+
+    // Phase 2: Atomic Commit (Toàn bộ thành công mới ghi vào store)
+    const now = new Date();
+    const createdRecords: UserRecord[] = [];
+    for (const u of newUsers) {
+      const record: UserRecord = {
+        ...u,
+        createdAt: now,
+        updatedAt: now,
+      };
+      this.records.set(record.userId, record);
+      createdRecords.push(record);
+    }
+
+    this.persist();
+    this.logger.log(`[UserRepository] Transaction COMMITTED: Imported ${createdRecords.length} users successfully.`);
+    return createdRecords;
+  }
+
   public async findById(userId: string): Promise<UserRecord | null> {
     return this.records.get(userId) || null;
   }

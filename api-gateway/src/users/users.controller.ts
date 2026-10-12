@@ -30,6 +30,17 @@ export class UsersController {
     };
   }
 
+  @Post('bulk-import')
+  @HttpCode(HttpStatus.CREATED)
+  public async bulkImportUsers(@Body() body: any) {
+    const list = Array.isArray(body) ? body : body?.users || [];
+    const result = await this.usersService.bulkImportUsers(list);
+    return {
+      statusCode: HttpStatus.CREATED,
+      data: result,
+    };
+  }
+
   @Get()
   public async getAllUsers(@Query('role') role?: UserRole) {
     const users = await this.usersService.getAllUsers(role);

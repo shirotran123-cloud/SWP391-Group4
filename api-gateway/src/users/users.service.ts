@@ -2,6 +2,7 @@ import {
   Injectable,
   ConflictException,
   NotFoundException,
+  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { UserRepository } from '../database/user.repository';
@@ -38,6 +39,38 @@ export class UsersService {
 
     this.logger.log(`[UsersService] Created user ${record.userId} (${record.role})`);
     return record;
+  }
+
+  public async bulkImportUsers(users: CreateUserDto[]): Promise<{ importedCount: number; message: string }> {
+    if (!users || !Array.isArray(users) || users.length === 0) {
+      throw new BadRequestException('Danh sách sinh viên tải lên không được rỗng!');
+    }
+
+    try {
+      const recordsToInsert = users.map((dto) => ({
+        userId: dto.userId,
+        email: dto.email,
+        fullName: dto.fullName || dto.userId,
+        role: dto.role || 'STUDENT',
+        passwordHash: dto.password ? `hashed_${dto.password}` : 'hashed_default',
+        avatarUrl: dto.avatarUrl,
+        isActive: true,
+      }));
+
+      const created = await this.userRepo.createBatchTransactional(recordsToInsert);
+      return {
+        importedCount: created.length,
+        message: `Đã nhập thành công ${created.length} sinh viên từ file Excel vào cơ sở dữ liệu (Transaction Committed).`,
+      };
+    } catch (err) {
+      this.logger.error(`[UsersService] Bulk Import FAILED -> 100% ROLLBACK: ${err.message}`);
+      throw new BadRequestException({
+        statusCode: 400,
+        error: 'BULK_IMPORT_TRANSACTION_FAILED',
+        message: 'Giao dịch nhập danh sách thất bại! Đã ROLLBACK 100% để ngăn ngừa bản ghi mồ côi (R06).',
+        details: err.message,
+      });
+    }
   }
 
   public async getAllUsers(role?: UserRole): Promise<UserRecord[]> {
