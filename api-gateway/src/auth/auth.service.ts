@@ -153,10 +153,25 @@ export class AuthService {
   }
 
   /**
-   * Đăng nhập qua Google SSO (UC-01)
+   * Đăng nhập qua Google SSO (UC-01):
+   * Chỉ cho phép tài khoản trường (@fpt.edu.vn, @fe.edu.vn, @aita.fpt.edu.vn) hoặc @gmail.com hợp lệ.
    */
   public async loginWithGoogle(email: string, fullName?: string): Promise<{ token: string; user: UserRecord }> {
     const lowerEmail = email.toLowerCase().trim();
+    const isAllowedDomain =
+      lowerEmail.endsWith('@fpt.edu.vn') ||
+      lowerEmail.endsWith('@fe.edu.vn') ||
+      lowerEmail.endsWith('@aita.fpt.edu.vn') ||
+      lowerEmail.endsWith('@gmail.com');
+
+    // Chặn triệt để nếu không thuộc domain cho phép
+    if (!isAllowedDomain) {
+      this.logger.warn(`[AuthService] Chặn đăng nhập Google SSO từ domain trái phép: ${lowerEmail}`);
+      throw new ForbiddenException(
+        `Đăng nhập Google SSO bị từ chối! Email '${lowerEmail}' không thuộc domain được cấp phép (@fpt.edu.vn / @fe.edu.vn / @gmail.com).`,
+      );
+    }
+
     let user = await this.userRepo.findByEmail(lowerEmail);
 
     if (!user) {
@@ -164,10 +179,10 @@ export class AuthService {
         userId: lowerEmail,
         email: lowerEmail,
         fullName: fullName || lowerEmail.split('@')[0],
-        role: 'STUDENT',
+        role: lowerEmail.includes('teacher') || lowerEmail.includes('gv') ? 'INSTRUCTOR' : 'STUDENT',
         isActive: true,
       });
-      this.logger.log(`[AuthService] Đăng ký tài khoản Google mới: ${user.email}`);
+      this.logger.log(`[AuthService] Đăng ký tài khoản Google mới: ${user.email} (${user.role})`);
     }
 
     const token = this.signJwt({
