@@ -37,4 +37,10 @@ export interface PlagiarismMatch {
   sourceCodeA: string;
   sourceCodeB: string;
   matchedTokens: Array<{ lineA: [number, number]; lineB: [number, number] }>;
+  executionTimeMs?: number;
+  isFlagged?: boolean;
+  jaccardSimilarity?: number;
+  winnowingContainment?: number;
+  astStructuralSimilarity?: number;
+  status?: string;
 }
