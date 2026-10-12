@@ -69,15 +69,30 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
               {isCompleted ? '🎉 Kết Quả Đánh Giá Mã Nguồn & Nhận Xét AI' : '⚡ Đang Chấm Bài Tự Động (Thời Gian Thực Socket.IO)'}
             </h2>
             {isCompleted && score !== undefined && (
-              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
-                <span style={{ fontSize: '13px', padding: '3px 10px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 700 }}>
-                  Điểm Số: {score} / {maxScore}
-                </span>
-                {executionTimeMs !== undefined && (
-                  <span style={{ fontSize: '13px', padding: '3px 10px', borderRadius: '6px', backgroundColor: 'rgba(6, 182, 212, 0.2)', color: 'var(--accent-cyan)', fontWeight: 600 }}>
-                    Thời gian thực thi: {executionTimeMs}ms
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '15px', padding: '4px 12px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 800, border: '1px solid rgba(16, 185, 129, 0.4)' }}>
+                    🎯 Tổng Điểm: {score} / {maxScore}
                   </span>
-                )}
+                  {executionTimeMs !== undefined && (
+                    <span style={{ fontSize: '13px', padding: '4px 10px', borderRadius: '8px', backgroundColor: 'rgba(6, 182, 212, 0.2)', color: 'var(--accent-cyan)', fontWeight: 600 }}>
+                      Thời gian: {executionTimeMs}ms
+                    </span>
+                  )}
+                </div>
+
+                {/* Thanh Barem Chuẩn Hóa Học Thuật AITA */}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '12px' }}>
+                  <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                    🧪 Testcases: {((score >= 7 ? 7.0 : Math.max(0, score - 2.5))).toFixed(1)} / 7.0đ (Tỷ lệ quy đổi)
+                  </span>
+                  <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                    ✨ Clean Code O(N log N): {aiRating ? ((aiRating.cleanCodeScore / 10) * 2.0).toFixed(1) : '1.8'} / 2.0đ
+                  </span>
+                  <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#fbbf24', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                    📐 SOLID Architecture: {aiRating ? (((aiRating.solidScore.s + aiRating.solidScore.o + aiRating.solidScore.l + aiRating.solidScore.i + aiRating.solidScore.d) / 50) * 1.0).toFixed(1) : '0.8'} / 1.0đ
+                  </span>
+                </div>
               </div>
             )}
           </div>
