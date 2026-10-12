@@ -752,5 +752,162 @@
       "completedAt": "2026-10-12T08:31:21.460Z"
     },
     "score": 9.8
+  },
+  {
+    "submissionId": "SUB-971297-G2XSQ4",
+    "studentId": "vanthaitrung2k6@gmail.com",
+    "assignmentId": "TASK-SWP391-SPRINT2",
+    "language": "java",
+    "fileName": "sample_solution_fail_srp.zip",
+    "fileSizeBytes": 537,
+    "sha256Hash": "22a8d005357f24ae22a694569a489e6f3a883bfadda1dd49fdc163ec61cc9dc9",
+    "filePath": "D:\\swp\\SWP391-Group4\\api-gateway\\uploads\\submissions\\SUB-971297-G2XSQ4.zip",
+    "status": "COMPLETED",
+    "createdAt": "2026-10-12T08:32:51.299Z",
+    "updatedAt": "2026-10-12T08:32:54.415Z",
+    "queueJobId": "mem_SUB-971297-G2XSQ4_1791793971334",
+    "details": {
+      "submissionId": "SUB-971297-G2XSQ4",
+      "status": "COMPLETED",
+      "overallResult": "PASSED",
+      "score": 5.7,
+      "maxScore": 10,
+      "passedTestcases": 1,
+      "totalTestcases": 2,
+      "executionTimeMs": 3766,
+      "aiRating": {
+        "cleanCodeScore": 4.5,
+        "solidScore": {
+          "s": 5.5,
+          "o": 8.5,
+          "l": 9,
+          "i": 9,
+          "d": 8.5
+        },
+        "codeSmells": [
+          {
+            "line": 16,
+            "rule": "Single Responsibility Principle",
+            "description": "Phương thức tại dòng 16 vi phạm SRP: đang gánh vác nhiều trách nhiệm (sắp xếp + in kết quả + lưu DB)."
+          },
+          {
+            "line": 19,
+            "rule": "Single Responsibility Principle",
+            "description": "Phương thức tại dòng 19 vi phạm SRP: đang gánh vác nhiều trách nhiệm (sắp xếp + in kết quả + lưu DB)."
+          }
+        ],
+        "explanation": "Mã nguồn sử dụng thuật toán sắp xếp chưa tối ưu (O(N²)). Testcase 2 với 100,000 phần tử có thể bị TLE. Nên dùng Arrays.sort() hoặc thuật toán MergeSort/QuickSort để đạt O(N log N)."
+      },
+      "plagiarismMatch": {
+        "matchedStudentName": "Trần Thanh Nguyên",
+        "matchedStudentId": "SE170123",
+        "similarityRate": 12.5,
+        "sourceCodeA": "package com.aita.autograder;\n\nimport java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (!sc.hasNextInt()) return;\n        int n = sc.nextInt();\n        int[] arr = new int[n];\n        for (int i = 0; i < n; i++) {\n            arr[i] = sc.nextInt();\n        }\n\n        // Thuat toan Bubble Sort O(N^2) - se bi TLE o Testcase 2\n        sortAndPrintAndSaveToDatabase(arr);\n    }\n\n    private static void sortAndPrintAndSaveToDatabase(int[] arr) {\n        for (int i = 0; i < arr.length - 1; i++) {\n            for (int j = 0; j < arr.length - i - 1; j++) {\n                if (arr[j] > arr[j + 1]) {\n                    int temp = arr[j];\n                    arr[j] = arr[j + 1];\n                    arr[j + 1] = temp;\n                }\n            }\n        }\n        for (int i = 0; i < arr.length; i++) {\n            System.out.print(arr[i] + (i == arr.length - 1 ? \"\" : \" \"));\n        }\n        System.out.println();\n    }\n}\n",
+        "sourceCodeB": "// Reference solution\npublic class Solution {\n    public static void main(String[] args) {\n        // ...\n    }\n}",
+        "matchedTokens": [
+          {
+            "lineA": [
+              1,
+              5
+            ],
+            "lineB": [
+              1,
+              5
+            ]
+          }
+        ]
+      },
+      "completedAt": "2026-10-12T08:32:54.415Z"
+    },
+    "score": 5.7
+  },
+  {
+    "submissionId": "SUB-618573-OA1DAY",
+    "studentId": "vanthaitrung2k6@gmail.com",
+    "assignmentId": "TASK-SWP391-SPRINT2",
+    "language": "java",
+    "fileName": "sample_solution_pass.zip",
+    "fileSizeBytes": 435,
+    "sha256Hash": "fd6820ca3de0102c5f93be06ba6e1d61d25a99949b8ae8c2ee0922d77fedb5fb",
+    "filePath": "D:\\swp\\SWP391-Group4\\api-gateway\\uploads\\submissions\\SUB-618573-OA1DAY.zip",
+    "status": "COMPLETED",
+    "createdAt": "2026-10-12T08:43:38.574Z",
+    "updatedAt": "2026-10-12T08:43:41.144Z",
+    "queueJobId": "mem_SUB-618573-OA1DAY_1791794618598",
+    "details": {
+      "submissionId": "SUB-618573-OA1DAY",
+      "status": "COMPLETED",
+      "overallResult": "PASSED",
+      "score": 9.8,
+      "maxScore": 10,
+      "passedTestcases": 2,
+      "totalTestcases": 2,
+      "executionTimeMs": 255,
+      "aiRating": {
+        "cleanCodeScore": 9.5,
+        "solidScore": {
+          "s": 9,
+          "o": 8.5,
+          "l": 9,
+          "i": 9,
+          "d": 8.5
+        },
+        "codeSmells": [],
+        "explanation": "Mã nguồn sử dụng thuật toán sắp xếp hiệu quả O(N log N). Cấu trúc mã nguồn rõ ràng, phân tách trách nhiệm tốt. Điểm Clean Code: 9.5/10."
+      },
+      "plagiarismMatch": null,
+      "completedAt": "2026-10-12T08:43:41.144Z"
+    },
+    "score": 9.8
+  },
+  {
+    "submissionId": "SUB-633191-WYSYQH",
+    "studentId": "vanthaitrung2k6@gmail.com",
+    "assignmentId": "TASK-SWP391-SPRINT2",
+    "language": "java",
+    "fileName": "sample_solution_fail_srp.zip",
+    "fileSizeBytes": 537,
+    "sha256Hash": "22a8d005357f24ae22a694569a489e6f3a883bfadda1dd49fdc163ec61cc9dc9",
+    "filePath": "D:\\swp\\SWP391-Group4\\api-gateway\\uploads\\submissions\\SUB-633191-WYSYQH.zip",
+    "status": "COMPLETED",
+    "createdAt": "2026-10-12T08:43:53.192Z",
+    "updatedAt": "2026-10-12T08:43:56.257Z",
+    "queueJobId": "mem_SUB-633191-WYSYQH_1791794633221",
+    "details": {
+      "submissionId": "SUB-633191-WYSYQH",
+      "status": "COMPLETED",
+      "overallResult": "PASSED",
+      "score": 5.7,
+      "maxScore": 10,
+      "passedTestcases": 1,
+      "totalTestcases": 2,
+      "executionTimeMs": 3510,
+      "aiRating": {
+        "cleanCodeScore": 4.5,
+        "solidScore": {
+          "s": 5.5,
+          "o": 8.5,
+          "l": 9,
+          "i": 9,
+          "d": 8.5
+        },
+        "codeSmells": [
+          {
+            "line": 16,
+            "rule": "Single Responsibility Principle",
+            "description": "Phương thức tại dòng 16 vi phạm SRP: đang gánh vác nhiều trách nhiệm (sắp xếp + in kết quả + lưu DB)."
+          },
+          {
+            "line": 19,
+            "rule": "Single Responsibility Principle",
+            "description": "Phương thức tại dòng 19 vi phạm SRP: đang gánh vác nhiều trách nhiệm (sắp xếp + in kết quả + lưu DB)."
+          }
+        ],
+        "explanation": "Mã nguồn sử dụng thuật toán sắp xếp chưa tối ưu (O(N²)). Testcase 2 với 100,000 phần tử có thể bị TLE. Nên dùng Arrays.sort() hoặc thuật toán MergeSort/QuickSort để đạt O(N log N)."
+      },
+      "plagiarismMatch": null,
+      "completedAt": "2026-10-12T08:43:56.257Z"
+    },
+    "score": 5.7
   }
 ]

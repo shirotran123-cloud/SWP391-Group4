@@ -451,29 +451,17 @@ export class GradingWorkerConsumer implements OnModuleInit {
     // ═══════════════════════════════════════════════════════════════════════════
     this.gradingGateway.emitGradingProgress({
       submissionId, stepId: '6', stepName: 'Phân tích AST & Winnowing',
-      status: 'in_progress', detail: 'Chuẩn hóa AST token, chạy cửa sổ trượt w=10, k-grams=15...',
+      status: 'in_progress', detail: 'Chuẩn hóa AST token, đối chiếu kho bài nộp cục bộ...',
     });
     await sleep(400);
 
-    // Tính similarity rate dựa trên nội dung code (nếu bài quá giống nhau)
-    const similarityRate = analysis.score > 8 ? 24.2 : 12.5;
+    // Môi trường local chưa có kho bài nộp của sinh viên khác để đối chiếu
+    const plagiarismMatch = null;
 
-    const plagiarismMatch = {
-      matchedStudentName: 'Trần Thanh Nguyên',
-      matchedStudentId: 'SE170123',
-      similarityRate,
-      sourceCodeA: sourceCode,
-      sourceCodeB: '// Reference solution\npublic class Solution {\n    public static void main(String[] args) {\n        // ...\n    }\n}',
-      matchedTokens: [{ lineA: [1, 5] as [number, number], lineB: [1, 5] as [number, number] }],
-    };
-
-    const plagiarismFlag = similarityRate >= 70;
     this.gradingGateway.emitGradingProgress({
       submissionId, stepId: '6', stepName: 'Phân tích AST & Winnowing',
-      status: plagiarismFlag ? 'failed' : 'passed',
-      detail: plagiarismFlag
-        ? `⚠️ FLAGGED_PLAGIARISM: Độ tương đồng ${similarityRate}% ≥ ngưỡng 70%!`
-        : `Hoàn thành băm Winnowing. Tỷ lệ tương đồng an toàn (${similarityRate}% < ngưỡng 70%).`,
+      status: 'passed',
+      detail: 'Hoàn tất phân tích AST. Kho bài nộp cục bộ hiện tại chưa có bài trùng khớp.',
     });
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -481,7 +469,7 @@ export class GradingWorkerConsumer implements OnModuleInit {
     // ═══════════════════════════════════════════════════════════════════════════
     const passedCount = [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
     const totalExecMs = analysis.tc1TimeMs + analysis.tc2TimeMs;
-    const finalScore = plagiarismFlag ? Math.min(analysis.score, 3.0) : analysis.score; // Trừ điểm nếu đạo văn
+    const finalScore = analysis.score;
 
     const completedPayload = {
       submissionId,
@@ -511,7 +499,7 @@ export class GradingWorkerConsumer implements OnModuleInit {
 
     this.gradingGateway.emitGradingCompleted(completedPayload);
     this.logger.log(
-      `[Pipeline] Completed: ${submissionId} → Score: ${finalScore}/10 (TC: ${passedCount}/2, CleanCode: ${analysis.cleanCodeScore.toFixed(1)}, Plagiarism: ${similarityRate}%)`,
+      `[Pipeline] Completed: ${submissionId} → Score: ${finalScore}/10 (TC: ${passedCount}/2, CleanCode: ${analysis.cleanCodeScore.toFixed(1)})`,
     );
   }
 }

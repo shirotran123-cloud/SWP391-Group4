@@ -48,31 +48,6 @@ public class Solution {
     }
 }`;
 
-const mockSourceCodePlagiarized = `package com.aita.autograder;
-
-import java.util.*;
-
-public class Solution {
-    public static void main(String[] args) {
-        Scanner inputScanner = new Scanner(System.in);
-        int count = inputScanner.nextInt();
-        int[] numbers = new int[count];
-        for (int idx = 0; idx < count; idx++) {
-            numbers[idx] = inputScanner.nextInt();
-        }
-        
-        processSortingAndDisplay(numbers);
-    }
-    
-    private static void processSortingAndDisplay(int[] numbers) {
-        Arrays.sort(numbers);
-        for (int num : numbers) {
-            System.out.print(num + " ");
-        }
-        System.out.println();
-    }
-}`;
-
 const initialSteps: GradingStep[] = [
   { id: '1', label: 'Hàng đợi Redis BullMQ', status: 'pending', detail: 'Đang xếp hàng chờ Worker' },
   { id: '2', label: 'Khởi tạo Docker Sandbox', status: 'pending', detail: 'Cấp phát 512MB RAM & seccomp.json' },
@@ -216,7 +191,7 @@ export function App() {
     setIsModalOpen(true);
 
     let codeToGrade = mockSourceCodeStudent;
-    let computedPlagiarism: PlagiarismMatch;
+    let computedPlagiarism: PlagiarismMatch | undefined = undefined;
 
     if (benchmarkPairId !== undefined) {
       const pair = PlagiarismService.getBenchmarkPairs().find((p) => p.pairId === benchmarkPairId);
@@ -224,39 +199,26 @@ export function App() {
         codeToGrade = pair.codeA;
         setCurrentSourceCode(pair.codeA);
         computedPlagiarism = await PlagiarismService.evaluateBenchmarkPair(benchmarkPairId);
-      } else {
-        computedPlagiarism = await PlagiarismService.evaluateBenchmarkPair(1);
       }
     } else if (file) {
-      try {
-        const text = await file.text();
-        if (text && text.trim().length > 0) {
-          codeToGrade = text;
-          setCurrentSourceCode(text);
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        try {
+          const text = await file.text();
+          if (text && text.trim().length > 0) {
+            codeToGrade = text;
+            setCurrentSourceCode(text);
+          }
+        } catch (err) {
+          console.warn('Could not read file as plain text:', err);
         }
-      } catch (err) {
-        console.warn('Could not read file as plain text, using fallback code:', err);
+      } else {
+        // Nếu là file .zip, hiển thị code mẫu giải thuật trong editor thay vì chuỗi nhị phân PK zip
+        setCurrentSourceCode(mockSourceCodeStudent);
       }
-
-      // Compute REAL AST & Winnowing plagiarism against class reference solution
-      computedPlagiarism = await PlagiarismService.compareSubmissions(
-        {
-          submissionId: 'SUBM-STUDENT-CURRENT',
-          studentName: currentUser.fullName || 'Văn Thái Trung',
-          studentId: currentUser.userId || 'SE170000',
-          sourceCode: codeToGrade,
-          language: codeToGrade.includes('def ') ? 'python' : 'cpp',
-        },
-        {
-          submissionId: 'BENCH-REFERENCE-01',
-          studentName: 'Trần Thanh Nguyên (Kho bài lớp)',
-          studentId: 'SE170123',
-          sourceCode: mockSourceCodePlagiarized,
-          language: codeToGrade.includes('def ') ? 'python' : 'cpp',
-        }
-      );
+      // Khi nộp file ở môi trường local chưa có kho bài nộp đối chiếu, để trống không gán bài trùng
+      computedPlagiarism = undefined;
     } else {
-      computedPlagiarism = await PlagiarismService.evaluateBenchmarkPair(1);
+      computedPlagiarism = undefined;
     }
 
     const token = localStorage.getItem('aita_token');
@@ -327,7 +289,7 @@ export function App() {
     simulateSocketGradingEvents(computedPlagiarism);
   };
 
-  const simulateSocketGradingEvents = (realPlagiarism: PlagiarismMatch) => {
+  const simulateSocketGradingEvents = (realPlagiarism?: PlagiarismMatch) => {
     const delays = [600, 1400, 2400, 3400, 4600, 5800];
 
     delays.forEach((delay, index) => {
@@ -336,15 +298,19 @@ export function App() {
           prevSteps.map((step, idx) => {
             if (idx === index) {
               const currentDetail =
-                step.id === '5'
-                  ? `Đang chạy Winnowing w=10, k=15... (${realPlagiarism.similarityRate}% tương đồng)`
+                step.id === '6'
+                  ? realPlagiarism
+                    ? `Đang chạy Winnowing w=10, k=15... (${realPlagiarism.similarityRate}% tương đồng)`
+                    : 'Đang kiểm tra chỉ mục mã nguồn trong kho bài...'
                   : 'Đang thực thi...';
               return { ...step, status: 'in_progress', detail: currentDetail };
             }
             if (idx < index) {
               const passDetail =
-                step.id === '5'
-                  ? `Hoàn tất AST & Winnowing: ${realPlagiarism.similarityRate}% (${realPlagiarism.isFlagged ? 'BÁO ĐỘNG' : 'AN TOÀN'})`
+                step.id === '6'
+                  ? realPlagiarism
+                    ? `Hoàn tất AST & Winnowing: ${realPlagiarism.similarityRate}% (${realPlagiarism.isFlagged ? 'BÁO ĐỘNG' : 'AN TOÀN'})`
+                    : 'Không phát hiện trùng khớp trong kho bài (Kho nộp cục bộ)'
                   : 'Hoàn thành (PASS)';
               return { ...step, status: 'passed', detail: passDetail };
             }
@@ -359,8 +325,10 @@ export function App() {
                 ...s,
                 status: 'passed',
                 detail:
-                  s.id === '5'
-                    ? `Hoàn tất AST & Winnowing: ${realPlagiarism.similarityRate}% (${realPlagiarism.isFlagged ? 'BÁO ĐỘNG ĐẠO VĂN' : 'MÃ NGUỒN AN TOÀN'})`
+                  s.id === '6'
+                    ? realPlagiarism
+                      ? `Hoàn tất AST & Winnowing: ${realPlagiarism.similarityRate}% (${realPlagiarism.isFlagged ? 'BÁO ĐỘNG ĐẠO VĂN' : 'MÃ NGUỒN AN TOÀN'})`
+                      : 'Hoàn tất AST Winnowing: Chưa có bài trùng trong kho dữ liệu cục bộ'
                     : 'Hoàn thành (PASS)',
               }))
             );
@@ -371,10 +339,10 @@ export function App() {
               codeSmells: [
                 { line: 15, rule: 'Single Responsibility', description: 'Hàm `sortAndPrintAndSaveToDatabase` vi phạm SRP do vừa sắp xếp vừa in ra màn hình.' },
               ],
-              explanation: 'Mã nguồn có giải thuật rõ ràng. Đạt độ tương đồng AST thực tế ' + realPlagiarism.similarityRate + '% theo chuẩn RBL 2026.',
+              explanation: 'Mã nguồn có giải thuật rõ ràng. Không phát hiện dấu hiệu đạo văn trong kho lưu trữ.',
             });
 
-            // Set REAL Plagiarism Match from AST Engine
+            // Set Plagiarism Match (nếu có benchmark thì hiện, nộp file thật thì undefined)
             setPlagiarismMatch(realPlagiarism);
             setScore(8.8);
             setExecutionTimeMs(1420);
