@@ -128,5 +128,14 @@
     "isActive": true,
     "createdAt": "2026-10-13T02:48:31.558Z",
     "updatedAt": "2026-10-13T02:48:31.558Z"
+  },
+  {
+    "userId": "TEST_SV001",
+    "email": "sinhvien.test@fpt.edu.vn",
+    "fullName": "Sinh Viên FPT Test",
+    "role": "STUDENT",
+    "isActive": true,
+    "createdAt": "2026-10-13T10:17:49.093Z",
+    "updatedAt": "2026-10-13T10:17:49.094Z"
   }
 ]

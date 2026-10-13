@@ -191,39 +191,38 @@ export class AuthService {
 
     const existingUser = await this.userRepo.findByEmail(lowerEmail);
 
-    if (existingUser) {
-      if (existingUser.passwordHash) {
-        // ── Tài khoản đã có mật khẩu: PHẢI khớp ──────────────────────────────
-        const isValid = await this.verifyPassword(
-          password.trim(),
-          existingUser.passwordHash,
-        );
-        if (!isValid) {
-          this.logger.warn(`[AuthService] Sai mật khẩu: ${lowerEmail}`);
-          // Nếu nhập pass 123456 thì tự động reset cập nhật cho tài khoản test/demo
-          if (password.trim() === '123456') {
-            const newHashed = await this.hashPassword('123456');
-            await this.userRepo.update(existingUser.userId, { passwordHash: newHashed });
-            this.logger.log(`[AuthService] Đặt lại mật khẩu 123456 cho: ${lowerEmail}`);
-          } else {
-            throw new UnauthorizedException(
-              'Mật khẩu không chính xác. Vui lòng thử lại!',
-            );
-          }
-        }
-        this.logger.log(`[AuthService] Mật khẩu xác thực OK: ${lowerEmail}`);
-      } else {
-        // ── Tài khoản cũ chưa có mật khẩu (seeded) → đặt mật khẩu lần đầu ───
-        const hashed = await this.hashPassword(password.trim());
-        await this.userRepo.update(existingUser.userId, { passwordHash: hashed });
-        this.logger.log(
-          `[AuthService] Đặt mật khẩu lần đầu cho tài khoản: ${lowerEmail}`,
+    // BẮT BUỘC KIỂM TRA: Tài khoản phải tồn tại trên hệ thống
+    if (!existingUser) {
+      this.logger.warn(`[AuthService] Chặn đăng nhập: Tài khoản '${lowerEmail}' chưa có trên hệ thống AITA!`);
+      throw new UnauthorizedException(
+        `Tài khoản '${lowerEmail}' chưa có trên hệ thống AITA! Vui lòng liên hệ Giảng viên hoặc Quản trị viên để được cấp quyền.`,
+      );
+    }
+
+    if (!existingUser.isActive) {
+      this.logger.warn(`[AuthService] Chặn đăng nhập: Tài khoản '${lowerEmail}' đã bị khóa.`);
+      throw new ForbiddenException(
+        `Tài khoản '${lowerEmail}' đã bị khóa hoặc chưa được kích hoạt trong hệ thống.`,
+      );
+    }
+
+    if (existingUser.passwordHash) {
+      const isValid = await this.verifyPassword(
+        password.trim(),
+        existingUser.passwordHash,
+      );
+      if (!isValid) {
+        this.logger.warn(`[AuthService] Sai mật khẩu: ${lowerEmail}`);
+        throw new UnauthorizedException(
+          'Mật khẩu không chính xác. Vui lòng thử lại!',
         );
       }
+      this.logger.log(`[AuthService] Mật khẩu xác thực OK: ${lowerEmail}`);
     } else {
-      // ── User mới → tạo sau khi OTP thành công ─────────────────────────────
+      const hashed = await this.hashPassword(password.trim());
+      await this.userRepo.update(existingUser.userId, { passwordHash: hashed });
       this.logger.log(
-        `[AuthService] User mới, sẽ tạo tài khoản sau OTP: ${lowerEmail}`,
+        `[AuthService] Đặt mật khẩu lần đầu cho tài khoản: ${lowerEmail}`,
       );
     }
 
@@ -238,8 +237,7 @@ export class AuthService {
     return {
       success: true,
       message: `Mã OTP đã được gửi về hòm thư ${lowerEmail}.`,
-      // Luôn trả về debugOtp khi không phải production để phục vụ test / demo không bị nghẽn
-      debugOtp: process.env.NODE_ENV !== 'production' ? otp : (process.env.SMTP_USER ? undefined : otp),
+      debugOtp: process.env.SMTP_USER ? undefined : otp,
     };
   }
 
@@ -271,25 +269,19 @@ export class AuthService {
       throw new BadRequestException('Mã xác nhận OTP không chính xác!');
     }
 
-    // OTP đúng → xóa khỏi cache (One-Time-Password)
     this.otpCache.delete(lowerEmail);
 
-    let user = await this.userRepo.findByEmail(lowerEmail);
+    const user = await this.userRepo.findByEmail(lowerEmail);
     if (!user) {
-      // Tạo user mới, hash lại password từ entry
-      const passwordHash = entry.password
-        ? await this.hashPassword(entry.password)
-        : undefined;
-      user = await this.userRepo.create({
-        userId: lowerEmail,
-        email: lowerEmail,
-        fullName: lowerEmail.split('@')[0],
-        role: 'STUDENT',
-        passwordHash,
-        isActive: true,
-      });
-      this.logger.log(
-        `[AuthService] Tạo tài khoản mới sau OTP thành công: ${user.email}`,
+      this.logger.warn(`[AuthService] Chặn hoàn tất OTP: Tài khoản '${lowerEmail}' không tồn tại trong hệ thống.`);
+      throw new UnauthorizedException(
+        `Tài khoản '${lowerEmail}' chưa có trên hệ thống AITA! Vui lòng liên hệ Quản trị viên để được cấp quyền.`,
+      );
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenException(
+        `Tài khoản '${lowerEmail}' đã bị khóa hoặc chưa được kích hoạt trong hệ thống.`,
       );
     }
 
@@ -304,12 +296,12 @@ export class AuthService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Google SSO (UC-01)
+  // Google SSO (UC-01) - Kiểm tra nghiêm ngặt tài khoản trong hệ thống
   // ─────────────────────────────────────────────────────────────────────────
 
   public async loginWithGoogle(
     email: string,
-    fullName?: string,
+    _fullName?: string,
   ): Promise<{ token: string; user: UserRecord }> {
     const lowerEmail = email.toLowerCase().trim();
     const isAllowedDomain =
@@ -323,26 +315,31 @@ export class AuthService {
         `[AuthService] Chặn Google SSO domain trái phép: ${lowerEmail}`,
       );
       throw new ForbiddenException(
-        `Email '${lowerEmail}' không thuộc domain được cấp phép.`,
+        `Email '${lowerEmail}' không thuộc domain hoặc tổ chức được cấp phép.`,
       );
     }
 
-    let user = await this.userRepo.findByEmail(lowerEmail);
+    // KIỂM TRA BẮT BUỘC: Tài khoản Gmail phải có sẵn trong hệ thống users_store
+    const user = await this.userRepo.findByEmail(lowerEmail);
     if (!user) {
-      user = await this.userRepo.create({
-        userId: lowerEmail,
-        email: lowerEmail,
-        fullName: fullName || lowerEmail.split('@')[0],
-        role:
-          lowerEmail.includes('teacher') || lowerEmail.includes('gv')
-            ? 'INSTRUCTOR'
-            : 'STUDENT',
-        isActive: true,
-      });
-      this.logger.log(
-        `[AuthService] Đăng ký Google mới: ${user.email} (${user.role})`,
+      this.logger.warn(
+        `[AuthService] CHẶN ĐĂNG NHẬP: Tài khoản Gmail '${lowerEmail}' chưa có trên hệ thống AITA!`,
+      );
+      throw new UnauthorizedException(
+        `Tài khoản Gmail '${lowerEmail}' chưa có trên hệ thống AITA! Vui lòng liên hệ Giảng viên hoặc Quản trị viên để được cấp quyền truy cập.`,
       );
     }
+
+    if (!user.isActive) {
+      this.logger.warn(
+        `[AuthService] CHẶN ĐĂNG NHẬP: Tài khoản '${lowerEmail}' đã bị khóa/vô hiệu hóa.`,
+      );
+      throw new ForbiddenException(
+        `Tài khoản '${lowerEmail}' đã bị khóa hoặc chưa được kích hoạt trong hệ thống.`,
+      );
+    }
+
+    this.logger.log(`[AuthService] Đăng nhập Google thành công: ${user.email} (${user.role})`);
 
     const token = this.signJwt({
       userId: user.userId,
@@ -355,7 +352,7 @@ export class AuthService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Đăng nhập nhanh (demo / fallback)
+  // Đăng nhập nhanh (Credentials) - Kiểm tra nghiêm ngặt tài khoản
   // ─────────────────────────────────────────────────────────────────────────
 
   public async loginWithCredentials(
@@ -363,16 +360,18 @@ export class AuthService {
     _password?: string,
   ): Promise<{ token: string; user: UserRecord }> {
     const lowerEmail = email.toLowerCase().trim();
-    let user = await this.userRepo.findByEmail(lowerEmail);
+    const user = await this.userRepo.findByEmail(lowerEmail);
     if (!user) {
-      user = await this.userRepo.create({
-        userId: lowerEmail,
-        email: lowerEmail,
-        fullName: lowerEmail.split('@')[0],
-        role: 'STUDENT',
-        isActive: true,
-      });
-      this.logger.log(`[AuthService] Đăng nhập tạo mới: ${user.email}`);
+      this.logger.warn(`[AuthService] Chặn credentials: Tài khoản '${lowerEmail}' chưa có trên hệ thống.`);
+      throw new UnauthorizedException(
+        `Tài khoản '${lowerEmail}' chưa có trên hệ thống AITA! Vui lòng liên hệ Quản trị viên.`,
+      );
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenException(
+        `Tài khoản '${lowerEmail}' đã bị khóa hoặc chưa được kích hoạt trong hệ thống.`,
+      );
     }
 
     const token = this.signJwt({
