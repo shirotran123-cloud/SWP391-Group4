@@ -350,7 +350,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     });
   };
 
-  // Sinh đề tự động bằng Google Gemini AI THẬT (UC-08) - Có bảo vệ Timeout 10s & AITA Resilience Generator
+  // Sinh đề tự động bằng 100% Google Gemini AI THẬT (UC-08)
   const handleAiGenerateAssignment = async () => {
     setAiErrorMsg(null);
     setCreateSuccessMsg(null);
@@ -413,10 +413,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         setReferenceSolution(result.referenceSolution);
       }
 
-      const badgeText = result.isFallback
-        ? `✨ Đã tạo xong đề bài theo đúng yêu cầu: "${result.title}" (Bộ tăng tốc AITA Resilience hoàn tất trong ${result.latencyMs}ms)`
-        : `✨ Google Gemini AI (${result.modelUsed}) đã soạn đề & barem thành công trong ${result.latencyMs}ms!`;
-
+      const badgeText = `✨ Google Gemini AI (${result.modelUsed}) đã sinh đề & barem thành công trong ${result.latencyMs}ms!`;
       setAiSuccessBadge(badgeText);
       setCreateSuccessMsg(
         `Đã tạo đề bài "${result.title}" kèm ${result.testCases.length} testcases và ${result.rubric.length} tiêu chí barem chấm điểm.`
