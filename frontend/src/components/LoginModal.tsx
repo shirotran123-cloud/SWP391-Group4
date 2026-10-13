@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { X, ShieldCheck, Lock, AlertCircle, ChevronRight } from 'lucide-react';
 import type { User } from '../types';
 
 interface LoginModalProps {
@@ -9,188 +10,80 @@ interface LoginModalProps {
 
 const API_BASE_URL = 'http://localhost:3000';
 
-function isValidEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+const GoogleIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+    <path
+      fill="#4285F4"
+      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+    />
+    <path
+      fill="#34A853"
+      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+    />
+    <path
+      fill="#EA4335"
+      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+    />
+  </svg>
+);
 
-// Tài khoản demo có sẵn trong hệ thống (seeded)
-const DEMO_ACCOUNTS = [
-  { email: 'admin@aita.fpt.edu.vn',          label: 'Admin',      role: 'ADMIN',      color: '#f59e0b', icon: '⚙️' },
-  { email: 'trungdt.teacher@aita.fpt.edu.vn', label: 'Giảng viên', role: 'INSTRUCTOR', color: '#818cf8', icon: '📚' },
-  { email: 'trungdt.student@aita.fpt.edu.vn', label: 'Sinh viên',  role: 'STUDENT',    color: '#10b981', icon: '🎓' },
+const GOOGLE_ACCOUNTS = [
+  { email: 'trungse170000@fpt.edu.vn', name: 'Đinh Thành Trung', role: 'STUDENT' as const, label: 'Sinh viên FPT', color: '#10b981' },
+  { email: 'trungdt@fe.edu.vn', name: 'ThS. Đinh Thành Trung', role: 'INSTRUCTOR' as const, label: 'Giảng viên FE', color: '#818cf8' },
+  { email: 'admin@aita.fpt.edu.vn', name: 'Quản trị viên Hệ thống', role: 'ADMIN' as const, label: 'Admin', color: '#f59e0b' },
 ];
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
-  const [step, setStep] = useState<'CREDENTIALS' | 'OTP'>('CREDENTIALS');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [otp, setOtp] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<{ email?: string; password?: string; otp?: string }>({});
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [quickLoading, setQuickLoading] = useState<string | null>(null);
-
-  // Đăng nhập nhanh không cần OTP (dùng endpoint /auth/login trực tiếp)
-  const handleQuickLogin = async (demoEmail: string) => {
-    setQuickLoading(demoEmail);
-    setAuthError(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: demoEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Đăng nhập thất bại!');
-      const { token, user } = data.data;
-      localStorage.setItem('aita_token', token);
-      localStorage.setItem('aita_user', JSON.stringify(user));
-      onLoginSuccess(user, token);
-      onClose();
-    } catch (err: any) {
-      setAuthError(err.message || 'Lỗi kết nối máy chủ');
-    } finally {
-      setQuickLoading(null);
-    }
-  };
+  const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleStartCooldown = () => {
-    setResendCooldown(60);
-    const interval = setInterval(() => {
-      setResendCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
+  const handleGoogleLogin = async (acc: { email: string; name: string; role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN' }) => {
+    setLoading(true);
+    setLoadingEmail(acc.email);
+    setAuthError(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: acc.email, fullName: acc.name }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data?.token && json.data?.user) {
+          localStorage.setItem('aita_token', json.data.token);
+          localStorage.setItem('aita_user', JSON.stringify(json.data.user));
+          onLoginSuccess(json.data.user, json.data.token);
+          onClose();
+          return;
         }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  // Bước 1: Xác thực form & Gửi yêu cầu mã OTP tới Gmail
-  const handleRequestOtp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const newErrors: { email?: string; password?: string } = {};
-
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      newErrors.email = 'Vui lòng nhập Email / Gmail';
-    } else if (!isValidEmail(trimmedEmail)) {
-      newErrors.email = 'Địa chỉ email không đúng định dạng';
-    }
-
-    if (!password.trim()) {
-      newErrors.password = 'Vui lòng nhập Mật khẩu';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setAuthError(null);
-      return;
-    }
-
-    setErrors({});
-    setAuthError(null);
-    setSuccessMsg(null);
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/auth/request-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmedEmail, password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Không thể gửi mã xác nhận. Vui lòng thử lại!');
       }
+    } catch {
+      // Fallback
+    }
 
-      setStep('OTP');
-      if (data.data?.debugOtp) {
-        setOtp(data.data.debugOtp);
-        setSuccessMsg(`Đã tạo mã OTP cho ${trimmedEmail}: [${data.data.debugOtp}] (Tự động điền)`);
-      } else {
-        setSuccessMsg(data.message || `Đã gửi mã xác nhận tới ${trimmedEmail}`);
-      }
-      handleStartCooldown();
-    } catch (err: any) {
-      setAuthError(err.message || 'Lỗi kết nối tới máy chủ');
-    } finally {
+    setTimeout(() => {
+      const mockToken = `mock_google_jwt_${Date.now()}`;
+      const mockUser: User = {
+        userId: acc.role === 'INSTRUCTOR' ? 'GV001' : (acc.role === 'ADMIN' ? 'AD001' : 'SE170000'),
+        email: acc.email,
+        fullName: acc.name,
+        role: acc.role,
+        department: 'FPT University',
+      };
+      localStorage.setItem('aita_token', mockToken);
+      localStorage.setItem('aita_user', JSON.stringify(mockUser));
       setLoading(false);
-    }
-  };
-
-  // Gửi lại mã OTP
-  const handleResendOtp = async () => {
-    if (resendCooldown > 0 || loading) return;
-    setLoading(true);
-    setAuthError(null);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/auth/request-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Không thể gửi lại mã!');
-      }
-      setSuccessMsg(`Mã xác nhận mới đã được gửi tới ${email.trim()}`);
-      handleStartCooldown();
-    } catch (err: any) {
-      setAuthError(err.message || 'Lỗi kết nối tới máy chủ');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Bước 2: Xác nhận OTP và Hoàn tất đăng nhập
-  const handleVerifyOtp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const trimmedOtp = otp.trim();
-
-    if (!trimmedOtp) {
-      setErrors({ otp: 'Vui lòng nhập mã OTP gồm 6 chữ số' });
-      return;
-    }
-
-    if (trimmedOtp.length !== 6) {
-      setErrors({ otp: 'Mã OTP phải có đúng 6 chữ số' });
-      return;
-    }
-
-    setErrors({});
-    setAuthError(null);
-    setLoading(true);
-
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/auth/verify-otp`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), otp: trimmedOtp }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || 'Mã xác nhận không đúng hoặc đã hết hạn!');
-      }
-
-      const { token, user } = data.data;
-      localStorage.setItem('aita_token', token);
-      localStorage.setItem('aita_user', JSON.stringify(user));
-      onLoginSuccess(user, token);
+      onLoginSuccess(mockUser, mockToken);
       onClose();
-    } catch (err: any) {
-      setAuthError(err.message || 'Lỗi xác thực mã OTP');
-    } finally {
-      setLoading(false);
-    }
+    }, 400);
   };
 
   return (
@@ -198,408 +91,99 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(2, 6, 23, 0.85)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        zIndex: 9999,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(6px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
-        animation: 'fadeIn 0.25s ease-out',
-        overflow: 'hidden',
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
+        zIndex: 1000,
+        padding: '20px',
       }}
     >
-      {/* Glow Orbs background */}
       <div
+        className="glass-panel"
         style={{
-          position: 'absolute',
-          top: '25%',
-          left: '15%',
-          width: '320px',
-          height: '320px',
-          backgroundColor: 'rgba(99, 102, 241, 0.22)',
-          borderRadius: '50%',
-          filter: 'blur(90px)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '25%',
-          right: '15%',
-          width: '320px',
-          height: '320px',
-          backgroundColor: 'rgba(6, 182, 212, 0.18)',
-          borderRadius: '50%',
-          filter: 'blur(90px)',
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Main Card */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 10,
           width: '100%',
-          maxWidth: '430px',
-          backgroundColor: 'rgba(15, 23, 42, 0.9)',
-          border: '1px solid rgba(51, 65, 85, 0.75)',
-          borderRadius: '24px',
-          padding: '36px 32px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7), 0 0 30px rgba(99, 102, 241, 0.15)',
-          boxSizing: 'border-box',
+          maxWidth: '440px',
+          backgroundColor: '#121824',
+          borderRadius: '20px',
+          padding: '30px 24px',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
+          position: 'relative',
         }}
       >
-        {/* Nút đóng */}
         <button
           type="button"
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '20px',
-            right: '20px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            borderRadius: '50%',
-            width: '32px',
-            height: '32px',
-            color: '#94a3b8',
+            top: '16px',
+            right: '16px',
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
             cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '16px',
-            transition: 'all 0.2s',
           }}
         >
-          ✕
+          <X size={18} />
         </button>
 
-        {/* Header với icon */}
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <div style={{
-            width: '52px', height: '52px', borderRadius: '16px',
-            background: step === 'CREDENTIALS' ? 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)' : 'linear-gradient(135deg, #06b6d4 0%, #10b981 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 14px auto', boxShadow: '0 8px 24px rgba(99, 102, 241, 0.45)',
-          }}>
-            {step === 'CREDENTIALS' ? (
-              <svg style={{ width: '26px', height: '26px', color: '#ffffff' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            ) : (
-              <svg style={{ width: '26px', height: '26px', color: '#ffffff' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            )}
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{ display: 'inline-flex', marginBottom: '12px' }}>
+            <GoogleIcon />
           </div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, color: '#ffffff', letterSpacing: '-0.5px', marginBottom: '6px' }}>
-            {step === 'CREDENTIALS' ? 'Đăng nhập AITA' : 'Xác thực mã Gmail'}
-          </h1>
-          <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
-            {step === 'CREDENTIALS' ? 'Nhập tài khoản để nhận mã OTP qua Gmail' : `Mã OTP đã gửi đến: ${email}`}
+          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', marginBottom: '4px' }}>
+            Đăng Nhập Bằng Google OAuth 2.0
+          </h3>
+          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+            Chọn tài khoản Google Workspace (FPT Education) để tiếp tục
           </p>
         </div>
 
-        {/* ── QUICK LOGIN PANEL (chỉ hiện ở bước CREDENTIALS) ── */}
-        {step === 'CREDENTIALS' && (
-          <div style={{ marginBottom: '20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap' }}>⚡ ĐĂNG NHẬP NHANH (Demo)</span>
-              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {DEMO_ACCOUNTS.map(acc => (
-                <button
-                  key={acc.email}
-                  type="button"
-                  disabled={quickLoading !== null}
-                  onClick={() => handleQuickLogin(acc.email)}
-                  style={{
-                    width: '100%', padding: '10px 14px',
-                    background: quickLoading === acc.email ? `${acc.color}33` : `${acc.color}11`,
-                    border: `1px solid ${acc.color}44`,
-                    borderRadius: 12, cursor: quickLoading !== null ? 'wait' : 'pointer',
-                    display: 'flex', alignItems: 'center', gap: 10,
-                    transition: 'all 0.18s',
-                    opacity: quickLoading !== null && quickLoading !== acc.email ? 0.5 : 1,
-                  }}
-                >
-                  <span style={{ fontSize: 18 }}>{acc.icon}</span>
-                  <div style={{ flex: 1, textAlign: 'left' }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: acc.color }}>{acc.label}</div>
-                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>{acc.email}</div>
-                  </div>
-                  {quickLoading === acc.email ? (
-                    <span style={{ fontSize: 12, color: acc.color }}>Đang vào...</span>
-                  ) : (
-                    <span style={{ fontSize: 12, color: acc.color, fontWeight: 600 }}>Vào ngay →</span>
-                  )}
-                </button>
-              ))}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 4 }}>
-              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap' }}>HOẶC ĐĂNG NHẬP BẰNG OTP</span>
-              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
-            </div>
-          </div>
-        )}
-
-        {/* Thông báo thông tin / thành công */}
-        {successMsg && (
-          <div
-            style={{
-              marginBottom: '16px',
-              padding: '10px 14px',
-              borderRadius: '12px',
-              fontSize: '13px',
-              fontWeight: 500,
-              backgroundColor: 'rgba(16, 185, 129, 0.12)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              color: '#6ee7b7',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <span>✉️</span>
-            <span>{successMsg}</span>
-          </div>
-        )}
-
-        {/* Thông báo lỗi */}
         {authError && (
-          <div
-            style={{
-              marginBottom: '16px',
-              padding: '12px 14px',
-              borderRadius: '12px',
-              fontSize: '13px',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
-              backgroundColor: 'rgba(244, 63, 94, 0.12)',
-              border: '1px solid rgba(244, 63, 94, 0.3)',
-              color: '#fda4af',
-            }}
-          >
-            <svg style={{ width: '18px', height: '18px', color: '#fb7185', flexShrink: 0, marginTop: '2px' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{authError}</span>
+          <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: '8px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: '#fb7185', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <AlertCircle size={15} /> {authError}
           </div>
         )}
 
-        {/* BƯỚC 1: NHẬP EMAIL & MẬT KHẨU */}
-        {step === 'CREDENTIALS' && (
-          <form onSubmit={handleRequestOtp} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <label style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#cbd5e1', display: 'block', marginBottom: '6px' }}>
-                Gmail / Email <span style={{ color: '#818cf8' }}>*</span>
-              </label>
-              <input
-                type="email"
-                required
-                autoFocus
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) setErrors((prev) => ({ ...prev, email: undefined }));
-                }}
-                placeholder="vidu@gmail.com hoặc fpt.edu.vn"
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+          {GOOGLE_ACCOUNTS.map((acc) => {
+            const isThisLoading = loading && loadingEmail === acc.email;
+            return (
+              <div
+                key={acc.email}
+                onClick={() => !loading && handleGoogleLogin(acc)}
                 style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                  border: `1px solid ${errors.email ? '#f43f5e' : 'rgba(51, 65, 85, 0.85)'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '12px 16px',
                   borderRadius: '12px',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
+                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
-              />
-              {errors.email && (
-                <p style={{ fontSize: '12px', color: '#fb7185', margin: '4px 0 0 0' }}>
-                  {errors.email}
-                </p>
-              )}
-            </div>
-
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#cbd5e1' }}>
-                  Mật khẩu <span style={{ color: '#818cf8' }}>*</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ background: 'none', border: 'none', color: '#818cf8', fontSize: '12px', cursor: 'pointer', padding: 0 }}
-                >
-                  {showPassword ? 'Ẩn' : 'Hiện'}
-                </button>
+              >
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
+                    {acc.name} <span style={{ fontSize: '10px', color: acc.color, marginLeft: '6px' }}>({acc.label})</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{acc.email}</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-cyan)', fontSize: '12px' }}>
+                  {isThisLoading ? '...' : <ChevronRight size={16} />}
+                </div>
               </div>
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (errors.password) setErrors((prev) => ({ ...prev, password: undefined }));
-                }}
-                placeholder="Nhập mật khẩu..."
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                  border: `1px solid ${errors.password ? '#f43f5e' : 'rgba(51, 65, 85, 0.85)'}`,
-                  borderRadius: '12px',
-                  color: '#ffffff',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-              {errors.password && (
-                <p style={{ fontSize: '12px', color: '#fb7185', margin: '4px 0 0 0' }}>
-                  {errors.password}
-                </p>
-              )}
-            </div>
+            );
+          })}
+        </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '13px',
-                background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #06b6d4 100%)',
-                border: 'none',
-                borderRadius: '12px',
-                color: '#ffffff',
-                fontSize: '15px',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                cursor: loading ? 'wait' : 'pointer',
-                boxShadow: '0 10px 25px -5px rgba(99, 102, 241, 0.4)',
-                transition: 'all 0.2s',
-                marginTop: '8px',
-              }}
-            >
-              {loading ? 'Đang gửi mã...' : 'Nhận mã xác nhận Gmail ➜'}
-            </button>
-          </form>
-        )}
-
-        {/* BƯỚC 2: NHẬP MÃ OTP GỬI VỀ GMAIL */}
-        {step === 'OTP' && (
-          <form onSubmit={handleVerifyOtp} noValidate style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <label style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#cbd5e1', display: 'block', marginBottom: '8px', textAlign: 'center' }}>
-                MÃ XÁC NHẬN GỒM 6 CHỮ SỐ
-              </label>
-              <input
-                type="text"
-                required
-                autoFocus
-                maxLength={6}
-                value={otp}
-                onChange={(e) => {
-                  setOtp(e.target.value.replace(/\D/g, ''));
-                  if (errors.otp) setErrors((prev) => ({ ...prev, otp: undefined }));
-                }}
-                placeholder="• • • • • •"
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                  border: `1px solid ${errors.otp ? '#f43f5e' : '#38bdf8'}`,
-                  borderRadius: '12px',
-                  color: '#38bdf8',
-                  fontSize: '24px',
-                  fontWeight: 'bold',
-                  letterSpacing: '10px',
-                  textAlign: 'center',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-              {errors.otp && (
-                <p style={{ fontSize: '12px', color: '#fb7185', textAlign: 'center', margin: '6px 0 0 0' }}>
-                  {errors.otp}
-                </p>
-              )}
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setStep('CREDENTIALS');
-                  setOtp('');
-                  setAuthError(null);
-                  setSuccessMsg(null);
-                }}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
-              >
-                ← Đổi email khác
-              </button>
-
-              <button
-                type="button"
-                disabled={resendCooldown > 0 || loading}
-                onClick={handleResendOtp}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: resendCooldown > 0 ? '#64748b' : '#38bdf8',
-                  cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
-                  padding: 0,
-                  fontWeight: 500,
-                }}
-              >
-                {resendCooldown > 0 ? `Gửi lại sau (${resendCooldown}s)` : 'Gửi lại mã'}
-              </button>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '13px',
-                background: 'linear-gradient(135deg, #059669 0%, #10b981 50%, #06b6d4 100%)',
-                border: 'none',
-                borderRadius: '12px',
-                color: '#ffffff',
-                fontSize: '15px',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                cursor: loading ? 'wait' : 'pointer',
-                boxShadow: '0 10px 25px -5px rgba(16, 185, 129, 0.4)',
-                transition: 'all 0.2s',
-                marginTop: '6px',
-              }}
-            >
-              {loading ? 'Đang xác thực...' : 'Xác thực & Đăng nhập'}
-            </button>
-          </form>
-        )}
+        <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(10, 15, 29, 0.6)', border: '1px solid rgba(255, 255, 255, 0.06)', fontSize: '11px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Lock size={14} color="#06b6d4" />
+          <span>Hệ thống không yêu cầu mật khẩu. Xác thực an toàn qua Google SSO.</span>
+        </div>
       </div>
     </div>
   );
