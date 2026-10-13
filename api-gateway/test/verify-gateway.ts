@@ -200,7 +200,7 @@ async function runTestSuite() {
   console.log('   Người phụ trách: Đinh Thành Trung (Team Leader & System Architect)');
   console.log('================================================================\n');
 
-  const testPort = 3000;
+  const testPort = parseInt(process.env.AITA_TEST_PORT || '3000', 10);
   let app: any = null;
 
   // 0. Khởi động gateway in-memory nếu chưa có tiến trình nào lắng nghe

@@ -105,7 +105,7 @@ function gate(ok: boolean, name: string, details?: string): void {
 
 async function main(): Promise<void> {
   const started = Date.now();
-  const port = 3000;
+  const port = parseInt(process.env.AITA_TEST_PORT || '3000', 10);
   let app: any = null;
   if (!(await isPortOpen(port))) {
     app = await NestFactory.create(AppModule, { logger: false });
@@ -114,7 +114,7 @@ async function main(): Promise<void> {
     await app.listen(port);
     console.log(`booted in-memory gateway on :${port}`);
   } else {
-    console.log('using live gateway on :3000');
+    console.log(`using live gateway on :${port}`);
   }
   const base = `http://localhost:${port}`;
 
