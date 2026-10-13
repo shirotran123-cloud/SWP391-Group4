@@ -33,6 +33,79 @@ export interface GeneratedAssignmentResult {
   isFallback?: boolean;
 }
 
+/**
+ * Kiểm tra xem một model có phải là model sinh văn bản thuần (Text/JSON generation) hay không.
+ * Loại trừ triệt để:
+ * - Model TTS / Audio (chỉ trả về âm thanh, gây lỗi 400 response modalities: * AUDIO)
+ * - Model Embedding
+ * - Model Imagen (sinh ảnh)
+ * - Model Realtime / Live voice stream
+ */
+export function isPureTextModel(modelItem: any): boolean {
+  if (!modelItem) return false;
+  const name = (typeof modelItem === 'string' ? modelItem : modelItem.name || '').toLowerCase();
+
+  // 1. Loại trừ các từ khóa âm thanh / audio / tts / embedding / hình ảnh
+  if (
+    name.includes('tts') ||
+    name.includes('audio') ||
+    name.includes('embed') ||
+    name.includes('imagen') ||
+    name.includes('realtime') ||
+    name.includes('live-') ||
+    name.includes('transcription') ||
+    name.includes('native-audio')
+  ) {
+    return false;
+  }
+
+  // 2. Nếu là object từ Google ListModels API, phải hỗ trợ generateContent
+  if (typeof modelItem === 'object' && modelItem.supportedGenerationMethods) {
+    if (!modelItem.supportedGenerationMethods.includes('generateContent')) {
+      return false;
+    }
+  }
+
+  // 3. Phải thuộc dòng họ Gemini
+  return name.includes('gemini');
+}
+
+/**
+ * Lựa chọn model văn bản tối ưu nhất theo thứ tự ưu tiên tốc độ và độ ổn định
+ */
+export function pickBestTextModel(availableModels: string[]): string {
+  const cleanList = availableModels
+    .map(m => m.replace('models/', ''))
+    .filter(m => isPureTextModel(m));
+
+  if (cleanList.length === 0) {
+    return 'gemini-2.0-flash';
+  }
+
+  const priorityOrder = [
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-latest',
+    'gemini-1.5-flash-8b',
+    'gemini-2.0-flash-lite',
+    'gemini-2.0-pro-exp',
+    'gemini-1.5-pro',
+    'gemini-1.5-pro-latest',
+    'gemini-pro',
+  ];
+
+  for (const prio of priorityOrder) {
+    const matched = cleanList.find(m => m.toLowerCase() === prio || m.toLowerCase().startsWith(prio));
+    if (matched) return matched;
+  }
+
+  // Ưu tiên model nào có chữ "flash" mà không chứa tts
+  const flashModel = cleanList.find(m => m.toLowerCase().includes('flash'));
+  if (flashModel) return flashModel;
+
+  return cleanList[0];
+}
+
 export class GeminiAIService {
   /**
    * Trích xuất số lượng test case từ văn bản yêu cầu của Giảng viên nếu có
@@ -50,7 +123,7 @@ export class GeminiAIService {
 
   /**
    * Kiểm tra tính hợp lệ của API Key với Google Gemini AI THẬT bằng ModelService.ListModels
-   * Trả về danh sách chính xác các mô hình mà tài khoản Google của bạn có quyền sử dụng.
+   * Chỉ lọc và trả về danh sách các mô hình sinh VĂN BẢN (loại bỏ sạch các mô hình TTS/Audio).
    */
   public static async pingKey(
     apiKey: string,
@@ -63,7 +136,7 @@ export class GeminiAIService {
         return { success: false, message: 'Khóa API Key không được để trống.', latencyMs: 0 };
       }
 
-      // Gọi trực tiếp ModelService.ListModels như khuyến nghị của Google để lấy danh mục model khả dụng
+      // Gọi trực tiếp ModelService.ListModels từ Google để lấy danh mục model khả dụng
       const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`;
       const response = await fetch(url, { method: 'GET' });
       const latencyMs = Date.now() - startTime;
@@ -85,26 +158,27 @@ export class GeminiAIService {
       }
 
       const data = await response.json();
+      // LỌC TRIỆT ĐỂ: Chỉ lấy model TEXT, loại bỏ 100% mô hình TTS âm thanh
       const validModels: string[] = (data.models || [])
-        .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+        .filter((m: any) => isPureTextModel(m))
         .map((m: any) => (m.name || '').replace('models/', ''));
 
       if (validModels.length === 0) {
         return {
           success: false,
-          message: 'API Key hợp lệ nhưng Google chưa cấp quyền generateContent cho mô hình nào.',
+          message: 'API Key hợp lệ nhưng Google chưa cấp quyền mô hình văn bản (generateContent) nào.',
           latencyMs,
         };
       }
 
       const preferred = (model || '').replace('models/', '');
-      const chosenModel = validModels.includes(preferred)
+      const chosenModel = (preferred && validModels.includes(preferred) && isPureTextModel(preferred))
         ? preferred
-        : (validModels.find(m => m.includes('flash')) || validModels[0]);
+        : pickBestTextModel(validModels);
 
       return {
         success: true,
-        message: `Kết nối thành công tới Google Gemini! Tìm thấy ${validModels.length} mô hình khả dụng. (Mô hình đề xuất: ${chosenModel})`,
+        message: `Kết nối thành công tới Google Gemini! Tìm thấy ${validModels.length} mô hình văn bản khả dụng. (Mô hình đề xuất: ${chosenModel})`,
         latencyMs,
         availableModels: validModels,
       };
@@ -119,8 +193,7 @@ export class GeminiAIService {
 
   /**
    * GỌI 100% GOOGLE GEMINI AI THẬT ĐỂ SOẠN ĐỀ BÀI VÀ TESTCASES
-   * Tự động tra cứu danh sách models khả dụng thực tế của tài khoản (ModelService.ListModels)
-   * để không bao giờ bị lỗi 404 Model Not Found.
+   * Tự động lọc mô hình văn bản chuẩn (loại bỏ tts audio), tránh triệt để lỗi 400.
    * KHÔNG dùng bất kỳ đề mẫu hardcode nào.
    */
   public static async generateAssignment(
@@ -147,45 +220,72 @@ export class GeminiAIService {
     const extractedCount = GeminiAIService.extractRequestedCount(options.lecturerDescription);
     const targetTestCount = options.numTestCases || extractedCount || 5;
 
-    // Sinh mã hạt giống ngẫu nhiên để buộc AI luôn sinh đề mới mẻ mỗi lần bấm
+    // Sinh mã ngẫu nhiên để buộc AI luôn sinh đề mới mẻ mỗi lần bấm
     const randomSeed = Math.random().toString(36).substring(2, 8);
 
-    // 1. TỰ ĐỘNG TRA CỨU DANH SÁCH MÔ HÌNH KHẢ DỤNG THỰC TẾ TỪ GOOGLE
+    // 1. TỰ ĐỘNG TRA CỨU DANH SÁCH MÔ HÌNH VĂN BẢN KHẢ DỤNG THỰC TẾ TỪ GOOGLE
     let modelsToTry: string[] = [];
     try {
       const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
       if (listRes.ok) {
         const listData = await listRes.json();
+        // LỌC TRIỆT ĐỂ: Chỉ giữ lại các mô hình thuần văn bản (isPureTextModel)
         const availableFromGoogle: string[] = (listData.models || [])
-          .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
-          .map((m: any) => m.name);
+          .filter((m: any) => isPureTextModel(m))
+          .map((m: any) => m.name as string);
 
         if (availableFromGoogle.length > 0) {
           const rawRequested = options.model || '';
           const cleanedRequested = rawRequested.replace('models/', '');
 
-          const exactMatch = availableFromGoogle.find(m => m === `models/${cleanedRequested}` || m === cleanedRequested);
-          const flashModel = availableFromGoogle.find(m => m.toLowerCase().includes('flash'));
-          const primaryChoice = exactMatch || flashModel || availableFromGoogle[0];
+          let primaryChoice = '';
+          if (cleanedRequested && isPureTextModel(cleanedRequested)) {
+            const exactMatch = availableFromGoogle.find(m => m === `models/${cleanedRequested}` || m === cleanedRequested);
+            if (exactMatch) primaryChoice = exactMatch;
+          }
 
-          modelsToTry = [primaryChoice, ...availableFromGoogle.filter(m => m !== primaryChoice)];
+          if (!primaryChoice) {
+            const bestName = pickBestTextModel(availableFromGoogle);
+            primaryChoice = availableFromGoogle.find(m => m.replace('models/', '') === bestName) || availableFromGoogle[0];
+          }
+
+          modelsToTry = [
+            primaryChoice,
+            ...availableFromGoogle.filter(m => m !== primaryChoice)
+          ];
         }
       }
     } catch (listErr) {
       console.warn('Không thể tự động liệt kê models từ Google, sử dụng danh sách phổ biến:', listErr);
     }
 
+    // Danh sách dự phòng các model text phổ biến nếu ListModels không phản hồi
+    const fallbackPureTextModels = [
+      'models/gemini-2.0-flash',
+      'models/gemini-1.5-flash-latest',
+      'models/gemini-1.5-flash',
+      'models/gemini-1.5-flash-8b',
+      'models/gemini-1.5-pro-latest',
+      'models/gemini-1.5-pro',
+      'models/gemini-pro',
+    ];
+
     if (modelsToTry.length === 0) {
-      const requested = options.model ? [options.model.startsWith('models/') ? options.model : `models/${options.model}`] : [];
-      modelsToTry = Array.from(new Set([
-        ...requested,
-        'models/gemini-2.0-flash',
-        'models/gemini-1.5-flash-latest',
-        'models/gemini-1.5-flash',
-        'models/gemini-1.5-pro',
-        'models/gemini-pro'
-      ]));
+      const requested = (options.model && isPureTextModel(options.model))
+        ? [options.model.startsWith('models/') ? options.model : `models/${options.model}`]
+        : [];
+      modelsToTry = Array.from(new Set([...requested, ...fallbackPureTextModels]));
+    } else {
+      // Đảm bảo các model phổ biến luôn có mặt ở cuối để dự phòng
+      for (const fb of fallbackPureTextModels) {
+        if (!modelsToTry.includes(fb)) {
+          modelsToTry.push(fb);
+        }
+      }
     }
+
+    // Lọc lại một lần nữa để chắc chắn 100% không còn model TTS hay Audio nào lọt vào
+    modelsToTry = modelsToTry.filter(m => isPureTextModel(m));
 
     const systemPrompt = `Bạn là chuyên gia khảo thí AI tại Đại học FPT.
 Nhiệm vụ: Soạn thảo đề thi lập trình chi tiết, sáng tạo, thực tế và độc đáo theo yêu cầu của Giảng viên.
@@ -232,6 +332,8 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
 
     // 2. GỌI TRỰC TIẾP LÊN MÁY CHỦ GOOGLE GEMINI AI
     for (const modelToTry of modelsToTry) {
+      if (!isPureTextModel(modelToTry)) continue;
+
       const endpoint = modelToTry.startsWith('models/') ? modelToTry : `models/${modelToTry}`;
       const url = `https://generativelanguage.googleapis.com/v1beta/${endpoint}:generateContent?key=${cleanKey}`;
 
@@ -291,10 +393,20 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
       } catch (err: any) {
         lastError = err;
         console.warn(`Lỗi khi gọi model ${modelToTry}:`, err.message);
-        // Nếu lỗi là 400 (API Key sai), không cần thử model khác, báo lỗi ngay
-        if (err.message?.includes('400') || err.message?.includes('API_KEY_INVALID') || err.message?.includes('API key not valid')) {
+
+        // CHỈ dừng ngay lập tức nếu API Key không hợp lệ hoặc bị cấm
+        const errMsg = (err.message || '').toLowerCase();
+        if (
+          errMsg.includes('api_key_invalid') ||
+          errMsg.includes('api key not valid') ||
+          errMsg.includes('api key expired') ||
+          errMsg.includes('forbidden')
+        ) {
           throw err;
         }
+
+        // Với các lỗi model khác (như 400 modality, 404 model not found, 429 quota per model, 503...):
+        // TIẾP TỤC thử model văn bản tiếp theo trong danh sách modelsToTry!
       }
     }
 

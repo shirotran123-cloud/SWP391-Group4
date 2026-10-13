@@ -352,8 +352,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     });
     if (res.availableModels && res.availableModels.length > 0) {
       setAvailableModelList(res.availableModels);
-      if (selectedAiModel === 'auto' || !res.availableModels.includes(selectedAiModel)) {
-        const best = res.availableModels.find((m) => m.includes('flash')) || res.availableModels[0];
+      if (selectedAiModel === 'auto' || !res.availableModels.includes(selectedAiModel) || selectedAiModel.includes('tts')) {
+        const best = res.availableModels.find((m) => m.includes('flash') && !m.includes('tts')) || res.availableModels[0];
         setSelectedAiModel(best);
       }
     }
@@ -394,7 +394,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         lecturerDescription: lecturerPrompt,
         difficulty: 'TRUNG BÌNH',
         allowedLanguages,
-        model: selectedAiModel === 'auto' ? undefined : selectedAiModel,
+        model: (selectedAiModel && selectedAiModel !== 'auto' && !selectedAiModel.includes('tts')) ? selectedAiModel : undefined,
         numTestCases: testCountToUse,
       });
 
