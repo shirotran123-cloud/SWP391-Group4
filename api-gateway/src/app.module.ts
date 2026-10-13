@@ -7,6 +7,8 @@ import { UsersModule } from './users/users.module';
 import { CoursesModule } from './courses/courses.module';
 import { AssignmentsModule } from './assignments/assignments.module';
 import { SubmissionsModule } from './submissions/submissions.module';
+import { AppealsModule } from './appeals/appeals.module';
+import { TeamworkModule } from './teamwork/teamwork.module';
 import { InternalEventsController } from './internal/internal-events.controller';
 
 @Module({
@@ -19,8 +21,11 @@ import { InternalEventsController } from './internal/internal-events.controller'
     CoursesModule,
     AssignmentsModule,
     SubmissionsModule,
+    AppealsModule,
+    TeamworkModule,
   ],
   controllers: [InternalEventsController],
   providers: [],
 })
 export class AppModule {}
+

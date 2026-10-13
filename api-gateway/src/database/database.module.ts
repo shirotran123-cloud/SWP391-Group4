@@ -4,6 +4,8 @@ import { UserRepository } from './user.repository';
 import { CourseRepository } from './course.repository';
 import { AssignmentRepository } from './assignment.repository';
 import { DLQRepository } from './dlq.repository';
+import { AppealRepository } from './appeal.repository';
+import { TeamworkRepository } from './teamwork.repository';
 
 @Global()
 @Module({
@@ -13,6 +15,8 @@ import { DLQRepository } from './dlq.repository';
     CourseRepository,
     AssignmentRepository,
     DLQRepository,
+    AppealRepository,
+    TeamworkRepository,
   ],
   exports: [
     SubmissionRepository,
@@ -20,6 +24,9 @@ import { DLQRepository } from './dlq.repository';
     CourseRepository,
     AssignmentRepository,
     DLQRepository,
+    AppealRepository,
+    TeamworkRepository,
   ],
 })
 export class DatabaseModule {}
+
