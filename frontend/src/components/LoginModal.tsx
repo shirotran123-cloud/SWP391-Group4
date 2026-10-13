@@ -45,7 +45,7 @@ const GoogleIcon = () => (
 
 const PRESET_ACCOUNTS = [
   { email: 'trungse170000@fpt.edu.vn', name: 'Đinh Thành Trung', role: 'STUDENT' as const, label: 'Sinh viên FPT', color: '#10b981' },
-  { email: 'trungdt@fe.edu.vn', name: 'ThS. Đinh Thành Trung', role: 'INSTRUCTOR' as const, label: 'Giảng viên FE', color: '#818cf8' },
+  { email: 'giangvien.edu@gmail.com', name: 'ThS. Giảng Viên AITA', role: 'INSTRUCTOR' as const, label: 'Giảng viên AITA', color: '#818cf8' },
   { email: 'admin@aita.fpt.edu.vn', name: 'Quản trị viên Hệ thống', role: 'ADMIN' as const, label: 'Admin', color: '#f59e0b' },
   { email: 'vthaitrung2k6@gmail.com', name: 'Vũ Thái Trung', role: 'STUDENT' as const, label: 'Gmail Cá Nhân', color: '#06b6d4' },
 ];

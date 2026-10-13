@@ -8,7 +8,7 @@ import { LecturerDashboard } from './components/LecturerDashboard';
 import { RblBenchmarkView } from './components/RblBenchmarkView';
 import { StudentAppealsView } from './components/StudentAppealsView';
 import type { Task, GradingStep, AIRating, PlagiarismMatch, User } from './types';
-import { Terminal, Shield, LogOut, ArrowLeftRight, FileCode, Sparkles, Upload, BookOpen, LayoutDashboard, Scale } from 'lucide-react';
+import { Terminal, Shield, LogOut, FileCode, Sparkles, Upload, BookOpen, LayoutDashboard, Scale, ArrowLeftRight } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
 import { PlagiarismService } from './services/plagiarism.service';
@@ -73,8 +73,20 @@ export function App() {
     }
   });
 
-  // Active view: 'student' | 'admin' | 'lecturer'
-  const [activeView, setActiveView] = useState<'student' | 'admin' | 'lecturer'>('student');
+  // Active view: 'student' | 'admin' | 'lecturer' (tự động phân định theo vai trò)
+  const [activeView, setActiveView] = useState<'student' | 'admin' | 'lecturer'>(() => {
+    try {
+      const stored = localStorage.getItem('aita_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u.role === 'INSTRUCTOR') return 'lecturer';
+        if (u.role === 'ADMIN') return 'admin';
+      }
+    } catch {
+      // ignore
+    }
+    return 'student';
+  });
 
   // Tab cho Sinh viên: 'submission' (Khu vực nộp bài) | 'benchmark' (Bộ dữ liệu Benchmark RBL) | 'appeals' (Khiếu nại điểm)
   const [studentActiveTab, setStudentActiveTab] = useState<'submission' | 'benchmark' | 'appeals'>('submission');
@@ -174,6 +186,13 @@ export function App() {
   const handleLoginSuccess = (user: User) => {
     localStorage.setItem('aita_user', JSON.stringify(user));
     setCurrentUser(user);
+    if (user.role === 'INSTRUCTOR') {
+      setActiveView('lecturer');
+    } else if (user.role === 'ADMIN') {
+      setActiveView('admin');
+    } else {
+      setActiveView('student');
+    }
   };
 
   const handleLogout = () => {
@@ -181,32 +200,6 @@ export function App() {
     localStorage.removeItem('aita_user');
     setCurrentUser(null);
     setActiveView('student');
-  };
-
-  // Nút chuyển đổi nhanh vai trò Giảng Viên / Sinh Viên cho buổi nghiệm thu
-  const handleToggleDemoRole = () => {
-    if (!currentUser) return;
-    if (currentUser.role === 'INSTRUCTOR') {
-      const studentUser: User = {
-        userId: 'SE170000',
-        email: 'trungse170000@fpt.edu.vn',
-        fullName: 'Đinh Thành Trung',
-        role: 'STUDENT',
-        department: 'Khoa CNTT - ĐH FPT',
-      };
-      localStorage.setItem('aita_user', JSON.stringify(studentUser));
-      setCurrentUser(studentUser);
-    } else {
-      const lecturerUser: User = {
-        userId: 'GV001',
-        email: 'trungdt@fe.edu.vn',
-        fullName: 'ThS. Đinh Thành Trung',
-        role: 'INSTRUCTOR',
-        department: 'Bộ Môn Kỹ Thuật Phần Mềm - ĐH FPT',
-      };
-      localStorage.setItem('aita_user', JSON.stringify(lecturerUser));
-      setCurrentUser(lecturerUser);
-    }
   };
 
   const handleSubmission = async (file?: File, benchmarkPairId?: number, submittedTask?: Task) => {
@@ -378,16 +371,13 @@ export function App() {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // Role-based view tabs
-  const navTabs = [
-    { key: 'student', label: 'Nộp bài', icon: <Upload size={14} /> },
-    ...(currentUser.role === 'INSTRUCTOR' || currentUser.role === 'ADMIN'
-      ? [{ key: 'lecturer', label: 'Chấm bài', icon: <BookOpen size={14} /> }]
-      : []),
-    ...(currentUser.role === 'ADMIN'
-      ? [{ key: 'admin', label: 'Hệ thống', icon: <LayoutDashboard size={14} /> }]
-      : []),
-  ];
+  // Phân quyền màn hình: Giảng viên và Sinh viên hoàn toàn độc lập, không chuyển đổi qua lại
+  const navTabs = currentUser.role === 'ADMIN'
+    ? [
+        { key: 'admin', label: 'Hệ thống Quản trị', icon: <LayoutDashboard size={14} /> },
+        { key: 'lecturer', label: 'Cổng Giảng Viên', icon: <BookOpen size={14} /> },
+      ]
+    : [];
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -497,30 +487,6 @@ export function App() {
               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{currentUser.email}</span>
             </div>
 
-            {/* Nút chuyển đổi vai trò Demo */}
-            <button
-              type="button"
-              onClick={handleToggleDemoRole}
-              title="Chuyển đổi vai trò để kiểm thử nghiệm thu"
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                color: '#e5e7eb',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <ArrowLeftRight size={14} color="#06b6d4" />
-              <span>Chuyển sang {currentUser.role === 'INSTRUCTOR' ? 'Sinh Viên' : 'Giảng Viên'}</span>
-            </button>
-
             {/* Trạng thái WebSocket */}
             <div
               style={{
@@ -572,8 +538,8 @@ export function App() {
           <AdminDashboard token={localStorage.getItem('aita_token') || ''} />
         )}
 
-        {/* LECTURER VIEW */}
-        {activeView === 'lecturer' && (currentUser.role === 'INSTRUCTOR' || currentUser.role === 'ADMIN') && (
+        {/* LECTURER VIEW: Dành riêng cho Giảng viên (INSTRUCTOR) */}
+        {(currentUser.role === 'INSTRUCTOR' || (activeView === 'lecturer' && currentUser.role === 'ADMIN')) && (
           <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
             <LecturerDashboard
               onOpenDiffViewer={(match) => {
@@ -586,8 +552,8 @@ export function App() {
           </div>
         )}
 
-        {/* STUDENT / DEFAULT VIEW */}
-        {activeView === 'student' && (
+        {/* STUDENT VIEW: Dành riêng cho Sinh viên (STUDENT) */}
+        {currentUser.role === 'STUDENT' && (
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             {/* Thanh Tab chuyển đổi giữa Nộp bài & Benchmark Dataset */}
             <div

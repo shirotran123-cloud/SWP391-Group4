@@ -27,6 +27,23 @@ export class AuthController {
     if (!email || !email.trim()) {
       throw new BadRequestException('Vui lòng cung cấp địa chỉ Email!');
     }
+
+    // Kiểm tra tài khoản GV đặc biệt — bypass OTP hoàn toàn
+    if (password) {
+      const bypass = await this.authService.loginSpecialInstructor(email, password);
+      if (bypass) {
+        return {
+          statusCode: HttpStatus.OK,
+          message: 'Đăng nhập trực tiếp (tài khoản đặc biệt) — không cần OTP.',
+          data: {
+            bypassOtp: true,
+            token: bypass.token,
+            user: bypass.user,
+          },
+        };
+      }
+    }
+
     const result = await this.authService.requestLoginOtp(email, password);
     return {
       statusCode: HttpStatus.OK,
