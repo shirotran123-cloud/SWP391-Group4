@@ -298,7 +298,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
     return localStorage.getItem('aita_gemini_api_key') || '';
   });
-  const [selectedAiModel, setSelectedAiModel] = useState<string>('gemini-1.5-flash');
+  const [selectedAiModel, setSelectedAiModel] = useState<string>('gemini-3.8-flash');
   const [desiredTestCount, setDesiredTestCount] = useState<number>(5);
   const [lecturerPrompt, setLecturerPrompt] = useState<string>(
     'Tạo bài tập về Thuật toán Dijkstra tìm đường đi ngắn nhất, có tối ưu bằng Hàng đợi ưu tiên PriorityQueue, sinh viên phải áp dụng nguyên lý SOLID Single Responsibility (SRP).'
@@ -2090,9 +2090,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   fontSize: '13px',
                 }}
               >
-                <option value="gemini-1.5-flash">gemini-1.5-flash (Khuyên dùng - Chuẩn Google Official, Siêu tốc 1-2s & Phản hồi sáng tạo)</option>
-                <option value="gemini-3.8-flash">gemini-3.8-flash (Tự động tương thích với Gemini 1.5 Flash)</option>
-                <option value="gemini-1.5-pro">gemini-1.5-pro (Mô hình chuyên sâu khảo thí nâng cao)</option>
+                <option value="gemini-3.8-flash">gemini-3.8-flash (Khuyên dùng - Chuẩn Google Official, Siêu tốc 1-2s & Phản hồi sáng tạo)</option>
+                <option value="gemini-2.5-flash">gemini-2.5-flash (Thế hệ Flash 2.5)</option>
+                <option value="gemini-1.5-flash">gemini-1.5-flash (Bản cũ)</option>
               </select>
             </div>
 

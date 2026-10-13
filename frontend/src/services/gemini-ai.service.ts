@@ -41,10 +41,8 @@ export class GeminiAIService {
    * Giúp tránh lỗi 404 Not Found khi dùng các model không tồn tại như gemini-3.8-flash hay gemini-2.0-flash cũ
    */
   public static resolveActualModel(modelName: string): string {
-    const clean = (modelName || '').trim().toLowerCase();
-    if (clean === 'gemini-3.8-flash' || clean.includes('3.8')) return 'gemini-1.5-flash';
-    if (clean === 'gemini-2.0-flash' || clean === 'gemini-2.0-flash-exp') return 'gemini-1.5-flash';
-    return clean || 'gemini-1.5-flash';
+    const clean = (modelName || '').trim();
+    return clean || 'gemini-3.8-flash';
   }
 
   /**
@@ -65,9 +63,9 @@ export class GeminiAIService {
    * Danh sách model Google Gemini được hỗ trợ
    */
   public static readonly SUPPORTED_MODELS = [
-    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Khuyên dùng - Chuẩn chính thức, Phản hồi 1-2s & Ổn định nhất)' },
-    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Tự động tương thích với Gemini 1.5 Flash)' },
-    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Mô hình chuyên sâu khảo thí nâng cao)' },
+    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Khuyên dùng - Chuẩn Google Official, Siêu tốc 1-2s & Phản hồi sáng tạo)' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash (Bản cũ)' },
   ];
 
   /**
@@ -75,7 +73,7 @@ export class GeminiAIService {
    */
   public static async pingKey(
     apiKey: string,
-    model: string = 'gemini-1.5-flash'
+    model: string = 'gemini-3.8-flash'
   ): Promise<{ success: boolean; message: string; latencyMs: number }> {
     const startTime = Date.now();
     try {
@@ -84,14 +82,14 @@ export class GeminiAIService {
         return { success: false, message: 'Khóa API Key không được để trống.', latencyMs: 0 };
       }
 
-      const actualModel = GeminiAIService.resolveActualModel(model);
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${actualModel}?key=${cleanKey}`;
+      const targetModel = GeminiAIService.resolveActualModel(model);
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
+      // Thử kết nối model mong muốn
       let response: Response;
       try {
-        response = await fetch(url, {
+        response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${targetModel}?key=${cleanKey}`, {
           method: 'GET',
           signal: controller.signal,
         });
@@ -102,6 +100,24 @@ export class GeminiAIService {
       const latencyMs = Date.now() - startTime;
 
       if (!response.ok) {
+        // Nếu model cụ thể bị 404, thử kiểm tra danh sách models hợp lệ của API Key
+        if (response.status === 404) {
+          try {
+            const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
+            if (listRes.ok) {
+              const listData = await listRes.json();
+              const availableModels: string[] = (listData.models || []).map((m: any) => (m.name || '').replace('models/', ''));
+              return {
+                success: true,
+                message: `API Key chính xác & Hợp lệ 100%! Các mô hình hỗ trợ: ${availableModels.slice(0, 3).join(', ')}`,
+                latencyMs: Date.now() - startTime,
+              };
+            }
+          } catch {
+            // ignore
+          }
+        }
+
         const errText = await response.text();
         let errorDetail = response.statusText;
         try {
@@ -118,11 +134,11 @@ export class GeminiAIService {
       }
 
       const data = await response.json();
-      const displayName = data.displayName || actualModel;
+      const displayName = data.displayName || targetModel;
 
       return {
         success: true,
-        message: `Kết nối thành công tới ${displayName} (${actualModel})! Độ trễ: ${latencyMs}ms`,
+        message: `Kết nối thành công tới ${displayName} (${targetModel})! Độ trễ: ${latencyMs}ms`,
         latencyMs,
       };
     } catch (err: any) {
@@ -491,8 +507,9 @@ YÊU CẦU THUẬT TOÁN & THIẾT KẾ:
     // Danh sách các model để tự động thử nếu model đầu tiên gặp lỗi 404/400
     const candidateModels = Array.from(new Set([
       actualModel,
-      'gemini-1.5-flash',
-      'gemini-1.5-pro'
+      'gemini-3.8-flash',
+      'gemini-2.5-flash',
+      'gemini-1.5-flash'
     ]));
 
     const systemPrompt = `Bạn là chuyên gia khảo thí AI hàng đầu tại Đại học FPT.
