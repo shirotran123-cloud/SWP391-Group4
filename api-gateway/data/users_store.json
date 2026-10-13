@@ -90,12 +90,21 @@
     "updatedAt": "2026-10-13T07:40:00.000Z"
   },
   {
-    "userId": "linhcampochia@gmail.com",
-    "email": "linhcampochia@gmail.com",
-    "fullName": "Linh Campuchia",
+    "userId": "phaithayj@gmail.com",
+    "email": "phaithayj@gmail.com",
+    "fullName": "Vinh Nguyễn Hoàng",
     "role": "STUDENT",
     "isActive": true,
-    "createdAt": "2026-10-13T02:48:31.558Z",
-    "updatedAt": "2026-10-13T07:40:00.000Z"
+    "createdAt": "2026-10-13T09:50:00.000Z",
+    "updatedAt": "2026-10-13T09:50:00.000Z"
+  },
+  {
+    "userId": "mochibunnyyy123@gmail.com",
+    "email": "mochibunnyyy123@gmail.com",
+    "fullName": "Viktor Wilson",
+    "role": "STUDENT",
+    "isActive": true,
+    "createdAt": "2026-10-13T09:50:00.000Z",
+    "updatedAt": "2026-10-13T09:50:00.000Z"
   }
 ]
