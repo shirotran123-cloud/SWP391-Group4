@@ -21,6 +21,11 @@ import {
   AlertCircle,
   X,
   FileCode,
+  ArrowLeft,
+  FileText,
+  Trash2,
+  Eye,
+  FolderKanban,
 } from 'lucide-react';
 import { RblBenchmarkView } from './RblBenchmarkView';
 import type { PlagiarismMatch } from '../types';
@@ -38,6 +43,25 @@ interface CourseItem {
   instructorName: string;
   studentCount: number;
   assignmentCount: number;
+}
+
+export interface PublishedAssignment {
+  id: string;
+  courseId: string;
+  title: string;
+  description: string;
+  deadline: string;
+  timeLimitMs: number;
+  memoryLimitMb: number;
+  allowedLanguages: string[];
+  testCases: Array<{ input: string; output: string; weight: number; isHidden: boolean }>;
+  rubrics?: RubricCriterion[];
+  starterCode?: string;
+  referenceSolution?: string;
+  createdAt: string;
+  status: 'PUBLISHED' | 'CLOSED';
+  submissionCount: number;
+  isNewlyCreated?: boolean;
 }
 
 interface SubmissionRecord {
@@ -63,7 +87,7 @@ const initialCourses: CourseItem[] = [
     semester: 'Học kỳ Thu 2026',
     instructorName: 'ThS. Đinh Thành Trung',
     studentCount: 38,
-    assignmentCount: 3,
+    assignmentCount: 2,
   },
   {
     courseId: 'COURSE-PRO192',
@@ -72,7 +96,7 @@ const initialCourses: CourseItem[] = [
     semester: 'Học kỳ Thu 2026',
     instructorName: 'ThS. Đinh Thành Trung',
     studentCount: 42,
-    assignmentCount: 4,
+    assignmentCount: 1,
   },
   {
     courseId: 'COURSE-CSD201',
@@ -81,7 +105,72 @@ const initialCourses: CourseItem[] = [
     semester: 'Học kỳ Thu 2026',
     instructorName: 'ThS. Đinh Thành Trung',
     studentCount: 35,
-    assignmentCount: 2,
+    assignmentCount: 1,
+  },
+];
+
+const defaultPublishedAssignments: PublishedAssignment[] = [
+  {
+    id: 'ASM-SWP-01',
+    courseId: 'COURSE-SWP391',
+    title: 'Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị',
+    description: 'Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian và tuân thủ các nguyên lý SOLID.',
+    deadline: '2026-10-26T23:59',
+    timeLimitMs: 2000,
+    memoryLimitMb: 512,
+    allowedLanguages: ['java', 'python', 'cpp'],
+    testCases: [
+      { input: '5\n4 2 5 1 3', output: '1 2 3 4 5', weight: 3.5, isHidden: false },
+      { input: '3\n10 0 -5', output: '-5 0 10', weight: 3.5, isHidden: true },
+    ],
+    rubrics: [
+      { criterion: 'Tính đúng đắn thuật toán & Vượt qua Testcases', maxScore: 5.0, description: 'Pass 100% testcases' },
+      { criterion: 'Clean Code & Tối ưu O(N log N)', maxScore: 2.5, description: 'Mã nguồn rõ ràng, đặt tên chuẩn' },
+      { criterion: 'Thiết kế Hướng đối tượng & SOLID', maxScore: 2.5, description: 'Tuân thủ SRP và DIP' },
+    ],
+    starterCode: '// Java Starter Code BST',
+    createdAt: '10/10/2026 08:30',
+    status: 'PUBLISHED',
+    submissionCount: 28,
+  },
+  {
+    id: 'ASM-SWP-02',
+    courseId: 'COURSE-SWP391',
+    title: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
+    description: 'Cài đặt giải thuật sắp xếp nhanh tối ưu 3-Way Partitioning tránh suy biến trên dữ liệu trùng lặp.',
+    deadline: '2026-10-20T23:59',
+    timeLimitMs: 1500,
+    memoryLimitMb: 256,
+    allowedLanguages: ['java', 'python', 'cpp'],
+    testCases: [
+      { input: '5\n5 4 3 2 1', output: '1 2 3 4 5', weight: 4.0, isHidden: false },
+      { input: '10\n10 9 8 7 6 5 4 3 2 1', output: '1 2 3 4 5 6 7 8 9 10', weight: 3.0, isHidden: true },
+    ],
+    rubrics: [
+      { criterion: 'Đúng đắn Testcases', maxScore: 7.0, description: 'Vượt qua bộ testcases' },
+      { criterion: 'Clean Code & SOLID', maxScore: 3.0, description: 'Tuân thủ SRP' },
+    ],
+    starterCode: '// Solution starter',
+    createdAt: '08/10/2026 09:00',
+    status: 'PUBLISHED',
+    submissionCount: 35,
+  },
+  {
+    id: 'ASM-CSD-01',
+    courseId: 'COURSE-CSD201',
+    title: 'Cài Đặt Cây AVL Tự Cân Bằng (Self-Balancing Tree)',
+    description: 'Triển khai cây AVL với các phép xoay đơn và kép, kiểm tra cân bằng 1,000 phần tử.',
+    deadline: '2026-10-30T23:59',
+    timeLimitMs: 2000,
+    memoryLimitMb: 512,
+    allowedLanguages: ['java', 'cpp'],
+    testCases: [
+      { input: '6\n10 20 30 40 50 25', output: 'Preorder: 30 20 10 25 40 50', weight: 3.5, isHidden: false },
+      { input: '3\n3 2 1', output: 'Preorder: 2 1 3', weight: 3.5, isHidden: false },
+    ],
+    createdAt: '11/10/2026 10:15',
+    status: 'PUBLISHED',
+    submissionCount: 18,
   },
 ];
 
@@ -146,6 +235,30 @@ const mockSubmissionsList: SubmissionRecord[] = [
 
 export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiffViewer }) => {
   const [activeTab, setActiveTab] = useState<'COURSES' | 'CREATE_ASSIGNMENT' | 'EXCEL_IMPORT' | 'SUBMISSIONS' | 'RBL_LAB'>('COURSES');
+
+  // Quản lý danh sách khóa học và bài tập đã giao
+  const [courses, setCourses] = useState<CourseItem[]>(initialCourses);
+  const [publishedAssignments, setPublishedAssignments] = useState<PublishedAssignment[]>(() => {
+    try {
+      const saved = localStorage.getItem('aita_published_assignments');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return defaultPublishedAssignments;
+  });
+
+  // Môn học đang xem chi tiết (nếu null thì hiện danh sách tất cả môn học)
+  const [selectedCourseDetailId, setSelectedCourseDetailId] = useState<string | null>(null);
+
+  // Modal xem chi tiết đề bài đã giao
+  const [previewAssignment, setPreviewAssignment] = useState<PublishedAssignment | null>(null);
+
+  // Toast thông báo xuất bản thành công
+  const [publishSuccessToast, setPublishSuccessToast] = useState<string | null>(null);
 
   // Form state cho tạo đề bài
   const [assignmentTitle, setAssignmentTitle] = useState('Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị');
@@ -258,7 +371,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }, 1000);
 
     try {
-      const courseObj = initialCourses.find((c) => c.courseId === selectedCourse);
+      const courseObj = courses.find((c) => c.courseId === selectedCourse);
       const courseName = courseObj ? courseObj.courseName : 'Dự Án Phát Triển Phần Mềm';
       const courseCode = courseObj ? courseObj.courseCode : 'SWP391';
 
@@ -318,9 +431,92 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
+  // Lưu & Xuất bản đề bài tập: Lưu vào danh sách môn học và TỰ ĐỘNG ĐIỀU HƯỚNG sang trang môn học đó
   const handleSaveAssignment = (e: React.FormEvent) => {
     e.preventDefault();
-    setCreateSuccessMsg('✅ Đã lưu và xuất bản bài tập thành công lên hệ thống AITA! Sinh viên trong lớp đã có thể nộp bài.');
+    if (!assignmentTitle.trim()) {
+      setAiErrorMsg('Vui lòng nhập Tiêu đề bài tập trước khi xuất bản.');
+      return;
+    }
+
+    const courseObj = courses.find((c) => c.courseId === selectedCourse);
+    const courseName = courseObj ? courseObj.courseName : 'Dự Án Phát Triển Phần Mềm';
+    const courseCode = courseObj ? courseObj.courseCode : 'SWP391';
+
+    const newAsm: PublishedAssignment = {
+      id: `ASM-${Date.now().toString().slice(-5)}`,
+      courseId: selectedCourse,
+      title: assignmentTitle,
+      description: assignmentDesc,
+      deadline: deadlineDate,
+      timeLimitMs,
+      memoryLimitMb,
+      allowedLanguages: [...allowedLanguages],
+      testCases: [...testCases],
+      rubrics: [...generatedRubrics],
+      starterCode,
+      referenceSolution,
+      createdAt: new Date().toLocaleString('vi-VN'),
+      status: 'PUBLISHED',
+      submissionCount: 0,
+      isNewlyCreated: true,
+    };
+
+    const updatedAsms = [newAsm, ...publishedAssignments];
+    setPublishedAssignments(updatedAsms);
+    try {
+      localStorage.setItem('aita_published_assignments', JSON.stringify(updatedAsms));
+    } catch {
+      // ignore
+    }
+
+    // Tăng số lượng bài tập của khóa học
+    setCourses((prevCourses) =>
+      prevCourses.map((c) =>
+        c.courseId === selectedCourse ? { ...c, assignmentCount: c.assignmentCount + 1 } : c
+      )
+    );
+
+    const toastMsg = `🎉 ĐÃ XUẤT BẢN THÀNH CÔNG: Bài tập "${assignmentTitle}" (${testCases.length} testcases) đã giao cho lớp ${courseCode} (${courseName})!`;
+    setPublishSuccessToast(toastMsg);
+    setCreateSuccessMsg(toastMsg);
+
+    // TỰ ĐỘNG ĐIỀU HƯỚNG SANG TRANG CỦA MÔN HỌC ĐÓ
+    setSelectedCourseDetailId(selectedCourse);
+    setActiveTab('COURSES');
+    try {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {
+      // ignore
+    }
+  };
+
+  // Đóng hoặc mở lại bài tập
+  const handleToggleAssignmentStatus = (asmId: string) => {
+    const updated = publishedAssignments.map((a) =>
+      a.id === asmId ? { ...a, status: (a.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED') as 'PUBLISHED' | 'CLOSED', isNewlyCreated: false } : a
+    );
+    setPublishedAssignments(updated);
+    try {
+      localStorage.setItem('aita_published_assignments', JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+  };
+
+  // Xóa bài tập khỏi lớp
+  const handleDeleteAssignment = (asmId: string, courseId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bài tập này khỏi lớp học?')) return;
+    const updated = publishedAssignments.filter((a) => a.id !== asmId);
+    setPublishedAssignments(updated);
+    try {
+      localStorage.setItem('aita_published_assignments', JSON.stringify(updated));
+    } catch {
+      // ignore
+    }
+    setCourses((prev) =>
+      prev.map((c) => (c.courseId === courseId ? { ...c, assignmentCount: Math.max(0, c.assignmentCount - 1) } : c))
+    );
   };
 
   const handleSimulateRollback = (triggerError: boolean) => {
@@ -508,69 +704,452 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         </button>
       </div>
 
-      {/* TAB 1: KHÓA HỌC & LỚP */}
+      {/* TAB 1: KHÓA HỌC & LỚP (BẢNG QUẢN LÝ MÔN HỌC & BÀI TẬP ĐÃ GIAO) */}
       {activeTab === 'COURSES' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
-            {initialCourses.map((course) => (
-              <div key={course.courseId} className="glass-panel" style={{ padding: '24px', borderRadius: '14px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.2)', color: 'var(--accent-primary)', fontWeight: 700 }}>
-                    {course.courseCode}
+        <div>
+          {/* TRƯỜNG HỢP 1: XEM CHI TIẾT 1 MÔN HỌC & CÁC BÀI TẬP ĐÃ GIAO */}
+          {selectedCourseDetailId ? (() => {
+            const currentCourse = courses.find((c) => c.courseId === selectedCourseDetailId);
+            const courseAssignments = publishedAssignments.filter((a) => a.courseId === selectedCourseDetailId);
+            const courseCode = currentCourse ? currentCourse.courseCode : 'MÔN HỌC';
+            const courseName = currentCourse ? currentCourse.courseName : 'Chi tiết môn học';
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Banner Thông Báo Xuất Bản Thành Công nếu có */}
+                {publishSuccessToast && (
+                  <div
+                    style={{
+                      padding: '16px 20px',
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                      border: '1.5px solid rgba(16, 185, 129, 0.4)',
+                      color: '#34d399',
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <CheckCircle2 size={20} color="#10b981" />
+                      <span>{publishSuccessToast}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPublishSuccessToast(null)}
+                      style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '18px', fontWeight: 700 }}
+                    >
+                      ×
+                    </button>
+                  </div>
+                )}
+
+                {/* Header Thông Tin Môn Học */}
+                <div className="glass-panel" style={{ padding: '24px 28px', borderRadius: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCourseDetailId(null)}
+                      style={{
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        color: '#ffffff',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <ArrowLeft size={16} /> Quay Lại Danh Sách Môn Học
+                    </button>
+
+                    <div style={{ display: 'flex', gap: '10px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedCourse(selectedCourseDetailId);
+                          setActiveTab('CREATE_ASSIGNMENT');
+                        }}
+                        className="btn-primary"
+                        style={{
+                          padding: '9px 16px',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <PlusCircle size={16} /> + Giao Thêm Đề Mới (AI)
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('SUBMISSIONS')}
+                        style={{
+                          padding: '9px 16px',
+                          borderRadius: '8px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.15)',
+                          color: '#ffffff',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <Award size={16} /> Xem Sổ Điểm Lớp
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', padding: '4px 10px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.25)', color: 'var(--accent-primary)', fontWeight: 800 }}>
+                      {courseCode}
+                    </span>
+                    <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>
+                      {courseName}
+                    </h2>
+                  </div>
+
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
+                    Giảng viên: <strong>{currentCourse?.instructorName}</strong> • {currentCourse?.semester} • Sĩ số: <strong style={{ color: '#ffffff' }}>{currentCourse?.studentCount}</strong> sinh viên
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '20px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                    <span>Tổng số bài tập đã giao: <strong style={{ color: 'var(--accent-cyan)' }}>{courseAssignments.length}</strong> bài</span>
+                    <span>Đang mở nộp bài: <strong style={{ color: '#34d399' }}>{courseAssignments.filter((a) => a.status === 'PUBLISHED').length}</strong> bài</span>
+                  </div>
+                </div>
+
+                {/* Tiêu đề Danh Sách Bài Tập */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <FolderKanban size={20} color="var(--accent-cyan)" /> Danh Sách Các Bài Tập Đã Giao Của Môn Học
+                  </h3>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Hiển thị {courseAssignments.length} bài tập
                   </span>
-                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{course.semester}</span>
                 </div>
-                <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', marginBottom: '8px' }}>
-                  {course.courseName}
-                </h3>
-                <p style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '16px' }}>
-                  Giảng viên: {course.instructorName}
-                </p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
-                  <span>Sĩ số: <strong style={{ color: '#ffffff' }}>{course.studentCount}</strong> sinh viên</span>
-                  <span>Bài tập: <strong style={{ color: '#ffffff' }}>{course.assignmentCount}</strong> bài</span>
-                </div>
-                <div style={{ marginTop: '16px', display: 'flex', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCourse(course.courseId);
-                      setActiveTab('CREATE_ASSIGNMENT');
-                    }}
-                    style={{
-                      flex: 1,
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
-                      color: 'var(--accent-primary)',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Giao Đề Bài Mới
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('SUBMISSIONS')}
-                    style={{
-                      padding: '8px 12px',
-                      borderRadius: '8px',
-                      backgroundColor: 'rgba(255,255,255,0.05)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      color: 'var(--text-muted)',
-                      fontSize: '13px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Xem Bảng Điểm
-                  </button>
+
+                {/* Danh Sách Card Bài Tập Đã Giao */}
+                {courseAssignments.length === 0 ? (
+                  <div className="glass-panel" style={{ padding: '48px', borderRadius: '16px', textAlign: 'center' }}>
+                    <FileText size={44} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
+                    <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', marginBottom: '6px' }}>
+                      Chưa Có Bài Tập Nào Được Giao Cho Môn Học Này
+                    </h4>
+                    <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+                      Giảng viên có thể sử dụng Trợ lý Google Gemini AI để soạn đề và testcases chỉ trong 1 giây.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCourse(selectedCourseDetailId);
+                        setActiveTab('CREATE_ASSIGNMENT');
+                      }}
+                      className="btn-primary"
+                      style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ⚡ Soạn Đề Bài Tập Đầu Tiên Ngay
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                    {courseAssignments.map((asm) => {
+                      const totalWeight = asm.testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0);
+                      const isPublished = asm.status === 'PUBLISHED';
+
+                      return (
+                        <div
+                          key={asm.id}
+                          className="glass-panel"
+                          style={{
+                            padding: '22px 26px',
+                            borderRadius: '14px',
+                            border: asm.isNewlyCreated ? '1.5px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
+                            backgroundColor: asm.isNewlyCreated ? 'rgba(16, 185, 129, 0.04)' : undefined,
+                            boxShadow: asm.isNewlyCreated ? '0 4px 20px rgba(16, 185, 129, 0.15)' : undefined,
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  padding: '3px 8px',
+                                  borderRadius: '6px',
+                                  fontWeight: 700,
+                                  backgroundColor: isPublished ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)',
+                                  color: isPublished ? '#34d399' : '#f43f5e',
+                                  border: `1px solid ${isPublished ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+                                }}
+                              >
+                                {isPublished ? '🟢 ĐANG MỞ NỘP BÀI' : '🔴 ĐÃ ĐÓNG NỘP'}
+                              </span>
+
+                              {asm.isNewlyCreated && (
+                                <span
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '3px 8px',
+                                    borderRadius: '6px',
+                                    fontWeight: 700,
+                                    background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
+                                    color: '#ffffff',
+                                  }}
+                                >
+                                  ✨ MỚI XUẤT BẢN VỪA XONG
+                                </span>
+                              )}
+
+                              <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
+                                Mã: <strong>{asm.id}</strong> • Tạo lúc: {asm.createdAt}
+                              </span>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--accent-amber)', fontWeight: 600 }}>
+                              <Clock size={14} /> Hạn chót: {new Date(asm.deadline).toLocaleString('vi-VN')}
+                            </div>
+                          </div>
+
+                          <h4 style={{ fontSize: '17px', fontWeight: 800, color: '#ffffff', marginBottom: '8px' }}>
+                            {asm.title}
+                          </h4>
+
+                          <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '14px' }}>
+                            {asm.description.length > 200 ? `${asm.description.slice(0, 200)}...` : asm.description}
+                          </p>
+
+                          {/* Chips Thông số kỹ thuật */}
+                          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#c7d2fe' }}>
+                              🧪 {asm.testCases.length} Test Cases ({totalWeight.toFixed(1)}đ)
+                            </span>
+                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-cyan)' }}>
+                              ⚡ Thời gian: {asm.timeLimitMs}ms
+                            </span>
+                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
+                              💾 RAM: {asm.memoryLimitMb}MB
+                            </span>
+                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
+                              💻 {asm.allowedLanguages.join(', ').toUpperCase()}
+                            </span>
+                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 600 }}>
+                              👥 {asm.submissionCount}/38 Sinh viên đã nộp bài
+                            </span>
+                          </div>
+
+                          {/* Các nút hành động cho bài tập */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                type="button"
+                                onClick={() => setPreviewAssignment(asm)}
+                                style={{
+                                  padding: '7px 12px',
+                                  borderRadius: '8px',
+                                  backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                                  border: '1px solid var(--accent-primary)',
+                                  color: '#ffffff',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                }}
+                              >
+                                <Eye size={14} /> Xem Chi Tiết Đề & Test Cases
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab('SUBMISSIONS')}
+                                style={{
+                                  padding: '7px 12px',
+                                  borderRadius: '8px',
+                                  backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                                  color: 'var(--text-muted)',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                }}
+                              >
+                                <Award size={14} /> Sổ Điểm Bài Nộp
+                              </button>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleAssignmentStatus(asm.id)}
+                                style={{
+                                  padding: '6px 12px',
+                                  borderRadius: '6px',
+                                  backgroundColor: 'transparent',
+                                  border: `1px solid ${isPublished ? 'rgba(244, 63, 94, 0.4)' : 'rgba(16, 185, 129, 0.4)'}`,
+                                  color: isPublished ? '#f43f5e' : '#34d399',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {isPublished ? 'Đóng Nộp Bài' : 'Mở Lại Nộp Bài'}
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteAssignment(asm.id, asm.courseId)}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '6px',
+                                  backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                                  border: '1px solid rgba(244, 63, 94, 0.25)',
+                                  color: '#f43f5e',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                              >
+                                <Trash2 size={13} /> Xóa
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })() : (
+            /* TRƯỜNG HỢP 2: DANH SÁCH TẤT CẢ CÁC MÔN HỌC & LỚP */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>
+                    Các Lớp Học Phần Đang Giảng Dạy ({courses.length} Môn)
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                    Chọn bất kỳ môn học nào để xem danh sách các bài tập đã giao hoặc giao bài tập mới
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '16px' }}>
+                {courses.map((course) => {
+                  const assignedCount = publishedAssignments.filter((a) => a.courseId === course.courseId).length;
+
+                  return (
+                    <div key={course.courseId} className="glass-panel" style={{ padding: '24px', borderRadius: '14px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                        <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.2)', color: 'var(--accent-primary)', fontWeight: 700 }}>
+                          {course.courseCode}
+                        </span>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{course.semester}</span>
+                      </div>
+
+                      <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', marginBottom: '8px' }}>
+                        {course.courseName}
+                      </h3>
+
+                      <p style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '16px' }}>
+                        Giảng viên: {course.instructorName}
+                      </p>
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
+                        <span>Sĩ số: <strong style={{ color: '#ffffff' }}>{course.studentCount}</strong> sinh viên</span>
+                        <span>Đã giao: <strong style={{ color: 'var(--accent-cyan)' }}>{assignedCount}</strong> bài tập</span>
+                      </div>
+
+                      <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCourseDetailId(course.courseId)}
+                          style={{
+                            width: '100%',
+                            padding: '9px 12px',
+                            borderRadius: '8px',
+                            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(6, 182, 212, 0.2) 100%)',
+                            border: '1px solid rgba(99, 102, 241, 0.4)',
+                            color: '#ffffff',
+                            fontSize: '13px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <FolderKanban size={15} color="var(--accent-cyan)" /> 📋 Xem Các Bài Tập Đã Giao ({assignedCount})
+                        </button>
+
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedCourse(course.courseId);
+                              setActiveTab('CREATE_ASSIGNMENT');
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: '8px 10px',
+                              borderRadius: '8px',
+                              backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                              border: '1px solid rgba(255, 255, 255, 0.12)',
+                              color: 'var(--accent-primary)',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            + Giao Đề Mới (AI)
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('SUBMISSIONS')}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              backgroundColor: 'rgba(255,255,255,0.04)',
+                              border: '1px solid rgba(255,255,255,0.1)',
+                              color: 'var(--text-muted)',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Bảng Điểm
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -888,9 +1467,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     fontSize: '14px',
                   }}
                 >
-                  <option value="COURSE-SWP391">SWP391 - Dự Án Phát Triển Phần Mềm</option>
-                  <option value="COURSE-PRO192">PRO192 - Lập Trình Java OOP</option>
-                  <option value="COURSE-CSD201">CSD201 - Cấu Trúc Dữ Liệu & Giải Thuật</option>
+                  {courses.map((c) => (
+                    <option key={c.courseId} value={c.courseId}>
+                      {c.courseCode} - {c.courseName}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -1618,6 +2199,254 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 type="button"
                 onClick={() => setShowSolutionModal(false)}
                 style={{ padding: '8px 18px', borderRadius: '8px', backgroundColor: 'var(--accent-primary)', border: 'none', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XEM CHI TIẾT ĐỀ BÀI & TEST CASES ĐÃ XUẤT BẢN CỦA MÔN HỌC */}
+      {previewAssignment && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(5, 7, 13, 0.85)',
+            backdropFilter: 'blur(8px)',
+            zIndex: 1100,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+        >
+          <div
+            className="glass-panel"
+            style={{
+              width: '100%',
+              maxWidth: '900px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '28px',
+              borderRadius: '20px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+            }}
+          >
+            {/* Header Modal */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      fontWeight: 700,
+                      backgroundColor: previewAssignment.status === 'PUBLISHED' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)',
+                      color: previewAssignment.status === 'PUBLISHED' ? '#34d399' : '#f43f5e',
+                      border: `1px solid ${previewAssignment.status === 'PUBLISHED' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+                    }}
+                  >
+                    {previewAssignment.status === 'PUBLISHED' ? '🟢 ĐANG MỞ NỘP BÀI' : '🔴 ĐÃ ĐÓNG NỘP'}
+                  </span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Mã đề: <strong style={{ color: '#fff' }}>{previewAssignment.id}</strong> • Tạo ngày: {previewAssignment.createdAt}
+                  </span>
+                </div>
+                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>
+                  {previewAssignment.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewAssignment(null)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            {/* Thông số kỹ thuật */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Hạn chót nộp bài:</span>
+                <strong style={{ fontSize: '13px', color: 'var(--accent-amber)' }}>{new Date(previewAssignment.deadline).toLocaleString('vi-VN')}</strong>
+              </div>
+              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Thời gian thực thi tối đa:</span>
+                <strong style={{ fontSize: '13px', color: 'var(--accent-cyan)' }}>{previewAssignment.timeLimitMs} ms</strong>
+              </div>
+              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Bộ nhớ RAM tối đa:</span>
+                <strong style={{ fontSize: '13px', color: '#ffffff' }}>{previewAssignment.memoryLimitMb} MB</strong>
+              </div>
+              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Ngôn ngữ lập trình:</span>
+                <strong style={{ fontSize: '13px', color: 'var(--accent-primary)' }}>{previewAssignment.allowedLanguages.join(', ').toUpperCase()}</strong>
+              </div>
+            </div>
+
+            {/* Mô tả đề bài */}
+            <div>
+              <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#e5e7eb', marginBottom: '8px' }}>
+                📖 Mô Tả Yêu Cầu & Ràng Buộc:
+              </h4>
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', whiteSpace: 'pre-wrap', backgroundColor: 'rgba(0,0,0,0.25)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', margin: 0 }}>
+                {previewAssignment.description}
+              </p>
+            </div>
+
+            {/* Danh sách Test Cases */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Cpu size={16} /> Danh Sách Test Cases ({previewAssignment.testCases.length} Bộ Test, Tổng Trọng Số: {previewAssignment.testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0).toFixed(1)}đ):
+                </h4>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {previewAssignment.testCases.map((tc, tcIdx) => (
+                  <div
+                    key={tcIdx}
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '10px',
+                      backgroundColor: 'rgba(18, 24, 36, 0.7)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
+                        Test Case #{tcIdx + 1}
+                      </span>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            padding: '2px 8px',
+                            borderRadius: '4px',
+                            backgroundColor: tc.isHidden ? 'rgba(245, 158, 11, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+                            color: tc.isHidden ? 'var(--accent-amber)' : 'var(--accent-cyan)',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {tc.isHidden ? '🔒 Test Ẩn' : '🌐 Test Công Khai'}
+                        </span>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#34d399', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>
+                          Trọng số: {tc.weight}đ
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Đầu vào (Input / StdIn):</span>
+                        <pre style={{ margin: 0, padding: '8px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', border: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto' }}>
+                          {tc.input}
+                        </pre>
+                      </div>
+                      <div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Đầu ra kỳ vọng (Expected Output / StdOut):</span>
+                        <pre style={{ margin: 0, padding: '8px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', color: '#34d399', fontSize: '12px', fontFamily: 'var(--font-mono)', border: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto' }}>
+                          {tc.output}
+                        </pre>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Barem Rubrics */}
+            {previewAssignment.rubrics && previewAssignment.rubrics.length > 0 && (
+              <div>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#a5b4fc', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Award size={16} /> Barem Chấm Điểm Học Thuật (Rubrics):
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {previewAssignment.rubrics.map((r, rIdx) => (
+                    <div key={rIdx} style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>{rIdx + 1}. {r.criterion}</span>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#818cf8' }}>{r.maxScore}đ</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{r.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Starter Code hoặc Reference Solution nếu có */}
+            {previewAssignment.starterCode && (
+              <div>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#a5b4fc', marginBottom: '6px' }}>
+                  Khung Mã Nguồn Khởi Tạo (Starter Code):
+                </h4>
+                <pre style={{ margin: 0, padding: '12px', borderRadius: '8px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  {previewAssignment.starterCode}
+                </pre>
+              </div>
+            )}
+
+            {/* Footer Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleToggleAssignmentStatus(previewAssignment.id);
+                    setPreviewAssignment((prev) => (prev ? { ...prev, status: prev.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED' } : null));
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: previewAssignment.status === 'PUBLISHED' ? 'rgba(244, 63, 94, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                    border: `1px solid ${previewAssignment.status === 'PUBLISHED' ? 'rgba(244, 63, 94, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                    color: previewAssignment.status === 'PUBLISHED' ? '#f43f5e' : '#34d399',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {previewAssignment.status === 'PUBLISHED' ? 'Đóng Nộp Bài' : 'Mở Lại Nộp Bài'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreviewAssignment(null);
+                    setActiveTab('SUBMISSIONS');
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Award size={15} /> Xem Sổ Điểm Lớp
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPreviewAssignment(null)}
+                className="btn-primary"
+                style={{ padding: '8px 24px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
               >
                 Đóng
               </button>
