@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { SubmissionView } from './components/SubmissionView';
 import { LiveGradingModal } from './components/LiveGradingModal';
 import { LoginModal } from './components/LoginModal';
+import { AdminDashboard } from './components/AdminDashboard';
+import { LecturerPanel } from './components/LecturerPanel';
 import type { Task, GradingStep, AIRating, PlagiarismMatch, User } from './types';
-import { Terminal, Shield, LogIn, LogOut } from 'lucide-react';
+import { Terminal, Shield, LogIn, LogOut, LayoutDashboard, BookOpen, Upload } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 import { PlagiarismService } from './services/plagiarism.service';
 
@@ -66,6 +68,9 @@ export function App() {
       return null;
     }
   });
+
+  // Active view: 'student' | 'admin' | 'lecturer'
+  const [activeView, setActiveView] = useState<'student' | 'admin' | 'lecturer'>('student');
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
@@ -172,6 +177,7 @@ export function App() {
     localStorage.removeItem('aita_token');
     localStorage.removeItem('aita_user');
     setCurrentUser(null);
+    setActiveView('student');
   };
 
   const handleSubmission = async (file?: File, benchmarkPairId?: number) => {
@@ -353,10 +359,24 @@ export function App() {
     });
   };
 
+  // Role-based view tabs
+  const navTabs = currentUser ? [
+    ...(currentUser.role === 'ADMIN' || currentUser.role === 'INSTRUCTOR'
+      ? [{ key: 'student', label: 'Nộp bài', icon: <Upload size={14} /> }]
+      : [{ key: 'student', label: 'Nộp bài', icon: <Upload size={14} /> }]),
+    ...(currentUser.role === 'INSTRUCTOR' || currentUser.role === 'ADMIN'
+      ? [{ key: 'lecturer', label: 'Chấm bài', icon: <BookOpen size={14} /> }]
+      : []),
+    ...(currentUser.role === 'ADMIN'
+      ? [{ key: 'admin', label: 'Hệ thống', icon: <LayoutDashboard size={14} /> }]
+      : []),
+  ] : [];
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <nav className="glass-panel" style={{ borderRadius: '0', borderLeft: 'none', borderRight: 'none', borderTop: 'none', padding: '16px 32px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <nav className="glass-panel" style={{ borderRadius: '0', borderLeft: 'none', borderRight: 'none', borderTop: 'none', padding: '14px 32px' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)' }}>
               <Terminal size={24} />
@@ -367,100 +387,81 @@ export function App() {
             </div>
           </div>
 
+          {/* Center nav tabs (role-based) */}
+          {navTabs.length > 1 && (
+            <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 4, border: '1px solid var(--border-color)' }}>
+              {navTabs.map(tab => (
+                <button key={tab.key}
+                  onClick={() => setActiveView(tab.key as any)}
+                  style={{
+                    padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    background: activeView === tab.key ? 'rgba(99,102,241,0.25)' : 'transparent',
+                    color: activeView === tab.key ? '#818cf8' : 'var(--text-muted)',
+                    fontWeight: activeView === tab.key ? 700 : 500,
+                    fontSize: 13, display: 'flex', alignItems: 'center', gap: 6,
+                    transition: 'all 0.2s',
+                  }}>
+                  {tab.icon} {tab.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Right: user info + socket */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             {currentUser ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-                  <span
-                    style={{
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      backgroundColor:
-                        currentUser.role === 'ADMIN'
-                          ? 'rgba(245, 158, 11, 0.2)'
-                          : currentUser.role === 'INSTRUCTOR'
-                          ? 'rgba(99, 102, 241, 0.2)'
-                          : 'rgba(16, 185, 129, 0.2)',
-                      color:
-                        currentUser.role === 'ADMIN'
-                          ? '#f59e0b'
-                          : currentUser.role === 'INSTRUCTOR'
-                          ? '#818cf8'
-                          : '#10b981',
-                      border: '1px solid currentColor',
-                    }}
-                  >
-                    {currentUser.role}
-                  </span>
+                  <span style={{
+                    padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700,
+                    backgroundColor: currentUser.role === 'ADMIN' ? 'rgba(245,158,11,0.2)' : currentUser.role === 'INSTRUCTOR' ? 'rgba(99,102,241,0.2)' : 'rgba(16,185,129,0.2)',
+                    color: currentUser.role === 'ADMIN' ? '#f59e0b' : currentUser.role === 'INSTRUCTOR' ? '#818cf8' : '#10b981',
+                    border: '1px solid currentColor',
+                  }}>{currentUser.role}</span>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontWeight: 600, color: '#fff' }}>{currentUser.fullName}</span>
                     <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{currentUser.email}</span>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  title="Đăng xuất"
-                  style={{
-                    background: 'rgba(239, 68, 68, 0.1)',
-                    border: '1px solid rgba(239, 68, 68, 0.25)',
-                    color: '#f87171',
-                    borderRadius: '8px',
-                    padding: '6px 10px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                  }}
-                >
+                <button type="button" onClick={handleLogout} title="Đăng xuất"
+                  style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', color: '#f87171', borderRadius: '8px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', fontSize: '12px' }}>
                   <LogOut size={14} /> Thoát
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => setIsLoginModalOpen(true)}
-                className="btn-primary"
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                }}
-              >
+              <button type="button" onClick={() => setIsLoginModalOpen(true)} className="btn-primary"
+                style={{ padding: '8px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                 <LogIn size={15} /> Đăng Nhập
               </button>
             )}
 
             <span style={{ width: '1px', height: '20px', backgroundColor: 'var(--border-color)' }} />
 
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px',
-              padding: '4px 10px',
-              borderRadius: '20px',
-              backgroundColor: isSocketConnected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '4px 10px', borderRadius: '20px',
+              backgroundColor: isSocketConnected ? 'rgba(16,185,129,0.15)' : 'rgba(234,179,8,0.15)',
               color: isSocketConnected ? 'var(--accent-emerald)' : '#eab308',
-              border: `1px solid ${isSocketConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
-            }}>
-              <Shield size={14} /> {isSocketConnected ? 'Gateway WebSocket Connected' : 'Gateway Connecting'}
+              border: `1px solid ${isSocketConnected ? 'rgba(16,185,129,0.3)' : 'rgba(234,179,8,0.3)'}` }}>
+              <Shield size={14} /> {isSocketConnected ? 'WS Connected' : 'Connecting'}
             </div>
           </div>
         </div>
       </nav>
 
-      <main style={{ flexGrow: 1, padding: '40px 20px' }}>
-        <SubmissionView task={mockTask} onSubmit={handleSubmission} />
+      <main style={{ flexGrow: 1, padding: '40px 32px', maxWidth: 1280, margin: '0 auto', width: '100%', boxSizing: 'border-box' }}>
+        {/* ADMIN VIEW */}
+        {activeView === 'admin' && currentUser?.role === 'ADMIN' && (
+          <AdminDashboard token={localStorage.getItem('aita_token') || ''} />
+        )}
+
+        {/* LECTURER VIEW */}
+        {activeView === 'lecturer' && (currentUser?.role === 'INSTRUCTOR' || currentUser?.role === 'ADMIN') && (
+          <LecturerPanel token={localStorage.getItem('aita_token') || ''} />
+        )}
+
+        {/* STUDENT / DEFAULT VIEW */}
+        {activeView === 'student' && (
+          <SubmissionView task={mockTask} onSubmit={handleSubmission} />
+        )}
       </main>
 
       <LoginModal

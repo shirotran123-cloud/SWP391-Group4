@@ -10,7 +10,11 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
+import * as fs from 'fs';
+import * as path from 'path';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SubmissionsService } from './submissions.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
@@ -106,6 +110,44 @@ export class SubmissionsController {
       statusCode: HttpStatus.OK,
       data: submission,
     };
+  }
+
+  /**
+   * Download file .zip gốc của bài nộp (dành cho Giảng viên chấm tay)
+   */
+  @Get(':id/download')
+  public async downloadSubmissionFile(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const submission = await this.submissionsService.getSubmissionById(id);
+    if (!submission) {
+      throw new NotFoundException(`Không tìm thấy bài nộp với ID: ${id}`);
+    }
+
+    const filePath = submission.filePath;
+    if (!filePath || !fs.existsSync(filePath)) {
+      throw new NotFoundException(
+        `File zip của bài nộp ${id} không tồn tại trên server. ` +
+        `(Path: ${filePath || 'không có'})`,
+      );
+    }
+
+    const originalFileName = submission.fileName || `${id}.zip`;
+    const safeFileName = originalFileName.endsWith('.zip')
+      ? originalFileName
+      : `${originalFileName}.zip`;
+
+    const stat = fs.statSync(filePath);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}"`);
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('X-Submission-Id', id);
+    res.setHeader('X-Student-Id', submission.studentId);
+    res.setHeader('X-SHA256', submission.sha256Hash || '');
+
+    const stream = fs.createReadStream(filePath);
+    stream.pipe(res);
   }
 
   /**

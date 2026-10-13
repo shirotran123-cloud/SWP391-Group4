@@ -99,5 +99,14 @@
     "isActive": true,
     "createdAt": "2026-10-12T07:16:07.955Z",
     "updatedAt": "2026-10-12T07:16:07.955Z"
+  },
+  {
+    "userId": "linhcampochia@gmail.com",
+    "email": "linhcampochia@gmail.com",
+    "fullName": "linhcampochia",
+    "role": "STUDENT",
+    "isActive": true,
+    "createdAt": "2026-10-13T02:48:31.558Z",
+    "updatedAt": "2026-10-13T02:48:31.558Z"
   }
 ]

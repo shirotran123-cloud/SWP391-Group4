@@ -13,6 +13,13 @@ function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
+// Tài khoản demo có sẵn trong hệ thống (seeded)
+const DEMO_ACCOUNTS = [
+  { email: 'admin@aita.fpt.edu.vn',          label: 'Admin',      role: 'ADMIN',      color: '#f59e0b', icon: '⚙️' },
+  { email: 'trungdt.teacher@aita.fpt.edu.vn', label: 'Giảng viên', role: 'INSTRUCTOR', color: '#818cf8', icon: '📚' },
+  { email: 'trungdt.student@aita.fpt.edu.vn', label: 'Sinh viên',  role: 'STUDENT',    color: '#10b981', icon: '🎓' },
+];
+
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const [step, setStep] = useState<'CREDENTIALS' | 'OTP'>('CREDENTIALS');
   const [email, setEmail] = useState('');
@@ -24,6 +31,31 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [quickLoading, setQuickLoading] = useState<string | null>(null);
+
+  // Đăng nhập nhanh không cần OTP (dùng endpoint /auth/login trực tiếp)
+  const handleQuickLogin = async (demoEmail: string) => {
+    setQuickLoading(demoEmail);
+    setAuthError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: demoEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Đăng nhập thất bại!');
+      const { token, user } = data.data;
+      localStorage.setItem('aita_token', token);
+      localStorage.setItem('aita_user', JSON.stringify(user));
+      onLoginSuccess(user, token);
+      onClose();
+    } catch (err: any) {
+      setAuthError(err.message || 'Lỗi kết nối máy chủ');
+    } finally {
+      setQuickLoading(null);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -250,22 +282,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         </button>
 
         {/* Header với icon */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div
-            style={{
-              width: '52px',
-              height: '52px',
-              borderRadius: '16px',
-              background: step === 'CREDENTIALS' 
-                ? 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)' 
-                : 'linear-gradient(135deg, #06b6d4 0%, #10b981 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 14px auto',
-              boxShadow: '0 8px 24px rgba(99, 102, 241, 0.45)',
-            }}
-          >
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <div style={{
+            width: '52px', height: '52px', borderRadius: '16px',
+            background: step === 'CREDENTIALS' ? 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)' : 'linear-gradient(135deg, #06b6d4 0%, #10b981 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 14px auto', boxShadow: '0 8px 24px rgba(99, 102, 241, 0.45)',
+          }}>
             {step === 'CREDENTIALS' ? (
               <svg style={{ width: '26px', height: '26px', color: '#ffffff' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -280,11 +303,55 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             {step === 'CREDENTIALS' ? 'Đăng nhập AITA' : 'Xác thực mã Gmail'}
           </h1>
           <p style={{ color: '#94a3b8', fontSize: '13px', margin: 0 }}>
-            {step === 'CREDENTIALS' 
-              ? 'Nhập tài khoản để nhận mã OTP qua Gmail' 
-              : `Mã OTP đã gửi đến: ${email}`}
+            {step === 'CREDENTIALS' ? 'Nhập tài khoản để nhận mã OTP qua Gmail' : `Mã OTP đã gửi đến: ${email}`}
           </p>
         </div>
+
+        {/* ── QUICK LOGIN PANEL (chỉ hiện ở bước CREDENTIALS) ── */}
+        {step === 'CREDENTIALS' && (
+          <div style={{ marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap' }}>⚡ ĐĂNG NHẬP NHANH (Demo)</span>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {DEMO_ACCOUNTS.map(acc => (
+                <button
+                  key={acc.email}
+                  type="button"
+                  disabled={quickLoading !== null}
+                  onClick={() => handleQuickLogin(acc.email)}
+                  style={{
+                    width: '100%', padding: '10px 14px',
+                    background: quickLoading === acc.email ? `${acc.color}33` : `${acc.color}11`,
+                    border: `1px solid ${acc.color}44`,
+                    borderRadius: 12, cursor: quickLoading !== null ? 'wait' : 'pointer',
+                    display: 'flex', alignItems: 'center', gap: 10,
+                    transition: 'all 0.18s',
+                    opacity: quickLoading !== null && quickLoading !== acc.email ? 0.5 : 1,
+                  }}
+                >
+                  <span style={{ fontSize: 18 }}>{acc.icon}</span>
+                  <div style={{ flex: 1, textAlign: 'left' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: acc.color }}>{acc.label}</div>
+                    <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>{acc.email}</div>
+                  </div>
+                  {quickLoading === acc.email ? (
+                    <span style={{ fontSize: 12, color: acc.color }}>Đang vào...</span>
+                  ) : (
+                    <span style={{ fontSize: 12, color: acc.color, fontWeight: 600 }}>Vào ngay →</span>
+                  )}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16, marginBottom: 4 }}>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+              <span style={{ fontSize: 11, color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap' }}>HOẶC ĐĂNG NHẬP BẰNG OTP</span>
+              <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+            </div>
+          </div>
+        )}
 
         {/* Thông báo thông tin / thành công */}
         {successMsg && (
