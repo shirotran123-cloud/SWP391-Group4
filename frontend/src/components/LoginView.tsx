@@ -52,6 +52,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [clientId, setClientId] = useState<string>(() => {
     return localStorage.getItem('aita_google_client_id') || DEFAULT_CLIENT_ID;
   });
+  const [redirectUriConfig, setRedirectUriConfig] = useState<string>(() => {
+    return localStorage.getItem('aita_google_redirect_uri') || window.location.origin;
+  });
+  const [directEmailInput, setDirectEmailInput] = useState<string>('linhcampochia@gmail.com');
   const [showConfig, setShowConfig] = useState(false);
   const [showTester, setShowTester] = useState(false);
 
@@ -165,7 +169,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setSuccessMsg(null);
     setLoading(true);
 
-    const redirectUri = window.location.origin;
+    const redirectUri = redirectUriConfig.trim() || window.location.origin;
     const activeClientId = clientId.trim() || DEFAULT_CLIENT_ID;
 
     // URL OAuth 2.0 chuẩn của Google - chuyển hướng sang trang Google chính thức
@@ -182,9 +186,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     window.location.href = googleOAuthUrl;
   };
 
-  const handleSaveClientId = (val: string) => {
-    setClientId(val);
-    localStorage.setItem('aita_google_client_id', val);
+  const handleSaveConfig = (cId: string, rUri: string) => {
+    const cleanClientId = cId.trim() || DEFAULT_CLIENT_ID;
+    const cleanRedirectUri = rUri.trim() || window.location.origin;
+    setClientId(cleanClientId);
+    setRedirectUriConfig(cleanRedirectUri);
+    localStorage.setItem('aita_google_client_id', cleanClientId);
+    localStorage.setItem('aita_google_redirect_uri', cleanRedirectUri);
     setShowConfig(false);
   };
 
@@ -441,7 +449,71 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             <div style={{ fontSize: '11.5px', color: '#c7d2fe', marginBottom: '8px', fontWeight: 600 }}>
               Thử nghiệm luồng xác thực Google SSO & Kiểm tra CSDL:
             </div>
+
+            {/* Ô nhập email bất kỳ để đăng nhập trực tiếp (Bypass redirect_uri_mismatch nếu Google Cloud chưa cập nhật) */}
+            <div style={{ marginBottom: '12px', display: 'flex', gap: '8px' }}>
+              <input
+                type="email"
+                value={directEmailInput}
+                onChange={(e) => setDirectEmailInput(e.target.value)}
+                placeholder="Nhập email Google SSO..."
+                style={{
+                  flex: 1,
+                  padding: '7px 10px',
+                  borderRadius: '6px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  outline: 'none',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (directEmailInput.trim()) {
+                    verifyEmailWithBackend(directEmailInput.trim(), directEmailInput.split('@')[0]);
+                  }
+                }}
+                style={{
+                  padding: '7px 12px',
+                  borderRadius: '6px',
+                  backgroundColor: '#4f46e5',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Đăng nhập ngay
+              </button>
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => verifyEmailWithBackend('linhcampochia@gmail.com', 'Linh Campochia')}
+                style={{
+                  padding: '7px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(52, 211, 153, 0.5)',
+                  background: 'rgba(52, 211, 153, 0.15)',
+                  color: '#6ee7b7',
+                  fontSize: '11.5px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 600,
+                }}
+              >
+                <UserCheck size={14} />
+                <span>⭐ <strong>linhcampochia@gmail.com</strong> (Tài khoản của bạn • Student)</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => verifyEmailWithBackend('phaithayj@gmail.com', 'Vinh Nguyễn Hoàng')}
@@ -529,55 +601,85 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
         )}
 
-        {/* Khung cấu hình Client ID */}
+        {/* Khung cấu hình Client ID & Redirect URI */}
         {showConfig && (
           <div
             style={{
-              background: 'rgba(15, 23, 42, 0.8)',
-              padding: '14px',
+              background: 'rgba(15, 23, 42, 0.85)',
+              padding: '16px',
               borderRadius: '12px',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
               marginBottom: '18px',
               textAlign: 'left',
             }}
           >
-            <label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>
-              Google OAuth 2.0 Client ID:
-            </label>
-            <input
-              type="text"
-              defaultValue={clientId}
-              id="config-client-id"
-              placeholder="ví dụ: 652923540545-...apps.googleusercontent.com"
-              style={{
-                width: '100%',
-                padding: '8px 10px',
-                borderRadius: '8px',
-                background: 'rgba(0, 0, 0, 0.5)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: '#fff',
-                fontSize: '12px',
-                marginBottom: '8px',
-                boxSizing: 'border-box',
-              }}
-            />
+            <div style={{ marginBottom: '10px' }}>
+              <label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
+                Google OAuth 2.0 Client ID:
+              </label>
+              <input
+                type="text"
+                defaultValue={clientId}
+                id="config-client-id"
+                placeholder="652923540545-...apps.googleusercontent.com"
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#fff',
+                  fontSize: '12px',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
+                OAuth Redirect URI (Phải trùng khớp 100% cấu hình trên Google Cloud Console):
+              </label>
+              <input
+                type="text"
+                defaultValue={redirectUriConfig}
+                id="config-redirect-uri"
+                placeholder="http://localhost:5173"
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#fff',
+                  fontSize: '12px',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <span style={{ fontSize: '10.5px', color: '#fbbf24', marginTop: '4px', display: 'block' }}>
+                * Mẹo: Thử đổi giữa http://localhost:5173 hoặc http://localhost:5173/ nếu gặp lỗi redirect_uri_mismatch.
+              </span>
+            </div>
+
             <button
               onClick={() => {
-                const input = document.getElementById('config-client-id') as HTMLInputElement;
-                if (input) handleSaveClientId(input.value);
+                const cIdInput = document.getElementById('config-client-id') as HTMLInputElement;
+                const rUriInput = document.getElementById('config-redirect-uri') as HTMLInputElement;
+                if (cIdInput && rUriInput) {
+                  handleSaveConfig(cIdInput.value, rUriInput.value);
+                }
               }}
               style={{
-                padding: '6px 14px',
+                padding: '7px 16px',
                 borderRadius: '6px',
                 border: 'none',
                 background: '#4f46e5',
                 color: '#fff',
-                fontSize: '11.5px',
+                fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
               }}
             >
-              Lưu cấu hình
+              Lưu Cấu Hình
             </button>
           </div>
         )}
