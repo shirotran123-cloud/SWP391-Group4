@@ -4,7 +4,6 @@ import { LiveGradingModal } from './components/LiveGradingModal';
 import { LoginView } from './components/LoginView';
 import { LoginModal } from './components/LoginModal';
 import { AdminDashboard } from './components/AdminDashboard';
-import { LecturerPanel } from './components/LecturerPanel';
 import { LecturerDashboard } from './components/LecturerDashboard';
 import { RblBenchmarkView } from './components/RblBenchmarkView';
 import type { Task, GradingStep, AIRating, PlagiarismMatch, User } from './types';

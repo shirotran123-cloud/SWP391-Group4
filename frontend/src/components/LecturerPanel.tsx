@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  BookOpen, Download, Eye, RefreshCw, Search, Filter,
-  CheckCircle, XCircle, Clock, FileText, Code2, Star,
-  ChevronDown, ChevronUp, Edit3, Save, X, AlertTriangle,
-  BarChart2, User, MessageSquare,
+  Download, Eye, RefreshCw, Search, Filter,
+  CheckCircle, Clock, FileText,
+  ChevronDown, ChevronUp, Edit3, Save, X,
+  BarChart2, MessageSquare,
 } from 'lucide-react';
 
 const API = 'http://localhost:3000';
