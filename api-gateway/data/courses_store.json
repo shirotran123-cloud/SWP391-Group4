@@ -1,88 +1,35 @@
 [
   {
-    "courseId": "COURSE-SWP391",
-    "courseCode": "SWP391",
-    "courseName": "Application Development Project",
-    "description": "Dự án Phát triển Ứng dụng - Kỹ thuật phần mềm",
-    "semester": "Fall 2026",
-    "instructorId": "GV001",
-    "isActive": true,
-    "createdAt": "2026-10-07T04:09:51.202Z",
-    "updatedAt": "2026-10-07T04:09:51.202Z"
-  },
-  {
-    "courseId": "COURSE-PRN211",
-    "courseCode": "PRN211",
-    "courseName": "Basic Cross-Platform .NET Application",
-    "description": "Lập trình ứng dụng đa nền tảng với .NET Core",
-    "semester": "Fall 2026",
-    "instructorId": "GV001",
-    "isActive": true,
-    "createdAt": "2026-10-07T04:09:51.202Z",
-    "updatedAt": "2026-10-07T04:09:51.202Z"
-  },
-  {
-    "courseId": "COURSE-TEST-1791346231189",
-    "courseCode": "CS1189",
-    "courseName": "Kiểm thử Phần mềm Tự động",
-    "semester": "Fall 2026",
-    "instructorId": "GV001",
-    "isActive": true,
-    "createdAt": "2026-10-07T04:10:31.191Z",
-    "updatedAt": "2026-10-07T04:10:31.191Z"
-  },
-  {
-    "courseId": "COURSE-TEST-1791346314698",
-    "courseCode": "CS4698",
-    "courseName": "Kiểm thử Phần mềm Tự động",
-    "semester": "Fall 2026",
-    "instructorId": "GV001",
-    "isActive": true,
-    "createdAt": "2026-10-07T04:11:54.700Z",
-    "updatedAt": "2026-10-07T04:11:54.700Z"
-  },
-  {
     "courseId": "CRS-SWP391",
     "courseCode": "SE1701-SWP391",
     "courseName": "Application Development Project (SWP391)",
-    "description": "Dự án Phát triển phần mềm theo chuẩn Agile Scrum",
+    "description": "Du an Phat trien phan mem theo chuan Agile Scrum",
     "semester": "Fall 2026",
     "instructorId": "GV001",
     "isActive": true,
-    "createdAt": "2026-10-13T04:32:38.380Z",
-    "updatedAt": "2026-10-13T04:32:38.380Z"
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
   },
   {
     "courseId": "CRS-PRO192",
     "courseCode": "SE1702-PRO192",
     "courseName": "Object-Oriented Programming (PRO192)",
-    "description": "Lập trình hướng đối tượng với Java và Design Patterns",
+    "description": "Lap trinh huong doi tuong voi Java va Design Patterns",
     "semester": "Fall 2026",
     "instructorId": "GV001",
     "isActive": true,
-    "createdAt": "2026-10-13T04:32:38.380Z",
-    "updatedAt": "2026-10-13T04:32:38.380Z"
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
   },
   {
     "courseId": "CRS-CSD201",
     "courseCode": "SE1703-CSD201",
     "courseName": "Data Structures and Algorithms (CSD201)",
-    "description": "Cấu trúc dữ liệu và giải thuật nâng cao",
+    "description": "Cau truc du lieu va giai thuat nang cao",
     "semester": "Fall 2026",
     "instructorId": "GV001",
     "isActive": true,
-    "createdAt": "2026-10-13T04:32:38.380Z",
-    "updatedAt": "2026-10-13T04:32:38.380Z"
-  },
-  {
-    "courseId": "CRS-PRN221",
-    "courseCode": "PRN221",
-    "courseName": "Advanced Cross-Platform Application Development with .NET",
-    "description": "Lập trình ứng dụng đa nền tảng với .NET Core & Microservices",
-    "semester": "Fall 2026",
-    "instructorId": "GV001",
-    "isActive": true,
-    "createdAt": "2026-10-13T13:23:07.625Z",
-    "updatedAt": "2026-10-13T13:23:07.625Z"
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
   }
 ]

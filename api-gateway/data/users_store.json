@@ -2,140 +2,48 @@
   {
     "userId": "ADMIN001",
     "email": "admin@aita.fpt.edu.vn",
-    "fullName": "Hệ Thống Quản Trị AITA",
+    "fullName": "He Thong Quan Tri AITA",
     "role": "ADMIN",
     "isActive": true,
-    "createdAt": "2026-10-07T04:09:51.200Z",
-    "updatedAt": "2026-10-07T04:09:51.200Z"
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
   },
   {
     "userId": "GV001",
-    "email": "giangvien.edu@gmail.com",
-    "fullName": "ThS. Giảng Viên AITA",
+    "email": "trungdt@fe.edu.vn",
+    "fullName": "ThS. Dinh Thanh Trung",
     "role": "INSTRUCTOR",
     "isActive": true,
-    "createdAt": "2026-10-07T04:09:51.200Z",
-    "updatedAt": "2026-10-07T04:09:51.200Z"
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
   },
   {
     "userId": "SE170000",
-    "email": "trungdt.student@aita.fpt.edu.vn",
-    "fullName": "Đinh Thành Trung (Sinh viên)",
+    "email": "trungse170000@fpt.edu.vn",
+    "fullName": "Dinh Thanh Trung (Sinh vien)",
     "role": "STUDENT",
     "isActive": true,
-    "createdAt": "2026-10-07T04:09:51.200Z",
-    "updatedAt": "2026-10-07T04:09:51.200Z"
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
   },
   {
-    "userId": "SE170123",
-    "email": "nguyentt@aita.fpt.edu.vn",
-    "fullName": "Trần Thanh Nguyên",
-    "role": "STUDENT",
-    "isActive": true,
-    "createdAt": "2026-10-07T04:09:51.200Z",
-    "updatedAt": "2026-10-07T04:09:51.200Z"
-  },
-  {
-    "userId": "TEST-USER-1791346230749",
-    "email": "test-user-1791346230749@aita.fpt.edu.vn",
-    "fullName": "Nguyễn Văn Test (Updated)",
+    "userId": "COV-A-1791906948467",
+    "email": "cov.a.1791906948467@fpt.edu.vn",
+    "fullName": "Cov A",
     "role": "STUDENT",
     "passwordHash": "hashed_default",
     "isActive": true,
-    "createdAt": "2026-10-07T04:10:31.177Z",
-    "updatedAt": "2026-10-07T04:10:31.185Z"
+    "createdAt": "2026-10-13T15:55:48.468Z",
+    "updatedAt": "2026-10-13T15:55:48.468Z"
   },
   {
-    "userId": "TEST-USER-1791346314660",
-    "email": "test-user-1791346314660@aita.fpt.edu.vn",
-    "fullName": "Nguyễn Văn Test (Updated)",
+    "userId": "COV-B-1791906948467",
+    "email": "cov.b.1791906948467@fpt.edu.vn",
+    "fullName": "Cov B",
     "role": "STUDENT",
     "passwordHash": "hashed_default",
     "isActive": true,
-    "createdAt": "2026-10-07T04:11:54.686Z",
-    "updatedAt": "2026-10-07T04:11:54.694Z"
-  },
-  {
-    "userId": "SE201817",
-    "email": "user.student@gmail.com",
-    "fullName": "user.student",
-    "role": "STUDENT",
-    "isActive": true,
-    "createdAt": "2026-10-12T03:18:53.721Z",
-    "updatedAt": "2026-10-12T03:18:53.721Z"
-  },
-  {
-    "userId": "SE372411",
-    "email": "1@gmail.com",
-    "fullName": "1",
-    "role": "STUDENT",
-    "isActive": true,
-    "createdAt": "2026-10-12T03:29:08.336Z",
-    "updatedAt": "2026-10-12T03:29:08.336Z"
-  },
-  {
-    "userId": "SE712137",
-    "email": "vttrung2k6@gmail.com",
-    "fullName": "trung văn",
-    "role": "STUDENT",
-    "isActive": true,
-    "createdAt": "2026-10-12T03:38:06.823Z",
-    "updatedAt": "2026-10-13T08:37:39.923Z",
-    "passwordHash": "70362a9ce80febbb498fd06bc47a3b35:b6fb47d82101a154285d9fc6133779b90924681f153ef47d47db4c5b663d09f0b62bb5d6458c06756fc57fe782a06b563dfa434be2d256e50739b63697d3de1c"
-  },
-  {
-    "userId": "vthaitrung2k6@gmail.com",
-    "email": "vthaitrung2k6@gmail.com",
-    "fullName": "vthaitrung2k6",
-    "role": "STUDENT",
-    "isActive": true,
-    "createdAt": "2026-10-12T04:22:11.513Z",
-    "updatedAt": "2026-10-13T08:38:26.971Z",
-    "passwordHash": "9aec43133cb05477b8f428e327ceb71c:03067efcd95a45507973ecac2ac91fd9c1cd6f338903fb147dfc19591b4457dc44959c23503183eda819e48dc81fa2613f4e1b9ba845bbd81cfe6d4c8365f063"
-  },
-  {
-    "userId": "vanthaitrung2k6@gmail.com",
-    "email": "vanthaitrung2k6@gmail.com",
-    "fullName": "vanthaitrung2k6",
-    "role": "STUDENT",
-    "isActive": true,
-    "createdAt": "2026-10-12T07:16:07.955Z",
-    "updatedAt": "2026-10-12T07:16:07.955Z"
-  },
-  {
-    "userId": "phaithayj@gmail.com",
-    "email": "phaithayj@gmail.com",
-    "fullName": "Vinh Nguyễn Hoàng",
-    "role": "STUDENT",
-    "isActive": true,
-    "createdAt": "2026-10-13T09:50:00.000Z",
-    "updatedAt": "2026-10-13T09:50:00.000Z"
-  },
-  {
-    "userId": "mochibunnyyy123@gmail.com",
-    "email": "mochibunnyyy123@gmail.com",
-    "fullName": "Viktor Wilson",
-    "role": "STUDENT",
-    "isActive": true,
-    "createdAt": "2026-10-13T09:50:00.000Z",
-    "updatedAt": "2026-10-13T09:50:00.000Z"
-  },
-  {
-    "userId": "linhcampochia@gmail.com",
-    "email": "linhcampochia@gmail.com",
-    "fullName": "linhcampochia",
-    "role": "STUDENT",
-    "isActive": true,
-    "createdAt": "2026-10-13T02:48:31.558Z",
-    "updatedAt": "2026-10-13T02:48:31.558Z"
-  },
-  {
-    "userId": "TEST_SV001",
-    "email": "sinhvien.test@fpt.edu.vn",
-    "fullName": "Sinh Viên FPT Test",
-    "role": "STUDENT",
-    "isActive": true,
-    "createdAt": "2026-10-13T10:17:49.093Z",
-    "updatedAt": "2026-10-13T10:17:49.094Z"
+    "createdAt": "2026-10-13T15:55:48.468Z",
+    "updatedAt": "2026-10-13T15:55:48.468Z"
   }
 ]

@@ -2,73 +2,39 @@
   {
     "assignmentId": "TASK-SWP391-SPRINT2",
     "courseId": "COURSE-SWP391",
-    "title": "Thuật toán Sắp xếp & Tối ưu hóa Bộ nhớ (Milestone 2)",
-    "description": "Xây dựng thuật toán sắp xếp mảng 100,000 phần tử, tối ưu O(N log N) và tuân thủ các nguyên lý SOLID.",
+    "title": "Thuat toan Sap xep & Toi uu hoa Bo nho (Milestone 2)",
+    "description": "Xay dung thuat toan sap xep mang 100,000 phan tu, toi uu O(N log N) va tuan thu SOLID.",
     "allowedLanguages": [
       "java",
       "python",
       "cpp",
       "dotnet"
     ],
-    "maxScore": 10,
-    "deadline": "2026-10-21T04:09:51.203Z",
+    "maxScore": 10.0,
+    "deadline": "2026-12-31T23:59:59.000Z",
     "timeLimitMs": 2000,
     "memoryLimitMb": 512,
     "testcasesCount": 2,
     "isActive": true,
-    "createdAt": "2026-10-07T04:09:51.203Z",
-    "updatedAt": "2026-10-07T04:09:51.203Z"
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
   },
   {
     "assignmentId": "TASK-PRN211-M1",
     "courseId": "COURSE-PRN211",
-    "title": "Lập trình Cấu trúc dữ liệu & Thuật toán C# .NET",
-    "description": "Cài đặt Generic Binary Search Tree và xử lý ngoại lệ trong .NET 8.",
+    "title": "Lap trinh Cau truc du lieu & Thuat toan C# .NET",
+    "description": "Cai dat Generic Binary Search Tree va xu ly ngoai le trong .NET 8.",
     "allowedLanguages": [
       "dotnet",
       "java"
     ],
-    "maxScore": 10,
-    "deadline": "2026-10-21T04:09:51.203Z",
+    "maxScore": 10.0,
+    "deadline": "2026-12-31T23:59:59.000Z",
     "timeLimitMs": 2000,
     "memoryLimitMb": 512,
     "testcasesCount": 3,
     "isActive": true,
-    "createdAt": "2026-10-07T04:09:51.203Z",
-    "updatedAt": "2026-10-07T04:09:51.203Z"
-  },
-  {
-    "assignmentId": "TASK-TEST-1791346231198",
-    "courseId": "COURSE-SWP391",
-    "title": "Bài tập Thuật toán Kiểm thử Nhanh",
-    "allowedLanguages": [
-      "java",
-      "python"
-    ],
-    "maxScore": 10,
-    "deadline": "2026-10-17T04:10:31.198Z",
-    "timeLimitMs": 2000,
-    "memoryLimitMb": 512,
-    "testcasesCount": 2,
-    "isActive": true,
-    "createdAt": "2026-10-07T04:10:31.202Z",
-    "updatedAt": "2026-10-07T04:10:31.202Z"
-  },
-  {
-    "assignmentId": "TASK-TEST-1791346314703",
-    "courseId": "COURSE-SWP391",
-    "title": "Bài tập Thuật toán Kiểm thử Nhanh",
-    "allowedLanguages": [
-      "java",
-      "python"
-    ],
-    "maxScore": 10,
-    "deadline": "2026-10-17T04:11:54.703Z",
-    "timeLimitMs": 2000,
-    "memoryLimitMb": 512,
-    "testcasesCount": 2,
-    "isActive": true,
-    "createdAt": "2026-10-07T04:11:54.705Z",
-    "updatedAt": "2026-10-07T04:11:54.705Z"
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
   }
 ]

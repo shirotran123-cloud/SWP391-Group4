@@ -3,18 +3,31 @@
     "appealId": "APL-SAMPLE-001",
     "submissionId": "SUB-SAMPLE-01",
     "studentId": "SE170000",
-    "reason": "Kính gửi Thầy, bài của em bị chấm trừ điểm SOLID ở hàm main() nhưng em đã tách logic sang Service riêng. Kính mong Thầy xem xét lại.",
+    "reason": "Kinh gui Thay, bai cua em bi cham tru diem SOLID o ham main() nhung em da tach logic sang Service rieng. Kinh mong Thay xem xet lai.",
     "status": "PENDING",
-    "createdAt": "2026-10-13T03:41:10.827Z",
-    "updatedAt": "2026-10-13T03:41:10.827Z"
+    "createdAt": "2026-10-14T00:00:00.000Z",
+    "updatedAt": "2026-10-14T00:00:00.000Z"
   },
   {
-    "appealId": "APL-669392-4UO2",
-    "submissionId": "SUB-660992-P10FHR",
-    "studentId": "vthaitrung2k6",
-    "reason": "1313123123123123",
+    "appealId": "APL-948470-KI7H",
+    "submissionId": "COV-SUB-1791906948467",
+    "studentId": "SE170000",
+    "reason": "Coverage appeal number one, please recheck.",
+    "status": "ACCEPTED",
+    "createdAt": "2026-10-13T15:55:48.470Z",
+    "updatedAt": "2026-10-13T15:55:48.470Z",
+    "reviewerId": "GV001",
+    "resolutionNote": "Coverage resolution note.",
+    "adjustedScore": 8.5,
+    "resolvedAt": "2026-10-13T15:55:48.470Z"
+  },
+  {
+    "appealId": "APL-948471-O7OX",
+    "submissionId": "COV-SUB-1791906948467",
+    "studentId": "SE170000",
+    "reason": "Coverage appeal number two, supplementary detail.",
     "status": "PENDING",
-    "createdAt": "2026-10-13T10:01:09.392Z",
-    "updatedAt": "2026-10-13T10:01:09.392Z"
+    "createdAt": "2026-10-13T15:55:48.471Z",
+    "updatedAt": "2026-10-13T15:55:48.471Z"
   }
 ]
