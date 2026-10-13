@@ -5,8 +5,8 @@ import {
   Terminal,
   ExternalLink,
   RotateCw,
-  Sparkles,
   CheckCircle,
+  Settings,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
@@ -16,7 +16,11 @@ interface LoginViewProps {
 
 const API_BASE_URL = 'http://localhost:3000';
 
-// Biểu tượng Google chuẩn nhận diện thương hiệu Google OAuth
+// Client ID mặc định từ hệ thống trường hoặc từ biến môi trường VITE_GOOGLE_CLIENT_ID
+const DEFAULT_CLIENT_ID =
+  (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
+  '652923540545-ofcv5tmdn8kjiqfbnl2qf39fi6vdutfq.apps.googleusercontent.com';
+
 const GoogleIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
     <path
@@ -42,122 +46,130 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [clientId, setClientId] = useState<string>(() => {
+    return localStorage.getItem('aita_google_client_id') || DEFAULT_CLIENT_ID;
+  });
+  const [showConfig, setShowConfig] = useState(false);
 
-  // Xử lý xác thực khi nhận được thông tin từ Popup Google OAuth
-  const handleAuthPayload = async (payload: { email: string; fullName: string; credential?: string }) => {
-    setLoading(true);
-    setErrorMsg(null);
-    setSuccessMsg(`Đã nhận thông tin Google từ: ${payload.email}. Đang xác thực với hệ thống...`);
+  // Xử lý xác thực khi Google chuyển hướng về (OAuth 2.0 Redirect Callback)
+  useEffect(() => {
+    const handleGoogleCallback = async () => {
+      const hash = window.location.hash;
+      if (!hash) return;
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: payload.email,
-          fullName: payload.fullName,
-          credential: payload.credential,
-        }),
-      });
+      const params = new URLSearchParams(hash.substring(1));
+      const idToken = params.get('id_token');
+      const accessToken = params.get('access_token');
+      const error = params.get('error');
 
-      const json = await res.json();
-
-      if (!res.ok) {
-        setErrorMsg(
-          json.message ||
-            `Tài khoản '${payload.email}' chưa được phân quyền trong hệ thống AITA! Vui lòng liên hệ Quản trị viên.`
-        );
-        setSuccessMsg(null);
-        setLoading(false);
+      if (error) {
+        setErrorMsg(`Google OAuth trả về lỗi: ${error}`);
+        window.history.replaceState(null, '', window.location.pathname);
         return;
       }
 
-      if (json.data && json.data.token && json.data.user) {
-        localStorage.setItem('aita_token', json.data.token);
-        localStorage.setItem('aita_user', JSON.stringify(json.data.user));
-        setSuccessMsg(`Đăng nhập thành công! Xin chào ${json.data.user.fullName}.`);
-        setTimeout(() => {
-          onLoginSuccess(json.data.user);
-        }, 300);
-      } else {
-        setErrorMsg('Phản hồi từ máy chủ không hợp lệ!');
-        setLoading(false);
-      }
-    } catch (err: any) {
-      setErrorMsg('Không thể kết nối tới Backend API Gateway (Port 3000). Vui lòng kiểm tra lại dịch vụ!');
-      setLoading(false);
-    }
-  };
+      if (idToken || accessToken) {
+        setLoading(true);
+        setSuccessMsg('Đang nhận diện tài khoản Google và xác thực với AITA...');
 
-  // Lắng nghe sự kiện từ cửa sổ Google OAuth Popup
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'GOOGLE_OAUTH_SUCCESS') {
-        const { email, fullName, credential } = event.data;
-        if (email) {
-          void handleAuthPayload({ email, fullName, credential });
+        try {
+          let email = '';
+          let fullName = '';
+
+          if (idToken) {
+            // Giải mã JWT payload từ Google id_token
+            const base64Url = idToken.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(
+              atob(base64)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join('')
+            );
+            const parsed = JSON.parse(jsonPayload);
+            email = parsed.email;
+            fullName = parsed.name || email.split('@')[0];
+          } else if (accessToken) {
+            // Lấy thông tin người dùng từ Google UserInfo API
+            const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            const profile = await userInfoRes.json();
+            email = profile.email;
+            fullName = profile.name || email.split('@')[0];
+          }
+
+          if (email) {
+            // Xóa hash trên thanh địa chỉ để URL sạch sẽ
+            window.history.replaceState(null, '', window.location.pathname);
+
+            // Gửi lên Backend API Gateway để cấp quyền JWT AITA
+            const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, fullName, credential: idToken }),
+            });
+
+            const json = await res.json();
+
+            if (!res.ok) {
+              setErrorMsg(
+                json.message ||
+                  `Tài khoản '${email}' chưa được phân quyền trong hệ thống AITA! Vui lòng liên hệ Quản trị viên.`
+              );
+              setSuccessMsg(null);
+              setLoading(false);
+              return;
+            }
+
+            if (json.data && json.data.token && json.data.user) {
+              localStorage.setItem('aita_token', json.data.token);
+              localStorage.setItem('aita_user', JSON.stringify(json.data.user));
+              setSuccessMsg(`Đăng nhập Google thành công! Xin chào ${json.data.user.fullName}.`);
+              setTimeout(() => {
+                onLoginSuccess(json.data.user);
+              }, 300);
+            }
+          }
+        } catch (err: any) {
+          setErrorMsg('Lỗi khi xử lý phản hồi từ Google OAuth: ' + err.message);
+          setLoading(false);
         }
       }
     };
 
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'aita_google_oauth_response' && event.newValue) {
-        try {
-          const data = JSON.parse(event.newValue);
-          localStorage.removeItem('aita_google_oauth_response');
-          if (data && data.email) {
-            void handleAuthPayload({ email: data.email, fullName: data.fullName, credential: data.credential });
-          }
-        } catch {}
-      }
-    };
+    void handleGoogleCallback();
+  }, [onLoginSuccess]);
 
-    window.addEventListener('message', handleMessage);
-    window.addEventListener('storage', handleStorage);
-
-    return () => {
-      window.removeEventListener('message', handleMessage);
-      window.removeEventListener('storage', handleStorage);
-    };
-  }, []);
-
-  // Mở cửa sổ / Tab Google OAuth để người dùng đăng nhập trên trang của Google
-  const handleOpenGoogleOAuth = () => {
+  // Điều hướng thẳng sang trang đăng nhập thật của Google (Google OAuth 2.0 Endpoint)
+  const handleRedirectToGoogle = () => {
     setErrorMsg(null);
     setSuccessMsg(null);
+    setLoading(true);
 
-    const googleClientId = (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID;
+    const redirectUri = window.location.origin;
+    const activeClientId = clientId.trim() || DEFAULT_CLIENT_ID;
 
-    // Nếu đã cấu hình Google Cloud Client ID thật
-    if (googleClientId) {
-      const redirectUri = window.location.origin;
-      const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
-        googleClientId
-      )}&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&response_type=token%20id_token&scope=email%20profile%20openid&prompt=select_account`;
-      window.location.href = oauthUrl;
-      return;
-    }
+    // URL chuyển hướng chính thức của Google OAuth 2.0
+    const googleOAuthUrl =
+      `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${encodeURIComponent(activeClientId)}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `response_type=token%20id_token&` +
+      `scope=openid%20email%20profile&` +
+      `prompt=select_account&` +
+      `nonce=${Date.now()}`;
 
-    // Mở popup tab Google OAuth Account Chooser (chuẩn giao diện Google như ảnh người dùng yêu cầu)
-    const width = 480;
-    const height = 640;
-    const left = window.screenX + (window.outerWidth - width) / 2;
-    const top = window.screenY + (window.outerHeight - height) / 2;
+    console.log('[Google OAuth] Điều hướng tới URL chính thức của Google:', googleOAuthUrl);
 
-    const popup = window.open(
-      '/google-oauth.html',
-      'GoogleAccountChooser',
-      `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,location=no,status=no`
-    );
+    // Chuyển hướng trình duyệt sang trang đăng nhập chính thức của Google
+    window.location.href = googleOAuthUrl;
+  };
 
-    if (popup) {
-      popup.focus();
-    } else {
-      // Trường hợp trình duyệt chặn popup, mở trong tab mới
-      window.open('/google-oauth.html', '_blank');
-    }
+  const handleSaveClientId = (val: string) => {
+    setClientId(val);
+    localStorage.setItem('aita_google_client_id', val);
+    setShowConfig(false);
   };
 
   return (
@@ -249,7 +261,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               }}
             >
               <ShieldCheck size={14} />
-              Cổng Đăng Nhập Google SSO Ủy Quyền
+              Cổng Đăng Nhập Google OAuth 2.0 (SSO)
             </span>
           </div>
         </div>
@@ -299,10 +311,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
         )}
 
-        {/* Hộp hành động Đăng nhập với Google duy nhất */}
-        <div style={{ marginBottom: '24px' }}>
+        {/* NÚT DUY NHẤT: CHUYỂN HƯỚNG SANG TRANG GOOGLE */}
+        <div style={{ marginBottom: '20px' }}>
           <button
-            onClick={handleOpenGoogleOAuth}
+            onClick={handleRedirectToGoogle}
             disabled={loading}
             style={{
               width: '100%',
@@ -336,7 +348,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             {loading ? (
               <>
                 <RotateCw size={20} className="animate-spin" />
-                Đang Kết Nối Google SSO...
+                Đang Chuyển Hướng Tới Google...
               </>
             ) : (
               <>
@@ -353,12 +365,83 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             fontSize: '12px',
             color: 'var(--text-muted)',
             lineHeight: '1.6',
-            margin: '0 0 20px 0',
+            margin: '0 0 16px 0',
           }}
         >
-          Nhấp nút trên để mở tab chọn tài khoản Google của bạn.<br />
-          Hệ thống hỗ trợ tài khoản FPT (<strong>@fpt.edu.vn</strong>, <strong>@fe.edu.vn</strong>) và <strong>@gmail.com</strong>.
+          Nhấp nút trên để chuyển hướng sang trang đăng nhập chính thức của Google (<code style={{ color: '#a8c7fa' }}>accounts.google.com</code>).
         </p>
+
+        {/* Nút tuỳ chỉnh Client ID nếu cần */}
+        <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+          <button
+            onClick={() => setShowConfig(!showConfig)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'rgba(255, 255, 255, 0.4)',
+              fontSize: '11.5px',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              textDecoration: 'underline',
+            }}
+          >
+            <Settings size={12} /> Cấu hình Google Client ID ({clientId ? 'Đã thiết lập' : 'Mặc định'})
+          </button>
+        </div>
+
+        {showConfig && (
+          <div
+            style={{
+              background: 'rgba(15, 23, 42, 0.8)',
+              padding: '14px',
+              borderRadius: '12px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              marginBottom: '18px',
+              textAlign: 'left',
+            }}
+          >
+            <label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '6px' }}>
+              Google OAuth 2.0 Client ID:
+            </label>
+            <input
+              type="text"
+              defaultValue={clientId}
+              id="config-client-id"
+              placeholder="ví dụ: 652923540545-...apps.googleusercontent.com"
+              style={{
+                width: '100%',
+                padding: '8px 10px',
+                borderRadius: '8px',
+                background: 'rgba(0, 0, 0, 0.5)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#fff',
+                fontSize: '12px',
+                marginBottom: '8px',
+                boxSizing: 'border-box',
+              }}
+            />
+            <button
+              onClick={() => {
+                const input = document.getElementById('config-client-id') as HTMLInputElement;
+                if (input) handleSaveClientId(input.value);
+              }}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                background: '#4f46e5',
+                color: '#fff',
+                fontSize: '11.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Lưu cấu hình
+            </button>
+          </div>
+        )}
 
         {/* Chân trang thông tin kỹ thuật */}
         <div
@@ -375,7 +458,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         >
           <span>SWP391 Assessment 2 • Nhóm 4</span>
           <span>•</span>
-          <span>OAuth 2.0 Identity Gateway</span>
+          <span>Official Google OAuth 2.0 Redirect</span>
         </div>
       </div>
     </div>
