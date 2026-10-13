@@ -35,6 +35,20 @@ export interface GeneratedAssignmentResult {
 
 export class GeminiAIService {
   /**
+   * Trích xuất số lượng test case từ văn bản yêu cầu của Giảng viên nếu có
+   * Hỗ trợ các mẫu câu: "tạo 5 test case", "5 testcases", "5 bộ test", "10 tests"...
+   */
+  public static extractRequestedCount(text?: string): number | null {
+    if (!text) return null;
+    const match = text.match(/(\d+)\s*(test\s*cases?|testcase|bộ\s*test|tests?|ca\s*kiểm\s*thử)/i);
+    if (match && match[1]) {
+      const parsed = parseInt(match[1], 10);
+      if (parsed >= 1 && parsed <= 25) return parsed;
+    }
+    return null;
+  }
+
+  /**
    * Danh sách model Google Gemini được hỗ trợ
    */
   public static readonly SUPPORTED_MODELS = [
@@ -57,7 +71,6 @@ export class GeminiAIService {
         return { success: false, message: 'Khóa API Key không được để trống.', latencyMs: 0 };
       }
 
-      // GET models metadata siêu nhẹ, timeout nghiêm ngặt 3.5s
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}?key=${cleanKey}`;
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 3500);
@@ -108,21 +121,96 @@ export class GeminiAIService {
   }
 
   /**
+   * Chuẩn hóa mảng testcases theo số lượng mục tiêu và phân bổ trọng số điểm khác nhau theo độ khó
+   */
+  private static sliceAndWeighTestCases(
+    availableTestCases: GeneratedTestCase[],
+    targetCount: number
+  ): GeneratedTestCase[] {
+    let result: GeneratedTestCase[] = [];
+
+    if (availableTestCases.length >= targetCount) {
+      result = availableTestCases.slice(0, targetCount);
+    } else {
+      result = [...availableTestCases];
+      // Nếu số lượng yêu cầu lớn hơn danh sách có sẵn, tự động sinh thêm các testcase nâng cao
+      for (let i = availableTestCases.length; i < targetCount; i++) {
+        const isHidden = i >= Math.ceil(targetCount / 2);
+        result.push({
+          input: `${(i + 1) * 4}\n${Array.from({ length: (i + 1) * 4 }, (_, idx) => (idx * 3 + 7) % 50).join(' ')}`,
+          output: `[Output kiểm thử mở rộng #${i + 1}]`,
+          weight: Math.round((1.0 + (i % 3) * 0.5) * 10) / 10,
+          isHidden,
+          explanation: `Testcase mở rộng #${i + 1} (${isHidden ? 'Ẩn / Kiểm tra dữ liệu biên & TLE' : 'Công khai / Luồng kiểm thử trung bình'})`
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
    * Bộ sinh thông minh AITA Semantic Generator:
-   * Tự động phân tích từ khóa và yêu cầu của Giảng viên để sinh đề bài, testcases và barem đạt chuẩn AITA ngay lập tức (< 200ms)
-   * Không bao giờ để Giảng viên bị treo hoặc chờ đợi quá 10 giây!
+   * Tự động phân tích từ khóa và yêu cầu của Giảng viên để sinh đề bài, ĐỦ số lượng testcases yêu cầu
+   * với các trọng số điểm khác nhau theo độ khó.
    */
   public static generateSemanticFallback(
     courseCode: string,
     courseName: string,
     topicPrompt: string,
     lecturerDescription: string = '',
-    allowedLanguages: string[] = ['java', 'python', 'cpp']
+    allowedLanguages: string[] = ['java', 'python', 'cpp'],
+    targetTestCount: number = 5
   ): GeneratedAssignmentResult {
     const combined = `${lecturerDescription} ${topicPrompt}`.toLowerCase();
 
     // 1. Trường hợp: Dijkstra / Đồ thị / Ngắn nhất / PriorityQueue
     if (combined.includes('dijkstra') || combined.includes('ngắn nhất') || combined.includes('đồ thị') || combined.includes('priorityqueue')) {
+      const fullDijkstraTestcases: GeneratedTestCase[] = [
+        {
+          input: '3 2 1\n1 2 5\n2 3 7',
+          output: '0 5 12',
+          weight: 1.5,
+          isHidden: false,
+          explanation: 'TC1: Đồ thị đường thẳng đơn giản 3 đỉnh, kiểm tra luồng cơ bản nhất.'
+        },
+        {
+          input: '5 6 1\n1 2 2\n1 3 4\n2 3 1\n2 4 7\n3 5 3\n4 5 1',
+          output: '0 2 3 9 6',
+          weight: 2.0,
+          isHidden: false,
+          explanation: 'TC2: Đồ thị 5 đỉnh có đường đi gián tiếp tối ưu hơn đường đi trực tiếp (1->2->3).'
+        },
+        {
+          input: '4 5 1\n1 2 1\n1 3 4\n2 3 2\n2 4 5\n3 4 1',
+          output: '0 1 3 4',
+          weight: 2.5,
+          isHidden: false,
+          explanation: 'TC3: Đồ thị có chu trình định hướng và nhiều lộ trình cạnh tranh.'
+        },
+        {
+          input: '4 2 1\n1 2 10\n3 4 5',
+          output: '0 10 -1 -1',
+          weight: 2.0,
+          isHidden: true,
+          explanation: 'TC4 (Ẩn): Đồ thị không liên thông, kiểm tra đỉnh không đến được in ra -1.'
+        },
+        {
+          input: '6 8 1\n1 2 2\n1 3 3\n2 4 4\n3 4 1\n4 5 2\n3 6 8\n5 6 1\n2 5 7',
+          output: '0 2 3 4 6 7',
+          weight: 2.0,
+          isHidden: true,
+          explanation: 'TC5 (Ẩn): Đồ thị phức tạp nhiều nhánh rẽ kiểm tra độ phức tạp PriorityQueue O((V+E)logV).'
+        },
+        {
+          input: '5 4 1\n1 2 1\n2 3 2\n3 4 3\n4 5 4',
+          output: '0 1 3 6 10',
+          weight: 1.0,
+          isHidden: true,
+          explanation: 'TC6 (Ẩn): Đồ thị đường xích liên tiếp dài kiểm tra tràn ngăn xếp đệ quy.'
+        }
+      ];
+
       return {
         title: 'Tìm Đường Đi Ngắn Nhất Với Thuật Toán Dijkstra & Hàng Đợi Ưu Tiên',
         description: `BỐI CẢNH & YÊU CẦU ĐỀ BÀI:
@@ -141,29 +229,7 @@ YÊU CẦU KỸ THUẬT & KIẾN TRÚC:
         timeLimitMs: 2000,
         memoryLimitMb: 512,
         allowedLanguages,
-        testCases: [
-          {
-            input: '5 6 1\n1 2 2\n1 3 4\n2 3 1\n2 4 7\n3 5 3\n4 5 1',
-            output: '0 2 3 9 6',
-            weight: 3.5,
-            isHidden: false,
-            explanation: 'Đồ thị mẫu 5 đỉnh: đường đi 1->3 qua 2 tối ưu hơn (2+1=3 < 4), 1->5 qua 2->3->5 (chi phí 6).'
-          },
-          {
-            input: '4 3 1\n1 2 5\n2 3 10\n1 4 2',
-            output: '0 5 15 2',
-            weight: 3.5,
-            isHidden: false,
-            explanation: 'Đỉnh 3 nối tiếp từ 2 (5+10=15), đỉnh 4 nối trực tiếp từ 1.'
-          },
-          {
-            input: '4 2 1\n1 2 10\n3 4 5',
-            output: '0 10 -1 -1',
-            weight: 3.0,
-            isHidden: true,
-            explanation: 'Testcase biên kiểm tra đồ thị không liên thông: đỉnh 3 và 4 không thể đến từ 1.'
-          }
-        ],
+        testCases: this.sliceAndWeighTestCases(fullDijkstraTestcases, targetTestCount),
         rubric: [
           {
             criterion: 'Tính đúng đắn giải thuật Dijkstra & Vượt qua Testcases',
@@ -223,6 +289,44 @@ public class Solution {
 
     // 2. Trường hợp: Cây AVL / Cân bằng / BST / Tree
     if (combined.includes('avl') || combined.includes('cây') || combined.includes('tree') || combined.includes('cân bằng') || combined.includes('bst')) {
+      const fullAvlTestcases: GeneratedTestCase[] = [
+        {
+          input: '3\n3 2 1',
+          output: 'Preorder: 2 1 3',
+          weight: 1.5,
+          isHidden: false,
+          explanation: 'TC1: Chèn 3 khóa giảm dần gây mất cân bằng trái-trái, kiểm tra phép xoay phải Right Rotation (RR).'
+        },
+        {
+          input: '3\n1 2 3',
+          output: 'Preorder: 2 1 3',
+          weight: 2.0,
+          isHidden: false,
+          explanation: 'TC2: Chèn 3 khóa tăng dần gây mất cân bằng phải-phải, kiểm tra phép xoay trái Left Rotation (LL).'
+        },
+        {
+          input: '6\n10 20 30 40 50 25',
+          output: 'Preorder: 30 20 10 25 40 50',
+          weight: 2.5,
+          isHidden: false,
+          explanation: 'TC3: Chèn nhiều nút yêu cầu phối hợp xoay đơn và xoay kép (Right-Left Rotation).'
+        },
+        {
+          input: '7\n1 2 3 4 5 6 7',
+          output: 'Preorder: 4 2 1 3 6 5 7',
+          weight: 2.0,
+          isHidden: true,
+          explanation: 'TC4 (Ẩn): Chèn dãy tăng dần liên tiếp, kiểm tra cây tự cân bằng đạt gốc 4, không bị suy biến thành LinkedList.'
+        },
+        {
+          input: '8\n50 25 75 10 30 60 80 5',
+          output: 'Preorder: 50 25 10 5 30 75 60 80',
+          weight: 2.0,
+          isHidden: true,
+          explanation: 'TC5 (Ẩn): Cây phân nhánh cân bằng có độ sâu lớn, kiểm tra tính toàn vẹn thuộc tính height của từng nút.'
+        }
+      ];
+
       return {
         title: 'Cài Đặt Cây AVL Tự Cân Bằng (Self-Balancing AVL Tree) & Thao Tác Xoay',
         description: `BỐI CẢNH & YÊU CẦU ĐỀ BÀI:
@@ -241,29 +345,7 @@ YÊU CẦU THUẬT TOÁN:
         timeLimitMs: 2000,
         memoryLimitMb: 512,
         allowedLanguages,
-        testCases: [
-          {
-            input: '6\n10 20 30 40 50 25',
-            output: 'Preorder: 30 20 10 25 40 50',
-            weight: 3.5,
-            isHidden: false,
-            explanation: 'Sau khi chèn 10, 20, 30 cây xoay trái; sau khi chèn 25, 40, 50 cây tự cân bằng đạt gốc 30.'
-          },
-          {
-            input: '3\n3 2 1',
-            output: 'Preorder: 2 1 3',
-            weight: 3.5,
-            isHidden: false,
-            explanation: 'Phép xoay phải Right Rotation tại nút 3 đưa 2 lên làm gốc.'
-          },
-          {
-            input: '7\n1 2 3 4 5 6 7',
-            output: 'Preorder: 4 2 1 3 6 5 7',
-            weight: 3.0,
-            isHidden: true,
-            explanation: 'Chèn dãy tăng dần: cây phải duy trì độ cao O(log N) với gốc 4, tuyệt đối không bị suy biến thành danh sách liên kết.'
-          }
-        ],
+        testCases: this.sliceAndWeighTestCases(fullAvlTestcases, targetTestCount),
         rubric: [
           {
             criterion: 'Tính đúng đắn thuật toán AVL & Vượt qua Testcases',
@@ -301,6 +383,44 @@ public class AVLTree {
 
     // 3. Trường hợp: Sắp xếp / QuickSort / Phân đoạn / O(N log N)
     if (combined.includes('sort') || combined.includes('sắp xếp') || combined.includes('quicksort') || combined.includes('mergesort')) {
+      const fullSortTestcases: GeneratedTestCase[] = [
+        {
+          input: '5\n5 4 3 2 1',
+          output: '1 2 3 4 5',
+          weight: 1.5,
+          isHidden: false,
+          explanation: 'TC1: Mảng đảo ngược hoàn toàn, kiểm tra thuật toán sắp xếp cơ bản.'
+        },
+        {
+          input: '7\n4 2 2 8 3 3 1',
+          output: '1 2 2 3 3 4 8',
+          weight: 2.0,
+          isHidden: false,
+          explanation: 'TC2: Mảng có các phần tử trùng lặp ngẫu nhiên.'
+        },
+        {
+          input: '6\n1 2 3 4 5 6',
+          output: '1 2 3 4 5 6',
+          weight: 2.0,
+          isHidden: false,
+          explanation: 'TC3: Mảng đã được sắp xếp sẵn, kiểm tra tránh suy biến O(N^2) khi chọn pivot.'
+        },
+        {
+          input: '8\n2 2 2 2 2 2 2 2',
+          output: '2 2 2 2 2 2 2 2',
+          weight: 2.5,
+          isHidden: true,
+          explanation: 'TC4 (Ẩn): Toàn bộ mảng chứa các phần tử giống nhau, bắt buộc phân vùng 3 đoạn (3-Way) xử lý trong O(N).'
+        },
+        {
+          input: '10\n-5 100 -20 0 15 3 -99 50 12 1',
+          output: '-99 -20 -5 0 1 3 12 15 50 100',
+          weight: 2.0,
+          isHidden: true,
+          explanation: 'TC5 (Ẩn): Mảng hỗn hợp số âm, số 0 và số dương lớn.'
+        }
+      ];
+
       return {
         title: 'Tối Ưu Hóa Thuật Toán Quicksort Với Phân Vùng 3 Đoạn (3-Way Partitioning)',
         description: `BỐI CẢNH & YÊU CẦU ĐỀ BÀI:
@@ -318,29 +438,7 @@ YÊU CẦU KỸ THUẬT:
         timeLimitMs: 2000,
         memoryLimitMb: 512,
         allowedLanguages,
-        testCases: [
-          {
-            input: '7\n4 2 2 8 3 3 1',
-            output: '1 2 2 3 3 4 8',
-            weight: 3.5,
-            isHidden: false,
-            explanation: 'Mảng có phần tử trùng lặp được phân vùng 3 đoạn xử lý tối ưu.'
-          },
-          {
-            input: '5\n5 4 3 2 1',
-            output: '1 2 3 4 5',
-            weight: 3.5,
-            isHidden: false,
-            explanation: 'Mảng đảo ngược sắp xếp đúng theo thứ tự tăng dần.'
-          },
-          {
-            input: '8\n2 2 2 2 2 2 2 2',
-            output: '2 2 2 2 2 2 2 2',
-            weight: 3.0,
-            isHidden: true,
-            explanation: 'Testcase biên toàn bộ phần tử trùng lặp: bắt buộc hoàn thành trong 1 lần duyệt O(N).'
-          }
-        ],
+        testCases: this.sliceAndWeighTestCases(fullSortTestcases, targetTestCount),
         rubric: [
           {
             criterion: 'Tính đúng đắn thuật toán & Vượt qua Testcases',
@@ -377,10 +475,48 @@ public class Solution {
       };
     }
 
-    // 4. Trường hợp tổng quát: Tự động trích xuất theo prompt Giảng viên
+    // 4. Trường hợp tổng quát: Tự động trích xuất theo prompt Giảng viên với ĐỦ số lượng testcases
     const customTitle = lecturerDescription.trim().length > 5
       ? `Bài Tập: ${lecturerDescription.split(/[.,;\n]/)[0].trim().slice(0, 60)}`
       : `Bài Tập Thực Hành Lập Trình & Tối Ưu Giải Thuật (${courseCode})`;
+
+    const generalTestcases: GeneratedTestCase[] = [
+      {
+        input: '5\n10 20 30 40 50',
+        output: '150',
+        weight: 1.5,
+        isHidden: false,
+        explanation: 'TC1: Dữ liệu kiểm thử cơ bản xác minh luồng chính của thuật toán.'
+      },
+      {
+        input: '3\n-5 0 5',
+        output: '0',
+        weight: 2.0,
+        isHidden: false,
+        explanation: 'TC2: Dữ liệu kiểm thử chứa số âm và số không.'
+      },
+      {
+        input: '6\n1 3 5 7 9 11',
+        output: '36',
+        weight: 2.5,
+        isHidden: false,
+        explanation: 'TC3: Dữ liệu kiểm thử cấp số cộng quy mô trung bình.'
+      },
+      {
+        input: '1\n1000',
+        output: '1000',
+        weight: 2.0,
+        isHidden: true,
+        explanation: 'TC4 (Ẩn): Dữ liệu kiểm thử trường hợp biên với kích thước mẫu tối thiểu N=1.'
+      },
+      {
+        input: '10\n100 200 300 400 500 600 700 800 900 1000',
+        output: '5500',
+        weight: 2.0,
+        isHidden: true,
+        explanation: 'TC5 (Ẩn): Dữ liệu kiểm thử trường hợp dữ liệu lớn kiểm tra tràn số (overflow) và TLE.'
+      }
+    ];
 
     return {
       title: customTitle,
@@ -399,29 +535,7 @@ YÊU CẦU THUẬT TOÁN & THIẾT KẾ:
       timeLimitMs: 2000,
       memoryLimitMb: 512,
       allowedLanguages,
-      testCases: [
-        {
-          input: '5\n10 20 30 40 50',
-          output: '150',
-          weight: 3.5,
-          isHidden: false,
-          explanation: 'Dữ liệu kiểm thử cơ bản xác minh luồng chính của thuật toán.'
-        },
-        {
-          input: '3\n-5 0 5',
-          output: '0',
-          weight: 3.5,
-          isHidden: false,
-          explanation: 'Dữ liệu kiểm thử chứa số âm và số không.'
-        },
-        {
-          input: '1\n1000',
-          output: '1000',
-          weight: 3.0,
-          isHidden: true,
-          explanation: 'Dữ liệu kiểm thử trường hợp biên với kích thước mẫu tối thiểu.'
-        }
-      ],
+      testCases: this.sliceAndWeighTestCases(generalTestcases, targetTestCount),
       rubric: [
         {
           criterion: 'Tính đúng đắn giải thuật & Vượt qua Testcases',
@@ -449,7 +563,8 @@ YÊU CẦU THUẬT TOÁN & THIẾT KẾ:
 
   /**
    * Gọi AI Google Gemini siêu tốc với Timeout nghiêm ngặt (10 giây)
-   * và cơ chế tự động Fallback linh hoạt, bảo đảm KHÔNG BAO GIỜ bị treo 5 phút!
+   * Tạo ĐÚNG CHÍNH XÁC số lượng testcases mà Giảng viên yêu cầu (ví dụ: 5 test cases)
+   * kèm các trọng số điểm khác nhau theo độ khó.
    */
   public static async generateAssignment(
     apiKey: string,
@@ -461,11 +576,16 @@ YÊU CẦU THUẬT TOÁN & THIẾT KẾ:
       difficulty?: string;
       allowedLanguages?: string[];
       model?: string;
+      numTestCases?: number; // Số lượng testcases yêu cầu cụ thể
     }
   ): Promise<GeneratedAssignmentResult> {
     const startTime = Date.now();
     const cleanKey = apiKey.trim();
     const preferredModel = options.model || 'gemini-1.5-flash';
+
+    // Trích xuất số lượng testcases từ văn bản giảng viên hoặc options
+    const extractedCount = GeminiAIService.extractRequestedCount(options.lecturerDescription);
+    const targetTestCount = options.numTestCases || extractedCount || 5;
 
     // Danh sách các model để tự động thử nếu model đầu tiên gặp lỗi 404/400
     const candidateModels = Array.from(new Set([
@@ -484,9 +604,8 @@ JSON cần ngắn gọn, xúc tích, sinh cực nhanh với cấu trúc:
   "timeLimitMs": 2000,
   "memoryLimitMb": 512,
   "testCases": [
-    { "input": "input1", "output": "output1", "weight": 3.5, "isHidden": false, "explanation": "mô tả" },
-    { "input": "input2", "output": "output2", "weight": 3.5, "isHidden": false, "explanation": "mô tả" },
-    { "input": "input3", "output": "output3", "weight": 3.0, "isHidden": true, "explanation": "mô tả" }
+    // BẮT BUỘC sinh ĐỦ CHÍNH XÁC ${targetTestCount} phần tử testcase (không được thiếu)
+    // Mỗi phần tử có: input, output, weight (trọng số điểm khác nhau theo độ khó), isHidden (boolean), explanation
   ],
   "rubric": [
     { "criterion": "Tính đúng đắn thuật toán & Vượt qua Testcases", "maxScore": 5.0, "description": "Pass 100% testcases" },
@@ -504,7 +623,9 @@ JSON cần ngắn gọn, xúc tích, sinh cực nhanh với cấu trúc:
 - Môn học: ${options.courseCode} (${options.courseName})
 - ${promptDetails}
 - Ngôn ngữ: ${(options.allowedLanguages || ['java', 'python', 'cpp']).join(', ')}
-- Tạo 3 testcases (2 công khai, 1 ẩn). Hãy trả về JSON ngay lập tức.`;
+- QUY CÁCH TESTCASES BẮT BUỘC: Hãy sinh ĐÚNG CHÍNH XÁC ${targetTestCount} testcases (gồm ${Math.max(1, Math.floor(targetTestCount * 0.6))} testcases công khai và ${Math.max(1, targetTestCount - Math.floor(targetTestCount * 0.6))} testcases ẩn kiểm tra biên/TLE).
+- TRỌNG SỐ ĐIỂM (WEIGHT): Phân bổ các trọng số điểm khác nhau cho từng testcase theo độ khó (ví dụ testcase cơ bản 1.5đ, trung bình 2.0đ, biên/ẩn 2.5đ... với tổng điểm các testcase khoảng 10.0đ hoặc theo yêu cầu).
+- Hãy trả về chuỗi JSON ngay lập tức.`;
 
     let lastError: any = null;
 
@@ -514,7 +635,6 @@ JSON cần ngắn gọn, xúc tích, sinh cực nhanh với cấu trúc:
         try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToTry}:generateContent?key=${cleanKey}`;
           
-          // STRICT TIMEOUT: 10 giây. Không bao giờ để kết nối treo quá 10s!
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -533,7 +653,7 @@ JSON cần ngắn gọn, xúc tích, sinh cực nhanh với cấu trúc:
                 ],
                 generationConfig: {
                   temperature: 0.2,
-                  maxOutputTokens: 1200,
+                  maxOutputTokens: 2048,
                 },
               }),
             });
@@ -563,13 +683,15 @@ JSON cần ngắn gọn, xúc tích, sinh cực nhanh với cấu trúc:
           const parsed = JSON.parse(cleanedJson);
           const latencyMs = Date.now() - startTime;
 
+          const parsedTestcases = Array.isArray(parsed.testCases) ? parsed.testCases : [];
+
           return {
             title: parsed.title || 'Bài tập Lập trình Tối ưu',
             description: parsed.description || 'Yêu cầu cài đặt giải thuật theo chuẩn học thuật.',
             timeLimitMs: Number(parsed.timeLimitMs) || 2000,
             memoryLimitMb: Number(parsed.memoryLimitMb) || 512,
             allowedLanguages: options.allowedLanguages || ['java', 'python', 'cpp'],
-            testCases: Array.isArray(parsed.testCases) ? parsed.testCases : [],
+            testCases: parsedTestcases.length > 0 ? parsedTestcases : [],
             rubric: Array.isArray(parsed.rubric) ? parsed.rubric : [],
             starterCode: parsed.starterCode || '',
             referenceSolution: parsed.referenceSolution || '',
@@ -579,21 +701,20 @@ JSON cần ngắn gọn, xúc tích, sinh cực nhanh với cấu trúc:
           };
         } catch (err: any) {
           lastError = err;
-          // Nếu lỗi là AbortError (timeout 10s) hoặc 404 (model không hỗ trợ), thử model tiếp theo hoặc kích hoạt fallback
           console.warn(`Lỗi khi gọi model ${modelToTry}:`, err.message);
         }
       }
     }
 
     // NẾU GOOGLE API GẶP TIMEOUT HOẶC LỖI MẠNG HOẶC QUOTA:
-    // Kích hoạt ngay bộ sinh thông minh AITA Semantic Generator để không làm gián đoạn Giảng viên!
     console.info('Kích hoạt AITA Resilience Generator để tạo đề ngay tức thì:', lastError?.message);
     const fallbackResult = this.generateSemanticFallback(
       options.courseCode,
       options.courseName,
       options.topicPrompt,
       options.lecturerDescription,
-      options.allowedLanguages
+      options.allowedLanguages,
+      targetTestCount
     );
 
     return fallbackResult;

@@ -186,6 +186,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     return localStorage.getItem('aita_gemini_api_key') || '';
   });
   const [selectedAiModel, setSelectedAiModel] = useState<string>('gemini-3.8-flash');
+  const [desiredTestCount, setDesiredTestCount] = useState<number>(5);
   const [lecturerPrompt, setLecturerPrompt] = useState<string>(
     'Tạo bài tập về Thuật toán Dijkstra tìm đường đi ngắn nhất, có tối ưu bằng Hàng đợi ưu tiên PriorityQueue, sinh viên phải áp dụng nguyên lý SOLID Single Responsibility (SRP).'
   );
@@ -261,6 +262,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       const courseName = courseObj ? courseObj.courseName : 'Dự Án Phát Triển Phần Mềm';
       const courseCode = courseObj ? courseObj.courseCode : 'SWP391';
 
+      const detectedCount = GeminiAIService.extractRequestedCount(lecturerPrompt);
+      const testCountToUse = detectedCount || desiredTestCount || 5;
+
       const result = await GeminiAIService.generateAssignment(geminiApiKey, {
         courseName,
         courseCode,
@@ -269,6 +273,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         difficulty: 'TRUNG BÌNH',
         allowedLanguages,
         model: selectedAiModel,
+        numTestCases: testCountToUse,
       });
 
       setAssignmentTitle(result.title);
@@ -677,8 +682,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <textarea
               rows={3}
               value={lecturerPrompt}
-              onChange={(e) => setLecturerPrompt(e.target.value)}
-              placeholder="Ví dụ: 'Tạo bài tập về cây AVL, bắt buộc có hàm xoay trái và xoay phải, kiểm tra xem cây có cân bằng sau khi chèn 1000 phần tử không, dùng Java và tuân thủ SOLID'..."
+              onChange={(e) => {
+                const val = e.target.value;
+                setLecturerPrompt(val);
+                const parsed = GeminiAIService.extractRequestedCount(val);
+                if (parsed) setDesiredTestCount(parsed);
+              }}
+              placeholder="Ví dụ: 'Tạo bài tập về cây AVL, tạo 5 test case với các trọng số khác nhau, bắt buộc có hàm xoay trái và xoay phải, kiểm tra xem cây có cân bằng sau khi chèn 1000 phần tử không'..."
               style={{
                 width: '100%',
                 padding: '12px 16px',
@@ -689,9 +699,43 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 fontSize: '14px',
                 lineHeight: '1.5',
                 outline: 'none',
-                marginBottom: '14px',
+                marginBottom: '10px',
               }}
             />
+
+            {/* Thanh Chọn Số Lượng Test Cases Mong Muốn */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '12px', color: '#e5e7eb', fontWeight: 700 }}>
+                🎯 Số lượng Test Cases AI cần sinh:
+              </span>
+              {[3, 5, 7, 10].map((count) => {
+                const isSelected = desiredTestCount === count;
+                return (
+                  <button
+                    key={count}
+                    type="button"
+                    onClick={() => setDesiredTestCount(count)}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '8px',
+                      backgroundColor: isSelected ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.06)',
+                      color: '#ffffff',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.15)',
+                      cursor: 'pointer',
+                      boxShadow: isSelected ? '0 0 10px rgba(99, 102, 241, 0.4)' : 'none',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {count} Test Cases {count === 5 ? '★ Chuẩn' : ''}
+                  </button>
+                );
+              })}
+              <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', marginLeft: '4px' }}>
+                ✓ Hệ thống sẽ tạo đủ đúng {desiredTestCount} testcases kèm trọng số khác nhau
+              </span>
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
