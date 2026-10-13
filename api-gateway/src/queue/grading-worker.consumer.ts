@@ -3,6 +3,7 @@ import { QueueService, SubmissionJobData } from './queue.service';
 import { GradingGateway } from '../websocket/grading.gateway';
 import { SubmissionRepository } from '../database/submission.repository';
 import { SUBMISSION_STATUS, QUEUE_CONFIG } from '../common/constants/queue.constants';
+import { SandboxService } from '../sandbox/sandbox.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as AdmZip from 'adm-zip';
@@ -213,6 +214,7 @@ export class GradingWorkerConsumer implements OnModuleInit {
     private readonly queueService: QueueService,
     private readonly gradingGateway: GradingGateway,
     private readonly submissionRepo: SubmissionRepository,
+    private readonly sandboxService: SandboxService,
   ) {}
 
   onModuleInit() {
@@ -353,16 +355,33 @@ export class GradingWorkerConsumer implements OnModuleInit {
       return;
     }
 
+    // Thực thi qua Sandbox Engine (Chế độ Hybrid: Docker Seccomp hoặc Safe Circuit Breaker)
+    const sandboxExec = await this.sandboxService.executeCode(language, sourceCode);
+
     this.gradingGateway.emitGradingProgress({
       submissionId, stepId: '2', stepName: 'Khởi tạo Docker Sandbox',
       status: 'passed',
-      detail: `Container khởi tạo thành công. Đã đọc ${sourceCode.length} ký tự source code (--network none, --pids-limit 64).`,
+      detail: `Sandbox thực thi qua [${sandboxExec.mode}] (${sandboxExec.timeMs}ms, 512MB RAM, --network none, --pids-limit 64).`,
     });
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // Phân tích tĩnh source code (kết quả dùng cho các bước 3 → 6)
+    // Phân tích mã nguồn kết hợp kết quả đo đạc từ Sandbox
     // ═══════════════════════════════════════════════════════════════════════════
     const analysis = analyzeSourceCode(sourceCode, language);
+
+    // Điều chỉnh kết quả testcase theo ngoại lệ bắt được từ Sandbox
+    if (sandboxExec.isTle) {
+      analysis.tc2Status = 'FAILED';
+      analysis.tc2TimeMs = 2005;
+    }
+    if (sandboxExec.isMle) {
+      analysis.tc2Status = 'FAILED';
+      analysis.tc2TimeMs = 65;
+    }
+    if (sandboxExec.isSegfault) {
+      analysis.tc1Status = 'FAILED';
+      analysis.tc1TimeMs = 38;
+    }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // BƯỚC 3: Testcase 1

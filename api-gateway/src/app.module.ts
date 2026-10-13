@@ -9,6 +9,7 @@ import { AssignmentsModule } from './assignments/assignments.module';
 import { SubmissionsModule } from './submissions/submissions.module';
 import { AppealsModule } from './appeals/appeals.module';
 import { TeamworkModule } from './teamwork/teamwork.module';
+import { SandboxModule } from './sandbox/sandbox.module';
 import { InternalEventsController } from './internal/internal-events.controller';
 
 @Module({
@@ -23,9 +24,11 @@ import { InternalEventsController } from './internal/internal-events.controller'
     SubmissionsModule,
     AppealsModule,
     TeamworkModule,
+    SandboxModule,
   ],
   controllers: [InternalEventsController],
   providers: [],
 })
 export class AppModule {}
+
 
