@@ -7,9 +7,11 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { LecturerPanel } from './components/LecturerPanel';
 import { LecturerDashboard } from './components/LecturerDashboard';
 import { RblBenchmarkView } from './components/RblBenchmarkView';
+import { StudentAppealsView } from './components/StudentAppealsView';
 import type { Task, GradingStep, AIRating, PlagiarismMatch, User } from './types';
-import { Terminal, Shield, LogOut, ArrowLeftRight, FileCode, Sparkles, Upload, BookOpen, LayoutDashboard } from 'lucide-react';
+import { Terminal, Shield, LogOut, ArrowLeftRight, FileCode, Sparkles, Upload, BookOpen, LayoutDashboard, Scale } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+
 import { PlagiarismService } from './services/plagiarism.service';
 
 const API_BASE_URL = 'http://localhost:3000';
@@ -75,8 +77,9 @@ export function App() {
   // Active view: 'student' | 'admin' | 'lecturer'
   const [activeView, setActiveView] = useState<'student' | 'admin' | 'lecturer'>('student');
 
-  // Tab cho Sinh viên: 'submission' (Khu vực nộp bài) | 'benchmark' (Bộ dữ liệu Benchmark RBL)
-  const [studentActiveTab, setStudentActiveTab] = useState<'submission' | 'benchmark'>('submission');
+  // Tab cho Sinh viên: 'submission' (Khu vực nộp bài) | 'benchmark' (Bộ dữ liệu Benchmark RBL) | 'appeals' (Khiếu nại điểm)
+  const [studentActiveTab, setStudentActiveTab] = useState<'submission' | 'benchmark' | 'appeals'>('submission');
+
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
@@ -638,13 +641,34 @@ export function App() {
                   transition: 'all 0.2s ease',
                 }}
               >
-                <Sparkles size={16} /> Mục Nghiên Cứu: Bộ Dữ Liệu Benchmark AST (10 Cặp RBL)
+              <button
+                type="button"
+                onClick={() => setStudentActiveTab('appeals')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: studentActiveTab === 'appeals' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                  color: studentActiveTab === 'appeals' ? '#fbbf24' : 'var(--text-muted)',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: studentActiveTab === 'appeals' ? '#f59e0b' : 'transparent',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <Scale size={16} /> Phúc Khảo &amp; Khiếu Nại (UC-06)
               </button>
             </div>
 
             {studentActiveTab === 'submission' ? (
               <SubmissionView task={mockTask} onSubmit={handleSubmission} />
-            ) : (
+            ) : studentActiveTab === 'benchmark' ? (
               <RblBenchmarkView
                 onOpenDiffViewer={(match) => {
                   setPlagiarismMatch(match);
@@ -653,9 +677,16 @@ export function App() {
                   setIsCompleted(true);
                 }}
               />
+            ) : (
+              <StudentAppealsView
+                studentId={currentUser?.userId || 'SE170000'}
+                studentName={currentUser?.fullName || 'Sinh viên'}
+                apiBaseUrl={API_BASE_URL}
+              />
             )}
           </div>
         )}
+
       </main>
 
       {/* MODAL TRỰC TUYẾN CHẤM BÀI & BÁO CÁO KẾT QUẢ */}

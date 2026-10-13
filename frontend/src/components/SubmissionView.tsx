@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { UploadCloud, FileArchive, AlertOctagon, X, Send, Hash, ShieldCheck } from 'lucide-react';
+import { UploadCloud, FileArchive, AlertOctagon, X, Send, Hash, ShieldCheck, Lock, Bug, RefreshCw } from 'lucide-react';
 import { CountdownTimer } from './CountdownTimer';
 import type { Task } from '../types';
 
@@ -14,7 +14,12 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
   const [sha256Checksum, setSha256Checksum] = useState<string | null>(null);
   const [isHashing, setIsHashing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [exceptionType, setExceptionType] = useState<'OVERSIZE' | 'EXPIRED' | null>(null);
+  const [isDeadlineSimulatedExpired, setIsDeadlineSimulatedExpired] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isActuallyExpired = new Date() > new Date(task.deadline);
+  const isExpired = isActuallyExpired || isDeadlineSimulatedExpired;
 
   const calculateSha256 = async (file: File): Promise<string> => {
     const buffer = await file.arrayBuffer();
@@ -25,10 +30,22 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
 
   const processFile = async (file: File) => {
     setErrorMessage(null);
+    setExceptionType(null);
+
+    // Kiểm tra ngoại lệ 2: Quá hạn chót (BR-02)
+    if (isExpired) {
+      setErrorMessage(`[BR-02 Ngoại Lệ] Đã quá hạn chót nộp bài (${new Date(task.deadline).toLocaleString('vi-VN')})! Cổng nộp đã tự động đóng.`);
+      setExceptionType('EXPIRED');
+      return;
+    }
+
     const maxBytes = task.maxSizeMb * 1024 * 1024;
 
+    // Kiểm tra ngoại lệ 1: File quá kích thước 10MB
     if (file.size > maxBytes) {
-      setErrorMessage(`Dung lượng file vượt quá giới hạn ${task.maxSizeMb}MB! (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+      setErrorMessage(`[413 Payload Too Large - Ngoại Lệ 1] Dung lượng file (${sizeMb} MB) vượt quá giới hạn tối đa ${task.maxSizeMb} MB! Hệ thống từ chối nhận file để bảo vệ băng thông.`);
+      setExceptionType('OVERSIZE');
       return;
     }
 
@@ -51,6 +68,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
   };
 
   const handleDrag = (e: React.DragEvent) => {
+    if (isExpired) return;
     e.preventDefault();
     e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') {
@@ -61,6 +79,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
   };
 
   const handleDrop = (e: React.DragEvent) => {
+    if (isExpired) return;
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
@@ -78,13 +97,106 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
   };
 
   const handleSubmit = () => {
+    if (isExpired) {
+      setErrorMessage('[BR-02 Ngoại Lệ] Không thể nộp bài do đã quá hạn chót!');
+      return;
+    }
     if (selectedFile) {
       onSubmit(selectedFile);
     }
   };
 
+  // Demo kịch bản 1: Giả lập file 12.5MB
+  const triggerDemoOversize = () => {
+    setSelectedFile(null);
+    setSha256Checksum(null);
+    setErrorMessage(
+      `[413 Payload Too Large - Ngoại Lệ 1] Dung lượng file (12.45 MB) vượt quá giới hạn tối đa ${task.maxSizeMb} MB! Đã đánh chặn ngay tại Client-side trước khi truyền tải qua mạng.`,
+    );
+    setExceptionType('OVERSIZE');
+  };
+
+  // Demo kịch bản 2: Giả lập quá hạn deadline (BR-02)
+  const toggleDemoExpired = () => {
+    const nextState = !isDeadlineSimulatedExpired;
+    setIsDeadlineSimulatedExpired(nextState);
+    setSelectedFile(null);
+    setSha256Checksum(null);
+    if (nextState) {
+      setErrorMessage(
+        '[BR-02 Ngoại Lệ 2] Cổng nộp bài đã đóng do quá hạn chót Deadline. Không cho phép nộp bổ sung nhằm bảo toàn tính toàn vẹn học thuật.',
+      );
+      setExceptionType('EXPIRED');
+    } else {
+      setErrorMessage(null);
+      setExceptionType(null);
+    }
+  };
+
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '24px' }}>
+      {/* Thanh Demo Ngoại Lệ cho Hội đồng đánh giá */}
+      <div
+        style={{
+          padding: '12px 18px',
+          borderRadius: '12px',
+          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          border: '1px solid rgba(245, 158, 11, 0.3)',
+          marginBottom: '20px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13px', fontWeight: 700 }}>
+          <Bug size={16} />
+          <span>Kịch bản Demo Đường Ngoại Lệ (Milestone 2 Defense):</span>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={triggerDemoOversize}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              backgroundColor: exceptionType === 'OVERSIZE' ? 'rgba(244, 63, 94, 0.3)' : 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(244, 63, 94, 0.4)',
+              color: '#f43f5e',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            🔴 Demo File &gt; 10MB
+          </button>
+          <button
+            type="button"
+            onClick={toggleDemoExpired}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '8px',
+              backgroundColor: isDeadlineSimulatedExpired ? 'rgba(244, 63, 94, 0.3)' : 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(244, 63, 94, 0.4)',
+              color: '#f43f5e',
+              fontSize: '12px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            {isDeadlineSimulatedExpired ? <RefreshCw size={12} /> : <Lock size={12} />}
+            {isDeadlineSimulatedExpired ? 'Khôi phục Deadline' : '🔴 Demo Quá Deadline (BR-02)'}
+          </button>
+        </div>
+      </div>
+
       <div className="glass-panel" style={{ padding: '28px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
           <div>
@@ -96,7 +208,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>{task.description}</p>
           </div>
-          <CountdownTimer deadline={task.deadline} />
+          <CountdownTimer deadline={isDeadlineSimulatedExpired ? new Date(Date.now() - 3600000).toISOString() : task.deadline} />
         </div>
       </div>
 
@@ -105,35 +217,66 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
           Khu vực nộp bài tập (.zip)
         </h2>
 
+        {/* Dropzone */}
         <div
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => {
+            if (!isExpired) fileInputRef.current?.click();
+          }}
           style={{
-            border: `2px dashed ${dragActive ? 'var(--accent-primary)' : selectedFile ? 'var(--accent-emerald)' : 'var(--border-color)'}`,
+            border: `2px dashed ${
+              isExpired
+                ? 'rgba(244, 63, 94, 0.5)'
+                : dragActive
+                ? 'var(--accent-primary)'
+                : selectedFile
+                ? 'var(--accent-emerald)'
+                : 'var(--border-color)'
+            }`,
             borderRadius: '16px',
             padding: '40px 24px',
             textAlign: 'center',
-            cursor: 'pointer',
-            backgroundColor: dragActive ? 'rgba(99, 102, 241, 0.08)' : 'rgba(18, 24, 36, 0.5)',
+            cursor: isExpired ? 'not-allowed' : 'pointer',
+            backgroundColor: isExpired
+              ? 'rgba(244, 63, 94, 0.05)'
+              : dragActive
+              ? 'rgba(99, 102, 241, 0.08)'
+              : 'rgba(18, 24, 36, 0.5)',
             transition: 'all 0.2s ease-in-out',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             gap: '12px',
+            opacity: isExpired ? 0.75 : 1,
           }}
         >
           <input
             ref={fileInputRef}
             type="file"
             accept=".zip"
+            disabled={isExpired}
             onChange={handleChange}
             style={{ display: 'none' }}
           />
 
-          {selectedFile ? (
+          {isExpired ? (
+            <>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(244, 63, 94, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f43f5e' }}>
+                <Lock size={36} />
+              </div>
+              <div>
+                <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#f43f5e' }}>
+                  Cổng nộp bài đã đóng (Quá hạn deadline - Quy tắc BR-02)
+                </h4>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Hệ thống khóa nộp bài tự động khi quá thời hạn quy định để bảo đảm tính công bằng.
+                </p>
+              </div>
+            </>
+          ) : selectedFile ? (
             <>
               <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-emerald)' }}>
                 <FileArchive size={36} />
@@ -201,38 +344,80 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({ task, onSubmit }
           )}
         </div>
 
+        {/* Error message / Exception banner */}
         {errorMessage && (
-          <div style={{ marginTop: '16px', padding: '12px 16px', borderRadius: '10px', backgroundColor: 'rgba(244, 63, 94, 0.12)', border: '1px solid rgba(244, 63, 94, 0.3)', color: '#f43f5e', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <AlertOctagon size={18} />
-            <span>{errorMessage}</span>
+          <div
+            style={{
+              marginTop: '16px',
+              padding: '14px 18px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(244, 63, 94, 0.12)',
+              border: '1px solid rgba(244, 63, 94, 0.35)',
+              color: '#f43f5e',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px',
+              lineHeight: 1.5,
+            }}
+          >
+            <AlertOctagon size={20} style={{ flexShrink: 0, marginTop: '2px' }} />
+            <div>
+              <div style={{ fontWeight: 700, marginBottom: '2px' }}>
+                {exceptionType === 'OVERSIZE'
+                  ? 'ĐÁNH CHẶN NGOẠI LỆ: DUNG LƯỢNG VƯỢT QUÁ 10MB'
+                  : exceptionType === 'EXPIRED'
+                  ? 'ĐÁNH CHẶN NGOẠI LỆ: QUÁ HẠN NỘP BÀI (BR-02)'
+                  : 'LỖI BÀI NỘP'}
+              </div>
+              <span>{errorMessage}</span>
+            </div>
           </div>
         )}
 
+        {/* Submit button */}
         <button
           onClick={handleSubmit}
-          disabled={!selectedFile || isHashing}
+          disabled={!selectedFile || isHashing || isExpired}
           style={{
             marginTop: '24px',
             width: '100%',
             padding: '14px 24px',
             borderRadius: '12px',
             border: 'none',
-            background: selectedFile && !isHashing
+            background: isExpired
+              ? 'rgba(255, 255, 255, 0.05)'
+              : selectedFile && !isHashing
               ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
               : 'var(--bg-card)',
-            color: selectedFile && !isHashing ? '#ffffff' : 'var(--text-dim)',
+            color: isExpired
+              ? '#f43f5e'
+              : selectedFile && !isHashing
+              ? '#ffffff'
+              : 'var(--text-dim)',
             fontSize: '16px',
             fontWeight: 700,
-            cursor: selectedFile && !isHashing ? 'pointer' : 'not-allowed',
+            cursor: selectedFile && !isHashing && !isExpired ? 'pointer' : 'not-allowed',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '10px',
-            boxShadow: selectedFile && !isHashing ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none',
+            boxShadow:
+              selectedFile && !isHashing && !isExpired
+                ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)'
+                : 'none',
             transition: 'all 0.2s ease',
           }}
         >
-          <Send size={18} /> Nộp Bài Chấm Điểm Trực Tuyến
+          {isExpired ? (
+            <>
+              <Lock size={18} /> Cổng Nộp Đã Đóng (Quá Hạn Chót BR-02)
+            </>
+          ) : (
+            <>
+              <Send size={18} /> Nộp Bài Chấm Điểm Trực Tuyến
+            </>
+          )}
         </button>
       </div>
     </div>

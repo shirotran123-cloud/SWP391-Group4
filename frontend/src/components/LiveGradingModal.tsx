@@ -1,8 +1,9 @@
-import { useEffect } from 'react';
-import { CheckCircle2, Clock, Loader2, XCircle, Sparkles, Award } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { CheckCircle2, Clock, Loader2, XCircle, Sparkles, Award, Scale } from 'lucide-react';
 import type { GradingStep, AIRating, PlagiarismMatch } from '../types';
 import { SolidRadarChart } from './SolidRadarChart';
 import { MonacoDiffViewer } from './MonacoDiffViewer';
+import { AppealModal } from './AppealModal';
 
 interface LiveGradingModalProps {
   isOpen: boolean;
@@ -32,12 +33,13 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
   score,
   maxScore = 10,
   executionTimeMs,
-}) => {
+  const [isAppealModalOpen, setIsAppealModalOpen] = useState(false);
+
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isCompleted) {
+      if (e.key === 'Escape' && isCompleted && !isAppealModalOpen) {
         onClose();
       }
     };
@@ -46,7 +48,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, isCompleted, onClose]);
+  }, [isOpen, isCompleted, isAppealModalOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -98,23 +100,47 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
           </div>
 
           {isCompleted && (
-            <button
-              onClick={onClose}
-              style={{
-                padding: '8px 20px',
-                borderRadius: '10px',
-                border: 'none',
-                backgroundColor: 'var(--accent-primary)',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '14px',
-                cursor: 'pointer',
-              }}
-            >
-              Hoàn thành & Đóng (Esc)
-            </button>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={() => setIsAppealModalOpen(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(245, 158, 11, 0.4)',
+                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
+                  color: '#fbbf24',
+                  fontWeight: 700,
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                }}
+              >
+                <Scale size={16} /> Khiếu Nại Điểm (UC-06)
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: 'var(--accent-primary)',
+                  color: '#ffffff',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                }}
+              >
+                Hoàn thành & Đóng (Esc)
+              </button>
+            </div>
           )}
         </div>
+
 
         <div style={{ marginBottom: '28px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 600 }}>
@@ -238,7 +264,16 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
             plagiarismMatch={plagiarismMatch}
           />
         )}
+
+        <AppealModal
+          isOpen={isAppealModalOpen}
+          onClose={() => setIsAppealModalOpen(false)}
+          submissionId={submissionId}
+          studentId={studentName}
+          currentScore={score}
+        />
       </div>
     </div>
   );
 };
+

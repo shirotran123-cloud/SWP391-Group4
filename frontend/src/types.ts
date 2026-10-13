@@ -55,4 +55,29 @@ export interface User {
   department?: string;
 }
 
-export type UserProfile = User;
+export interface Appeal {
+  appealId: string;
+  submissionId: string;
+  studentId: string;
+  reason: string;
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'IN_REVIEW';
+  reviewerId?: string;
+  resolutionNote?: string;
+  adjustedScore?: number;
+  resolvedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamworkMetric {
+  metricId: string;
+  classId: string;
+  studentId: string;
+  studentName?: string;
+  commitCount: number;
+  linesAdded: number;
+  linesDeleted: number;
+  contributionPct: number;
+  isFreeRider: boolean;
+  analyzedAt: string;
+}

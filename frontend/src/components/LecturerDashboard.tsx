@@ -26,9 +26,12 @@ import {
   Trash2,
   Eye,
   FolderKanban,
+  Scale,
 } from 'lucide-react';
 import { RblBenchmarkView } from './RblBenchmarkView';
+import { LecturerAppealsManager } from './LecturerAppealsManager';
 import type { PlagiarismMatch } from '../types';
+
 import { GeminiAIService, type RubricCriterion } from '../services/gemini-ai.service';
 
 interface LecturerDashboardProps {
@@ -234,7 +237,8 @@ const mockSubmissionsList: SubmissionRecord[] = [
 ];
 
 export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiffViewer }) => {
-  const [activeTab, setActiveTab] = useState<'COURSES' | 'CREATE_ASSIGNMENT' | 'EXCEL_IMPORT' | 'SUBMISSIONS' | 'RBL_LAB'>('COURSES');
+  const [activeTab, setActiveTab] = useState<'COURSES' | 'CREATE_ASSIGNMENT' | 'EXCEL_IMPORT' | 'SUBMISSIONS' | 'RBL_LAB' | 'APPEALS'>('COURSES');
+
 
   // Quản lý danh sách khóa học và bài tập đã giao
   const [courses, setCourses] = useState<CourseItem[]>(initialCourses);
@@ -706,9 +710,27 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <Cpu size={16} /> 5. Phòng Thí Nghiệm AST (RBL Core)
+        <button
+          type="button"
+          onClick={() => setActiveTab('APPEALS')}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '8px',
+            background: activeTab === 'APPEALS' ? 'rgba(245, 158, 11, 0.2)' : 'transparent',
+            border: `1px solid ${activeTab === 'APPEALS' ? '#f59e0b' : 'transparent'}`,
+            color: activeTab === 'APPEALS' ? '#fbbf24' : 'var(--text-muted)',
+            fontWeight: 700,
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <Scale size={16} color="#fbbf24" /> 6. Phúc Khảo Điểm (UC-06)
         </button>
       </div>
+
 
       {/* TAB 1: KHÓA HỌC & LỚP (BẢNG QUẢN LÝ MÔN HỌC & BÀI TẬP ĐÃ GIAO) */}
       {activeTab === 'COURSES' && (
@@ -2021,6 +2043,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       {activeTab === 'RBL_LAB' && (
         <RblBenchmarkView onOpenDiffViewer={onOpenDiffViewer} />
       )}
+
+      {/* TAB 6: PHÚC KHẢO & KHIẾU NẠI ĐIỂM (UC-06 / BR-05) */}
+      {activeTab === 'APPEALS' && (
+        <LecturerAppealsManager apiBaseUrl="http://localhost:3000" lecturerId="GV001" />
+      )}
+
 
       {/* MODAL CẤU HÌNH GOOGLE GEMINI AI KEY (DÙNG AI THẬT) */}
       {isConfigModalOpen && (
