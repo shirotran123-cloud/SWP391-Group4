@@ -1316,5 +1316,55 @@
       "completedAt": "2026-10-13T10:16:10.969Z"
     },
     "score": 0
+  },
+  {
+    "submissionId": "SUB-760093-I139S3",
+    "studentId": "SE712137",
+    "assignmentId": "TASK-SWP391-SPRINT2",
+    "language": "java",
+    "fileName": "sample_solution_fail_srp.zip",
+    "fileSizeBytes": 537,
+    "sha256Hash": "22a8d005357f24ae22a694569a489e6f3a883bfadda1dd49fdc163ec61cc9dc9",
+    "filePath": "D:\\swp\\SWP391-Group4\\api-gateway\\uploads\\submissions\\SUB-760093-I139S3.zip",
+    "status": "COMPLETED",
+    "createdAt": "2026-10-13T10:36:00.094Z",
+    "updatedAt": "2026-10-13T10:36:03.269Z",
+    "queueJobId": "mem_SUB-760093-I139S3_1791887760123",
+    "details": {
+      "submissionId": "SUB-760093-I139S3",
+      "status": "COMPLETED",
+      "overallResult": "PASSED",
+      "score": 5.7,
+      "maxScore": 10,
+      "passedTestcases": 1,
+      "totalTestcases": 2,
+      "executionTimeMs": 3570,
+      "aiRating": {
+        "cleanCodeScore": 4.5,
+        "solidScore": {
+          "s": 5.5,
+          "o": 8.5,
+          "l": 9,
+          "i": 9,
+          "d": 8.5
+        },
+        "codeSmells": [
+          {
+            "line": 16,
+            "rule": "Single Responsibility Principle",
+            "description": "Phương thức tại dòng 16 vi phạm SRP: đang gánh vác nhiều trách nhiệm (sắp xếp + in kết quả + lưu DB)."
+          },
+          {
+            "line": 19,
+            "rule": "Single Responsibility Principle",
+            "description": "Phương thức tại dòng 19 vi phạm SRP: đang gánh vác nhiều trách nhiệm (sắp xếp + in kết quả + lưu DB)."
+          }
+        ],
+        "explanation": "Mã nguồn sử dụng thuật toán sắp xếp chưa tối ưu (O(N²)). Testcase 2 với 100,000 phần tử có thể bị TLE. Nên dùng Arrays.sort() hoặc thuật toán MergeSort/QuickSort để đạt O(N log N)."
+      },
+      "plagiarismMatch": null,
+      "completedAt": "2026-10-13T10:36:03.269Z"
+    },
+    "score": 5.7
   }
 ]
