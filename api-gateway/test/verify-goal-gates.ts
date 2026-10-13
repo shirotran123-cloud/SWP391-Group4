@@ -103,7 +103,7 @@ function gate(ok: boolean, name: string, details?: string): void {
   else { failed++; console.error(`[FAIL] ${name}${details ? ` -> ${details}` : ''}`); }
 }
 
-async function main(): Promise<void> {
+async function main(): Promise<boolean> {
   const started = Date.now();
   const port = parseInt(process.env.AITA_TEST_PORT || '3000', 10);
   let app: any = null;
@@ -223,10 +223,16 @@ async function main(): Promise<void> {
   const elapsed = Date.now() - started;
   console.log(`---\nGATES: ${passed} passed, ${failed} failed (${elapsed}ms)`);
   if (elapsed >= 180000) { failed++; console.error('[FAIL] total runtime >= 3min'); }
-  if (failed > 0) process.exit(1);
+  return failed === 0;
 }
 
-main().catch((err) => {
-  console.error('[FAIL] verify-goal-gates crashed:', err);
-  process.exit(1);
-});
+export { main as runGoalGates };
+
+if (require.main === module) {
+  main().then((ok) => {
+    if (!ok) process.exit(1);
+  }).catch((err) => {
+    console.error('[FAIL] verify-goal-gates crashed:', err);
+    process.exit(1);
+  });
+}

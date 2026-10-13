@@ -22,7 +22,7 @@ function assert(condition: boolean, testName: string, details?: string) {
   }
 }
 
-async function runTests() {
+async function runTests(): Promise<boolean> {
   console.log("\n=======================================================");
   console.log("   AITA GenAI Core & Review Hub - Test Suite (Tuáº§n 3 & 4)");
   console.log("=======================================================\n");
@@ -392,12 +392,16 @@ async function runTests() {
   console.log(`Results: ${passed} PASSED, ${failed} FAILED`);
   console.log("-------------------------------------------------------\n");
 
-  if (failed > 0) {
-    process.exit(1);
-  }
+  return failed === 0;
 }
 
-runTests().catch((err) => {
-  console.error("Test execution failed with error:", err);
-  process.exit(1);
-});
+export { runTests as runMainSuite };
+
+if (require.main === module) {
+  runTests().then((ok) => {
+    if (!ok) process.exit(1);
+  }).catch((err) => {
+    console.error("Test execution failed with error:", err);
+    process.exit(1);
+  });
+}

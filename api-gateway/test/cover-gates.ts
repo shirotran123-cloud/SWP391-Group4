@@ -29,7 +29,7 @@ function gate(ok: boolean, name: string, details?: string): void {
   else { failed++; console.error(`[FAIL] ${name}${details ? ` -> ${details}` : ''}`); }
 }
 
-async function main(): Promise<void> {
+async function main(): Promise<boolean> {
   const app = await NestFactory.create(AppModule, { logger: false });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   await app.init();
@@ -127,7 +127,13 @@ async function main(): Promise<void> {
   }
 
   console.log(`---\nCOVER-GATES: ${passed} passed, ${failed} failed`);
-  if (failed > 0) process.exit(1);
+  return failed === 0;
 }
 
-main().catch((err) => { console.error('[FAIL] cover-gates crashed:', err); process.exit(1); });
+export { main as runCoverGates };
+
+if (require.main === module) {
+  main().then((ok) => {
+    if (!ok) process.exit(1);
+  }).catch((err) => { console.error('[FAIL] cover-gates crashed:', err); process.exit(1); });
+}

@@ -98,7 +98,7 @@ function gate(condition: boolean, name: string, details?: string): void {
   }
 }
 
-async function main(): Promise<void> {
+async function main(): Promise<boolean> {
   const started = Date.now();
   console.log('=== AITA GOAL GATES (genai-hub + sandbox) ===');
 
@@ -159,10 +159,16 @@ async function main(): Promise<void> {
   const elapsed = Date.now() - started;
   console.log(`---\nGATES: ${passed} passed, ${failed} failed (${elapsed}ms)`);
   gate(elapsed < 60000, 'total runtime < 60s', `${elapsed}ms`);
-  if (failed > 0) process.exit(1);
+  return failed === 0;
 }
 
-main().catch((err) => {
-  console.error('[FAIL] goal-gates crashed:', err);
-  process.exit(1);
-});
+export { main as runGoalGatesSuite };
+
+if (require.main === module) {
+  main().then((ok) => {
+    if (!ok) process.exit(1);
+  }).catch((err) => {
+    console.error('[FAIL] goal-gates crashed:', err);
+    process.exit(1);
+  });
+}

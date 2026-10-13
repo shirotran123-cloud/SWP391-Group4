@@ -194,7 +194,7 @@ function isPortOpen(port: number): Promise<boolean> {
   });
 }
 
-async function runTestSuite() {
+async function runTestSuite(): Promise<boolean> {
   console.log('================================================================');
   console.log('🧪 BẮT ĐẦU KIỂM THỬ TOÀN DIỆN MILESTONE 2 - AITA API GATEWAY');
   console.log('   Người phụ trách: Đinh Thành Trung (Team Leader & System Architect)');
@@ -618,13 +618,18 @@ public class Solution {
       await app.close();
     }
   }
+  return true;
 }
 
-runTestSuite()
-  .then(() => {
-    process.exit(0);
-  })
-  .catch((err) => {
-    console.error('❌ Kiểm thử thất bại:', err);
-    process.exit(1);
-  });
+export { runTestSuite as runHttpSuite };
+
+if (require.main === module) {
+  runTestSuite()
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((err) => {
+      console.error('❌ Kiểm thử thất bại:', err);
+      process.exit(1);
+    });
+}
