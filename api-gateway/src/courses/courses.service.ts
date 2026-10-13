@@ -75,4 +75,21 @@ export class CoursesService {
     this.logger.log(`[CoursesService] Deleted course ${courseId}`);
     return { success, message: `Đã xóa khóa học ${courseId} thành công.` };
   }
+
+  public async bulkImportStudents(
+    courseId: string,
+    students: Array<{ studentCode: string; fullName: string; email: string }>,
+  ): Promise<{ enrolledCount: number; message: string }> {
+    await this.getCourseById(courseId);
+    return this.courseRepo.bulkEnrollStudents(courseId, students);
+  }
+
+  public async getCoursesByStudent(studentId: string): Promise<CourseRecord[]> {
+    return this.courseRepo.findCoursesByStudent(studentId);
+  }
+
+  public async getStudentsInCourse(courseId: string) {
+    await this.getCourseById(courseId);
+    return this.courseRepo.getStudentsInCourse(courseId);
+  }
 }

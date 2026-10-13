@@ -38,6 +38,40 @@ export class CoursesController {
     };
   }
 
+  @Get('student/:studentId')
+  public async getCoursesByStudent(@Param('studentId') studentId: string) {
+    const courses = await this.coursesService.getCoursesByStudent(studentId);
+    return {
+      statusCode: HttpStatus.OK,
+      total: courses.length,
+      data: courses,
+    };
+  }
+
+  @Get(':id/students')
+  public async getStudentsInCourse(@Param('id') id: string) {
+    const students = await this.coursesService.getStudentsInCourse(id);
+    return {
+      statusCode: HttpStatus.OK,
+      total: students.length,
+      data: students,
+    };
+  }
+
+  @Post(':id/bulk-import')
+  @HttpCode(HttpStatus.CREATED)
+  public async bulkImportStudents(
+    @Param('id') id: string,
+    @Body() body: any,
+  ) {
+    const list = Array.isArray(body) ? body : body?.students || [];
+    const result = await this.coursesService.bulkImportStudents(id, list);
+    return {
+      statusCode: HttpStatus.CREATED,
+      ...result,
+    };
+  }
+
   @Get(':id')
   public async getCourseById(@Param('id') id: string) {
     const course = await this.coursesService.getCourseById(id);

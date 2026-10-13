@@ -75,10 +75,27 @@ export class PostgresService implements OnModuleInit, OnModuleDestroy {
     return this.isConnected && this.pool !== null;
   }
 
+  public getPool(): Pool | null {
+    return this.pool;
+  }
+
   public async query(text: string, params?: any[]): Promise<any> {
     if (!this.isConnected || !this.pool) {
       throw new Error('PostgreSQL hiện không khả dụng. Đang dùng JSON fallback.');
     }
     return this.pool.query(text, params);
+  }
+
+  public async safeQuery<T = any>(text: string, params?: any[]): Promise<T[]> {
+    if (!this.isConnected || !this.pool) {
+      return [];
+    }
+    try {
+      const res = await this.pool.query(text, params);
+      return (res.rows || []) as T[];
+    } catch (err: any) {
+      this.logger.warn(`[PostgresService:safeQuery] Query error (${err.message}). Text: ${text.substring(0, 80)}`);
+      return [];
+    }
   }
 }

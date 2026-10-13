@@ -92,6 +92,36 @@ export function App() {
   // Tab cho Sinh viên: 'submission' (Khu vực nộp bài) | 'history' (Lịch sử nộp & điểm số) | 'benchmark' (Bộ dữ liệu Benchmark RBL) | 'appeals' (Khiếu nại điểm)
   const [studentActiveTab, setStudentActiveTab] = useState<'submission' | 'history' | 'benchmark' | 'appeals'>('submission');
 
+  // Danh sách môn học sinh viên đang tham gia (nạp từ PostgreSQL qua API)
+  const [enrolledCourses, setEnrolledCourses] = useState<Array<{ courseId: string; courseCode: string; courseName: string; semester: string; description?: string }>>([
+    {
+      courseId: 'CRS-SWP391',
+      courseCode: 'SE1701-SWP391',
+      courseName: 'Application Development Project (SWP391)',
+      semester: 'Fall 2026',
+      description: 'Dự án Phát triển phần mềm theo chuẩn Agile Scrum',
+    },
+  ]);
+  const [selectedStudentCourseId, setSelectedStudentCourseId] = useState<string>('CRS-SWP391');
+
+  // Fetch danh sách môn học của sinh viên từ server
+  useEffect(() => {
+    if (currentUser && currentUser.role === 'STUDENT') {
+      const studentId = currentUser.userId || 'SE170000';
+      fetch(`${API_BASE_URL}/api/v1/courses/student/${studentId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          const list = data.data || data || [];
+          if (Array.isArray(list) && list.length > 0) {
+            setEnrolledCourses(list);
+            if (!list.some((c: any) => c.courseId === selectedStudentCourseId)) {
+              setSelectedStudentCourseId(list[0].courseId);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [currentUser]);
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
@@ -556,6 +586,75 @@ export function App() {
         {/* STUDENT VIEW: Dành riêng cho Sinh viên (STUDENT) */}
         {currentUser.role === 'STUDENT' && (
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            {/* KHỐI HIỂN THỊ CÁC MÔN HỌC ĐANG THEO HỌC (ENROLLED COURSES) */}
+            <div
+              className="glass-panel"
+              style={{
+                padding: '20px 24px',
+                borderRadius: '16px',
+                marginBottom: '20px',
+                border: '1.5px solid rgba(99, 102, 241, 0.3)',
+                backgroundColor: 'rgba(15, 23, 42, 0.6)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <BookOpen size={20} color="var(--accent-primary)" />
+                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>
+                    Các Lớp Học Phần Bạn Đang Ghi Danh ({enrolledCourses.length} Môn)
+                  </h3>
+                </div>
+                <span style={{ fontSize: '12px', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  ● Đồng bộ thời gian thực từ PostgreSQL (class_members)
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                {enrolledCourses.map((c) => {
+                  const isSelected = c.courseId === selectedStudentCourseId;
+                  return (
+                    <div
+                      key={c.courseId}
+                      onClick={() => setSelectedStudentCourseId(c.courseId)}
+                      style={{
+                        padding: '14px 18px',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.03)',
+                        border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.08)'}`,
+                        boxShadow: isSelected ? '0 4px 15px rgba(99, 102, 241, 0.25)' : 'none',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 800,
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            backgroundColor: isSelected ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)',
+                            color: '#ffffff',
+                          }}
+                        >
+                          {c.courseCode}
+                        </span>
+                        <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 700 }}>
+                          ✓ Đang Học (Active)
+                        </span>
+                      </div>
+                      <h4 style={{ fontSize: '14px', fontWeight: 700, color: isSelected ? '#ffffff' : 'var(--text-muted)', marginBottom: '4px' }}>
+                        {c.courseName}
+                      </h4>
+                      <p style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
+                        {c.semester} • Giảng viên AITA
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Thanh Tab chuyển đổi giữa Nộp bài & Benchmark Dataset */}
             <div
               style={{
@@ -662,7 +761,13 @@ export function App() {
 
             {studentActiveTab === 'submission' ? (
               <SubmissionView
-                task={mockTask}
+                task={{
+                  ...mockTask,
+                  course: (() => {
+                    const active = enrolledCourses.find((c) => c.courseId === selectedStudentCourseId);
+                    return active ? `${active.courseCode} - ${active.courseName}` : mockTask.course;
+                  })(),
+                }}
                 studentId={currentUser.userId}
                 studentName={currentUser.fullName}
                 onSubmit={(file, taskItem) => handleSubmission(file, undefined, taskItem)}

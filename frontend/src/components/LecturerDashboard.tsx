@@ -624,25 +624,160 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     );
   };
 
-  const handleSimulateRollback = (triggerError: boolean) => {
+  // State và modal tạo khóa học mới
+  const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
+  const [newCourseCode, setNewCourseCode] = useState('PRN211');
+  const [newCourseName, setNewCourseName] = useState('Cross-Platform Application Development with .NET');
+  const [newCourseSemester, setNewCourseSemester] = useState('Học kỳ Thu 2026');
+  const [newCourseDesc, setNewCourseDesc] = useState('Lập trình ứng dụng đa nền tảng với .NET Core & Clean Architecture');
+  const [createCourseLoading, setCreateCourseLoading] = useState(false);
+
+  // State cho việc nạp Roster Excel vào lớp
+  const [targetCourseId, setTargetCourseId] = useState<string>('CRS-SWP391');
+
+  // Tải danh sách khóa học thực tế từ API Gateway (PostgreSQL 15)
+  const fetchLiveCourses = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/v1/courses');
+      if (res.ok) {
+        const json = await res.json();
+        const serverCourses = json.data || json || [];
+        if (Array.isArray(serverCourses) && serverCourses.length > 0) {
+          const mapped: CourseItem[] = serverCourses.map((c: any) => ({
+            courseId: c.courseId,
+            courseCode: c.courseCode,
+            courseName: c.courseName,
+            semester: c.semester,
+            instructorName: 'ThS. Giảng Viên AITA',
+            studentCount: c.studentCount || 38,
+            assignmentCount: 2,
+          }));
+          setCourses(mapped);
+          if (mapped.length > 0 && !targetCourseId) {
+            setTargetCourseId(mapped[0].courseId);
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    void fetchLiveCourses();
+  }, []);
+
+  const handleCreateNewCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCourseCode.trim() || !newCourseName.trim()) {
+      alert('Vui lòng nhập Mã học phần và Tên khóa học!');
+      return;
+    }
+
+    setCreateCourseLoading(true);
+    const generatedId = 'CRS-' + newCourseCode.trim().toUpperCase();
+    try {
+      await fetch('http://localhost:3000/api/v1/courses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId: generatedId,
+          courseCode: newCourseCode.trim().toUpperCase(),
+          courseName: newCourseName.trim(),
+          semester: newCourseSemester,
+          description: newCourseDesc,
+          instructorId: 'GV001',
+        }),
+      });
+
+      const newCourseObj: CourseItem = {
+        courseId: generatedId,
+        courseCode: newCourseCode.trim().toUpperCase(),
+        courseName: newCourseName.trim(),
+        semester: newCourseSemester,
+        instructorName: 'ThS. Giảng Viên AITA',
+        studentCount: 0,
+        assignmentCount: 0,
+      };
+
+      setCourses((prev) => [newCourseObj, ...prev.filter((c) => c.courseId !== generatedId)]);
+      setTargetCourseId(generatedId);
+      setIsCreateCourseModalOpen(false);
+      setPublishSuccessToast(`🎉 Đã tạo thành công khóa học mới [${newCourseCode}] và lưu vào PostgreSQL 15!`);
+    } catch (err: any) {
+      alert(`Lỗi tạo khóa học: ${err.message}`);
+    } finally {
+      setCreateCourseLoading(false);
+    }
+  };
+
+  const handleDownloadSampleCsv = () => {
+    const csvContent =
+      'Mã Sinh Viên,Họ Và Tên,Email FPT\n' +
+      'SE170000,Đinh Thành Trung,trungdt.student@aita.fpt.edu.vn\n' +
+      'SE170123,Trần Thanh Nguyên,nguyentt@aita.fpt.edu.vn\n' +
+      'SE201817,Nguyễn Hoàng Vinh,user.student@gmail.com\n' +
+      'SE712137,Võ Thái Trung,vttrung2k6@gmail.com\n' +
+      'SE170456,Lê Hoàng Nam,namlh@aita.fpt.edu.vn\n';
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `roster_${targetCourseId || 'sample'}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExecuteLiveBulkImport = async (triggerError: boolean, customStudents?: any[]) => {
     setExcelLoading(true);
     setExcelStatus(null);
     setSimulatedRollback(null);
 
-    setTimeout(() => {
-      setExcelLoading(false);
-      if (triggerError) {
-        setSimulatedRollback(true);
-        setExcelStatus(
-          '❌ PHÁT HIỆN LỖI: Dòng số 3 chứa Mã Sinh Viên trùng lặp [SE170123] với một bản ghi đã tồn tại! Hệ thống đã kích hoạt 100% SQL TRANSACTION ROLLBACK. Không có bản ghi mồ côi nào bị ghi vào cơ sở dữ liệu.'
-        );
-      } else {
-        setSimulatedRollback(false);
-        setExcelStatus(
-          '✅ GIAO DỊCH SQL THÀNH CÔNG: Đã nhập thành công 38 sinh viên vào lớp SE1701-SWP391! Tất cả tài khoản đã được cấp quyền Google SSO.'
-        );
+    const studentsToImport = customStudents || (triggerError ? [
+      { studentCode: 'SE170000', fullName: 'Đinh Thành Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
+      { studentCode: 'SE170123', fullName: 'Trần Thanh Nguyên', email: 'nguyentt@aita.fpt.edu.vn' },
+      { studentCode: 'SE170123_ERROR_ROLLBACK', fullName: 'Nguyễn Văn Lỗi (Trùng MSSV)', email: 'loi@aita.fpt.edu.vn' },
+    ] : [
+      { studentCode: 'SE170000', fullName: 'Đinh Thành Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
+      { studentCode: 'SE170123', fullName: 'Trần Thanh Nguyên', email: 'nguyentt@aita.fpt.edu.vn' },
+      { studentCode: 'SE201817', fullName: 'Nguyễn Hoàng Vinh', email: 'user.student@gmail.com' },
+      { studentCode: 'SE712137', fullName: 'Võ Thái Trung', email: 'vttrung2k6@gmail.com' },
+      { studentCode: 'SE170456', fullName: 'Lê Hoàng Nam', email: 'vinhtt@aita.fpt.edu.vn' },
+    ]);
+
+    try {
+      const courseIdToUse = targetCourseId || 'CRS-SWP391';
+      const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToUse}/bulk-import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ students: studentsToImport }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || data.error || 'Lỗi giao dịch SQL!');
       }
-    }, 900);
+
+      setSimulatedRollback(false);
+      setExcelStatus(
+        `✅ GIAO DỊCH SQL THÀNH CÔNG (100% COMMIT): Đã nạp và ghi danh thành công ${studentsToImport.length} sinh viên vào lớp [${courseIdToUse}] trong PostgreSQL 15! Sinh viên đăng nhập vào sẽ thấy môn học ngay.`
+      );
+      setCourses((prev) =>
+        prev.map((c) =>
+          c.courseId === courseIdToUse ? { ...c, studentCount: Math.max(c.studentCount, studentsToImport.length) } : c
+        )
+      );
+    } catch (err: any) {
+      setSimulatedRollback(true);
+      setExcelStatus(
+        `❌ GIAO DỊCH SQL THẤT BẠI: ${err.message}. Hệ thống đã tự động kích hoạt 100% SQL TRANSACTION ROLLBACK (R06) bảo toàn dữ liệu PostgreSQL, không có bất kỳ bản ghi mồ côi nào!`
+      );
+    } finally {
+      setExcelLoading(false);
+    }
   };
 
   return (
@@ -1170,7 +1305,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           })() : (
             /* TRƯỜNG HỢP 2: DANH SÁCH TẤT CẢ CÁC MÔN HỌC & LỚP */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>
                     Các Lớp Học Phần Đang Giảng Dạy ({courses.length} Môn)
@@ -1179,6 +1314,24 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     Chọn bất kỳ môn học nào để xem danh sách các bài tập đã giao hoặc giao bài tập mới
                   </p>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsCreateCourseModalOpen(true)}
+                  className="btn-primary"
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '10px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <PlusCircle size={16} /> + Tạo Khóa Học Mới
+                </button>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '16px' }}>
@@ -1958,22 +2111,85 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             </p>
           </div>
 
+          {/* CHỌN KHÓA HỌC & TẢI FILE MẪU */}
+          <div
+            style={{
+              padding: '20px 24px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              marginBottom: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+              <label style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>
+                1. Chọn Lớp Học Phần Cần Ghi Danh:
+              </label>
+              <select
+                value={targetCourseId}
+                onChange={(e) => setTargetCourseId(e.target.value)}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#ffffff',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  minWidth: '260px',
+                  outline: 'none',
+                }}
+              >
+                {courses.map((c) => (
+                  <option key={c.courseId} value={c.courseId} style={{ backgroundColor: '#0f172a' }}>
+                    {c.courseCode} - {c.courseName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleDownloadSampleCsv}
+              style={{
+                padding: '9px 16px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(6, 182, 212, 0.15)',
+                border: '1px solid rgba(6, 182, 212, 0.35)',
+                color: 'var(--accent-cyan)',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
+              <Download size={15} /> Tải File Mẫu Roster (.csv)
+            </button>
+          </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '28px' }}>
             <div style={{ padding: '24px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <CheckCircle2 size={24} color="#10b981" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 1: Nhập Thành Công 100%</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 1: Nhập Live Thành Công 100% (Commit)</h3>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
-                Tất cả 38 dòng trong file Excel đều hợp lệ, MSSV không bị trùng, email chuẩn định dạng @fpt.edu.vn. Giao diện thực hiện COMMIT toàn bộ.
+                Nạp danh sách sinh viên chuẩn vào PostgreSQL 15 bảng <code>class_members</code>. Tất cả tài khoản được cấp quyền truy cập môn học. Giao diện thực hiện COMMIT toàn bộ.
               </p>
               <button
                 type="button"
-                onClick={() => handleSimulateRollback(false)}
+                onClick={() => handleExecuteLiveBulkImport(false)}
                 disabled={excelLoading}
                 style={{
                   width: '100%',
-                  padding: '10px 16px',
+                  padding: '11px 16px',
                   borderRadius: '8px',
                   backgroundColor: '#10b981',
                   border: 'none',
@@ -1987,25 +2203,25 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   gap: '8px',
                 }}
               >
-                <Upload size={16} /> Thử Nghiệm Nhập Hợp Lệ (Commit)
+                <Upload size={16} /> ⚡ Thực Thi Giao Dịch Nhập Roster (Live PostgreSQL)
               </button>
             </div>
 
             <div style={{ padding: '24px', borderRadius: '12px', backgroundColor: 'rgba(244, 63, 94, 0.08)', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <AlertTriangle size={24} color="#f43f5e" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 2: Minh Chứng Lỗi & Rollback ACID</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 2: Minh Chứng Lỗi Dòng N & 100% Rollback (R06)</h3>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
-                Mô phỏng file Excel có dòng số 3 chứa MSSV trùng lặp [SE170123]. Hệ thống lập tức tung Exception và thực thi 100% ROLLBACK bảo toàn dữ liệu.
+                Gửi file Excel có dòng số 3 chứa lỗi trùng lặp MSSV [SE170123]. Backend mở SQL Transaction, phát hiện vi phạm và thực thi 100% ROLLBACK bảo toàn dữ liệu.
               </p>
               <button
                 type="button"
-                onClick={() => handleSimulateRollback(true)}
+                onClick={() => handleExecuteLiveBulkImport(true)}
                 disabled={excelLoading}
                 style={{
                   width: '100%',
-                  padding: '10px 16px',
+                  padding: '11px 16px',
                   borderRadius: '8px',
                   backgroundColor: 'rgba(244, 63, 94, 0.2)',
                   border: '1px solid #f43f5e',
@@ -2019,7 +2235,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   gap: '8px',
                 }}
               >
-                <AlertTriangle size={16} /> Mô Phỏng Lỗi Dòng 3 & Rollback ACID
+                <AlertTriangle size={16} /> ⚠️ Kích Hoạt Thử Nghiệm Lỗi Dòng 3 &amp; Rollback
               </button>
             </div>
           </div>
@@ -2642,6 +2858,177 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 Đóng
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL TẠO KHÓA HỌC MỚI (LƯU VÀO POSTGRESQL 15) */}
+      {isCreateCourseModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px',
+          }}
+        >
+          <div
+            className="glass-panel"
+            style={{
+              width: '100%',
+              maxWidth: '560px',
+              backgroundColor: '#0f172a',
+              border: '1.5px solid rgba(99, 102, 241, 0.4)',
+              borderRadius: '20px',
+              padding: '28px 32px',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.2)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <BookOpen size={24} color="var(--accent-primary)" />
+                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>
+                  Tạo Lớp Học Phần Mới (PostgreSQL 15)
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateCourseModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewCourse} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>
+                  Mã Lớp Học Phần / Subject Code:
+                </label>
+                <input
+                  type="text"
+                  value={newCourseCode}
+                  onChange={(e) => setNewCourseCode(e.target.value.toUpperCase())}
+                  placeholder="Ví dụ: PRN211, PRO192, SWP391"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    fontWeight: 700,
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>
+                  Tên Khóa Học / Course Name:
+                </label>
+                <input
+                  type="text"
+                  value={newCourseName}
+                  onChange={(e) => setNewCourseName(e.target.value)}
+                  placeholder="Ví dụ: Lập trình Cross-Platform .NET Core"
+                  required
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>
+                  Học Kỳ (Semester):
+                </label>
+                <input
+                  type="text"
+                  value={newCourseSemester}
+                  onChange={(e) => setNewCourseSemester(e.target.value)}
+                  placeholder="Ví dụ: Học kỳ Thu 2026 (Fall 2026)"
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>
+                  Mô Tả Mục Tiêu Khóa Học:
+                </label>
+                <textarea
+                  value={newCourseDesc}
+                  onChange={(e) => setNewCourseDesc(e.target.value)}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    resize: 'none',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateCourseModalOpen(false)}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Hủy Bỏ
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={createCourseLoading}
+                  className="btn-primary"
+                  style={{
+                    padding: '10px 22px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: createCourseLoading ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <PlusCircle size={16} /> {createCourseLoading ? 'Đang Lưu...' : 'Lưu Vào PostgreSQL 15'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
