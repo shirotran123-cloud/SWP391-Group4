@@ -346,8 +346,24 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
 - Môn học: ${options.courseCode} (${options.courseName})
 - ${promptDetails}
 - Ngôn ngữ cho phép: ${(options.allowedLanguages || ['java', 'python', 'cpp']).join(', ')}
-- QUY CÁCH TESTCASES: Sinh ĐÚNG CHÍNH XÁC ${targetTestCount} bộ testcases (gồm ${Math.max(1, Math.floor(targetTestCount * 0.6))} testcases công khai và ${Math.max(1, targetTestCount - Math.floor(targetTestCount * 0.6))} testcases ẩn kiểm tra biên/TLE).
-- TRỌNG SỐ ĐIỂM: Phân bổ các trọng số điểm khác nhau cho từng testcase theo độ khó (ví dụ test dễ 1.5đ, trung bình 2.0đ, ẩn/biên 2.5đ... tổng cộng khoảng 10.0đ).
+- MA TRẬN TESTCASES BẮT BUỘC (BAO QUÁT 100% CÁC RANH GIỚI BIÊN CỦA CODE):
+  Sinh ĐÚNG CHÍNH XÁC ${targetTestCount} bộ testcases, phân bổ bắt buộc bao quát đầy đủ 5 tầng ranh giới sau:
+  1. Testcases Cơ bản / Thông thường (Happy Path) [khoảng 40%]: Luồng hoạt động chuẩn, dữ liệu mẫu kích thước vừa (N từ 3 đến 8) để sinh viên debug và kiểm tra logic cơ bản.
+  2. Testcases Ranh giới Cực tiểu (Corner / Minimal Boundary) [khoảng 20%]:
+     - Kích thước tiệm cận biên dưới: N = 1 (chỉ duy nhất 1 phần tử), N = 0 (tập dữ liệu rỗng), chuỗi rỗng.
+     - Giá trị số 0, số âm, hoặc giá trị nhỏ nhất của kiểu dữ liệu.
+  3. Testcases Ranh giới Suy biến & Bẫy thuật toán (Degenerate / Adversarial Cases) [khoảng 20%]:
+     - Toàn bộ các phần tử đầu vào trùng khớp nhau hoàn toàn (All identical values).
+     - Dữ liệu đã sắp xếp sẵn theo thứ tự tăng dần hoặc giảm dần (Sorted / Reversed input) nhằm bẫy thuật toán O(N^2) (ví dụ QuickSort suy biến nếu không chọn pivot tốt).
+     - Với Cấu trúc Cây (Tree): Dữ liệu làm cây bị lệch 1 nhánh thành danh sách liên kết (Skewed Tree) nhằm kiểm tra đệ quy tràn Call Stack.
+     - Với Đồ thị (Graph): Đồ thị không liên thông, đỉnh cô lập hoặc có chu trình.
+  4. Testcases Ranh giới Cực đại & Chống tràn số (Stress Scale & Overflow) [khoảng 20%]:
+     - Kích thước chạm ngưỡng giới hạn trên của bài toán (N lớn) nhằm kiểm tra thời gian thực thi (chống TLE - Time Limit Exceeded) và bộ nhớ (chống MLE).
+     - Giá trị số lớn vượt quá 2^31 - 1 để kiểm tra việc sử dụng biến 64-bit (long / BigInt) tránh tràn số nguyên.
+  5. Testcases Thao tác Không tồn tại / Xử lý ngoại lệ:
+     - Yêu cầu tìm kiếm hoặc xóa một phần tử KHÔNG tồn tại trong cấu trúc dữ liệu.
+- MỤC GIẢI THÍCH (explanation): Trong mỗi testcase, trường "explanation" BẮT BUỘC ghi rõ mục đích kiểm tra biên (Ví dụ: "Biên cực tiểu N=1", "Biên bẫy suy biến dữ liệu trùng lặp", "Biên cực đại chống TLE", "Thao tác phần tử không tồn tại").
+- TRỌNG SỐ ĐIỂM: Phân bổ các trọng số điểm khác nhau cho từng testcase theo độ khó (ví dụ test cơ bản 1.5đ, test biên cực tiểu 2.0đ, test bẫy suy biến/cực đại ẩn 2.5đ - 3.0đ... tổng cộng khoảng 10.0đ).
 - BỐI CẢNH THỰC TẾ BẮT BUỘC (ĐA DẠNG HÓA):
   + Lĩnh vực bài toán cho đề thi này: "${chosenDomain}".
   + ĐẶC BIỆT CẤM: TUYỆT ĐỐI KHÔNG lặp lại các mô-típ Drone y tế, máy bay cứu hộ khẩn cấp hay giao thuốc cấp cứu (trừ phi giảng viên yêu cầu đích danh từ khóa này).
