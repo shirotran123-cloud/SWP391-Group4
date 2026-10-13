@@ -629,14 +629,21 @@ JSON cần ngắn gọn, xúc tích, sinh cực nhanh với cấu trúc:
 
     let lastError: any = null;
 
-    // Thử gọi các model Google Gemini với Timeout nghiêm ngặt 10 giây
+    // Thử gọi các model Google Gemini với Timeout tổng thể nghiêm ngặt tối đa 10 giây
     if (cleanKey) {
       for (const modelToTry of candidateModels) {
+        const elapsed = Date.now() - startTime;
+        if (elapsed >= 9500) {
+          console.warn('Đã chạm ngưỡng thời gian 10s, lập tức chuyển sang bộ đề dự phòng AITA.');
+          break;
+        }
+
+        const remainingTimeoutMs = Math.max(2000, 10000 - elapsed);
         try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToTry}:generateContent?key=${cleanKey}`;
           
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 10000);
+          const timeoutId = setTimeout(() => controller.abort(), remainingTimeoutMs);
 
           let response: Response;
           try {
@@ -702,6 +709,11 @@ JSON cần ngắn gọn, xúc tích, sinh cực nhanh với cấu trúc:
         } catch (err: any) {
           lastError = err;
           console.warn(`Lỗi khi gọi model ${modelToTry}:`, err.message);
+          // Nếu bị quá thời gian (Timeout AbortError), lập tức thoát ra để lấy đề fallback, không để người dùng đợi
+          if (err.name === 'AbortError' || err.message?.includes('aborted') || (Date.now() - startTime) >= 9500) {
+            console.warn('Thời gian gọi Google Gemini vượt quá 10 giây, kích hoạt đề dự phòng ngay lập tức.');
+            break;
+          }
         }
       }
     }
