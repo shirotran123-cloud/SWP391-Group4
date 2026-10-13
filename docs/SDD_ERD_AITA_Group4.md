@@ -197,7 +197,7 @@
 - `class_id FK → classes CASCADE`; `student_id FK → users CASCADE`.
 - `commit_count`, `lines_added`, `lines_deleted` INTs.
 - `contribution_pct NUMERIC(5,2)` CHECK 0–100; `is_free_rider BOOLEAN DEFAULT FALSE`.
-- Rule: `is_free_rider = (contribution_pct < 10.0)` (BR-12).
+- Rule: `is_free_rider = (contribution_pct < 10%)` (BR-12).
 - `UNIQUE(class_id, student_id)`; index `is_free_rider`.
 
 ### Infra dead_letter_jobs (BullMQ fault tolerance)
