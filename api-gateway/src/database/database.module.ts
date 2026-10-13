@@ -6,10 +6,12 @@ import { AssignmentRepository } from './assignment.repository';
 import { DLQRepository } from './dlq.repository';
 import { AppealRepository } from './appeal.repository';
 import { TeamworkRepository } from './teamwork.repository';
+import { PostgresService } from './postgres.service';
 
 @Global()
 @Module({
   providers: [
+    PostgresService,
     SubmissionRepository,
     UserRepository,
     CourseRepository,
@@ -19,6 +21,7 @@ import { TeamworkRepository } from './teamwork.repository';
     TeamworkRepository,
   ],
   exports: [
+    PostgresService,
     SubmissionRepository,
     UserRepository,
     CourseRepository,
@@ -29,4 +32,5 @@ import { TeamworkRepository } from './teamwork.repository';
   ],
 })
 export class DatabaseModule {}
+
 
