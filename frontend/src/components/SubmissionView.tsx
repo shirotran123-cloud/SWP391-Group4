@@ -27,12 +27,13 @@ export interface StudentTaskItem extends Task {
 
 export interface StudentSubmissionRecord {
   assignmentId: string;
+  submissionId?: string;
   submittedAt: string;
   fileName: string;
   fileSizeMb?: number;
   sha256?: string;
   score?: number;
-  status: 'GRADED' | 'SUBMITTED';
+  status: 'QUEUED' | 'GRADED' | 'SUBMITTED';
 }
 
 interface SubmissionViewProps {
@@ -473,8 +474,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         fileName: selectedFile.name,
         fileSizeMb: Number((selectedFile.size / (1024 * 1024)).toFixed(2)),
         sha256: sha256Checksum || undefined,
-        score: 8.8,
-        status: 'GRADED',
+        status: 'QUEUED',
       };
 
       const updated = { ...submissionHistory, [currentTask.id]: newRecord };
@@ -737,7 +737,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   Bạn đã nộp bài thành công cho bài tập này!
                 </div>
                 <div style={{ fontSize: '12px', color: '#a7f3d0' }}>
-                  File: <strong>{prevSubmission.fileName}</strong> | Nộp lúc: {new Date(prevSubmission.submittedAt).toLocaleString('vi-VN')} | Điểm gần nhất: <span style={{ fontWeight: 800, color: '#34d399' }}>{prevSubmission.score}/10</span>
+                  File: <strong>{prevSubmission.fileName}</strong> | Nộp lúc: {new Date(prevSubmission.submittedAt).toLocaleString('vi-VN')} | Trạng thái: <span style={{ fontWeight: 800, color: prevSubmission.status === 'GRADED' ? '#34d399' : '#fbbf24' }}>{prevSubmission.status === 'GRADED' ? `Đã chấm ${prevSubmission.score}/10` : 'Đang chờ chấm'}</span>
                 </div>
               </div>
             </div>

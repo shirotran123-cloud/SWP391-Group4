@@ -8,7 +8,7 @@ import { LecturerDashboard } from './components/LecturerDashboard';
 import { RblBenchmarkView } from './components/RblBenchmarkView';
 import { StudentAppealsView } from './components/StudentAppealsView';
 import { StudentHistoryView } from './components/StudentHistoryView';
-import type { Task, GradingStep, AIRating, PlagiarismMatch, User } from './types';
+import type { Task, GradingStep, AIRating, PlagiarismMatch, User, ScoreBreakdown } from './types';
 import { Terminal, Shield, LogOut, FileCode, Sparkles, Upload, BookOpen, LayoutDashboard, Scale, ArrowLeftRight, Clock } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
@@ -129,12 +129,18 @@ export function App() {
   const [steps, setSteps] = useState<GradingStep[]>(initialSteps);
   const [isCompleted, setIsCompleted] = useState(false);
   const [submissionId, setSubmissionId] = useState('');
+  const [currentAssignmentId, setCurrentAssignmentId] = useState('');
   const [currentSourceCode, setCurrentSourceCode] = useState<string>(mockSourceCodeStudent);
   const [aiRating, setAiRating] = useState<AIRating | undefined>(undefined);
   const [plagiarismMatch, setPlagiarismMatch] = useState<PlagiarismMatch | undefined>(undefined);
   const [score, setScore] = useState<number | undefined>(undefined);
+  const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown | undefined>(undefined);
   const [executionTimeMs, setExecutionTimeMs] = useState<number | undefined>(undefined);
+  const currentAssignmentIdRef = useRef('');
+  const submissionIdRef = useRef('');
+  const currentUserRef = useRef<User | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  currentUserRef.current = currentUser;
 
   // Khởi tạo kết nối Socket.IO
   useEffect(() => {
@@ -194,7 +200,9 @@ export function App() {
       if (data.aiRating) setAiRating(data.aiRating);
       if (data.plagiarismMatch) setPlagiarismMatch(data.plagiarismMatch);
       if (data.score !== undefined) setScore(data.score);
+      if (data.scoreBreakdown) setScoreBreakdown(data.scoreBreakdown);
       if (data.executionTimeMs !== undefined) setExecutionTimeMs(data.executionTimeMs);
+      persistGradingResult({ score: data.score, scoreBreakdown: data.scoreBreakdown, submissionId: data.submissionId });
       setSteps((prev) =>
         prev.map((s) => (s.status === 'in_progress' || s.status === 'pending' ? { ...s, status: 'passed' } : s))
       );
@@ -233,6 +241,29 @@ export function App() {
     setActiveView('student');
   };
 
+  const persistGradingResult = (result: { score?: number; scoreBreakdown?: ScoreBreakdown; submissionId?: string }) => {
+    const user = currentUserRef.current;
+    const assignmentId = currentAssignmentIdRef.current;
+    if (!user || !assignmentId) return;
+
+    const storageKey = `aita_student_submissions_${user.userId}`;
+    try {
+      const saved = localStorage.getItem(storageKey);
+      const history = saved ? JSON.parse(saved) : {};
+      const current = history[assignmentId];
+      if (!current) return;
+      history[assignmentId] = {
+        ...current,
+        submissionId: result.submissionId || current.submissionId,
+        score: result.score,
+        status: 'GRADED',
+      };
+      localStorage.setItem(storageKey, JSON.stringify(history));
+    } catch (err) {
+      console.warn('Không thể cập nhật lịch sử điểm:', err);
+    }
+  };
+
   const handleSubmission = async (file?: File, benchmarkPairId?: number, submittedTask?: Task) => {
     const activeTask = submittedTask || mockTask;
     if (!currentUser) return;
@@ -242,7 +273,10 @@ export function App() {
     setAiRating(undefined);
     setPlagiarismMatch(undefined);
     setScore(undefined);
+    setScoreBreakdown(undefined);
     setExecutionTimeMs(undefined);
+    setCurrentAssignmentId(activeTask.id);
+    currentAssignmentIdRef.current = activeTask.id;
     setIsModalOpen(true);
 
     let codeToGrade = mockSourceCodeStudent;
@@ -296,6 +330,7 @@ export function App() {
           const result = await response.json();
           const subId = result.data.submissionId;
           setSubmissionId(subId);
+          submissionIdRef.current = subId;
 
           if (socketRef.current && socketRef.current.connected) {
             socketRef.current.emit('join_submission', {
@@ -316,7 +351,9 @@ export function App() {
               if (data.aiRating) setAiRating(data.aiRating);
               setPlagiarismMatch(computedPlagiarism);
               if (data.score !== undefined) setScore(data.score);
+              if (data.scoreBreakdown) setScoreBreakdown(data.scoreBreakdown);
               if (data.executionTimeMs !== undefined) setExecutionTimeMs(data.executionTimeMs);
+              persistGradingResult({ score: data.score, scoreBreakdown: data.scoreBreakdown, submissionId: data.submissionId });
               setSteps((prev) => prev.map((s) => ({ ...s, status: 'passed' })));
               setIsCompleted(true);
             });
@@ -331,11 +368,19 @@ export function App() {
 
     const subId = generateFallbackSubId();
     setSubmissionId(subId);
+    submissionIdRef.current = subId;
     simulateSocketGradingEvents(computedPlagiarism);
   };
 
   const simulateSocketGradingEvents = (realPlagiarism?: PlagiarismMatch) => {
     const delays = [600, 1400, 2400, 3400, 4600, 5800];
+    const fallbackBreakdown: ScoreBreakdown = {
+      testcase1: 4.0,
+      testcase2: 3.0,
+      cleanCode: 1.7,
+      solid: 0.8,
+      total: 9.5,
+    };
 
     delays.forEach((delay, index) => {
       setTimeout(() => {
@@ -388,8 +433,10 @@ export function App() {
             });
 
             setPlagiarismMatch(realPlagiarism);
-            setScore(8.8);
+            setScoreBreakdown(fallbackBreakdown);
+            setScore(fallbackBreakdown.total);
             setExecutionTimeMs(1420);
+            persistGradingResult({ score: fallbackBreakdown.total, scoreBreakdown: fallbackBreakdown, submissionId: submissionIdRef.current });
             setIsCompleted(true);
           }, 600);
         }
@@ -813,6 +860,7 @@ export function App() {
         plagiarismMatch={plagiarismMatch}
         sourceCode={currentSourceCode}
         score={score}
+        scoreBreakdown={scoreBreakdown}
         executionTimeMs={executionTimeMs}
       />
 

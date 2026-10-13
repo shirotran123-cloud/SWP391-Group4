@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Clock, Loader2, XCircle, Sparkles, Award, Scale } from 'lucide-react';
-import type { GradingStep, AIRating, PlagiarismMatch } from '../types';
+import type { GradingStep, AIRating, PlagiarismMatch, ScoreBreakdown } from '../types';
 import { SolidRadarChart } from './SolidRadarChart';
 import { MonacoDiffViewer } from './MonacoDiffViewer';
 import { AppealModal } from './AppealModal';
@@ -16,6 +16,7 @@ interface LiveGradingModalProps {
   plagiarismMatch?: PlagiarismMatch;
   sourceCode: string;
   score?: number;
+  scoreBreakdown?: ScoreBreakdown;
   maxScore?: number;
   executionTimeMs?: number;
 }
@@ -31,6 +32,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
   plagiarismMatch,
   sourceCode,
   score,
+  scoreBreakdown,
   maxScore = 10,
   executionTimeMs,
 }) => {
@@ -87,13 +89,16 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                 {/* Thanh Barem Chuẩn Hóa Học Thuật AITA */}
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '12px' }}>
                   <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
-                    🧪 Testcases: {((score >= 7 ? 7.0 : Math.max(0, score - 2.5))).toFixed(1)} / 7.0đ (Tỷ lệ quy đổi)
+                    🧪 TC1: {(scoreBreakdown?.testcase1 ?? 0).toFixed(1)} / 4.0đ
+                  </span>
+                  <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                    🧪 TC2: {(scoreBreakdown?.testcase2 ?? 0).toFixed(1)} / 3.0đ
                   </span>
                   <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                    ✨ Clean Code O(N log N): {aiRating ? ((aiRating.cleanCodeScore / 10) * 2.0).toFixed(1) : '1.8'} / 2.0đ
+                    ✨ Clean Code: {(scoreBreakdown?.cleanCode ?? 0).toFixed(1)} / 2.0đ
                   </span>
                   <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#fbbf24', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
-                    📐 SOLID Architecture: {aiRating ? (((aiRating.solidScore.s + aiRating.solidScore.o + aiRating.solidScore.l + aiRating.solidScore.i + aiRating.solidScore.d) / 50) * 1.0).toFixed(1) : '0.8'} / 1.0đ
+                    📐 SOLID: {(scoreBreakdown?.solid ?? 0).toFixed(1)} / 1.0đ
                   </span>
                 </div>
               </div>

@@ -497,12 +497,21 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const passedCount = [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
     const totalExecMs = analysis.tc1TimeMs + analysis.tc2TimeMs;
     const finalScore = analysis.score;
+    const solidAvg = (analysis.solidScore.s + analysis.solidScore.o + analysis.solidScore.l + analysis.solidScore.i + analysis.solidScore.d) / 5;
+    const scoreBreakdown = {
+      testcase1: analysis.tc1Status === 'PASSED' ? 4.0 : 0,
+      testcase2: analysis.tc2Status === 'PASSED' ? 3.0 : 0,
+      cleanCode: Math.round((analysis.cleanCodeScore / 10) * 2 * 10) / 10,
+      solid: Math.round((solidAvg / 10) * 10 * 10) / 10,
+      total: finalScore,
+    };
 
     const completedPayload = {
       submissionId,
       status: 'COMPLETED' as const,
       overallResult: (passedCount > 0 ? 'PASSED' : 'FAILED') as 'PASSED' | 'FAILED',
       score: finalScore,
+      scoreBreakdown,
       maxScore: 10.0,
       passedTestcases: passedCount,
       totalTestcases: 2,

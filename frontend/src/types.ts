@@ -30,6 +30,22 @@ export interface AIRating {
   explanation: string;
 }
 
+export interface ScoreBreakdown {
+  testcase1: number;
+  testcase2: number;
+  cleanCode: number;
+  solid: number;
+  total: number;
+}
+
+export interface GradingResult {
+  score?: number;
+  passedTestcases?: number;
+  totalTestcases?: number;
+  scoreBreakdown?: ScoreBreakdown;
+  aiRating?: AIRating;
+}
+
 export interface PlagiarismMatch {
   matchedStudentName: string;
   matchedStudentId: string;
