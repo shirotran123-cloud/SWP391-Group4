@@ -462,9 +462,10 @@ public class Solution {
     console.log('\n📊 SUITE 8: Kiểm thử Bulk Import Sinh viên từ Excel với SQL Transaction (R06)...');
 
     // 8a. Thử nghiệm Rollback khi gặp dòng lỗi trùng lặp mã ở Dòng 2
+    const dupTs = Date.now();
     const failBatch = [
-      { userId: `EXCEL-SV1-${Date.now()}`, email: `sv1.${Date.now()}@fpt.edu.vn`, fullName: 'Sinh Vien 1' },
-      { userId: `EXCEL-SV1-${Date.now()}`, email: `sv2.${Date.now()}@fpt.edu.vn`, fullName: 'Sinh Vien 2 Trùng Mã' },
+      { userId: `EXCEL-SV1-${dupTs}`, email: `sv1.${dupTs}@fpt.edu.vn`, fullName: 'Sinh Vien 1' },
+      { userId: `EXCEL-SV1-${dupTs}`, email: `sv2.${dupTs}@fpt.edu.vn`, fullName: 'Sinh Vien 2 Trùng Mã' },
     ];
     const failBatchRes = await httpRequest(`${baseUrl}/api/v1/users/bulk-import`, 'POST', failBatch);
     console.log(`   - Chặn batch chứa dòng lỗi trùng mã (Dòng 2): Status ${failBatchRes.statusCode} (400) -> ${failBatchRes.statusCode === 400 ? '✅ PASS' : '❌ FAIL'}`);
