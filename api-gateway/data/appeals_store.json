@@ -1,0 +1,11 @@
+[
+  {
+    "appealId": "APL-SAMPLE-001",
+    "submissionId": "SUB-SAMPLE-01",
+    "studentId": "SE170000",
+    "reason": "Kính gửi Thầy, bài của em bị chấm trừ điểm SOLID ở hàm main() nhưng em đã tách logic sang Service riêng. Kính mong Thầy xem xét lại.",
+    "status": "PENDING",
+    "createdAt": "2026-10-13T03:41:10.827Z",
+    "updatedAt": "2026-10-13T03:41:10.827Z"
+  }
+]

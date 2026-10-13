@@ -1,5 +1,17 @@
-import React, { useState } from 'react';
-import { X, ShieldCheck, Lock, AlertCircle, ChevronRight } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import {
+  X,
+  ShieldCheck,
+  AlertCircle,
+  ChevronRight,
+  Mail,
+  KeyRound,
+  RotateCw,
+  CheckCircle,
+  Sparkles,
+  ArrowRight,
+  ArrowLeft,
+} from 'lucide-react';
 import type { User } from '../types';
 
 interface LoginModalProps {
@@ -31,59 +43,177 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const GOOGLE_ACCOUNTS = [
+const PRESET_ACCOUNTS = [
   { email: 'trungse170000@fpt.edu.vn', name: 'Đinh Thành Trung', role: 'STUDENT' as const, label: 'Sinh viên FPT', color: '#10b981' },
   { email: 'trungdt@fe.edu.vn', name: 'ThS. Đinh Thành Trung', role: 'INSTRUCTOR' as const, label: 'Giảng viên FE', color: '#818cf8' },
   { email: 'admin@aita.fpt.edu.vn', name: 'Quản trị viên Hệ thống', role: 'ADMIN' as const, label: 'Admin', color: '#f59e0b' },
+  { email: 'vthaitrung2k6@gmail.com', name: 'Vũ Thái Trung', role: 'STUDENT' as const, label: 'Gmail Cá Nhân', color: '#06b6d4' },
 ];
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
+  const [step, setStep] = useState<'EMAIL' | 'OTP'>('EMAIL');
+  const [emailInput, setEmailInput] = useState('');
+  const [targetEmail, setTargetEmail] = useState('');
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
-  const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [debugOtp, setDebugOtp] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(60);
+
+  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  useEffect(() => {
+    let timer: any;
+    if (step === 'OTP' && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, countdown]);
+
+  useEffect(() => {
+    if (step === 'OTP' && otpInputRefs.current[0]) {
+      setTimeout(() => {
+        otpInputRefs.current[0]?.focus();
+      }, 150);
+    }
+  }, [step]);
 
   if (!isOpen) return null;
 
-  const handleGoogleLogin = async (acc: { email: string; name: string; role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN' }) => {
-    setLoading(true);
-    setLoadingEmail(acc.email);
-    setAuthError(null);
+  const handleRequestOtp = async (emailToSend: string) => {
+    const trimmed = emailToSend.trim().toLowerCase();
+    setErrorMsg(null);
+    setSuccessMsg(null);
 
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: acc.email, fullName: acc.name }),
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json.data?.token && json.data?.user) {
-          localStorage.setItem('aita_token', json.data.token);
-          localStorage.setItem('aita_user', JSON.stringify(json.data.user));
-          onLoginSuccess(json.data.user, json.data.token);
-          onClose();
-          return;
-        }
-      }
-    } catch {
-      // Fallback
+    if (!trimmed) {
+      setErrorMsg('Vui lòng nhập địa chỉ Gmail hoặc FPT Email!');
+      return;
     }
 
-    setTimeout(() => {
-      const mockToken = `mock_google_jwt_${Date.now()}`;
-      const mockUser: User = {
-        userId: acc.role === 'INSTRUCTOR' ? 'GV001' : (acc.role === 'ADMIN' ? 'AD001' : 'SE170000'),
-        email: acc.email,
-        fullName: acc.name,
-        role: acc.role,
-        department: 'FPT University',
-      };
-      localStorage.setItem('aita_token', mockToken);
-      localStorage.setItem('aita_user', JSON.stringify(mockUser));
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      setErrorMsg('Địa chỉ email không đúng định dạng!');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/request-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMsg(data.message || 'Yêu cầu gửi mã OTP thất bại!');
+        setLoading(false);
+        return;
+      }
+
+      setTargetEmail(trimmed);
+      setStep('OTP');
+      setOtpDigits(['', '', '', '', '', '']);
+      setCountdown(60);
+      setDebugOtp(data.data?.debugOtp || null);
+      setSuccessMsg(`Mã xác thực OTP đã được gửi đến ${trimmed}.`);
+    } catch {
+      setErrorMsg('Không thể kết nối đến máy chủ xác thực.');
+    } finally {
       setLoading(false);
-      onLoginSuccess(mockUser, mockToken);
-      onClose();
-    }, 400);
+    }
+  };
+
+  const handleVerifyOtp = async (codeToVerify?: string) => {
+    const fullOtp = codeToVerify || otpDigits.join('');
+    setErrorMsg(null);
+
+    if (fullOtp.length !== 6) {
+      setErrorMsg('Vui lòng nhập đủ 6 chữ số mã xác thực!');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: targetEmail,
+          otp: fullOtp,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!res.ok) {
+        setErrorMsg(json.message || 'Mã xác thực OTP không chính xác!');
+        setLoading(false);
+        return;
+      }
+
+      const data = json.data;
+      if (data && data.token && data.user) {
+        localStorage.setItem('aita_token', data.token);
+        localStorage.setItem('aita_user', JSON.stringify(data.user));
+        setSuccessMsg('Xác thực thành công!');
+        setTimeout(() => {
+          onLoginSuccess(data.user, data.token);
+          onClose();
+        }, 250);
+      } else {
+        setErrorMsg('Phản hồi từ máy chủ không hợp lệ!');
+        setLoading(false);
+      }
+    } catch {
+      setErrorMsg('Lỗi kết nối khi xác thực OTP!');
+      setLoading(false);
+    }
+  };
+
+  const handleOtpDigitChange = (index: number, value: string) => {
+    const cleanVal = value.replace(/[^0-9]/g, '');
+    if (!cleanVal) {
+      const newDigits = [...otpDigits];
+      newDigits[index] = '';
+      setOtpDigits(newDigits);
+      return;
+    }
+
+    const digit = cleanVal.slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = digit;
+    setOtpDigits(newDigits);
+
+    if (index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+
+    const combined = newDigits.join('');
+    if (combined.length === 6 && !newDigits.includes('')) {
+      void handleVerifyOtp(combined);
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').trim().replace(/[^0-9]/g, '');
+    if (pasted.length >= 6) {
+      const sixDigits = pasted.slice(0, 6).split('');
+      setOtpDigits(sixDigits);
+      otpInputRefs.current[5]?.focus();
+      void handleVerifyOtp(sixDigits.join(''));
+    }
   };
 
   return (
@@ -92,29 +222,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         position: 'fixed',
         inset: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(6px)',
+        backdropFilter: 'blur(8px)',
+        zIndex: 9999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000,
-        padding: '20px',
+        padding: '16px',
       }}
     >
       <div
         className="glass-panel"
         style={{
           width: '100%',
-          maxWidth: '440px',
-          backgroundColor: '#121824',
+          maxWidth: '460px',
+          padding: '32px 28px',
           borderRadius: '20px',
-          padding: '30px 24px',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.8)',
           position: 'relative',
         }}
       >
         <button
-          type="button"
           onClick={onClose}
           style={{
             position: 'absolute',
@@ -126,65 +254,311 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
             cursor: 'pointer',
           }}
         >
-          <X size={18} />
+          <X size={20} />
         </button>
 
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-          <div style={{ display: 'inline-flex', marginBottom: '12px' }}>
-            <GoogleIcon />
+        <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              padding: '12px',
+              borderRadius: '16px',
+              backgroundColor: 'rgba(66, 133, 244, 0.15)',
+              color: '#60a5fa',
+              marginBottom: '10px',
+            }}
+          >
+            <ShieldCheck size={28} />
           </div>
-          <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', marginBottom: '4px' }}>
-            Đăng Nhập Bằng Google OAuth 2.0
-          </h3>
-          <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Chọn tài khoản Google Workspace (FPT Education) để tiếp tục
+          <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 6px 0', color: '#ffffff' }}>
+            Xác Thực OTP Google SSO
+          </h2>
+          <p style={{ color: 'var(--text-muted)', fontSize: '12.5px', margin: 0 }}>
+            {step === 'EMAIL'
+              ? 'Nhập Gmail / FPT Email để nhận mã OTP xác thực'
+              : `Mã OTP đã gửi tới ${targetEmail}`}
           </p>
         </div>
 
-        {authError && (
-          <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: '8px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: '#fb7185', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <AlertCircle size={15} /> {authError}
+        {errorMsg && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              color: '#fca5a5',
+              fontSize: '12px',
+              marginBottom: '16px',
+            }}
+          >
+            <AlertCircle size={15} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} />
+            <div>{errorMsg}</div>
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-          {GOOGLE_ACCOUNTS.map((acc) => {
-            const isThisLoading = loading && loadingEmail === acc.email;
-            return (
-              <div
-                key={acc.email}
-                onClick={() => !loading && handleGoogleLogin(acc)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.04)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
-                    {acc.name} <span style={{ fontSize: '10px', color: acc.color, marginLeft: '6px' }}>({acc.label})</span>
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{acc.email}</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-cyan)', fontSize: '12px' }}>
-                  {isThisLoading ? '...' : <ChevronRight size={16} />}
+        {successMsg && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 12px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              border: '1px solid rgba(16, 185, 129, 0.35)',
+              color: '#6ee7b7',
+              fontSize: '12px',
+              marginBottom: '16px',
+            }}
+          >
+            <CheckCircle size={15} style={{ flexShrink: 0, color: '#10b981' }} />
+            <div>{successMsg}</div>
+          </div>
+        )}
+
+        {step === 'EMAIL' ? (
+          <div>
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="email"
+                  value={emailInput}
+                  onChange={(e) => {
+                    setEmailInput(e.target.value);
+                    setErrorMsg(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleRequestOtp(emailInput);
+                    }
+                  }}
+                  placeholder="Nhập email (@fpt.edu.vn, @fe.edu.vn, @gmail.com)..."
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px 12px 40px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <Mail size={16} color="#94a3b8" />
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </div>
 
-        <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(10, 15, 29, 0.6)', border: '1px solid rgba(255, 255, 255, 0.06)', fontSize: '11px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Lock size={14} color="#06b6d4" />
-          <span>Hệ thống không yêu cầu mật khẩu. Xác thực an toàn qua Google SSO.</span>
-        </div>
+            <button
+              onClick={() => handleRequestOtp(emailInput)}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)',
+                color: '#ffffff',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+              }}
+            >
+              {loading ? (
+                <>
+                  <RotateCw size={16} className="animate-spin" />
+                  Đang Gửi OTP...
+                </>
+              ) : (
+                <>
+                  <GoogleIcon />
+                  Gửi Mã Xác Thực OTP Đến Gmail
+                  <ArrowRight size={16} />
+                </>
+              )}
+            </button>
+
+            <div
+              style={{
+                textAlign: 'center',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                margin: '18px 0 12px 0',
+                textTransform: 'uppercase',
+                fontWeight: 600,
+              }}
+            >
+              Tài Khoản Mẫu Nhanh
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {PRESET_ACCOUNTS.map((acc) => (
+                <button
+                  key={acc.email}
+                  onClick={() => {
+                    setEmailInput(acc.email);
+                    void handleRequestOtp(acc.email);
+                  }}
+                  disabled={loading}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    cursor: 'pointer',
+                    color: '#ffffff',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '12.5px', fontWeight: 600 }}>{acc.name}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{acc.email}</div>
+                  </div>
+                  <ChevronRight size={14} color="#64748b" />
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div>
+            {debugOtp && (
+              <div
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  marginBottom: '16px',
+                  fontSize: '12px',
+                  color: '#bae6fd',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
+                  <Sparkles size={14} color="#38bdf8" />
+                  <span>Mã OTP Demo: <strong style={{ color: '#fff', fontSize: '14px', letterSpacing: '1px' }}>{debugOtp}</strong></span>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '6px', marginBottom: '18px' }}>
+              {otpDigits.map((digit, idx) => (
+                <input
+                  key={idx}
+                  ref={(el) => { otpInputRefs.current[idx] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                  onPaste={handleOtpPaste}
+                  style={{
+                    width: '42px',
+                    height: '50px',
+                    borderRadius: '10px',
+                    border: digit ? '2px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.2)',
+                    background: digit ? 'rgba(99, 102, 241, 0.15)' : 'rgba(15, 23, 42, 0.7)',
+                    color: '#ffffff',
+                    fontSize: '22px',
+                    fontWeight: 700,
+                    textAlign: 'center',
+                    fontFamily: 'monospace',
+                    outline: 'none',
+                  }}
+                />
+              ))}
+            </div>
+
+            <button
+              onClick={() => handleVerifyOtp()}
+              disabled={loading || otpDigits.join('').length !== 6}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '12px',
+                border: 'none',
+                background:
+                  otpDigits.join('').length === 6
+                    ? 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)'
+                    : 'rgba(255, 255, 255, 0.12)',
+                color: '#ffffff',
+                fontWeight: 600,
+                fontSize: '13px',
+                cursor: loading || otpDigits.join('').length !== 6 ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {loading ? 'Đang Xác Thực...' : 'Xác Nhận & Đăng Nhập'}
+            </button>
+
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                marginTop: '14px',
+                fontSize: '11.5px',
+                color: 'var(--text-muted)',
+              }}
+            >
+              <button
+                onClick={() => setStep('EMAIL')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: 0,
+                }}
+              >
+                <ArrowLeft size={13} /> Đổi email
+              </button>
+              {countdown > 0 ? (
+                <span>Gửi lại sau ({countdown}s)</span>
+              ) : (
+                <button
+                  onClick={() => handleRequestOtp(targetEmail)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#38bdf8',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    padding: 0,
+                  }}
+                >
+                  Gửi lại mã
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+

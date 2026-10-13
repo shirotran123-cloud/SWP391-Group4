@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  ForbiddenException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import { UserRepository } from '../database/user.repository';
 import { UserRecord } from '../database/user.entity';
 import { MailService } from './mail.service';
@@ -82,12 +88,35 @@ export class AuthService {
   }
 
   /**
-   * Bước 1: Gửi mã OTP về email của người dùng khi đăng nhập
+   * Bước 1: Kiểm tra email và gửi mã OTP về hòm thư người dùng
+   * KHÔNG CHO PHÉP email không tồn tại hoặc sai định dạng
    */
-  public async requestLoginOtp(email: string, password?: string): Promise<{ success: boolean; message: string; debugOtp?: string }> {
+  public async requestLoginOtp(
+    email: string,
+    password?: string,
+  ): Promise<{ success: boolean; message: string; debugOtp?: string }> {
     const lowerEmail = email.toLowerCase().trim();
 
-    // Sinh mã ngẫu nhiên 6 chữ số
+    // 1. Kiểm tra cú pháp Email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(lowerEmail)) {
+      throw new BadRequestException('Địa chỉ email không đúng định dạng!');
+    }
+
+    // 2. Kiểm tra tài khoản có tồn tại trong hệ thống hay không
+    const user = await this.userRepo.findByEmail(lowerEmail);
+    if (!user) {
+      this.logger.warn(`[AuthService] Từ chối gửi OTP: Email không tồn tại trong hệ thống: ${lowerEmail}`);
+      throw new UnauthorizedException(
+        `Email '${lowerEmail}' không tồn tại trong hệ thống AITA! Vui lòng kiểm tra lại địa chỉ email hoặc liên hệ Quản trị viên để được cấp tài khoản.`,
+      );
+    }
+
+    if (!user.isActive) {
+      throw new ForbiddenException('Tài khoản này đã bị khóa hoặc chưa kích hoạt!');
+    }
+
+    // 3. Sinh mã ngẫu nhiên 6 chữ số
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 5 * 60 * 1000; // 5 phút hiệu lực
 
@@ -97,25 +126,29 @@ export class AuthService {
       password,
     });
 
-    // Gửi email qua MailService
+    // 4. Gửi email qua MailService
     await this.mailService.sendOtpEmail(lowerEmail, otp);
 
     return {
       success: true,
-      message: `Mã OTP đã được gửi về hòm thư ${lowerEmail}.`,
+      message: `Mã OTP xác thực đã được gửi đến hộp thư ${lowerEmail}.`,
       debugOtp: process.env.SMTP_USER ? undefined : otp,
     };
   }
 
   /**
    * Bước 2: Xác thực mã OTP và hoàn tất đăng nhập
+   * Bắt buộc mã OTP phải khớp chính xác
    */
-  public async verifyLoginOtp(email: string, otp: string): Promise<{ token: string; user: UserRecord }> {
+  public async verifyLoginOtp(
+    email: string,
+    otp: string,
+  ): Promise<{ token: string; user: UserRecord }> {
     const lowerEmail = email.toLowerCase().trim();
     const entry = this.otpCache.get(lowerEmail);
 
     if (!entry) {
-      throw new BadRequestException('Chưa có mã xác nhận nào được yêu cầu cho email này, hoặc mã đã bị hủy!');
+      throw new BadRequestException('Chưa có mã xác nhận OTP nào được yêu cầu cho email này, hoặc mã đã bị hủy!');
     }
 
     if (Date.now() > entry.expiresAt) {
@@ -124,22 +157,15 @@ export class AuthService {
     }
 
     if (entry.otp !== otp.trim()) {
-      throw new BadRequestException('Mã xác nhận OTP không chính xác!');
+      throw new BadRequestException('Mã xác nhận OTP không chính xác. Vui lòng kiểm tra lại!');
     }
 
     // Mã đúng -> Xóa OTP khỏi cache để tránh dùng lại (One-Time-Password)
     this.otpCache.delete(lowerEmail);
 
-    let user = await this.userRepo.findByEmail(lowerEmail);
+    const user = await this.userRepo.findByEmail(lowerEmail);
     if (!user) {
-      user = await this.userRepo.create({
-        userId: lowerEmail,
-        email: lowerEmail,
-        fullName: lowerEmail.split('@')[0],
-        role: 'STUDENT',
-        isActive: true,
-      });
-      this.logger.log(`[AuthService] Người dùng xác thực OTP tạo mới: ${user.email}`);
+      throw new UnauthorizedException(`Tài khoản '${lowerEmail}' không tồn tại trong hệ thống!`);
     }
 
     const token = this.signJwt({
@@ -148,41 +174,28 @@ export class AuthService {
       role: user.role,
       fullName: user.fullName,
     });
+
+    this.logger.log(`[AuthService] Người dùng xác thực OTP thành công: ${user.email} (${user.role})`);
 
     return { token, user };
   }
 
   /**
    * Đăng nhập qua Google SSO (UC-01):
-   * Chỉ cho phép tài khoản trường (@fpt.edu.vn, @fe.edu.vn, @aita.fpt.edu.vn) hoặc @gmail.com hợp lệ.
+   * Chỉ cho phép tài khoản đã tồn tại trong danh mục hệ thống
    */
-  public async loginWithGoogle(email: string, fullName?: string): Promise<{ token: string; user: UserRecord }> {
+  public async loginWithGoogle(
+    email: string,
+    fullName?: string,
+  ): Promise<{ token: string; user: UserRecord }> {
     const lowerEmail = email.toLowerCase().trim();
-    const isAllowedDomain =
-      lowerEmail.endsWith('@fpt.edu.vn') ||
-      lowerEmail.endsWith('@fe.edu.vn') ||
-      lowerEmail.endsWith('@aita.fpt.edu.vn') ||
-      lowerEmail.endsWith('@gmail.com');
-
-    // Chặn triệt để nếu không thuộc domain cho phép
-    if (!isAllowedDomain) {
-      this.logger.warn(`[AuthService] Chặn đăng nhập Google SSO từ domain trái phép: ${lowerEmail}`);
-      throw new ForbiddenException(
-        `Đăng nhập Google SSO bị từ chối! Email '${lowerEmail}' không thuộc domain được cấp phép (@fpt.edu.vn / @fe.edu.vn / @gmail.com).`,
-      );
-    }
-
-    let user = await this.userRepo.findByEmail(lowerEmail);
+    const user = await this.userRepo.findByEmail(lowerEmail);
 
     if (!user) {
-      user = await this.userRepo.create({
-        userId: lowerEmail,
-        email: lowerEmail,
-        fullName: fullName || lowerEmail.split('@')[0],
-        role: lowerEmail.includes('teacher') || lowerEmail.includes('gv') ? 'INSTRUCTOR' : 'STUDENT',
-        isActive: true,
-      });
-      this.logger.log(`[AuthService] Đăng ký tài khoản Google mới: ${user.email} (${user.role})`);
+      this.logger.warn(`[AuthService] Chặn Google SSO: Email không tồn tại: ${lowerEmail}`);
+      throw new UnauthorizedException(
+        `Email '${lowerEmail}' không tồn tại trong hệ thống AITA! Vui lòng liên hệ Quản trị viên để được cấp tài khoản.`,
+      );
     }
 
     const token = this.signJwt({
@@ -196,20 +209,16 @@ export class AuthService {
   }
 
   /**
-   * Đăng nhập tiêu chuẩn bằng Email và Mật khẩu (Direct login fallback nếu cần)
+   * Đăng nhập bằng Email và Mật khẩu (Direct login fallback nếu cần)
    */
-  public async loginWithCredentials(email: string, password?: string): Promise<{ token: string; user: UserRecord }> {
+  public async loginWithCredentials(
+    email: string,
+    password?: string,
+  ): Promise<{ token: string; user: UserRecord }> {
     const lowerEmail = email.toLowerCase().trim();
-    let user = await this.userRepo.findByEmail(lowerEmail);
+    const user = await this.userRepo.findByEmail(lowerEmail);
     if (!user) {
-      user = await this.userRepo.create({
-        userId: lowerEmail,
-        email: lowerEmail,
-        fullName: lowerEmail.split('@')[0],
-        role: 'STUDENT',
-        isActive: true,
-      });
-      this.logger.log(`[AuthService] Đăng nhập tạo mới: ${user.email}`);
+      throw new UnauthorizedException('Tài khoản hoặc mật khẩu không chính xác!');
     }
 
     const token = this.signJwt({

@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ShieldCheck,
   CheckCircle,
   AlertCircle,
-  ExternalLink,
   ChevronRight,
-  Sparkles,
-  Lock,
   ArrowRight,
   Terminal,
+  Mail,
+  KeyRound,
+  RotateCw,
+  ArrowLeft,
+  Sparkles,
+  Info,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
@@ -40,8 +43,8 @@ const GoogleIcon = () => (
   </svg>
 );
 
-// Danh mục tài khoản Google Workspace (FPT University) được ủy quyền
-const GOOGLE_SSO_ACCOUNTS = [
+// Danh mục tài khoản mẫu hợp lệ trong hệ thống
+const PRESET_ACCOUNTS = [
   {
     email: 'trungse170000@fpt.edu.vn',
     name: 'Đinh Thành Trung',
@@ -49,7 +52,6 @@ const GOOGLE_SSO_ACCOUNTS = [
     role: 'STUDENT' as const,
     roleLabel: 'Sinh Viên FPT',
     avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-    department: 'Khoa CNTT - Kỹ Thuật Phần Mềm',
     badgeColor: '#10b981',
     badgeBg: 'rgba(16, 185, 129, 0.15)',
   },
@@ -60,7 +62,6 @@ const GOOGLE_SSO_ACCOUNTS = [
     role: 'INSTRUCTOR' as const,
     roleLabel: 'Giảng Viên FE',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-    department: 'Bộ Môn KTPM - Đại Học FPT',
     badgeColor: '#818cf8',
     badgeBg: 'rgba(99, 102, 241, 0.15)',
   },
@@ -69,107 +70,207 @@ const GOOGLE_SSO_ACCOUNTS = [
     name: 'Quản Trị Viên Hệ Thống',
     studentCode: 'AD001',
     role: 'ADMIN' as const,
-    roleLabel: 'Admin / Khảo Thí',
+    roleLabel: 'Admin Khảo Thí',
     avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
-    department: 'Phòng Đào Tạo & Khảo Thí AITA',
     badgeColor: '#f59e0b',
     badgeBg: 'rgba(245, 158, 11, 0.15)',
+  },
+  {
+    email: 'vthaitrung2k6@gmail.com',
+    name: 'Vũ Thái Trung',
+    studentCode: 'SE712137',
+    role: 'STUDENT' as const,
+    roleLabel: 'Gmail Cá Nhân',
+    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
+    badgeColor: '#06b6d4',
+    badgeBg: 'rgba(6, 182, 212, 0.15)',
   },
 ];
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  const [isAccountChooserOpen, setIsAccountChooserOpen] = useState(false);
-  const [customEmail, setCustomEmail] = useState('');
+  // Trạng thái: 'EMAIL' (bước 1: nhập email) hoặc 'OTP' (bước 2: nhập mã 6 số)
+  const [step, setStep] = useState<'EMAIL' | 'OTP'>('EMAIL');
+  const [emailInput, setEmailInput] = useState('');
+  const [targetEmail, setTargetEmail] = useState('');
+  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
-  const [loadingEmail, setLoadingEmail] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [debugOtp, setDebugOtp] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(60);
 
-  // Thực hiện đăng nhập Google SSO (UC-01: Login via Google SSO)
-  const handlePerformGoogleLogin = async (account: {
-    email: string;
-    name: string;
-    role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
-    studentCode?: string;
-    avatar?: string;
-    department?: string;
-  }) => {
+  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Đếm ngược 60s cho nút gửi lại OTP
+  useEffect(() => {
+    let timer: any;
+    if (step === 'OTP' && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, countdown]);
+
+  // Tự động focus vào ô OTP đầu tiên khi chuyển sang bước OTP
+  useEffect(() => {
+    if (step === 'OTP' && otpInputRefs.current[0]) {
+      setTimeout(() => {
+        otpInputRefs.current[0]?.focus();
+      }, 150);
+    }
+  }, [step]);
+
+  // BƯỚC 1: YÊU CẦU GỬI MÃ OTP VỀ EMAIL
+  const handleRequestOtp = async (emailToSend: string) => {
+    const trimmed = emailToSend.trim().toLowerCase();
+    setErrorMsg(null);
+    setSuccessMsg(null);
+
+    if (!trimmed) {
+      setErrorMsg('Vui lòng nhập địa chỉ Gmail hoặc FPT Email!');
+      return;
+    }
+
+    // Kiểm tra định dạng cơ bản
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmed)) {
+      setErrorMsg('Địa chỉ email không đúng định dạng!');
+      return;
+    }
+
     setLoading(true);
-    setLoadingEmail(account.email);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/request-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Backend từ chối: Email không tồn tại hoặc lỗi khác
+        const message = data.message || 'Yêu cầu gửi mã OTP thất bại!';
+        setErrorMsg(message);
+        setLoading(false);
+        return;
+      }
+
+      // Gửi mã OTP thành công
+      setTargetEmail(trimmed);
+      setStep('OTP');
+      setOtpDigits(['', '', '', '', '', '']);
+      setCountdown(60);
+      if (data.data?.debugOtp) {
+        setDebugOtp(data.data.debugOtp);
+      } else {
+        setDebugOtp(null);
+      }
+      setSuccessMsg(`Mã xác thực đã được gửi đến ${trimmed}.`);
+    } catch (err: any) {
+      setErrorMsg(
+        'Không thể kết nối tới Backend API Gateway (Port 3000). Vui lòng kiểm tra dịch vụ đã được khởi động chưa!'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // BƯỚC 2: XÁC THỰC MÃ OTP 6 CHỮ SỐ
+  const handleVerifyOtp = async (codeToVerify?: string) => {
+    const fullOtp = codeToVerify || otpDigits.join('');
     setErrorMsg(null);
 
+    if (fullOtp.length !== 6) {
+      setErrorMsg('Vui lòng nhập đủ 6 chữ số mã xác thực OTP!');
+      return;
+    }
+
+    setLoading(true);
     try {
-      // 1. Gửi yêu cầu xác thực Google SSO lên Backend API Gateway
-      const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: account.email,
-          fullName: account.name,
+          email: targetEmail,
+          otp: fullOtp,
         }),
       });
 
-      if (res.ok) {
-        const json = await res.json();
-        const data = json.data;
-        if (data && data.token && data.user) {
-          localStorage.setItem('aita_token', data.token);
-          localStorage.setItem('aita_user', JSON.stringify(data.user));
-          onLoginSuccess(data.user);
-          return;
-        }
+      const json = await res.json();
+
+      if (!res.ok) {
+        const message = json.message || 'Mã xác thực OTP không chính xác!';
+        setErrorMsg(message);
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.warn('[Google SSO] API Gateway chưa phản hồi hoặc offline, kích hoạt cơ chế Fallback an toàn:', err);
-    }
 
-    // 2. Client-side Graceful Fallback nếu API Gateway offline
-    setTimeout(() => {
-      const fallbackUser: UserProfile = {
-        userId: account.studentCode || (account.role === 'INSTRUCTOR' ? 'GV001' : 'SE170000'),
-        email: account.email,
-        fullName: account.name,
-        role: account.role,
-        avatarUrl: account.avatar,
-        department: account.department || 'Đại Học FPT',
-        token: `mock_google_oauth_jwt_${Date.now()}`,
-      };
-
-      localStorage.setItem('aita_token', fallbackUser.token || 'mock_jwt_token');
-      localStorage.setItem('aita_user', JSON.stringify(fallbackUser));
+      // Xác thực thành công
+      const data = json.data;
+      if (data && data.token && data.user) {
+        localStorage.setItem('aita_token', data.token);
+        localStorage.setItem('aita_user', JSON.stringify(data.user));
+        setSuccessMsg('Xác thực OTP thành công! Đang chuyển hướng...');
+        setTimeout(() => {
+          onLoginSuccess(data.user);
+        }, 300);
+      } else {
+        setErrorMsg('Phản hồi từ máy chủ không hợp lệ!');
+        setLoading(false);
+      }
+    } catch (err: any) {
+      setErrorMsg('Lỗi kết nối khi xác thực OTP với máy chủ!');
       setLoading(false);
-      onLoginSuccess(fallbackUser);
-    }, 450);
+    }
   };
 
-  const handleCustomGoogleSubmit = (e: React.FormEvent) => {
+  // Xử lý khi gõ vào ô OTP
+  const handleOtpDigitChange = (index: number, value: string) => {
+    // Chỉ chấp nhận chữ số
+    const cleanVal = value.replace(/[^0-9]/g, '');
+    if (!cleanVal) {
+      const newDigits = [...otpDigits];
+      newDigits[index] = '';
+      setOtpDigits(newDigits);
+      return;
+    }
+
+    const digit = cleanVal.slice(-1);
+    const newDigits = [...otpDigits];
+    newDigits[index] = digit;
+    setOtpDigits(newDigits);
+
+    // Tự động focus sang ô tiếp theo
+    if (index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+
+    // Nếu đã nhập đủ 6 số, tự động trigger xác thực
+    const combined = newDigits.join('');
+    if (combined.length === 6 && !newDigits.includes('')) {
+      void handleVerifyOtp(combined);
+    }
+  };
+
+  // Xử lý phím Backspace
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  // Xử lý Paste cả chuỗi 6 số
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
-    setErrorMsg(null);
-    const trimmed = customEmail.trim();
-
-    if (!trimmed) {
-      setErrorMsg('Vui lòng nhập địa chỉ Google Email (@fpt.edu.vn, @fe.edu.vn hoặc @gmail.com)');
-      return;
+    const pasted = e.clipboardData.getData('text').trim().replace(/[^0-9]/g, '');
+    if (pasted.length >= 6) {
+      const sixDigits = pasted.slice(0, 6).split('');
+      setOtpDigits(sixDigits);
+      otpInputRefs.current[5]?.focus();
+      void handleVerifyOtp(sixDigits.join(''));
     }
-
-    const isFpt = trimmed.endsWith('@fpt.edu.vn') || trimmed.endsWith('@fe.edu.vn') || trimmed.endsWith('@gmail.com');
-    if (!isFpt) {
-      setErrorMsg('Hệ thống chỉ chấp nhận tài khoản Google Workspace FPT (@fpt.edu.vn, @fe.edu.vn) hoặc Gmail!');
-      return;
-    }
-
-    const isInstructor = trimmed.includes('@fe.edu.vn') || trimmed.toLowerCase().startsWith('gv');
-    const isAdmin = trimmed.toLowerCase().startsWith('admin');
-    const role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN' = isAdmin ? 'ADMIN' : (isInstructor ? 'INSTRUCTOR' : 'STUDENT');
-    const prefix = trimmed.split('@')[0];
-    const name = prefix.toUpperCase();
-
-    void handlePerformGoogleLogin({
-      email: trimmed,
-      name: `${name} (${role === 'INSTRUCTOR' ? 'Giảng Viên' : (role === 'ADMIN' ? 'Admin' : 'Sinh Viên')})`,
-      role,
-      studentCode: prefix,
-      department: isInstructor ? 'Bộ Môn KTPM - Đại Học FPT' : 'Khoa CNTT - FPT University',
-    });
   };
 
   return (
@@ -196,14 +297,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           overflow: 'hidden',
         }}
       >
-        {/* Glow trang trí phía trên */}
+        {/* Glow trang trí phía trên 4 màu Google */}
         <div
           style={{
             position: 'absolute',
             top: 0,
             left: '50%',
             transform: 'translateX(-50%)',
-            width: '260px',
+            width: '280px',
             height: '4px',
             background: 'linear-gradient(90deg, #4285F4 0%, #34A853 35%, #FBBC05 70%, #EA4335 100%)',
             borderRadius: '0 0 8px 8px',
@@ -211,7 +312,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         />
 
         {/* Logo và Tiêu đề hệ thống */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div
             style={{
               display: 'inline-flex',
@@ -222,17 +323,25 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               borderRadius: '20px',
               background: 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)',
               color: '#ffffff',
-              marginBottom: '18px',
+              marginBottom: '16px',
               boxShadow: '0 10px 25px rgba(99, 102, 241, 0.4)',
             }}
           >
             <Terminal size={32} />
           </div>
 
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px', marginBottom: '8px' }}>
+          <h1
+            style={{
+              fontSize: '24px',
+              fontWeight: 800,
+              color: '#ffffff',
+              letterSpacing: '-0.3px',
+              marginBottom: '6px',
+            }}
+          >
             AITA-INTELLIGENT
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.5' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.5', margin: 0 }}>
             Hệ Thống Đánh Giá Mã Nguồn & Giám Sát Liêm Chính Học Thuật Tự Động
           </p>
 
@@ -251,7 +360,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 gap: '6px',
               }}
             >
-              <ShieldCheck size={13} /> UC-01: Xác thực duy nhất qua Google OAuth 2.0 SSO
+              <ShieldCheck size={13} />
+              Xác Thực Hai Bước OTP Qua Gmail & Google Workspace
             </span>
           </div>
         </div>
@@ -260,325 +370,521 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         {errorMsg && (
           <div
             style={{
-              marginBottom: '20px',
-              padding: '12px 16px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(244, 63, 94, 0.15)',
-              border: '1px solid rgba(244, 63, 94, 0.35)',
-              color: '#fb7185',
-              fontSize: '13px',
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-start',
               gap: '10px',
+              padding: '12px 14px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(239, 68, 68, 0.15)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              color: '#fca5a5',
+              fontSize: '12.5px',
+              marginBottom: '20px',
+              lineHeight: '1.4',
             }}
           >
-            <AlertCircle size={18} style={{ flexShrink: 0 }} />
-            <span>{errorMsg}</span>
+            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} />
+            <div>{errorMsg}</div>
           </div>
         )}
 
-        {/* ======================================================== */}
-        {/* NÚT CHÍNH: ĐĂNG NHẬP BẰNG GOOGLE (DUY NHẤT - NO PASSWORD) */}
-        {/* ======================================================== */}
-        <div style={{ marginBottom: '24px' }}>
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => setIsAccountChooserOpen(true)}
+        {/* Thông báo thành công nếu có */}
+        {successMsg && (
+          <div
             style={{
-              width: '100%',
-              padding: '14px 20px',
-              borderRadius: '14px',
-              border: '1px solid rgba(255, 255, 255, 0.25)',
-              backgroundColor: '#ffffff',
-              color: '#1f2937',
-              fontSize: '15px',
-              fontWeight: 700,
-              cursor: loading ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 25px rgba(66, 133, 244, 0.25)',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 8px 30px rgba(66, 133, 244, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 25px rgba(66, 133, 244, 0.25)';
+              gap: '10px',
+              padding: '12px 14px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(16, 185, 129, 0.15)',
+              border: '1px solid rgba(16, 185, 129, 0.4)',
+              color: '#6ee7b7',
+              fontSize: '12.5px',
+              marginBottom: '20px',
             }}
           >
-            <GoogleIcon />
-            <span>Đăng Nhập Bằng Tài Khoản Google</span>
-          </button>
+            <CheckCircle size={16} style={{ flexShrink: 0, color: '#10b981' }} />
+            <div>{successMsg}</div>
+          </div>
+        )}
 
-          <p style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center', marginTop: '10px' }}>
-            Hỗ trợ tài khoản sinh viên (<code>@fpt.edu.vn</code>) & giảng viên (<code>@fe.edu.vn</code>)
-          </p>
-        </div>
-
-        {/* PHÂN CÁCH TRỰC QUAN */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '20px',
-            color: 'var(--text-dim)',
-            fontSize: '12px',
-          }}
-        >
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
-          <span>hoặc chọn nhanh tài khoản Google demo</span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
-        </div>
-
-        {/* DANH SÁCH TÀI KHOẢN GOOGLE SSO DEMO (1-CLICK) */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
-          {GOOGLE_SSO_ACCOUNTS.map((acc) => {
-            const isThisLoading = loading && loadingEmail === acc.email;
-            return (
-              <div
-                key={acc.email}
-                onClick={() => !loading && handlePerformGoogleLogin(acc)}
+        {/* ========================================================================= */}
+        {/* BƯỚC 1: NHẬP GMAIL / FPT EMAIL ĐỂ YÊU CẦU MÃ OTP */}
+        {/* ========================================================================= */}
+        {step === 'EMAIL' && (
+          <div>
+            <div style={{ marginBottom: '20px' }}>
+              <label
                 style={{
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(18, 24, 36, 0.8)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  transition: 'all 0.2s ease',
-                  opacity: loading && !isThisLoading ? 0.5 : 1,
-                }}
-                onMouseEnter={(e) => {
-                  if (!loading) {
-                    e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.12)';
-                    e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.35)';
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!loading) {
-                    e.currentTarget.style.backgroundColor = 'rgba(18, 24, 36, 0.8)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                    e.currentTarget.style.transform = 'translateX(0)';
-                  }
+                  display: 'block',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  color: 'var(--text-muted)',
+                  marginBottom: '8px',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <img
-                    src={acc.avatar}
-                    alt={acc.name}
-                    style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      {acc.name}
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          fontWeight: 700,
-                          padding: '1px 6px',
-                          borderRadius: '4px',
-                          backgroundColor: acc.badgeBg,
-                          color: acc.badgeColor,
-                        }}
-                      >
-                        {acc.roleLabel}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                      {acc.email}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-cyan)', fontSize: '12px', fontWeight: 600 }}>
-                  {isThisLoading ? (
-                    <span style={{ color: 'var(--accent-cyan)' }}>Đang kết nối...</span>
-                  ) : (
-                    <>
-                      <span>Đăng nhập</span>
-                      <ChevronRight size={14} />
-                    </>
-                  )}
+                Nhập Địa Chỉ Gmail / FPT Email
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="email"
+                  value={emailInput}
+                  onChange={(e) => {
+                    setEmailInput(e.target.value);
+                    setErrorMsg(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleRequestOtp(emailInput);
+                    }
+                  }}
+                  placeholder="ví dụ: trungse170000@fpt.edu.vn hoặc user@gmail.com"
+                  style={{
+                    width: '100%',
+                    padding: '14px 16px 14px 44px',
+                    borderRadius: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    background: 'rgba(15, 23, 42, 0.75)',
+                    color: '#ffffff',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                    transition: 'all 0.2s',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '14px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <Mail size={18} color="#94a3b8" />
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        {/* CAM KẾT BẢO MẬT & CHÍNH SÁCH GOOGLE OAUTH */}
-        <div
-          style={{
-            padding: '14px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(10, 15, 29, 0.6)',
-            border: '1px solid rgba(255, 255, 255, 0.06)',
-            fontSize: '12px',
-            color: 'var(--text-dim)',
-            lineHeight: '1.5',
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '10px',
-          }}
-        >
-          <Lock size={16} color="#06b6d4" style={{ marginTop: '2px', flexShrink: 0 }} />
-          <div>
-            Hệ thống <strong>không lưu trữ mật khẩu</strong> của người dùng. Toàn bộ phiên xác thực được bảo đảm bằng giao thức <strong>Google OAuth 2.0 PKCE & OpenID Connect</strong> an toàn tuyệt đối.
-          </div>
-        </div>
-      </div>
-
-      {/* ======================================================== */}
-      {/* MODAL POPUP: GOOGLE ACCOUNT CHOOSER (MÔ PHỎNG CHUẨN GOOGLE) */}
-      {/* ======================================================== */}
-      {isAccountChooserOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
-            backdropFilter: 'blur(6px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 999,
-            padding: '20px',
-          }}
-        >
-          <div
-            className="glass-panel"
-            style={{
-              width: '100%',
-              maxWidth: '440px',
-              backgroundColor: '#ffffff',
-              borderRadius: '20px',
-              padding: '28px 24px',
-              color: '#1f2937',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.6)',
-            }}
-          >
-            {/* Header Google Popup */}
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ display: 'inline-flex', marginBottom: '8px' }}>
-                <GoogleIcon />
-              </div>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>
-                Chọn một tài khoản Google
-              </h3>
-              <p style={{ fontSize: '13px', color: '#6b7280' }}>
-                để tiếp tục đăng nhập vào <strong>AITA-Intelligent</strong>
-              </p>
             </div>
 
-            {/* Danh sách tài khoản trong Chooser */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '18px' }}>
-              {GOOGLE_SSO_ACCOUNTS.map((acc) => (
-                <div
+            {/* Nút gửi mã OTP */}
+            <button
+              onClick={() => handleRequestOtp(emailInput)}
+              disabled={loading}
+              style={{
+                width: '100%',
+                padding: '14px 20px',
+                borderRadius: '14px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                boxShadow: '0 8px 20px rgba(79, 70, 229, 0.35)',
+                transition: 'all 0.2s',
+              }}
+            >
+              {loading ? (
+                <>
+                  <RotateCw size={18} className="animate-spin" />
+                  Đang Kiểm Tra & Gửi Mã OTP...
+                </>
+              ) : (
+                <>
+                  <GoogleIcon />
+                  Gửi Mã Xác Thực OTP Đến Gmail
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+
+            {/* Phân cách */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                margin: '28px 0 18px 0',
+                color: 'var(--text-muted)',
+                fontSize: '11px',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.8px',
+              }}
+            >
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
+              <span style={{ padding: '0 12px' }}>Hoặc Chọn Tài Khoản Khảo Thí Mẫu</span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
+            </div>
+
+            {/* Danh sách tài khoản mẫu hợp lệ */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {PRESET_ACCOUNTS.map((acc) => (
+                <button
                   key={acc.email}
                   onClick={() => {
-                    setIsAccountChooserOpen(false);
-                    void handlePerformGoogleLogin(acc);
+                    setEmailInput(acc.email);
+                    void handleRequestOtp(acc.email);
                   }}
+                  disabled={loading}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '12px',
+                    justifyContent: 'space-between',
                     padding: '10px 14px',
-                    borderRadius: '10px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.03)',
                     cursor: 'pointer',
-                    border: '1px solid #e5e7eb',
-                    backgroundColor: '#f9fafb',
-                    transition: 'all 0.15s ease',
+                    textAlign: 'left',
+                    color: '#ffffff',
+                    transition: 'all 0.2s',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f3f4f6';
-                    e.currentTarget.style.borderColor = '#4285F4';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f9fafb';
-                    e.currentTarget.style.borderColor = '#e5e7eb';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
                   }}
                 >
-                  <img
-                    src={acc.avatar}
-                    alt={acc.name}
-                    style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
-                  />
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#111827' }}>{acc.name}</div>
-                    <div style={{ fontSize: '12px', color: '#6b7280' }}>{acc.email}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <img
+                      src={acc.avatar}
+                      alt={acc.name}
+                      style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover' }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 600 }}>{acc.name}</div>
+                      <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>{acc.email}</div>
+                    </div>
                   </div>
-                </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '3px 8px',
+                        borderRadius: '10px',
+                        color: acc.badgeColor,
+                        backgroundColor: acc.badgeBg,
+                      }}
+                    >
+                      {acc.roleLabel}
+                    </span>
+                    <ChevronRight size={16} color="#64748b" />
+                  </div>
+                </button>
               ))}
             </div>
 
-            {/* Form nhập tài khoản Google FPT khác */}
-            <form onSubmit={handleCustomGoogleSubmit} style={{ borderTop: '1px solid #e5e7eb', paddingTop: '16px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#374151', marginBottom: '6px' }}>
-                Hoặc sử dụng tài khoản Google FPT khác:
-              </label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="email"
-                  value={customEmail}
-                  onChange={(e) => setCustomEmail(e.target.value)}
-                  placeholder="name@fpt.edu.vn / @fe.edu.vn"
-                  style={{
-                    flex: 1,
-                    padding: '9px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #d1d5db',
-                    fontSize: '13px',
-                    outline: 'none',
-                    color: '#111827',
-                  }}
-                />
+            <p
+              style={{
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                textAlign: 'center',
+                marginTop: '22px',
+                lineHeight: '1.5',
+              }}
+            >
+              🔒 Hệ thống bảo mật 2FA: Email không tồn tại trong danh mục sinh viên/giảng viên sẽ bị từ chối truy cập.
+            </p>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* BƯỚC 2: NHẬP MÃ XÁC THỰC OTP 6 SỐ */}
+        {/* ========================================================================= */}
+        {step === 'OTP' && (
+          <div>
+            <div style={{ textAlign: 'center', marginBottom: '22px' }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '14px',
+                  background: 'rgba(99, 102, 241, 0.18)',
+                  color: '#818cf8',
+                  marginBottom: '10px',
+                }}
+              >
+                <KeyRound size={24} />
+              </div>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: '0 0 6px 0' }}>
+                Xác Thực Mã Bảo Mật OTP
+              </h2>
+              <p style={{ color: 'var(--text-muted)', fontSize: '12.5px', margin: 0 }}>
+                Mã xác thực 6 chữ số đã được gửi đến hộp thư:
+              </p>
+              <div
+                style={{
+                  fontSize: '13.5px',
+                  fontWeight: 700,
+                  color: '#38bdf8',
+                  marginTop: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span>{targetEmail}</span>
                 <button
-                  type="submit"
+                  onClick={() => {
+                    setStep('EMAIL');
+                    setErrorMsg(null);
+                    setSuccessMsg(null);
+                  }}
                   style={{
-                    padding: '9px 16px',
-                    borderRadius: '8px',
+                    background: 'none',
                     border: 'none',
-                    backgroundColor: '#4285F4',
-                    color: '#ffffff',
-                    fontSize: '13px',
-                    fontWeight: 700,
+                    color: '#94a3b8',
+                    textDecoration: 'underline',
+                    fontSize: '11.5px',
                     cursor: 'pointer',
+                    padding: '2px 4px',
                   }}
                 >
-                  Tiếp tục
+                  (Đổi email)
                 </button>
               </div>
-            </form>
+            </div>
 
-            {/* Nút Hủy */}
-            <div style={{ textAlign: 'center', marginTop: '16px' }}>
+            {/* Banner hiển thị Demo OTP nếu chưa cấu hình SMTP App Password */}
+            {debugOtp && (
+              <div
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.35)',
+                  marginBottom: '20px',
+                  fontSize: '12.5px',
+                  color: '#bae6fd',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, marginBottom: '4px' }}>
+                  <Sparkles size={15} color="#38bdf8" />
+                  <span>Môi Trường Thử Nghiệm / Đánh Giá:</span>
+                </div>
+                <div>
+                  Mã OTP của bạn là:{' '}
+                  <span
+                    style={{
+                      fontFamily: 'monospace',
+                      fontSize: '16px',
+                      fontWeight: 800,
+                      color: '#ffffff',
+                      background: 'rgba(0, 0, 0, 0.4)',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      letterSpacing: '2px',
+                    }}
+                  >
+                    {debugOtp}
+                  </span>
+                  <button
+                    onClick={() => {
+                      const digits = debugOtp.split('');
+                      setOtpDigits(digits);
+                      void handleVerifyOtp(debugOtp);
+                    }}
+                    style={{
+                      marginLeft: '8px',
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(56, 189, 248, 0.5)',
+                      background: 'rgba(56, 189, 248, 0.2)',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Điền nhanh & Xác nhận
+                  </button>
+                </div>
+                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
+                  * Để nhận email thật về hộp thư Gmail cá nhân, cấu hình SMTP_USER và SMTP_PASS trong file .env.
+                </div>
+              </div>
+            )}
+
+            {/* 6 Ô NHẬP MÃ OTP ĐỘC LẬP */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'center',
+                gap: '8px',
+                marginBottom: '22px',
+              }}
+            >
+              {otpDigits.map((digit, idx) => (
+                <input
+                  key={idx}
+                  ref={(el) => { otpInputRefs.current[idx] = el; }}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                  onPaste={handleOtpPaste}
+                  style={{
+                    width: '48px',
+                    height: '56px',
+                    borderRadius: '12px',
+                    border: digit
+                      ? '2px solid #6366f1'
+                      : '1px solid rgba(255, 255, 255, 0.2)',
+                    background: digit ? 'rgba(99, 102, 241, 0.15)' : 'rgba(15, 23, 42, 0.7)',
+                    color: '#ffffff',
+                    fontSize: '24px',
+                    fontWeight: 700,
+                    textAlign: 'center',
+                    fontFamily: 'monospace',
+                    outline: 'none',
+                    boxShadow: digit ? '0 0 15px rgba(99, 102, 241, 0.35)' : 'none',
+                    transition: 'all 0.15s ease-in-out',
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Nút xác nhận OTP */}
+            <button
+              onClick={() => handleVerifyOtp()}
+              disabled={loading || otpDigits.join('').length !== 6}
+              style={{
+                width: '100%',
+                padding: '14px 20px',
+                borderRadius: '14px',
+                border: 'none',
+                background:
+                  otpDigits.join('').length === 6
+                    ? 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)'
+                    : 'rgba(255, 255, 255, 0.12)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor:
+                  loading || otpDigits.join('').length !== 6 ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                boxShadow:
+                  otpDigits.join('').length === 6
+                    ? '0 8px 20px rgba(16, 185, 129, 0.35)'
+                    : 'none',
+                transition: 'all 0.2s',
+              }}
+            >
+              {loading ? (
+                <>
+                  <RotateCw size={18} className="animate-spin" />
+                  Đang Xác Thực OTP...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={18} />
+                  Xác Nhận & Đăng Nhập Hệ Thống
+                </>
+              )}
+            </button>
+
+            {/* Các tùy chọn dưới: Gửi lại mã / Đổi Email */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginTop: '18px',
+                paddingTop: '16px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                fontSize: '12px',
+              }}
+            >
               <button
-                type="button"
-                onClick={() => setIsAccountChooserOpen(false)}
+                onClick={() => {
+                  setStep('EMAIL');
+                  setErrorMsg(null);
+                  setSuccessMsg(null);
+                }}
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#6b7280',
-                  fontSize: '12px',
-                  fontWeight: 600,
+                  color: 'var(--text-muted)',
                   cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: 0,
                 }}
               >
-                Hủy bỏ
+                <ArrowLeft size={14} />
+                Quay lại đổi Email
               </button>
+
+              {countdown > 0 ? (
+                <span style={{ color: 'var(--text-muted)' }}>
+                  Gửi lại mã sau (00:{countdown < 10 ? `0${countdown}` : countdown})
+                </span>
+              ) : (
+                <button
+                  onClick={() => handleRequestOtp(targetEmail)}
+                  disabled={loading}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#38bdf8',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    textDecoration: 'underline',
+                    padding: 0,
+                  }}
+                >
+                  Gửi lại mã OTP mới
+                </button>
+              )}
             </div>
           </div>
+        )}
+
+        {/* Chân trang thông tin kỹ thuật */}
+        <div
+          style={{
+            marginTop: '28px',
+            textAlign: 'center',
+            fontSize: '11px',
+            color: 'rgba(255, 255, 255, 0.35)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+          }}
+        >
+          <span>SWP391 Assessment 2 • Nhóm 4</span>
+          <span>•</span>
+          <span>Google SSO & OTP Gateway</span>
         </div>
-      )}
+      </div>
     </div>
   );
 };
+
