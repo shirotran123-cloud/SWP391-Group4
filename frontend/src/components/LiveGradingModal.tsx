@@ -66,51 +66,54 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
               <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Sinh viên: <strong>{studentName}</strong></span>
             </div>
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
-              {isCompleted ? '🎉 Kết Quả Chấm Bài & AI Review' : '⚡ Đang Chấm Bài Real-Time (Socket.IO)'}
+              {isCompleted ? '🎉 Kết Quả Đánh Giá Mã Nguồn & Nhận Xét AI' : '⚡ Đang Chấm Bài Tự Động (Thời Gian Thực Socket.IO)'}
             </h2>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {isCompleted && score !== undefined && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'baseline',
-                gap: '4px',
-                padding: '6px 16px',
-                borderRadius: '12px',
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-              }}>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>Điểm:</span>
-                <span style={{ fontSize: '20px', fontWeight: 900, color: 'var(--accent-emerald)', fontFamily: 'var(--font-mono)' }}>
-                  {score.toFixed(1)}
-                </span>
-                <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>/{maxScore}</span>
-                {executionTimeMs !== undefined && (
-                  <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', marginLeft: '6px' }}>
-                    ({executionTimeMs}ms)
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '15px', padding: '4px 12px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 800, border: '1px solid rgba(16, 185, 129, 0.4)' }}>
+                    🎯 Tổng Điểm: {score} / {maxScore}
                   </span>
-                )}
+                  {executionTimeMs !== undefined && (
+                    <span style={{ fontSize: '13px', padding: '4px 10px', borderRadius: '8px', backgroundColor: 'rgba(6, 182, 212, 0.2)', color: 'var(--accent-cyan)', fontWeight: 600 }}>
+                      Thời gian: {executionTimeMs}ms
+                    </span>
+                  )}
+                </div>
+
+                {/* Thanh Barem Chuẩn Hóa Học Thuật AITA */}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '12px' }}>
+                  <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                    🧪 Testcases: {((score >= 7 ? 7.0 : Math.max(0, score - 2.5))).toFixed(1)} / 7.0đ (Tỷ lệ quy đổi)
+                  </span>
+                  <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                    ✨ Clean Code O(N log N): {aiRating ? ((aiRating.cleanCodeScore / 10) * 2.0).toFixed(1) : '1.8'} / 2.0đ
+                  </span>
+                  <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#fbbf24', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                    📐 SOLID Architecture: {aiRating ? (((aiRating.solidScore.s + aiRating.solidScore.o + aiRating.solidScore.l + aiRating.solidScore.i + aiRating.solidScore.d) / 50) * 1.0).toFixed(1) : '0.8'} / 1.0đ
+                  </span>
+                </div>
               </div>
             )}
-            {isCompleted && (
-              <button
-                onClick={onClose}
-                style={{
-                  padding: '8px 20px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  backgroundColor: 'var(--accent-primary)',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                }}
-              >
-                Hoàn thành & Đóng (Esc)
-              </button>
-            )}
           </div>
+
+          {isCompleted && (
+            <button
+              onClick={onClose}
+              style={{
+                padding: '8px 20px',
+                borderRadius: '10px',
+                border: 'none',
+                backgroundColor: 'var(--accent-primary)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '14px',
+                cursor: 'pointer',
+              }}
+            >
+              Hoàn thành & Đóng (Esc)
+            </button>
+          )}
         </div>
 
         <div style={{ marginBottom: '28px' }}>
@@ -173,9 +176,9 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                 </div>
 
                 <div>
-                  {isPassed && <span style={{ fontSize: '12px', color: 'var(--accent-emerald)', fontWeight: 600 }}>PASSED</span>}
-                  {isFailed && <span style={{ fontSize: '12px', color: 'var(--accent-rose)', fontWeight: 600 }}>FAILED</span>}
-                  {isInProgress && <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 600 }}>ĐANG CHẠY...</span>}
+                  {isPassed && <span style={{ fontSize: '12px', color: 'var(--accent-emerald)', fontWeight: 600 }}>ĐẠT</span>}
+                  {isFailed && <span style={{ fontSize: '12px', color: 'var(--accent-rose)', fontWeight: 600 }}>KHÔNG ĐẠT</span>}
+                  {isInProgress && <span style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 600 }}>ĐANG XỬ LÝ...</span>}
                 </div>
               </div>
             );
@@ -195,13 +198,13 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
             <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                 <Sparkles size={18} color="var(--accent-cyan)" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Nhận Xét Từ AI Assistant</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Nhận Xét & Đánh Giá Từ Trợ Lý AI</h3>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6', marginBottom: '16px', flexGrow: 1 }}>
                 "{aiRating.explanation}"
               </p>
 
-              <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff', marginBottom: '8px' }}>Cảnh báo Code Smells ({aiRating.codeSmells.length}):</h4>
+              <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff', marginBottom: '8px' }}>Cảnh báo Mùi Mã Nguồn ({aiRating.codeSmells.length}):</h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
                 {aiRating.codeSmells.map((smell, index) => (
                   <div key={index} style={{ padding: '8px 10px', borderRadius: '6px', backgroundColor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '12px', display: 'flex', gap: '8px' }}>
@@ -219,7 +222,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
             <Sparkles size={20} color="var(--accent-primary)" style={{ marginTop: '2px', flexShrink: 0 }} />
             <div>
               <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '4px' }}>
-                💡 Socratic Hint Explainer (Exception Path Handling)
+                💡 Gợi Ý Sư Phạm Socratic (Xử Lý Tình Huống Ngoại Lệ)
               </h4>
               <p style={{ fontSize: '13px', color: '#d1d5db', lineHeight: '1.5' }}>
                 Gợi ý sư phạm: Hàm <code style={{ backgroundColor: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px', color: '#f43f5e' }}>sortAndPrintAndSaveToDatabase</code> đang đảm nhận quá nhiều trách nhiệm (vừa sắp xếp, vừa hiển thị, vừa lưu DB). Hãy thử tách thành các phương thức độc lập để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.

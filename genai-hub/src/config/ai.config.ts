@@ -31,7 +31,7 @@ export const aiConfig: AIConfig = {
   defaultProvider: (process.env.DEFAULT_LLM_PROVIDER as "gemini" | "openai" | "mock") || "mock",
   gemini: {
     keys: parseKeys(process.env.GEMINI_API_KEYS),
-    model: process.env.GEMINI_MODEL || "gemini-1.5-flash",
+    model: process.env.GEMINI_MODEL || "gemini-3.8-flash",
   },
   openai: {
     keys: parseKeys(process.env.OPENAI_API_KEYS),
