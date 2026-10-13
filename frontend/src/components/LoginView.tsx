@@ -21,7 +21,7 @@ const API_BASE_URL = 'http://localhost:3000';
 // Client ID mặc định từ hệ thống hoặc cấu hình
 const DEFAULT_CLIENT_ID =
   (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
-  '652923540545-ofcv5tmdn8kjiqfbnl2qf39fi6vdutfq.apps.googleusercontent.com';
+  '788798423051-4c6pqis6sjcrnit4c74omft9kqrvp623.apps.googleusercontent.com';
 
 const GoogleIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
@@ -50,7 +50,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [blockedEmail, setBlockedEmail] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [clientId, setClientId] = useState<string>(() => {
-    return localStorage.getItem('aita_google_client_id') || DEFAULT_CLIENT_ID;
+    const saved = localStorage.getItem('aita_google_client_id');
+    if (!saved || saved.startsWith('652923540545')) {
+      return DEFAULT_CLIENT_ID;
+    }
+    return saved;
   });
   const [redirectUriConfig, setRedirectUriConfig] = useState<string>(() => {
     return localStorage.getItem('aita_google_redirect_uri') || window.location.origin;
@@ -621,7 +625,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 type="text"
                 defaultValue={clientId}
                 id="config-client-id"
-                placeholder="652923540545-...apps.googleusercontent.com"
+                placeholder="788798423051-4c6pqis6sjcrnit4c74omft9kqrvp623.apps.googleusercontent.com"
                 style={{
                   width: '100%',
                   padding: '8px 10px',
