@@ -4,7 +4,6 @@ import { LiveGradingModal } from './components/LiveGradingModal';
 import { LoginView } from './components/LoginView';
 import { LoginModal } from './components/LoginModal';
 import { AdminDashboard } from './components/AdminDashboard';
-import { LecturerPanel } from './components/LecturerPanel';
 import { LecturerDashboard } from './components/LecturerDashboard';
 import { RblBenchmarkView } from './components/RblBenchmarkView';
 import { StudentAppealsView } from './components/StudentAppealsView';
@@ -210,7 +209,8 @@ export function App() {
     }
   };
 
-  const handleSubmission = async (file?: File, benchmarkPairId?: number) => {
+  const handleSubmission = async (file?: File, benchmarkPairId?: number, submittedTask?: Task) => {
+    const activeTask = submittedTask || mockTask;
     if (!currentUser) return;
 
     setSteps(initialSteps.map((s) => ({ ...s, status: 'pending' })));
@@ -259,7 +259,7 @@ export function App() {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('studentId', currentUser.userId);
-        formData.append('assignmentId', 'TASK-SWP391-SPRINT2');
+        formData.append('assignmentId', activeTask.id);
         formData.append('language', codeToGrade.includes('def ') ? 'python' : 'java');
 
         const response = await fetch(`${API_BASE_URL}/api/v1/submissions`, {
@@ -667,7 +667,12 @@ export function App() {
             </div>
 
             {studentActiveTab === 'submission' ? (
-              <SubmissionView task={mockTask} onSubmit={handleSubmission} />
+              <SubmissionView
+                task={mockTask}
+                studentId={currentUser.userId}
+                studentName={currentUser.fullName}
+                onSubmit={(file, taskItem) => handleSubmission(file, undefined, taskItem)}
+              />
             ) : studentActiveTab === 'benchmark' ? (
               <RblBenchmarkView
                 onOpenDiffViewer={(match) => {

@@ -356,8 +356,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     });
     if (res.availableModels && res.availableModels.length > 0) {
       setAvailableModelList(res.availableModels);
-      if (selectedAiModel === 'auto' || !res.availableModels.includes(selectedAiModel)) {
-        const best = res.availableModels.find((m) => m.includes('flash')) || res.availableModels[0];
+      if (selectedAiModel === 'auto' || !res.availableModels.includes(selectedAiModel) || selectedAiModel.includes('tts')) {
+        const best = res.availableModels.find((m) => m.includes('flash') && !m.includes('tts')) || res.availableModels[0];
         setSelectedAiModel(best);
       }
     }
@@ -391,14 +391,24 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       const detectedCount = GeminiAIService.extractRequestedCount(lecturerPrompt);
       const testCountToUse = detectedCount || desiredTestCount || 5;
 
+            // Ưu tiên yêu cầu cụ thể của giảng viên; tránh truyền lại tiêu đề cũ nếu đã bị gán từ lần sinh trước
+      let topicToUse = lecturerPrompt?.trim() || '';
+      if (!topicToUse) {
+        if (assignmentTitle && !assignmentTitle.toLowerCase().includes('drone')) {
+          topicToUse = assignmentTitle;
+        } else {
+          topicToUse = `${courseCode} - Cấu trúc dữ liệu & Thuật toán thực tế`;
+        }
+      }
+
       const result = await GeminiAIService.generateAssignment(geminiApiKey, {
         courseName,
         courseCode,
-        topicPrompt: assignmentTitle || 'Cấu trúc dữ liệu và giải thuật nâng cao',
+        topicPrompt: topicToUse,
         lecturerDescription: lecturerPrompt,
         difficulty: 'TRUNG BÌNH',
         allowedLanguages,
-        model: selectedAiModel === 'auto' ? undefined : selectedAiModel,
+        model: (selectedAiModel && selectedAiModel !== 'auto' && !selectedAiModel.includes('tts')) ? selectedAiModel : undefined,
         numTestCases: testCountToUse,
       });
 
