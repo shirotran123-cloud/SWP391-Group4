@@ -4,7 +4,7 @@
   "description": "Subsystem 1 & 5: Central NestJS Gateway, Redis BullMQ Orchestrator & Real-Time Socket.IO Server for AITA Platform",
   "author": "Đinh Thanh Trung <trungdt@aita.fpt.edu.vn>",
   "scripts": {
-    "build": "nest build || tsc",
+    "build": "tsc",
     "start": "ts-node src/main.ts",
     "start:dev": "ts-node src/main.ts",
     "start:prod": "node dist/main.js",

@@ -53,6 +53,11 @@ Phân hệ 3 chịu trách nhiệm xử lý toàn bộ các tác vụ liên quan
 
 ## 2. Các Tính Năng Trọng Tâm
 
+### Cấu hình OpenAI-compatible endpoint
+- Chép `.env.example` thành `.env`, sau đó đặt key mới vào `OPENAI_API_KEYS`.
+- Đặt `DEFAULT_LLM_PROVIDER=openai` để chọn provider này; không commit `.env`.
+- `OPENAI_BASE_URL` mặc định là `https://api.openai.com/v1` và có thể đổi sang endpoint tương thích Chat Completions; `OPENAI_MODEL` chọn model cần gọi.
+
 ### 2.1. Đánh giá tất định Clean Code & SOLID (UC-09)
 - **Deterministic Temperature:** Khóa chặt `temperature = 0.2` để đảm bảo tính nhất quán (deterministic) khi chấm bài thi học thuật; cùng một đoạn code nộp nhiều lần sẽ cho ra phổ điểm đồng nhất.
 - **Strict JSON Schema Mode:** Bắt buộc LLM sinh dữ liệu đúng theo cấu trúc `CODE_REVIEW_JSON_SCHEMA`, ngăn chặn lỗi parsing JSON tự do.

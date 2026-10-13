@@ -11,6 +11,7 @@ export interface AIConfig {
   openai: {
     keys: string[];
     model: string;
+    baseUrl: string;
   };
   temperature: number;
   maxTokenWindow: number;
@@ -36,6 +37,7 @@ export const aiConfig: AIConfig = {
   openai: {
     keys: parseKeys(process.env.OPENAI_API_KEYS),
     model: process.env.OPENAI_MODEL || "gpt-4o",
+    baseUrl: (process.env.OPENAI_BASE_URL || "https://api.openai.com/v1").replace(/\/+$/, ""),
   },
   temperature: Number(process.env.AI_TEMPERATURE) || 0.2, // Deterministic evaluation
   maxTokenWindow: Number(process.env.MAX_TOKEN_WINDOW) || 8192, // CON-03 limit

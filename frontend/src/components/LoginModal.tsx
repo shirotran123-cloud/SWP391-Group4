@@ -5,7 +5,6 @@ import {
   AlertCircle,
   ChevronRight,
   Mail,
-  KeyRound,
   RotateCw,
   CheckCircle,
   Sparkles,

@@ -6,11 +6,13 @@ import { adaptSchemaForOpenAI } from "../schemas/schema-adapter";
 export class OpenAIProvider implements ILLMProvider {
   public readonly providerName = "OpenAI";
   private model: string;
+  private baseUrl: string;
   private keyRotator: KeyRotatorService;
 
-  constructor(keyRotator: KeyRotatorService, model = "gpt-4o") {
+  constructor(keyRotator: KeyRotatorService, model = "gpt-4o", baseUrl = "https://api.openai.com/v1") {
     this.keyRotator = keyRotator;
     this.model = model;
+    this.baseUrl = baseUrl.replace(/\/+$/, "");
   }
 
   public async generateCompletion(messages: LLMMessage[], options?: LLMOptions): Promise<LLMResponse> {
@@ -48,7 +50,7 @@ export class OpenAIProvider implements ILLMProvider {
 
         let response: Response;
         try {
-          response = await fetch("https://api.openai.com/v1/chat/completions", {
+          response = await fetch(`${this.baseUrl}/chat/completions`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

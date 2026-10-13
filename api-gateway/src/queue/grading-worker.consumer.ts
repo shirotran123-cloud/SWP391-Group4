@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { QueueService, SubmissionJobData } from './queue.service';
 import { GradingGateway } from '../websocket/grading.gateway';
 import { SubmissionRepository } from '../database/submission.repository';
@@ -205,10 +205,11 @@ function extractSourceCodeFromZip(filePath: string, language: string): string | 
 }
 
 @Injectable()
-export class GradingWorkerConsumer implements OnModuleInit {
+export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GradingWorkerConsumer.name);
   private activeJobsCount = 0;
   private readonly jobRetryTracker: Map<string, number> = new Map();
+  private workerInterval: NodeJS.Timeout | null = null;
 
   constructor(
     private readonly queueService: QueueService,
@@ -221,8 +222,15 @@ export class GradingWorkerConsumer implements OnModuleInit {
     this.startWorkerLoop();
   }
 
+  onModuleDestroy() {
+    if (this.workerInterval) {
+      clearInterval(this.workerInterval);
+      this.workerInterval = null;
+    }
+  }
+
   private startWorkerLoop(): void {
-    setInterval(async () => {
+    this.workerInterval = setInterval(async () => {
       if (this.activeJobsCount >= QUEUE_CONFIG.CONCURRENCY_LIMIT) return;
 
       const job = this.queueService.popNextMemoryJob();

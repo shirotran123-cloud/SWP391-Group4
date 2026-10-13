@@ -530,7 +530,7 @@ public class Solution {
     // SUITE 11: Kiểm thử Appeals CRUD & Ràng buộc BR-05 (UC-06)
     // ========================================================================
     console.log('\n⚖️ SUITE 11: Kiểm thử Quản lý Phúc khảo / Appeals (UC-06 & BR-05)...');
-    const testSubId = 'SUB-TEST-APPEAL';
+    const testSubId = submissionId || 'SUB-TEST-APPEAL';
     // 11a. Tạo đơn phúc khảo lần 1
     const appeal1Res = await httpRequest(`${baseUrl}/api/v1/appeals`, 'POST', {
       submissionId: testSubId,

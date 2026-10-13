@@ -6,6 +6,7 @@ import { ExamGeneratorService } from "../src/services/exam-generator.service";
 import { SubmissionConsumerWorker } from "../src/workers/submission-consumer";
 import { createServer } from "../src/server";
 import { MockProvider } from "../src/providers/mock.provider";
+import { OpenAIProvider } from "../src/providers/openai.provider";
 import * as http from "http";
 
 let passed = 0;
@@ -79,6 +80,39 @@ async function runTests() {
   // Subsequent fetch must select the healthy key
   const k3 = keyRotator.getNextKey("openai");
   assert(k3 === k2, "Skips cooling-down key and chooses healthy key");
+
+  // ------------------------------------------------------------------
+  // SUITE 2.1: OpenAI-compatible endpoint configuration
+  // ------------------------------------------------------------------
+  console.log("\n\x1b[36m[SUITE 2.1]\x1b[0m OpenAI-Compatible Endpoint");
+
+  const endpointKeyRotator = new KeyRotatorService(["test-key"]);
+  const compatibleProvider = new OpenAIProvider(
+    endpointKeyRotator,
+    "custom-ai-model",
+    "https://example.test/v1/"
+  );
+  const originalFetch = global.fetch;
+  let requestedUrl = "";
+  let requestedModel = "";
+  global.fetch = async (input, init) => {
+    requestedUrl = String(input);
+    const requestBody = init?.body;
+    if (typeof requestBody === "string") {
+      requestedModel = (JSON.parse(requestBody) as { model: string }).model;
+    }
+    return new Response(JSON.stringify({
+      model: "custom-ai-model",
+      choices: [{ message: { content: "test response" } }],
+    }), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    await compatibleProvider.generateCompletion([{ role: "user", content: "test" }]);
+  } finally {
+    global.fetch = originalFetch;
+  }
+  assert(requestedUrl === "https://example.test/v1/chat/completions", "Uses configured OpenAI-compatible base URL");
+  assert(requestedModel === "custom-ai-model", "Sends configured model name");
 
   // ------------------------------------------------------------------
   // SUITE 3: Code Reviewer & Deterministic JSON Schema (UC-09)

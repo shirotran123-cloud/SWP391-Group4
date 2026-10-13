@@ -36,7 +36,7 @@ export function createGenAIHub(providerOverride?: "gemini" | "openai" | "mock") 
     configuredProviders.push(new GeminiProvider(keyRotator, aiConfig.gemini.model));
   }
   if (aiConfig.openai.keys.length > 0) {
-    configuredProviders.push(new OpenAIProvider(keyRotator, aiConfig.openai.model));
+    configuredProviders.push(new OpenAIProvider(keyRotator, aiConfig.openai.model, aiConfig.openai.baseUrl));
   }
 
   if (chosenProvider === "mock" || configuredProviders.length === 0) {
