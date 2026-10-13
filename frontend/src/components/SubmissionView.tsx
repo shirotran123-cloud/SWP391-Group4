@@ -392,12 +392,6 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
       return;
     }
 
-    const maxBytes = (selectedTask.maxSizeMb || 10) * 1024 * 1024;
-    if (file.size > maxBytes) {
-      setErrorMessage(`Dung lượng file vượt quá giới hạn ${selectedTask.maxSizeMb || 10}MB! (${(file.size / (1024 * 1024)).toFixed(2)}MB)`);
-      return;
-    }
-
     const isZip = file.name.endsWith('.zip') || file.type.includes('zip') || file.type.includes('compressed');
     if (!isZip) {
       setErrorMessage('Chỉ chấp nhận file định dạng nén (.zip) chứa mã nguồn.');
@@ -474,7 +468,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     if (selectedFile && currentTask) {
       // Lưu lại thông tin nộp bài tạm thời
       const newRecord: StudentSubmissionRecord = {
-        assignmentId: selectedTask.id,
+        assignmentId: currentTask.id,
         submittedAt: new Date().toISOString(),
         fileName: selectedFile.name,
         fileSizeMb: Number((selectedFile.size / (1024 * 1024)).toFixed(2)),
@@ -483,7 +477,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         status: 'GRADED',
       };
 
-      const updated = { ...submissionHistory, [selectedTask.id]: newRecord };
+      const updated = { ...submissionHistory, [currentTask.id]: newRecord };
       setSubmissionHistory(updated);
       try {
         localStorage.setItem(`aita_student_submissions_${studentId}`, JSON.stringify(updated));
@@ -491,7 +485,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         console.warn('Không thể lưu kết quả nộp bài:', e);
       }
 
-      onSubmit(selectedFile, selectedTask);
+      onSubmit(selectedFile, currentTask);
     }
   };
 

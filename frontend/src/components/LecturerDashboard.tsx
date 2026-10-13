@@ -720,6 +720,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
+          <Sparkles size={16} /> 5. RBL Lab (Nghiên Cứu)
+        </button>
+
         <button
           type="button"
           onClick={() => setActiveTab('APPEALS')}

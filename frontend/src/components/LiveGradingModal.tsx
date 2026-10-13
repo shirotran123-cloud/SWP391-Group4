@@ -33,6 +33,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
   score,
   maxScore = 10,
   executionTimeMs,
+}) => {
   const [isAppealModalOpen, setIsAppealModalOpen] = useState(false);
 
   useEffect(() => {

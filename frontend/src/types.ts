@@ -55,6 +55,8 @@ export interface User {
   department?: string;
 }
 
+export type UserProfile = User;
+
 export interface Appeal {
   appealId: string;
   submissionId: string;

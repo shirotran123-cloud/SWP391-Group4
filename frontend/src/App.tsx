@@ -641,6 +641,9 @@ export function App() {
                   transition: 'all 0.2s ease',
                 }}
               >
+                <ArrowLeftRight size={16} /> Đối Soát Đạo Văn (AST Winnowing)
+              </button>
+
               <button
                 type="button"
                 onClick={() => setStudentActiveTab('appeals')}
