@@ -120,6 +120,13 @@ async function main(): Promise<boolean> {
 
   try {
     // (a) Auth guard + valid SSO flow (same routes as verify-gateway.ts).
+    // Seed-cleanse safety: ensure the SSO test account exists first.
+    await httpRequest(`${base}/api/v1/users`, 'POST', {
+      userId: 'TEST_SV001',
+      email: 'sinhvien.test@fpt.edu.vn',
+      fullName: 'Sinh Vien FPT Test',
+      role: 'STUDENT',
+    });
     const invalid = await httpRequest(`${base}/api/v1/auth/me`, 'GET', undefined, 'application/json', {
       authorization: 'Bearer invalid',
     });

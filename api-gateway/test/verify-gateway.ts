@@ -436,6 +436,13 @@ public class Solution {
     console.log('\n🔑 SUITE 7: Kiểm thử Auth JWT & Google SSO Whitelist (UC-01)...');
 
     // 7a. Google SSO với domain hợp lệ @fpt.edu.vn
+    // Seed-cleanse safety: ensure the SSO test account exists first.
+    await httpRequest(`${baseUrl}/api/v1/users`, 'POST', {
+      userId: 'TEST_SV001',
+      email: 'sinhvien.test@fpt.edu.vn',
+      fullName: 'Sinh Viên FPT Test',
+      role: 'STUDENT',
+    });
     const validSsoRes = await httpRequest(`${baseUrl}/api/v1/auth/google`, 'POST', {
       email: 'sinhvien.test@fpt.edu.vn',
       fullName: 'Sinh Viên FPT Test',
