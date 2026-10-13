@@ -17,7 +17,7 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedSubId, setSelectedSubId] = useState('TASK-SWP391-SPRINT2');
+  const [selectedSubId, setSelectedSubId] = useState('');
 
   const fetchStudentAppeals = async () => {
     setLoading(true);

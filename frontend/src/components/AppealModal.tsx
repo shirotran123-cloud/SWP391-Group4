@@ -5,7 +5,7 @@ import type { Appeal } from '../types';
 interface AppealModalProps {
   isOpen: boolean;
   onClose: () => void;
-  submissionId: string;
+  submissionId?: string;
   studentId: string;
   currentScore?: number;
   apiBaseUrl?: string;
@@ -14,11 +14,12 @@ interface AppealModalProps {
 export const AppealModal: React.FC<AppealModalProps> = ({
   isOpen,
   onClose,
-  submissionId,
+  submissionId = '',
   studentId,
   currentScore,
   apiBaseUrl = 'http://localhost:3000',
 }) => {
+  const [subIdInput, setSubIdInput] = useState(submissionId);
   const [reason, setReason] = useState('');
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -27,16 +28,23 @@ export const AppealModal: React.FC<AppealModalProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isOpen && submissionId) {
-      void fetchAppeals();
+    if (isOpen) {
+      if (submissionId) {
+        setSubIdInput(submissionId);
+        void fetchAppeals(submissionId);
+      } else if (subIdInput) {
+        void fetchAppeals(subIdInput);
+      }
     }
   }, [isOpen, submissionId]);
 
-  const fetchAppeals = async () => {
+  const fetchAppeals = async (targetId?: string) => {
+    const sid = (targetId ?? subIdInput).trim();
+    if (!sid) return;
     setLoading(true);
     setErrorMessage(null);
     try {
-      const res = await fetch(`${apiBaseUrl}/api/v1/appeals?submissionId=${submissionId}`);
+      const res = await fetch(`${apiBaseUrl}/api/v1/appeals?submissionId=${encodeURIComponent(sid)}`);
       if (res.ok) {
         const json = await res.json();
         setAppeals(json.data || []);
@@ -57,6 +65,11 @@ export const AppealModal: React.FC<AppealModalProps> = ({
 
   const handleSubmitAppeal = async (e: React.FormEvent) => {
     e.preventDefault();
+    const finalSubId = subIdInput.trim();
+    if (!finalSubId) {
+      setErrorMessage('Vui lòng nhập mã bài nộp (Submission ID) cần phúc khảo.');
+      return;
+    }
     if (reason.trim().length < 10) {
       setErrorMessage('Vui lòng nhập lý do khiếu nại cụ thể (tối thiểu 10 ký tự)');
       return;
@@ -71,7 +84,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          submissionId,
+          submissionId: finalSubId,
           studentId: studentId || 'SE170000',
           reason: reason.trim(),
         }),
@@ -84,7 +97,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
 
       setSuccessMessage('Đơn phúc khảo đã được gửi thành công! Giảng viên sẽ xem xét trong vòng 48h.');
       setReason('');
-      void fetchAppeals();
+      void fetchAppeals(finalSubId);
     } catch (err: any) {
       setErrorMessage(err.message || 'Lỗi kết nối tới máy chủ API Gateway');
     } finally {
@@ -181,17 +194,41 @@ export const AppealModal: React.FC<AppealModalProps> = ({
         </div>
 
         {/* Info Cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '12px', marginBottom: '20px' }}>
           <div style={{ padding: '12px 16px', borderRadius: '12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Mã bài nộp</div>
-            <div style={{ fontSize: '14px', fontWeight: 700, color: '#818cf8', fontFamily: 'var(--font-mono)', marginTop: '2px' }}>
-              {submissionId}
-            </div>
+            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+              Mã bài nộp (Submission ID) *
+            </label>
+            <input
+              type="text"
+              placeholder="VD: SUB-1728... hoặc mã bài nộp"
+              value={subIdInput}
+              onChange={(e) => {
+                setSubIdInput(e.target.value);
+                setErrorMessage(null);
+              }}
+              onBlur={() => {
+                if (subIdInput.trim()) void fetchAppeals(subIdInput.trim());
+              }}
+              style={{
+                width: '100%',
+                padding: '6px 10px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                border: '1px solid rgba(129, 140, 248, 0.4)',
+                color: '#818cf8',
+                fontSize: '13px',
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono)',
+                outline: 'none',
+                boxSizing: 'border-box',
+              }}
+            />
           </div>
           <div style={{ padding: '12px 16px', borderRadius: '12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Điểm hiện tại</div>
-            <div style={{ fontSize: '16px', fontWeight: 800, color: '#10b981', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Award size={18} /> {currentScore !== undefined ? `${currentScore} / 10.0` : 'N/A'}
+            <div style={{ fontSize: '16px', fontWeight: 800, color: '#10b981', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Award size={18} /> {currentScore !== undefined ? `${currentScore} / 10.0` : 'Xem trong bài nộp'}
             </div>
           </div>
         </div>

@@ -125,11 +125,23 @@ export class SubmissionsController {
       throw new NotFoundException(`Không tìm thấy bài nộp với ID: ${id}`);
     }
 
-    const filePath = submission.filePath;
-    if (!filePath || !fs.existsSync(filePath)) {
+    let resolvedPath = submission.filePath;
+    if (!resolvedPath || !fs.existsSync(resolvedPath)) {
+      const localUploadPath = path.resolve(process.cwd(), 'uploads', 'submissions', `${id}.zip`);
+      if (fs.existsSync(localUploadPath)) {
+        resolvedPath = localUploadPath;
+      } else if (resolvedPath) {
+        const byBaseName = path.resolve(process.cwd(), 'uploads', 'submissions', path.basename(resolvedPath));
+        if (fs.existsSync(byBaseName)) {
+          resolvedPath = byBaseName;
+        }
+      }
+    }
+
+    if (!resolvedPath || !fs.existsSync(resolvedPath)) {
       throw new NotFoundException(
         `File zip của bài nộp ${id} không tồn tại trên server. ` +
-        `(Path: ${filePath || 'không có'})`,
+        `(Path: ${submission.filePath || 'không có'})`,
       );
     }
 
@@ -138,7 +150,7 @@ export class SubmissionsController {
       ? originalFileName
       : `${originalFileName}.zip`;
 
-    const stat = fs.statSync(filePath);
+    const stat = fs.statSync(resolvedPath);
     res.setHeader('Content-Type', 'application/zip');
     res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}"`);
     res.setHeader('Content-Length', stat.size);
@@ -146,7 +158,7 @@ export class SubmissionsController {
     res.setHeader('X-Student-Id', submission.studentId);
     res.setHeader('X-SHA256', submission.sha256Hash || '');
 
-    const stream = fs.createReadStream(filePath);
+    const stream = fs.createReadStream(resolvedPath);
     stream.pipe(res);
   }
 

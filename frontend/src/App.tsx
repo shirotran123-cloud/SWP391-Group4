@@ -7,8 +7,9 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { LecturerDashboard } from './components/LecturerDashboard';
 import { RblBenchmarkView } from './components/RblBenchmarkView';
 import { StudentAppealsView } from './components/StudentAppealsView';
+import { StudentHistoryView } from './components/StudentHistoryView';
 import type { Task, GradingStep, AIRating, PlagiarismMatch, User } from './types';
-import { Terminal, Shield, LogOut, FileCode, Sparkles, Upload, BookOpen, LayoutDashboard, Scale, ArrowLeftRight } from 'lucide-react';
+import { Terminal, Shield, LogOut, FileCode, Sparkles, Upload, BookOpen, LayoutDashboard, Scale, ArrowLeftRight, Clock } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
 import { PlagiarismService } from './services/plagiarism.service';
@@ -88,8 +89,8 @@ export function App() {
     return 'student';
   });
 
-  // Tab cho Sinh viên: 'submission' (Khu vực nộp bài) | 'benchmark' (Bộ dữ liệu Benchmark RBL) | 'appeals' (Khiếu nại điểm)
-  const [studentActiveTab, setStudentActiveTab] = useState<'submission' | 'benchmark' | 'appeals'>('submission');
+  // Tab cho Sinh viên: 'submission' (Khu vực nộp bài) | 'history' (Lịch sử nộp & điểm số) | 'benchmark' (Bộ dữ liệu Benchmark RBL) | 'appeals' (Khiếu nại điểm)
+  const [studentActiveTab, setStudentActiveTab] = useState<'submission' | 'history' | 'benchmark' | 'appeals'>('submission');
 
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -588,6 +589,30 @@ export function App() {
 
               <button
                 type="button"
+                onClick={() => setStudentActiveTab('history')}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: studentActiveTab === 'history' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                  color: studentActiveTab === 'history' ? '#10b981' : 'var(--text-muted)',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: studentActiveTab === 'history' ? '#10b981' : 'transparent',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <Clock size={16} /> Lịch Sử Nộp &amp; Điểm Số
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setStudentActiveTab('benchmark')}
                 style={{
                   display: 'flex',
@@ -641,6 +666,14 @@ export function App() {
                 studentId={currentUser.userId}
                 studentName={currentUser.fullName}
                 onSubmit={(file, taskItem) => handleSubmission(file, undefined, taskItem)}
+              />
+            ) : studentActiveTab === 'history' ? (
+              <StudentHistoryView
+                studentId={currentUser?.userId || 'SE170000'}
+                studentName={currentUser?.fullName || 'Sinh viên'}
+                apiBaseUrl={API_BASE_URL}
+                onNavigateToSubmit={() => setStudentActiveTab('submission')}
+                onOpenAppealModal={() => setStudentActiveTab('appeals')}
               />
             ) : studentActiveTab === 'benchmark' ? (
               <RblBenchmarkView

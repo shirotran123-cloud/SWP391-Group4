@@ -236,8 +236,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: `Mã OTP đã được gửi về hòm thư ${lowerEmail}.`,
-      debugOtp: process.env.SMTP_USER ? undefined : otp,
+      message: `Mã OTP đã được gửi về hòm thư ${lowerEmail}. Vui lòng kiểm tra email để lấy mã xác nhận đăng nhập.`,
     };
   }
 

@@ -1271,5 +1271,50 @@
       "completedAt": "2026-10-13T10:01:04.307Z"
     },
     "score": 5.7
+  },
+  {
+    "submissionId": "SUB-568109-BVD74X",
+    "studentId": "SE712137",
+    "assignmentId": "TASK-SWP391-SPRINT2",
+    "language": "java",
+    "fileName": "PRJ301-1.zip",
+    "fileSizeBytes": 3233993,
+    "sha256Hash": "79e24b8453a6c1af85d2cfe13017daae016dacaebc558d0e93020954a9359c48",
+    "filePath": "D:\\swp\\SWP391-Group4\\api-gateway\\uploads\\submissions\\SUB-568109-BVD74X.zip",
+    "status": "COMPLETED",
+    "createdAt": "2026-10-13T10:16:08.111Z",
+    "updatedAt": "2026-10-13T10:16:10.969Z",
+    "queueJobId": "mem_SUB-568109-BVD74X_1791886568127",
+    "details": {
+      "submissionId": "SUB-568109-BVD74X",
+      "status": "COMPLETED",
+      "overallResult": "FAILED",
+      "score": 0,
+      "maxScore": 10,
+      "passedTestcases": 0,
+      "totalTestcases": 2,
+      "executionTimeMs": 0,
+      "aiRating": {
+        "cleanCodeScore": 0,
+        "solidScore": {
+          "s": 0,
+          "o": 0,
+          "l": 0,
+          "i": 0,
+          "d": 0
+        },
+        "codeSmells": [
+          {
+            "line": 1,
+            "rule": "Invalid Submission",
+            "description": "File không chứa code giải thuật sắp xếp hợp lệ."
+          }
+        ],
+        "explanation": "Bài nộp không hợp lệ: không phát hiện cấu trúc giải thuật sắp xếp, vòng lặp hoặc xuất kết quả."
+      },
+      "plagiarismMatch": null,
+      "completedAt": "2026-10-13T10:16:10.969Z"
+    },
+    "score": 0
   }
 ]
