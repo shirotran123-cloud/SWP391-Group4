@@ -1,877 +1,640 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  ShieldCheck,
-  CheckCircle,
-  AlertCircle,
-  ChevronRight,
-  ArrowRight,
-  Terminal,
-  Mail,
+  Code2,
+  ShieldAlert,
   KeyRound,
-  RotateCw,
+  ChevronRight,
+  PlusCircle,
   ArrowLeft,
-  Sparkles,
+  Lock,
+  Mail,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
+
+// ─────────────────────────────────────────────────────────────────────────────
+const API_BASE = 'http://localhost:3000';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserProfile) => void;
 }
 
-const API_BASE_URL = 'http://localhost:3000';
+// ─── Tài khoản lưu trên thiết bị (localStorage) ──────────────────────────────
+interface SavedAccount {
+  email: string;
+  name: string;
+  avatarLetter: string;
+  avatarColor: string;
+  lastUsed: number;
+}
 
-// Biểu tượng Google chuẩn nhận diện thương hiệu Google OAuth
-const GoogleIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-    <path
-      fill="#4285F4"
-      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-    />
-    <path
-      fill="#34A853"
-      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-    />
-    <path
-      fill="#FBBC05"
-      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-    />
-    <path
-      fill="#EA4335"
-      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-    />
-  </svg>
-);
-
-// Danh mục tài khoản mẫu hợp lệ trong hệ thống
-const PRESET_ACCOUNTS = [
-  {
-    email: 'trungse170000@fpt.edu.vn',
-    name: 'Đinh Thành Trung',
-    studentCode: 'SE170000',
-    role: 'STUDENT' as const,
-    roleLabel: 'Sinh Viên FPT',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-    badgeColor: '#10b981',
-    badgeBg: 'rgba(16, 185, 129, 0.15)',
-  },
-  {
-    email: 'trungdt@fe.edu.vn',
-    name: 'ThS. Đinh Thành Trung',
-    studentCode: 'GV001',
-    role: 'INSTRUCTOR' as const,
-    roleLabel: 'Giảng Viên FE',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-    badgeColor: '#818cf8',
-    badgeBg: 'rgba(99, 102, 241, 0.15)',
-  },
-  {
-    email: 'admin@aita.fpt.edu.vn',
-    name: 'Quản Trị Viên Hệ Thống',
-    studentCode: 'AD001',
-    role: 'ADMIN' as const,
-    roleLabel: 'Admin Khảo Thí',
-    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
-    badgeColor: '#f59e0b',
-    badgeBg: 'rgba(245, 158, 11, 0.15)',
-  },
-  {
-    email: 'vthaitrung2k6@gmail.com',
-    name: 'Vũ Thái Trung',
-    studentCode: 'SE712137',
-    role: 'STUDENT' as const,
-    roleLabel: 'Gmail Cá Nhân',
-    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
-    badgeColor: '#06b6d4',
-    badgeBg: 'rgba(6, 182, 212, 0.15)',
-  },
+const STORAGE_KEY = 'aita_saved_accounts';
+const AVATAR_COLORS = [
+  '#4285F4', '#34A853', '#7B2FBE', '#EA4335',
+  '#FBBC05', '#1a73e8', '#e91e63', '#00bcd4',
 ];
 
+function randomColor() {
+  return AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
+}
+
+function loadAccounts(): SavedAccount[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as SavedAccount[];
+  } catch { /* ignore */ }
+  return [];
+}
+
+function saveAccounts(accounts: SavedAccount[]) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+type Step = 'picker' | 'enter-email' | 'password' | 'otp';
+
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  const [step, setStep] = useState<'EMAIL' | 'OTP'>('EMAIL');
-  const [emailInput, setEmailInput] = useState('');
-  const [targetEmail, setTargetEmail] = useState('');
-  const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
-  const [debugOtp, setDebugOtp] = useState<string | null>(null);
-  const [countdown, setCountdown] = useState(60);
+  const [step, setStep]                   = useState<Step>('picker');
+  const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+  const [activeAccount, setActiveAccount] = useState<SavedAccount | null>(null);
 
-  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  // form states
+  const [inputEmail,     setInputEmail]     = useState('');
+  const [password,       setPassword]       = useState('');
+  const [showPassword,   setShowPassword]   = useState(false);
+  const [otpCode,        setOtpCode]        = useState('');
+  const [debugOtp,       setDebugOtp]       = useState<string | null>(null); // auto-filled khi dev
 
-  useEffect(() => {
-    let timer: any;
-    if (step === 'OTP' && countdown > 0) {
-      timer = setInterval(() => {
-        setCountdown((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [step, countdown]);
+  // UI states
+  const [errorMsg,       setErrorMsg]       = useState<string | null>(null);
+  const [successMsg,     setSuccessMsg]     = useState<string | null>(null);
+  const [loading,        setLoading]        = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
-    if (step === 'OTP' && otpInputRefs.current[0]) {
-      setTimeout(() => {
-        otpInputRefs.current[0]?.focus();
-      }, 150);
+    setSavedAccounts(loadAccounts());
+  }, []);
+
+  const clearMessages = () => { setErrorMsg(null); setSuccessMsg(null); };
+
+  // ── Cooldown đếm ngược gửi lại OTP ────────────────────────────────────────
+  const startCooldown = () => {
+    setResendCooldown(60);
+    const iv = setInterval(() => {
+      setResendCooldown(prev => {
+        if (prev <= 1) { clearInterval(iv); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  // ── Chọn tài khoản đã lưu ─────────────────────────────────────────────────
+  const handleSelectSaved = (acc: SavedAccount) => {
+    setActiveAccount(acc);
+    setPassword(''); setOtpCode(''); setDebugOtp(null);
+    clearMessages(); setStep('password');
+  };
+
+  // ── "Sử dụng tài khoản khác" ──────────────────────────────────────────────
+  const handleUseOther = () => {
+    setInputEmail(''); clearMessages(); setStep('enter-email');
+  };
+
+  // ── Xác nhận email nhập tay ───────────────────────────────────────────────
+  const handleEmailSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = inputEmail.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      setErrorMsg('Địa chỉ email không hợp lệ.'); return;
     }
-  }, [step]);
+    // Nếu đã có trong danh sách → chuyển thẳng sang bước password
+    const existing = savedAccounts.find(a => a.email === email);
+    if (existing) { handleSelectSaved(existing); return; }
 
-  // BƯỚC 1: YÊU CẦU GỬI MÃ OTP VỀ EMAIL
-  const handleRequestOtp = async (emailToSend: string) => {
-    const trimmed = emailToSend.trim().toLowerCase();
-    setErrorMsg(null);
-    setSuccessMsg(null);
+    const newAcc: SavedAccount = {
+      email,
+      name: email.split('@')[0],
+      avatarLetter: email[0].toUpperCase(),
+      avatarColor: randomColor(),
+      lastUsed: Date.now(),
+    };
+    setActiveAccount(newAcc);
+    setPassword(''); setOtpCode(''); setDebugOtp(null);
+    clearMessages(); setStep('password');
+  };
 
-    if (!trimmed) {
-      setErrorMsg('Vui lòng nhập địa chỉ Gmail hoặc FPT Email!');
-      return;
-    }
+  // ── Xác nhận mật khẩu → gọi API request-otp ──────────────────────────────
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) { setErrorMsg('Vui lòng nhập mật khẩu.'); return; }
+    clearMessages(); setLoading(true);
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmed)) {
-      setErrorMsg('Địa chỉ email không đúng định dạng!');
-      return;
-    }
-
-    setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/auth/request-otp`, {
+      const res = await fetch(`${API_BASE}/api/v1/auth/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmed }),
+        body: JSON.stringify({ email: activeAccount!.email, password }),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
-        // Backend từ chối: Email không tồn tại
-        const message = data.message || 'Email này không tồn tại trong hệ thống AITA!';
-        setErrorMsg(message);
-        setLoading(false);
-        return;
+        throw new Error(data.message || 'Xác thực thất bại. Vui lòng thử lại!');
       }
 
-      // Gửi mã OTP thành công
-      setTargetEmail(trimmed);
-      setStep('OTP');
-      setOtpDigits(['', '', '', '', '', '']);
-      setCountdown(60);
+      // Nếu server trả debugOtp (môi trường dev chưa cấu hình SMTP)
       if (data.data?.debugOtp) {
+        setOtpCode(data.data.debugOtp);
         setDebugOtp(data.data.debugOtp);
+        setSuccessMsg(`[Dev] OTP: ${data.data.debugOtp} (tự động điền)`);
       } else {
-        setDebugOtp(null);
+        setSuccessMsg(data.message || `Đã gửi OTP đến ${activeAccount!.email}`);
       }
-      setSuccessMsg(`Mã xác thực OTP đã được tạo cho ${trimmed}.`);
-    } catch (err: any) {
-      setErrorMsg(
-        'Không thể kết nối tới Backend API Gateway (Port 3000). Vui lòng đảm bảo dịch vụ đã được khởi động!'
-      );
+
+      startCooldown();
+      setStep('otp');
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Lỗi kết nối máy chủ.');
     } finally {
       setLoading(false);
     }
   };
 
-  // BƯỚC 2: XÁC THỰC MÃ OTP 6 CHỮ SỐ
-  const handleVerifyOtp = async (codeToVerify?: string) => {
-    const fullOtp = codeToVerify || otpDigits.join('');
-    setErrorMsg(null);
-
-    if (fullOtp.length !== 6) {
-      setErrorMsg('Vui lòng nhập đủ 6 chữ số mã xác thực OTP!');
-      return;
-    }
-
-    setLoading(true);
+  // ── Gửi lại OTP ───────────────────────────────────────────────────────────
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || loading) return;
+    clearMessages(); setLoading(true);
     try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/auth/verify-otp`, {
+      const res = await fetch(`${API_BASE}/api/v1/auth/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: targetEmail,
-          otp: fullOtp,
-        }),
+        body: JSON.stringify({ email: activeAccount!.email, password }),
       });
-
-      const json = await res.json();
-
-      if (!res.ok) {
-        const message = json.message || 'Mã xác thực OTP không chính xác!';
-        setErrorMsg(message);
-        setLoading(false);
-        return;
-      }
-
-      // Xác thực thành công
-      const data = json.data;
-      if (data && data.token && data.user) {
-        localStorage.setItem('aita_token', data.token);
-        localStorage.setItem('aita_user', JSON.stringify(data.user));
-        setSuccessMsg('Xác thực OTP thành công! Đang chuyển hướng...');
-        setTimeout(() => {
-          onLoginSuccess(data.user);
-        }, 300);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Không thể gửi lại mã!');
+      if (data.data?.debugOtp) {
+        setOtpCode(data.data.debugOtp);
+        setDebugOtp(data.data.debugOtp);
+        setSuccessMsg(`[Dev] OTP mới: ${data.data.debugOtp}`);
       } else {
-        setErrorMsg('Phản hồi từ máy chủ không hợp lệ!');
-        setLoading(false);
+        setSuccessMsg(`Mã mới đã gửi đến ${activeAccount!.email}`);
       }
-    } catch (err: any) {
-      setErrorMsg('Lỗi kết nối khi xác thực OTP với máy chủ!');
+      startCooldown();
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Lỗi kết nối.');
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleOtpDigitChange = (index: number, value: string) => {
-    const cleanVal = value.replace(/[^0-9]/g, '');
-    if (!cleanVal) {
-      const newDigits = [...otpDigits];
-      newDigits[index] = '';
-      setOtpDigits(newDigits);
-      return;
-    }
-
-    const digit = cleanVal.slice(-1);
-    const newDigits = [...otpDigits];
-    newDigits[index] = digit;
-    setOtpDigits(newDigits);
-
-    if (index < 5) {
-      otpInputRefs.current[index + 1]?.focus();
-    }
-
-    const combined = newDigits.join('');
-    if (combined.length === 6 && !newDigits.includes('')) {
-      void handleVerifyOtp(combined);
-    }
-  };
-
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
-      otpInputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  // ── Xác nhận OTP → gọi API verify-otp ────────────────────────────────────
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const pasted = e.clipboardData.getData('text').trim().replace(/[^0-9]/g, '');
-    if (pasted.length >= 6) {
-      const sixDigits = pasted.slice(0, 6).split('');
-      setOtpDigits(sixDigits);
-      otpInputRefs.current[5]?.focus();
-      void handleVerifyOtp(sixDigits.join(''));
+    if (otpCode.length < 6) { setErrorMsg('Vui lòng nhập đủ 6 chữ số OTP.'); return; }
+    clearMessages(); setLoading(true);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/v1/auth/verify-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: activeAccount!.email, otp: otpCode.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Mã OTP không đúng hoặc đã hết hạn!');
+
+      const { token, user } = data.data;
+      localStorage.setItem('aita_token', token);
+      localStorage.setItem('aita_user', JSON.stringify(user));
+
+      // Lưu tài khoản vào localStorage picker
+      const acc = activeAccount!;
+      const updated = [
+        { ...acc, name: user.fullName || acc.name, lastUsed: Date.now() },
+        ...savedAccounts.filter(a => a.email !== acc.email),
+      ];
+      setSavedAccounts(updated);
+      saveAccounts(updated);
+
+      // Map UserRecord → UserProfile
+      const profile: UserProfile = {
+        userId:     user.userId,
+        email:      user.email,
+        fullName:   user.fullName,
+        role:       user.role === 'INSTRUCTOR' ? 'INSTRUCTOR' : user.role === 'ADMIN' ? 'ADMIN' : 'STUDENT',
+        avatarUrl:  user.avatarUrl,
+        department: user.role === 'INSTRUCTOR' ? 'Giảng viên - ĐH FPT' : 'Sinh viên - ĐH FPT',
+      };
+      onLoginSuccess(profile);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Lỗi xác thực OTP.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  // ── Quay lại ─────────────────────────────────────────────────────────────
+  const goBack = () => {
+    clearMessages(); setDebugOtp(null);
+    if (step === 'otp')         { setStep('password'); return; }
+    if (step === 'password')    {
+      const fromPicker = savedAccounts.some(a => a.email === activeAccount?.email);
+      setStep(fromPicker ? 'picker' : 'enter-email'); return;
+    }
+    setStep('picker');
+  };
+
+  // ── Xoá tài khoản ────────────────────────────────────────────────────────
+  const handleRemoveAccount = (email: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = savedAccounts.filter(a => a.email !== email);
+    setSavedAccounts(updated); saveAccounts(updated);
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Shared UI helpers
+  // ─────────────────────────────────────────────────────────────────────────
+  const cardStyle: React.CSSProperties = {
+    width: '100%', maxWidth: '480px', borderRadius: '28px',
+    backgroundColor: '#1e1f24', border: '1px solid rgba(255,255,255,0.08)',
+    boxShadow: '0 30px 60px -10px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.04)',
+    overflow: 'hidden',
+  };
+
+  const GoogleLogo = () => (
+    <svg width="26" height="26" viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+    </svg>
+  );
+
+  const Avatar = ({ acc, size = 40 }: { acc: SavedAccount; size?: number }) => (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      backgroundColor: acc.avatarColor, display: 'flex',
+      alignItems: 'center', justifyContent: 'center',
+      color: '#fff', fontWeight: 700, fontSize: size * 0.42, flexShrink: 0,
+    }}>
+      {acc.avatarLetter}
+    </div>
+  );
+
+  const ErrorBox = () => errorMsg ? (
+    <div style={{
+      marginBottom: '14px', padding: '11px 14px', borderRadius: '10px',
+      backgroundColor: 'rgba(244,63,94,0.12)', border: '1px solid rgba(244,63,94,0.3)',
+      color: '#f87171', fontSize: '13px', display: 'flex', alignItems: 'flex-start', gap: '8px',
+    }}>
+      <ShieldAlert size={15} style={{ flexShrink: 0, marginTop: '1px' }} />
+      <span>{errorMsg}</span>
+    </div>
+  ) : null;
+
+  const SuccessBox = () => successMsg ? (
+    <div style={{
+      marginBottom: '14px', padding: '10px 14px', borderRadius: '10px',
+      backgroundColor: 'rgba(52,168,83,0.1)', border: '1px solid rgba(52,168,83,0.25)',
+      color: '#81c995', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px',
+    }}>
+      <span>✉️</span><span>{successMsg}</span>
+    </div>
+  ) : null;
+
+  const BackBtn = () => (
+    <button onClick={goBack} style={{
+      background: 'none', border: 'none', cursor: 'pointer', color: '#9aa0a6',
+      padding: '4px', display: 'flex', alignItems: 'center', borderRadius: '50%',
+    }}
+      onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.08)')}
+      onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+    ><ArrowLeft size={20} /></button>
+  );
+
+  const Footer = () => (
+    <div style={{
+      padding: '13px 32px', borderTop: '1px solid rgba(255,255,255,0.06)',
+      display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#5f6368',
+    }}>
+      <span>Tiếng Việt ▾</span>
+      <div style={{ display: 'flex', gap: '14px' }}>
+        {['Trợ giúp', 'Quyền riêng tư', 'Điều khoản'].map(t => (
+          <span key={t} style={{ cursor: 'pointer' }}
+            onMouseEnter={e => (e.currentTarget.style.color = '#8ab4f8')}
+            onMouseLeave={e => (e.currentTarget.style.color = '#5f6368')}>{t}</span>
+        ))}
+      </div>
+    </div>
+  );
+
+  const PrimaryBtn = ({ children, disabled, onClick, type = 'button' }: {
+    children: React.ReactNode; disabled?: boolean;
+    onClick?: () => void; type?: 'button' | 'submit';
+  }) => (
+    <button type={type} disabled={disabled} onClick={onClick} style={{
+      padding: '12px 28px', borderRadius: '24px', border: 'none',
+      background: disabled ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg,#1a73e8,#1557b0)',
+      color: disabled ? '#5f6368' : '#fff', fontSize: '14px', fontWeight: 700,
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      boxShadow: disabled ? 'none' : '0 4px 14px rgba(26,115,232,0.4)',
+      transition: 'all 0.15s',
+    }}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'translateY(-1px)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+    >{children}</button>
+  );
+
+  // ═════════════════════════════════════════════════════════════════════════
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'radial-gradient(circle at 50% 15%, #1e1b4b 0%, #070a13 75%)',
-        padding: '24px',
-      }}
-    >
-      <div
-        className="glass-panel"
-        style={{
-          width: '100%',
-          maxWidth: '520px',
-          padding: '40px 36px',
-          borderRadius: '24px',
-          border: '1px solid rgba(255, 255, 255, 0.12)',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 50px rgba(99, 102, 241, 0.18)',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Glow trang trí phía trên 4 màu Google */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '280px',
-            height: '4px',
-            background: 'linear-gradient(90deg, #4285F4 0%, #34A853 35%, #FBBC05 70%, #EA4335 100%)',
-            borderRadius: '0 0 8px 8px',
-          }}
-        />
+    <div style={{
+      minHeight: '100vh', display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      background: 'radial-gradient(ellipse at 50% 0%,#141828 0%,#0a0d17 70%)',
+      padding: '24px', fontFamily: "'Inter','Google Sans',sans-serif",
+    }}>
 
-        {/* Logo và Tiêu đề hệ thống */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '64px',
-              height: '64px',
-              borderRadius: '20px',
-              background: 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)',
-              color: '#ffffff',
-              marginBottom: '16px',
-              boxShadow: '0 10px 25px rgba(99, 102, 241, 0.4)',
-            }}
-          >
-            <Terminal size={32} />
-          </div>
-
-          <h1
-            style={{
-              fontSize: '24px',
-              fontWeight: 800,
-              color: '#ffffff',
-              letterSpacing: '-0.3px',
-              marginBottom: '6px',
-            }}
-          >
-            AITA-INTELLIGENT
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: '1.5', margin: 0 }}>
-            Hệ Thống Đánh Giá Mã Nguồn & Giám Sát Liêm Chính Học Thuật Tự Động
-          </p>
-
-          <div style={{ marginTop: '14px', display: 'flex', justifyContent: 'center' }}>
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 700,
-                padding: '4px 12px',
-                borderRadius: '16px',
-                backgroundColor: 'rgba(66, 133, 244, 0.15)',
-                color: '#60a5fa',
-                border: '1px solid rgba(66, 133, 244, 0.35)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <ShieldCheck size={13} />
-              Xác Thực Hai Bước OTP Qua Gmail & Google Workspace
-            </span>
-          </div>
-        </div>
-
-        {/* Thông báo lỗi nếu có */}
-        {errorMsg && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '10px',
-              padding: '12px 14px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(239, 68, 68, 0.15)',
-              border: '1px solid rgba(239, 68, 68, 0.4)',
-              color: '#fca5a5',
-              fontSize: '12.5px',
-              marginBottom: '20px',
-              lineHeight: '1.4',
-            }}
-          >
-            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '2px', color: '#ef4444' }} />
-            <div>{errorMsg}</div>
-          </div>
-        )}
-
-        {/* Thông báo thành công nếu có */}
-        {successMsg && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '12px 14px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(16, 185, 129, 0.15)',
-              border: '1px solid rgba(16, 185, 129, 0.4)',
-              color: '#6ee7b7',
-              fontSize: '12.5px',
-              marginBottom: '20px',
-            }}
-          >
-            <CheckCircle size={16} style={{ flexShrink: 0, color: '#10b981' }} />
-            <div>{successMsg}</div>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* BƯỚC 1: NHẬP GMAIL / FPT EMAIL ĐỂ YÊU CẦU MÃ OTP */}
-        {/* ========================================================================= */}
-        {step === 'EMAIL' && (
-          <div>
-            <div style={{ marginBottom: '20px' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  color: 'var(--text-muted)',
-                  marginBottom: '8px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px',
-                }}
-              >
-                Nhập Địa Chỉ Gmail / FPT Email
-              </label>
-              <div style={{ position: 'relative' }}>
-                <input
-                  type="email"
-                  value={emailInput}
-                  onChange={(e) => {
-                    setEmailInput(e.target.value);
-                    setErrorMsg(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      void handleRequestOtp(emailInput);
-                    }
-                  }}
-                  placeholder="ví dụ: trungse170000@fpt.edu.vn hoặc user@gmail.com"
-                  style={{
-                    width: '100%',
-                    padding: '14px 16px 14px 44px',
-                    borderRadius: '14px',
-                    border: '1px solid rgba(255, 255, 255, 0.18)',
-                    background: 'rgba(15, 23, 42, 0.75)',
-                    color: '#ffffff',
-                    fontSize: '14px',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                    transition: 'all 0.2s',
-                  }}
-                />
-                <div
-                  style={{
-                    position: 'absolute',
-                    left: '14px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    pointerEvents: 'none',
-                  }}
-                >
-                  <Mail size={18} color="#94a3b8" />
-                </div>
-              </div>
-            </div>
-
-            {/* Nút gửi mã OTP */}
-            <button
-              onClick={() => handleRequestOtp(emailInput)}
-              disabled={loading}
-              style={{
-                width: '100%',
-                padding: '14px 20px',
-                borderRadius: '14px',
-                border: 'none',
-                background: 'linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%)',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '14px',
-                cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.7 : 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                boxShadow: '0 8px 20px rgba(79, 70, 229, 0.35)',
-                transition: 'all 0.2s',
-              }}
-            >
-              {loading ? (
-                <>
-                  <RotateCw size={18} className="animate-spin" />
-                  Đang Kiểm Tra & Gửi Mã OTP...
-                </>
-              ) : (
-                <>
-                  <GoogleIcon />
-                  Gửi Mã Xác Thực OTP Đến Gmail
-                  <ArrowRight size={18} />
-                </>
-              )}
-            </button>
-
-            {/* Phân cách */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                margin: '28px 0 18px 0',
-                color: 'var(--text-muted)',
-                fontSize: '11px',
-                fontWeight: 600,
-                textTransform: 'uppercase',
-                letterSpacing: '0.8px',
-              }}
-            >
-              <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
-              <span style={{ padding: '0 12px' }}>Hoặc Chọn Tài Khoản Khảo Thí Mẫu</span>
-              <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
-            </div>
-
-            {/* Danh sách tài khoản mẫu hợp lệ */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {PRESET_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.email}
-                  onClick={() => {
-                    setEmailInput(acc.email);
-                    void handleRequestOtp(acc.email);
-                  }}
-                  disabled={loading}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '10px 14px',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    color: '#ffffff',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.08)';
-                    e.currentTarget.style.borderColor = 'rgba(99, 102, 241, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <img
-                      src={acc.avatar}
-                      alt={acc.name}
-                      style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover' }}
-                    />
-                    <div>
-                      <div style={{ fontSize: '13px', fontWeight: 600 }}>{acc.name}</div>
-                      <div style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>{acc.email}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        borderRadius: '10px',
-                        color: acc.badgeColor,
-                        backgroundColor: acc.badgeBg,
-                      }}
-                    >
-                      {acc.roleLabel}
-                    </span>
-                    <ChevronRight size={16} color="#64748b" />
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            <p
-              style={{
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-                textAlign: 'center',
-                marginTop: '22px',
-                lineHeight: '1.5',
-              }}
-            >
-              🔒 Hệ thống bảo mật 2FA: Email không tồn tại trong danh mục sinh viên/giảng viên sẽ bị từ chối truy cập.
+      {/* ══ STEP 1: ACCOUNT PICKER ══════════════════════════════════════════ */}
+      {step === 'picker' && (
+        <div style={cardStyle}>
+          <div style={{ padding: '32px 32px 16px' }}>
+            <div style={{ marginBottom: '14px' }}><GoogleLogo /></div>
+            <h1 style={{ fontSize: '22px', fontWeight: 400, color: '#e8eaed', marginBottom: '4px' }}>
+              Chọn tài khoản
+            </h1>
+            <p style={{ fontSize: '13px', color: '#9aa0a6' }}>
+              để tiếp tục đến <strong style={{ color: '#bdc1c6' }}>AITA Grading System</strong>
             </p>
           </div>
-        )}
 
-        {/* ========================================================================= */}
-        {/* BƯỚC 2: NHẬP MÃ XÁC THỰC OTP 6 SỐ */}
-        {/* ========================================================================= */}
-        {step === 'OTP' && (
-          <div>
-            <div style={{ textAlign: 'center', marginBottom: '22px' }}>
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '14px',
-                  background: 'rgba(99, 102, 241, 0.18)',
-                  color: '#818cf8',
-                  marginBottom: '10px',
-                }}
-              >
-                <KeyRound size={24} />
-              </div>
-              <h2 style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', margin: '0 0 6px 0' }}>
-                Xác Thực Mã Bảo Mật OTP
-              </h2>
-              <p style={{ color: 'var(--text-muted)', fontSize: '12.5px', margin: 0 }}>
-                Mã xác thực 6 chữ số dành cho tài khoản:
-              </p>
-              <div
-                style={{
-                  fontSize: '13.5px',
-                  fontWeight: 700,
-                  color: '#38bdf8',
-                  marginTop: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                }}
-              >
-                <span>{targetEmail}</span>
-                <button
-                  onClick={() => {
-                    setStep('EMAIL');
-                    setErrorMsg(null);
-                    setSuccessMsg(null);
-                  }}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#94a3b8',
-                    textDecoration: 'underline',
-                    fontSize: '11.5px',
-                    cursor: 'pointer',
-                    padding: '2px 4px',
-                  }}
-                >
-                  (Đổi email)
-                </button>
-              </div>
-            </div>
-
-            {/* Banner hiển thị Demo OTP nếu chưa cấu hình SMTP App Password */}
-            {debugOtp && (
-              <div
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(56, 189, 248, 0.12)',
-                  border: '1px solid rgba(56, 189, 248, 0.35)',
-                  marginBottom: '20px',
-                  fontSize: '12.5px',
-                  color: '#bae6fd',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, marginBottom: '4px' }}>
-                  <Sparkles size={15} color="#38bdf8" />
-                  <span>Môi Trường Thử Nghiệm / Đánh Giá:</span>
-                </div>
-                <div>
-                  Mã OTP của bạn là:{' '}
-                  <span
-                    style={{
-                      fontFamily: 'monospace',
-                      fontSize: '16px',
-                      fontWeight: 800,
-                      color: '#ffffff',
-                      background: 'rgba(0, 0, 0, 0.4)',
-                      padding: '2px 8px',
-                      borderRadius: '6px',
-                      letterSpacing: '2px',
-                    }}
-                  >
-                    {debugOtp}
-                  </span>
-                  <button
-                    onClick={() => {
-                      const digits = debugOtp.split('');
-                      setOtpDigits(digits);
-                      void handleVerifyOtp(debugOtp);
-                    }}
-                    style={{
-                      marginLeft: '8px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      border: '1px solid rgba(56, 189, 248, 0.5)',
-                      background: 'rgba(56, 189, 248, 0.2)',
-                      color: '#ffffff',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Điền nhanh & Xác nhận
-                  </button>
-                </div>
-                <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '6px' }}>
-                  * Để nhận email thật về hộp thư Gmail cá nhân, cấu hình SMTP_USER và SMTP_PASS trong file .env.
-                </div>
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            {savedAccounts.length === 0 && (
+              <div style={{ padding: '20px 32px', color: '#5f6368', fontSize: '13px', textAlign: 'center' }}>
+                Chưa có tài khoản nào. Nhấn "Sử dụng tài khoản khác" để thêm.
               </div>
             )}
 
-            {/* 6 Ô NHẬP MÃ OTP ĐỘC LẬP */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: '8px',
-                marginBottom: '22px',
-              }}
-            >
-              {otpDigits.map((digit, idx) => (
-                <input
-                  key={idx}
-                  ref={(el) => { otpInputRefs.current[idx] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={digit}
-                  onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                  onPaste={handleOtpPaste}
-                  style={{
-                    width: '48px',
-                    height: '56px',
-                    borderRadius: '12px',
-                    border: digit
-                      ? '2px solid #6366f1'
-                      : '1px solid rgba(255, 255, 255, 0.2)',
-                    background: digit ? 'rgba(99, 102, 241, 0.15)' : 'rgba(15, 23, 42, 0.7)',
-                    color: '#ffffff',
-                    fontSize: '24px',
-                    fontWeight: 700,
-                    textAlign: 'center',
-                    fontFamily: 'monospace',
-                    outline: 'none',
-                    boxShadow: digit ? '0 0 15px rgba(99, 102, 241, 0.35)' : 'none',
-                    transition: 'all 0.15s ease-in-out',
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Nút xác nhận OTP */}
-            <button
-              onClick={() => handleVerifyOtp()}
-              disabled={loading || otpDigits.join('').length !== 6}
-              style={{
-                width: '100%',
-                padding: '14px 20px',
-                borderRadius: '14px',
-                border: 'none',
-                background:
-                  otpDigits.join('').length === 6
-                    ? 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)'
-                    : 'rgba(255, 255, 255, 0.12)',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '14px',
-                cursor:
-                  loading || otpDigits.join('').length !== 6 ? 'not-allowed' : 'pointer',
-                opacity: loading ? 0.7 : 1,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                boxShadow:
-                  otpDigits.join('').length === 6
-                    ? '0 8px 20px rgba(16, 185, 129, 0.35)'
-                    : 'none',
-                transition: 'all 0.2s',
-              }}
-            >
-              {loading ? (
-                <>
-                  <RotateCw size={18} className="animate-spin" />
-                  Đang Xác Thực OTP...
-                </>
-              ) : (
-                <>
-                  <CheckCircle size={18} />
-                  Xác Nhận & Đăng Nhập Hệ Thống
-                </>
-              )}
-            </button>
-
-            {/* Các tùy chọn dưới: Gửi lại mã / Đổi Email */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginTop: '18px',
-                paddingTop: '16px',
-                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-                fontSize: '12px',
-              }}
-            >
-              <button
-                onClick={() => {
-                  setStep('EMAIL');
-                  setErrorMsg(null);
-                  setSuccessMsg(null);
-                }}
+            {savedAccounts.map(acc => (
+              <div key={acc.email} onClick={() => handleSelectSaved(acc)}
                 style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  padding: 0,
+                  display: 'flex', alignItems: 'center', gap: '14px',
+                  padding: '13px 32px', cursor: 'pointer',
+                  borderBottom: '1px solid rgba(255,255,255,0.04)',
+                  transition: 'background-color 0.15s',
                 }}
+                onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)')}
+                onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
-                <ArrowLeft size={14} />
-                Quay lại đổi Email
-              </button>
-
-              {countdown > 0 ? (
-                <span style={{ color: 'var(--text-muted)' }}>
-                  Gửi lại mã sau (00:{countdown < 10 ? `0${countdown}` : countdown})
-                </span>
-              ) : (
-                <button
-                  onClick={() => handleRequestOtp(targetEmail)}
-                  disabled={loading}
+                <Avatar acc={acc} size={40} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#e8eaed', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {acc.name}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#9aa0a6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {acc.email}
+                  </div>
+                </div>
+                <button onClick={e => handleRemoveAccount(acc.email, e)}
+                  title="Xoá khỏi danh sách"
                   style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#38bdf8',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    textDecoration: 'underline',
-                    padding: 0,
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: '#5f6368', fontSize: '16px', padding: '4px 6px',
+                    borderRadius: '4px', flexShrink: 0, lineHeight: 1,
                   }}
-                >
-                  Gửi lại mã OTP mới
-                </button>
-              )}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#f87171')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#5f6368')}
+                >✕</button>
+                <ChevronRight size={16} color="#5f6368" style={{ flexShrink: 0 }} />
+              </div>
+            ))}
+
+            {/* Sử dụng tài khoản khác */}
+            <div onClick={handleUseOther}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '14px',
+                padding: '14px 32px', cursor: 'pointer',
+                transition: 'background-color 0.15s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.06)')}
+              onMouseLeave={e => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <div style={{
+                width: 40, height: 40, borderRadius: '50%',
+                border: '1.5px solid #5f6368', display: 'flex',
+                alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              }}>
+                <PlusCircle size={18} color="#9aa0a6" />
+              </div>
+              <span style={{ fontSize: '14px', color: '#e8eaed' }}>Sử dụng một tài khoản khác</span>
             </div>
           </div>
-        )}
 
-        {/* Chân trang thông tin kỹ thuật */}
-        <div
-          style={{
-            marginTop: '28px',
-            textAlign: 'center',
-            fontSize: '11px',
-            color: 'rgba(255, 255, 255, 0.35)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-          }}
-        >
-          <span>SWP391 Assessment 2 • Nhóm 4</span>
-          <span>•</span>
-          <span>Google SSO & OTP Gateway</span>
+          <Footer />
         </div>
+      )}
+
+      {/* ══ STEP 2: NHẬP EMAIL (tài khoản khác) ════════════════════════════ */}
+      {step === 'enter-email' && (
+        <div style={cardStyle}>
+          <div style={{ padding: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <BackBtn /><GoogleLogo />
+            </div>
+            <h1 style={{ fontSize: '22px', fontWeight: 400, color: '#e8eaed', marginBottom: '6px' }}>Đăng nhập</h1>
+            <p style={{ fontSize: '13px', color: '#9aa0a6', marginBottom: '24px' }}>
+              Tiếp tục đến <strong style={{ color: '#bdc1c6' }}>AITA Grading System</strong>
+            </p>
+
+            <ErrorBox />
+
+            <form onSubmit={handleEmailSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#bdc1c6', marginBottom: '8px' }}>
+                  Địa chỉ Email
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#5f6368' }}>
+                    <Mail size={16} />
+                  </div>
+                  <input type="email" autoFocus
+                    placeholder="vidu@gmail.com, @fpt.edu.vn, @fe.edu.vn"
+                    value={inputEmail}
+                    onChange={e => { setInputEmail(e.target.value); clearMessages(); }}
+                    style={{
+                      width: '100%', padding: '13px 14px 13px 42px', borderRadius: '10px',
+                      backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                      color: '#e8eaed', fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(26,115,232,0.7)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.12)')}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <PrimaryBtn type="submit">Tiếp theo</PrimaryBtn>
+              </div>
+            </form>
+          </div>
+          <Footer />
+        </div>
+      )}
+
+      {/* ══ STEP 3: NHẬP MẬT KHẨU ══════════════════════════════════════════ */}
+      {step === 'password' && activeAccount && (
+        <div style={cardStyle}>
+          <div style={{ padding: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <BackBtn /><GoogleLogo />
+            </div>
+
+            <h1 style={{ fontSize: '22px', fontWeight: 400, color: '#e8eaed', marginBottom: '6px' }}>Xin chào</h1>
+
+            {/* Account chip */}
+            <div onClick={goBack} title="Đổi tài khoản" style={{
+              display: 'inline-flex', alignItems: 'center', gap: '8px',
+              padding: '5px 10px 5px 6px', borderRadius: '24px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              backgroundColor: 'rgba(255,255,255,0.05)',
+              marginBottom: '22px', cursor: 'pointer',
+            }}>
+              <Avatar acc={activeAccount} size={22} />
+              <span style={{ fontSize: '13px', color: '#bdc1c6' }}>{activeAccount.email}</span>
+              <span style={{ fontSize: '11px', color: '#5f6368' }}>▾</span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <Avatar acc={activeAccount} size={72} />
+            </div>
+            <p style={{ textAlign: 'center', fontSize: '16px', color: '#e8eaed', fontWeight: 600, marginBottom: '22px' }}>
+              {activeAccount.name}
+            </p>
+
+            <ErrorBox />
+
+            <form onSubmit={handlePasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#bdc1c6', marginBottom: '8px' }}>
+                  Mật khẩu
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input type={showPassword ? 'text' : 'password'} autoFocus
+                    placeholder="Nhập mật khẩu tài khoản Google"
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); clearMessages(); }}
+                    style={{
+                      width: '100%', padding: '13px 44px 13px 14px', borderRadius: '10px',
+                      backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                      color: '#e8eaed', fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(26,115,232,0.7)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.12)')}
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={{
+                    position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                    background: 'none', border: 'none', cursor: 'pointer', color: '#9aa0a6', padding: 0,
+                  }}>
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <p style={{ fontSize: '11px', color: '#5f6368', marginTop: '7px' }}>
+                  Nếu là lần đầu đăng nhập, mật khẩu này sẽ được đặt cho tài khoản.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', color: '#8ab4f8', cursor: 'pointer' }}>Quên mật khẩu?</span>
+                <PrimaryBtn type="submit" disabled={loading}>
+                  {loading ? 'Đang gửi OTP…' : 'Tiếp theo'}
+                </PrimaryBtn>
+              </div>
+            </form>
+          </div>
+          <Footer />
+        </div>
+      )}
+
+      {/* ══ STEP 4: NHẬP OTP ════════════════════════════════════════════════ */}
+      {step === 'otp' && activeAccount && (
+        <div style={cardStyle}>
+          <div style={{ padding: '32px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+              <BackBtn /><GoogleLogo />
+            </div>
+
+            <h1 style={{ fontSize: '20px', fontWeight: 400, color: '#e8eaed', marginBottom: '4px' }}>Xác minh 2 bước</h1>
+            <p style={{ fontSize: '13px', color: '#9aa0a6' }}>Mã OTP đã gửi tới</p>
+            <p style={{ fontSize: '13px', color: '#8ab4f8', fontWeight: 600, marginBottom: '20px' }}>
+              {activeAccount.email}
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <Avatar acc={activeAccount} size={56} />
+            </div>
+
+            <SuccessBox />
+            <ErrorBox />
+
+            {/* Dev hint */}
+            {debugOtp && (
+              <div style={{
+                marginBottom: '14px', padding: '9px 14px', borderRadius: '8px',
+                backgroundColor: 'rgba(251,188,5,0.1)', border: '1px solid rgba(251,188,5,0.25)',
+                color: '#fdd663', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '8px',
+              }}>
+                <span>🔧 Dev mode — OTP đã tự điền:&nbsp;<strong style={{ letterSpacing: '3px' }}>{debugOtp}</strong></span>
+              </div>
+            )}
+
+            <form onSubmit={handleOtpSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#bdc1c6', marginBottom: '8px' }}>
+                  Mã OTP 6 chữ số
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#5f6368' }}>
+                    <KeyRound size={16} />
+                  </div>
+                  <input type="text" inputMode="numeric" maxLength={6}
+                    autoFocus={!debugOtp}
+                    placeholder="• • • • • •"
+                    value={otpCode}
+                    onChange={e => { setOtpCode(e.target.value.replace(/\D/g, '')); clearMessages(); }}
+                    style={{
+                      width: '100%', padding: '14px 14px 14px 42px', borderRadius: '10px',
+                      backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                      color: '#e8eaed', fontSize: '24px', letterSpacing: '10px', fontWeight: 700,
+                      outline: 'none', textAlign: 'center', boxSizing: 'border-box',
+                    }}
+                    onFocus={e => (e.target.style.borderColor = 'rgba(26,115,232,0.7)')}
+                    onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.12)')}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button type="button" onClick={handleResendOtp}
+                  disabled={resendCooldown > 0 || loading}
+                  style={{
+                    background: 'none', border: 'none', cursor: resendCooldown > 0 ? 'not-allowed' : 'pointer',
+                    color: resendCooldown > 0 ? '#5f6368' : '#8ab4f8', fontSize: '13px', padding: 0,
+                  }}>
+                  {resendCooldown > 0 ? `Gửi lại sau (${resendCooldown}s)` : 'Gửi lại mã'}
+                </button>
+                <PrimaryBtn type="submit" disabled={loading}>
+                  {loading ? 'Đang xác thực…' : 'Xác nhận'}
+                </PrimaryBtn>
+              </div>
+            </form>
+          </div>
+          <Footer />
+        </div>
+      )}
+
+      {/* Brand */}
+      <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.3 }}>
+        <Code2 size={13} color="#e5e7eb" />
+        <span style={{ fontSize: '11px', color: '#9aa0a6' }}>
+          AITA Intelligent Grading System · FPT University
+        </span>
       </div>
     </div>
   );
