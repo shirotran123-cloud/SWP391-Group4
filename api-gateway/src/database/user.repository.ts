@@ -9,6 +9,7 @@ export class UserRepository {
   private readonly records: Map<string, UserRecord> = new Map();
   private readonly dataDir: string;
   private readonly dataFile: string;
+  private lastMtime: number = 0;
 
   constructor() {
     this.dataDir = path.resolve(process.cwd(), 'data');
@@ -23,22 +24,40 @@ export class UserRepository {
       }
 
       if (fs.existsSync(this.dataFile)) {
-        const raw = fs.readFileSync(this.dataFile, 'utf-8');
-        const parsed: UserRecord[] = JSON.parse(raw);
-        for (const record of parsed) {
-          this.records.set(record.userId, {
-            ...record,
-            createdAt: new Date(record.createdAt),
-            updatedAt: new Date(record.updatedAt),
-          });
-        }
-        this.logger.log(`[UserRepository] Loaded ${this.records.size} users from persistent store.`);
+        this.reloadIfModified();
+        this.logger.log(`[UserRepository] Đã tải ${this.records.size} người dùng từ persistent store.`);
       } else {
         this.seedInitialUsers();
       }
-    } catch (err) {
-      this.logger.warn(`[UserRepository] Failed to load store: ${err.message}. Seeding defaults.`);
+    } catch (err: any) {
+      this.logger.warn(`[UserRepository] Lỗi tải store: ${err.message}. Khởi tạo mặc định.`);
       this.seedInitialUsers();
+    }
+  }
+
+  /**
+   * Tự động đồng bộ lại bộ nhớ nếu file users_store.json được chỉnh sửa từ bên ngoài
+   */
+  public reloadIfModified(): void {
+    try {
+      if (fs.existsSync(this.dataFile)) {
+        const stat = fs.statSync(this.dataFile);
+        if (stat.mtimeMs !== this.lastMtime) {
+          const raw = fs.readFileSync(this.dataFile, 'utf-8');
+          const parsed: UserRecord[] = JSON.parse(raw);
+          this.records.clear();
+          for (const record of parsed) {
+            this.records.set(record.userId, {
+              ...record,
+              createdAt: new Date(record.createdAt),
+              updatedAt: new Date(record.updatedAt),
+            });
+          }
+          this.lastMtime = stat.mtimeMs;
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`[UserRepository] Không thể đọc users_store.json: ${err.message}`);
     }
   }
 
@@ -55,8 +74,8 @@ export class UserRepository {
       },
       {
         userId: 'GV001',
-        email: 'trungdt.teacher@aita.fpt.edu.vn',
-        fullName: 'ThS. Đinh Thành Trung (Giảng viên)',
+        email: 'trungdt@fe.edu.vn',
+        fullName: 'ThS. Đinh Thành Trung',
         role: 'INSTRUCTOR',
         isActive: true,
         createdAt: new Date(),
@@ -64,17 +83,8 @@ export class UserRepository {
       },
       {
         userId: 'SE170000',
-        email: 'trungdt.student@aita.fpt.edu.vn',
+        email: 'trungse170000@fpt.edu.vn',
         fullName: 'Đinh Thành Trung (Sinh viên)',
-        role: 'STUDENT',
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        userId: 'SE170123',
-        email: 'nguyentt@aita.fpt.edu.vn',
-        fullName: 'Trần Thanh Nguyên',
         role: 'STUDENT',
         isActive: true,
         createdAt: new Date(),
@@ -86,15 +96,18 @@ export class UserRepository {
       this.records.set(u.userId, u);
     }
     this.persist();
-    this.logger.log(`[UserRepository] Seeded ${defaultUsers.length} default users.`);
+    this.logger.log(`[UserRepository] Khởi tạo ${defaultUsers.length} người dùng mặc định.`);
   }
 
   private persist(): void {
     try {
       const recordsArray = Array.from(this.records.values());
       fs.writeFileSync(this.dataFile, JSON.stringify(recordsArray, null, 2), 'utf-8');
-    } catch (err) {
-      this.logger.error(`[UserRepository] Failed to persist store: ${err.message}`);
+      if (fs.existsSync(this.dataFile)) {
+        this.lastMtime = fs.statSync(this.dataFile).mtimeMs;
+      }
+    } catch (err: any) {
+      this.logger.error(`[UserRepository] Lỗi lưu trữ store: ${err.message}`);
     }
   }
 
@@ -110,16 +123,11 @@ export class UserRepository {
     return newRecord;
   }
 
-  /**
-   * Thực thi ACID Transaction chèn hàng loạt (Bulk Import từ Excel).
-   * Bất kỳ dòng nào gặp lỗi trùng khóa hoặc sai định dạng đều kích hoạt ROLLBACK 100%,
-   * đảm bảo không để lại bản ghi mồ côi (orphaned records - theo R06).
-   */
   public async createBatchTransactional(newUsers: Omit<UserRecord, 'createdAt' | 'updatedAt'>[]): Promise<UserRecord[]> {
+    this.reloadIfModified();
     const existingIds = new Set(this.records.keys());
     const existingEmails = new Set(Array.from(this.records.values()).map((u) => u.email.toLowerCase()));
 
-    // Phase 1: Pre-validation & Conflict Detection (Rollback simulation)
     const batchIds = new Set<string>();
     const batchEmails = new Set<string>();
 
@@ -144,7 +152,6 @@ export class UserRepository {
       batchEmails.add(lowerEmail);
     }
 
-    // Phase 2: Atomic Commit (Toàn bộ thành công mới ghi vào store)
     const now = new Date();
     const createdRecords: UserRecord[] = [];
     for (const u of newUsers) {
@@ -158,15 +165,17 @@ export class UserRepository {
     }
 
     this.persist();
-    this.logger.log(`[UserRepository] Transaction COMMITTED: Imported ${createdRecords.length} users successfully.`);
+    this.logger.log(`[UserRepository] Transaction COMMITTED: Đã import ${createdRecords.length} users thành công.`);
     return createdRecords;
   }
 
   public async findById(userId: string): Promise<UserRecord | null> {
+    this.reloadIfModified();
     return this.records.get(userId) || null;
   }
 
   public async findByEmail(email: string): Promise<UserRecord | null> {
+    this.reloadIfModified();
     for (const user of this.records.values()) {
       if (user.email.toLowerCase() === email.toLowerCase()) {
         return user;
@@ -176,6 +185,7 @@ export class UserRepository {
   }
 
   public async findAll(role?: UserRole): Promise<UserRecord[]> {
+    this.reloadIfModified();
     const all = Array.from(this.records.values());
     if (role) {
       return all.filter((u) => u.role === role);
@@ -184,6 +194,7 @@ export class UserRepository {
   }
 
   public async update(userId: string, partial: Partial<Omit<UserRecord, 'userId' | 'createdAt'>>): Promise<UserRecord | null> {
+    this.reloadIfModified();
     const existing = this.records.get(userId);
     if (!existing) return null;
 
@@ -198,6 +209,7 @@ export class UserRepository {
   }
 
   public async delete(userId: string): Promise<boolean> {
+    this.reloadIfModified();
     const existed = this.records.delete(userId);
     if (existed) {
       this.persist();
