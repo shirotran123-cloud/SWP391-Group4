@@ -7,14 +7,14 @@
 ---
 
 ## 📋 MỤC TIÊU NGHIỆM THU MILESTONE 2 (ĐÁP ỨNG 100% RUBRIC)
-1. **Kiến trúc & CSDL (30%):** Kiến trúc đa tầng Enterprise Microservices, $\ge 10$ bảng CSDL quan hệ chuẩn hóa 3NF có PK/FK, Redis BullMQ, Docker Sandbox, WebSocket Gateway.
+1. **Kiến trúc & CSDL (30%):** Kiến trúc đa tầng Enterprise Microservices, **13 thực thể CSDL quan hệ chuẩn hóa 3NF (ERD 13 Tables)** có ràng buộc PK/FK toàn vẹn, Redis BullMQ, Docker Sandbox, WebSocket Gateway.
 2. **Workflow Implementation (50%):**
    * **Workflow 0:** Core Infrastructure, User Auth (Google SSO/JWT), Role-Based Access Control (Admin / Lecturer / Student), Base CRUD APIs.
    * **Workflow 1:** Data Setup Flow – Giảng viên quản lý môn học, giao bài tập, AI sinh đề thi thực tế theo yêu cầu kèm ma trận 5 tầng testcases biên.
    * **Workflow 2:** Main Processing Flow – Sinh viên theo dõi Deadline Hub, nộp mã nguồn `.zip` $\to$ Docker Sandbox chấm testcase $\to$ GenAI chấm Clean Code & 5 trục SOLID $\to$ AST Winnowing kiểm tra đạo văn $\to$ Stream WebSocket theo thời gian thực.
    * **$\ge 2$ Exception Paths Fully Functional:**
      * *Exception 1 (Resource Violation):* TLE Watchdog 2.0s và MLE 512MB Linux OOM Killer (Exit code 137).
-     * *Exception 2 (Plagiarism Fraud):* Trùng lặp AST $\ge 70\%$, kích hoạt cờ `FLAGGED_PLAGIARISM` và Monaco Diff Viewer.
+     * *Exception 2 (Plagiarism Fraud):* Trùng lặp AST $\ge 70\%$, kích hoạt cờ `FLAGGED_PLAGIARISM` và Monaco Diff Viewer đối soát song song.
      * *Exception 3 (Security Defense):* Prompt Injection trong comment mã nguồn bị `PromptSanitizer` trung hòa.
      * *Exception 4 (Queue Resilience):* Redis BullMQ Dead Letter Queue & Exponential Backoff Retry.
 3. **Minh chứng Git & AI Logs (20%):** $\ge 8$ commits/thành viên (100% Conventional Commits) + $\ge 6$ logs AI Debugging chi tiết.
@@ -32,7 +32,7 @@
 ├─────────────────────┼─────────────────────┼─────────────────────┼──────────────────────┤
 │ • Tổng quan đề tài  │ • Workflow 1: Setup │ • Workflow 2A: Hub  │ • Workflow 2B: Audit │
 │ • Kiến trúc hệ thống│ • Quản lý học phần  │ • Giám sát Deadline │ • GenAI Clean Code   │
-│ • Database 10 bảng  │ • AI Sinh Đề Thi    │ • SHA-256 Checksum  │ • 5 Trục SOLID Radar │
+│ • Database 13 bảng  │ • AI Sinh Đề Thi    │ • SHA-256 Checksum  │ • 5 Trục SOLID Radar │
 │ • Workflow 0: Auth  │ • Ma trận Test biên │ • Docker Sandbox    │ • AST Winnowing RBL  │
 │ • Redis & Queue     │ • Barem chấm điểm   │ • Exception 1: TLE  │ • Exception 2 & 3    │
 │ • Exception 4 (DLQ) │ • Xuất bản bài tập  │ • Exception MLE 137 │ • Monaco Diff View   │
@@ -47,9 +47,9 @@
 
 ## 👤 THÀNH VIÊN 1: TỔNG QUAN, KIẾN TRÚC HỆ THỐNG, CSDL & WORKFLOW 0
 * **Thời lượng:** 3.5 - 4 phút
-* **Vai trò:** Dẫn dắt, gây ấn tượng mở đầu với hội đồng, trình bày kiến trúc kỹ thuật và nền tảng hạ tầng.
-* **Mã nguồn cần nắm vững:**
-  - Database Schema: [`scratch/database_README.md`](file:///C:/Users/DELL/.gemini/antigravity-ide/brain/4ebe0b62-8a79-448f-a56d-50a63e5a6c38/scratch/database_README.md)
+* **Vai trò:** Dẫn dắt, gây ấn tượng mở đầu với hội đồng, trình bày kiến trúc kỹ thuật và nền tảng hạ tầng CSDL 13 thực thể.
+* **Mã nguồn & Tài liệu cần nắm vững:**
+  - Database Schema (13 bảng 3NF): [`PROJECT_CONTEXT_AITA.md`](file:///C:/Users/DELL/.gemini/antigravity-ide/brain/4ebe0b62-8a79-448f-a56d-50a63e5a6c38/PROJECT_CONTEXT_AITA.md)
   - Kiến trúc & Gateway: [`api-gateway/src/`](file:///D:/Main/ky5/SWP391/Project/SWP391-Group4/api-gateway)
   - Authentication Controller & Guard: [`frontend/src/components/LoginView.tsx`](file:///D:/Main/ky5/SWP391/Project/SWP391-Group4/frontend/src/components/LoginView.tsx)
 
@@ -64,16 +64,28 @@
    > - **Message Broker & Queue:** Redis v7 với BullMQ xử lý tác vụ bất đồng bộ, chống nghẽn mạng và bảo đảm tính chịu lỗi.
    > - **Isolated Workers:** Docker Sandbox (chạy Linux cgroups v2, Seccomp) và GenAI Hub độc lập."*
 
-3. **Cơ sở dữ liệu 10 bảng chuẩn hóa 3NF (1 phút):**
-   > *"Về tầng lưu trữ, nhóm triển khai đúng **10 bảng CSDL quan hệ** chuẩn hóa 3NF, phân tách minh bạch:
-   > 1. `users`, 2. `courses`, 3. `assignments`: Quản lý thực thể nghiệp vụ đào tạo.
-   > 4. `submissions`, 5. `dead_letter_jobs`: Quản lý các lượt nộp bài và hàng đợi sự cố.
-   > 6. `ai_review_results`, 7. `ai_prompt_templates`: Quản lý đánh giá Clean Code và schema AI.
-   > 8. `ast_fingerprints`, 9. `plagiarism_reports`, 10. `plagiarism_matches`: Quản lý dấu vân tay số mã nguồn và tọa độ đối soát đạo văn."*
+3. **Cơ sở dữ liệu 13 bảng chuẩn hóa 3NF (1 phút):**
+   > *"Về tầng lưu trữ dữ liệu, hệ thống được thiết kế và chuẩn hóa đúng **13 thực thể CSDL quan hệ trong 3NF** (tương ứng 100% với Sơ đồ ERD 13 thực thể của đề án):
+   > - **Nhóm 1 - Quản lý Học vụ & Phân quyền (4 bảng):**
+   >   1. `ROLES`: Quản lý 4 vai trò hệ thống (Student, Lecturer, Admin, Head of Dept).
+   >   2. `USERS`: Quản lý tài khoản, mã sinh viên, email `@fpt.edu.vn`.
+   >   3. `CLASSES`: Danh mục lớp học, học kỳ và giảng viên phụ trách.
+   >   4. `CLASS_MEMBERS`: Quản lý sinh viên ghi danh vào từng lớp học (ràng buộc `UNIQUE(class_id, user_id)`).
+   > - **Nhóm 2 - Quản lý Đề thi & Bài nộp (4 bảng):**
+   >   5. `ASSIGNMENTS`: Đề bài tập, ngôn ngữ cho phép, giới hạn CPU time và RAM.
+   >   6. `TEST_CASES`: Bộ test cases chuẩn và test cases ẩn kèm trọng số điểm.
+   >   7. `SUBMISSIONS`: Lượt nộp bài, mã băm SHA-256, điểm số cuối cùng.
+   >   8. `SUBMISSION_DETAILS`: Nhật ký chi tiết chạy từng testcase trong Docker (PASS/FAIL/TLE/MLE, time_ms, memory_kb).
+   > - **Nhóm 3 - AI Audit, Chống Đạo văn & Hậu kiểm (5 bảng):**
+   >   9. `AI_REVIEW_RESULTS`: Điểm Clean Code, điểm 5 trục SOLID, danh sách code smells và giải thích của AI.
+   >   10. `AST_FINGERPRINTS`: Dấu vân tay số của mã nguồn trích xuất từ cây AST phục vụ so khớp Winnowing.
+   >   11. `PLAGIARISM_REPORTS`: Báo cáo đối soát gian lận cặp bài nộp (`similarity_rate`, cờ `flagged_as_fraud`).
+   >   12. `APPEALS`: Quy trình khiếu nại, phúc khảo điểm bài tập của sinh viên.
+   >   13. `TEAMWORK_METRICS`: Đo lường đóng góp commit Git để phát hiện free-rider trong đồ án nhóm."*
 
 4. **Workflow 0 & Exception 4 – Khởi chạy & Khả năng chịu lỗi (1 phút):**
    > *"Trong Workflow 0, nhóm cài đặt trọn vẹn xác thực phân quyền 3 vai trò: Student, Instructor, Admin.
-   > - **Exception Path 4 (Queue Resilience):** Khi Redis hoặc Worker tạm thời mất kết nối, hệ thống kích hoạt cơ chế Exponential Backoff Retry (thử lại 3 lần sau 1s, 2s, 4s). Nếu lỗi không thể khắc phục (Poison Pill), công việc tự động đưa vào `dead_letter_jobs` để phân tích mà không làm sập server chính.
+   > - **Exception Path 4 (Queue Resilience):** Khi Redis hoặc Worker tạm thời mất kết nối, hệ thống kích hoạt cơ chế Exponential Backoff Retry (thử lại 3 lần sau 1s, 2s, 4s). Nếu lỗi không thể khắc phục (Poison Pill), công việc tự động đưa vào Dead Letter Queue để phân tích mà không làm sập server chính.
    > Tiếp theo, em xin mời bạn [Thành viên 2] trình bày Workflow 1: Quản lý học phần và Sinh đề thi AI!"*
 
 ---
@@ -221,6 +233,6 @@
 ## ✅ CHECKLIST CHUẨN BỊ TRƯỚC GIỜ BẢO VỆ
 - [ ] Cả 4 thành viên kéo mã nguồn mới nhất từ GitHub: `git pull origin main`.
 - [ ] Chạy thử lệnh build để đảm bảo 0 lỗi: `npm run build` tại thư mục `frontend`.
-- [ ] Khởi động sẵn 3 terminal trước khi vào phòng chấm: API Gateway, GenAI Hub, Frontend.
+- [ ] Khởi động sẵn 3 terminal (hoặc chạy `start-services.bat`) trước khi vào phòng chấm.
 - [ ] Mở sẵn tab trình duyệt tại `http://localhost:5173`.
 - [ ] Chuẩn bị sẵn 1 file `.zip` bài nộp hợp lệ và 1 file `.zip` chứa code vòng lặp vô hạn `while(1)` để biểu diễn Exception TLE nếu hội đồng yêu cầu.
