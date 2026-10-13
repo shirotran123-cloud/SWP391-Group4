@@ -11,7 +11,6 @@ import {
   RotateCw,
   ArrowLeft,
   Sparkles,
-  Info,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
@@ -88,7 +87,6 @@ const PRESET_ACCOUNTS = [
 ];
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
-  // Trạng thái: 'EMAIL' (bước 1: nhập email) hoặc 'OTP' (bước 2: nhập mã 6 số)
   const [step, setStep] = useState<'EMAIL' | 'OTP'>('EMAIL');
   const [emailInput, setEmailInput] = useState('');
   const [targetEmail, setTargetEmail] = useState('');
@@ -101,7 +99,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Đếm ngược 60s cho nút gửi lại OTP
   useEffect(() => {
     let timer: any;
     if (step === 'OTP' && countdown > 0) {
@@ -112,7 +109,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     return () => clearInterval(timer);
   }, [step, countdown]);
 
-  // Tự động focus vào ô OTP đầu tiên khi chuyển sang bước OTP
   useEffect(() => {
     if (step === 'OTP' && otpInputRefs.current[0]) {
       setTimeout(() => {
@@ -132,7 +128,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       return;
     }
 
-    // Kiểm tra định dạng cơ bản
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmed)) {
       setErrorMsg('Địa chỉ email không đúng định dạng!');
@@ -150,8 +145,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       const data = await res.json();
 
       if (!res.ok) {
-        // Backend từ chối: Email không tồn tại hoặc lỗi khác
-        const message = data.message || 'Yêu cầu gửi mã OTP thất bại!';
+        // Backend từ chối: Email không tồn tại
+        const message = data.message || 'Email này không tồn tại trong hệ thống AITA!';
         setErrorMsg(message);
         setLoading(false);
         return;
@@ -167,10 +162,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       } else {
         setDebugOtp(null);
       }
-      setSuccessMsg(`Mã xác thực đã được gửi đến ${trimmed}.`);
+      setSuccessMsg(`Mã xác thực OTP đã được tạo cho ${trimmed}.`);
     } catch (err: any) {
       setErrorMsg(
-        'Không thể kết nối tới Backend API Gateway (Port 3000). Vui lòng kiểm tra dịch vụ đã được khởi động chưa!'
+        'Không thể kết nối tới Backend API Gateway (Port 3000). Vui lòng đảm bảo dịch vụ đã được khởi động!'
       );
     } finally {
       setLoading(false);
@@ -226,9 +221,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  // Xử lý khi gõ vào ô OTP
   const handleOtpDigitChange = (index: number, value: string) => {
-    // Chỉ chấp nhận chữ số
     const cleanVal = value.replace(/[^0-9]/g, '');
     if (!cleanVal) {
       const newDigits = [...otpDigits];
@@ -242,26 +235,22 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     newDigits[index] = digit;
     setOtpDigits(newDigits);
 
-    // Tự động focus sang ô tiếp theo
     if (index < 5) {
       otpInputRefs.current[index + 1]?.focus();
     }
 
-    // Nếu đã nhập đủ 6 số, tự động trigger xác thực
     const combined = newDigits.join('');
     if (combined.length === 6 && !newDigits.includes('')) {
       void handleVerifyOtp(combined);
     }
   };
 
-  // Xử lý phím Backspace
   const handleOtpKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace' && !otpDigits[index] && index > 0) {
       otpInputRefs.current[index - 1]?.focus();
     }
   };
 
-  // Xử lý Paste cả chuỗi 6 số
   const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').trim().replace(/[^0-9]/g, '');
@@ -628,7 +617,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 Xác Thực Mã Bảo Mật OTP
               </h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '12.5px', margin: 0 }}>
-                Mã xác thực 6 chữ số đã được gửi đến hộp thư:
+                Mã xác thực 6 chữ số dành cho tài khoản:
               </p>
               <div
                 style={{
@@ -887,4 +876,3 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     </div>
   );
 };
-

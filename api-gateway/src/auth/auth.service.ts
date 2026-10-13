@@ -103,10 +103,10 @@ export class AuthService {
       throw new BadRequestException('Địa chỉ email không đúng định dạng!');
     }
 
-    // 2. Kiểm tra tài khoản có tồn tại trong hệ thống hay không
+    // 2. Bắt buộc kiểm tra tài khoản có tồn tại trong hệ thống hay không
     const user = await this.userRepo.findByEmail(lowerEmail);
     if (!user) {
-      this.logger.warn(`[AuthService] Từ chối gửi OTP: Email không tồn tại trong hệ thống: ${lowerEmail}`);
+      this.logger.warn(`[AuthService] Chặn gửi OTP: Email không tồn tại trong hệ thống: ${lowerEmail}`);
       throw new UnauthorizedException(
         `Email '${lowerEmail}' không tồn tại trong hệ thống AITA! Vui lòng kiểm tra lại địa chỉ email hoặc liên hệ Quản trị viên để được cấp tài khoản.`,
       );
@@ -181,8 +181,8 @@ export class AuthService {
   }
 
   /**
-   * Đăng nhập qua Google SSO (UC-01):
-   * Chỉ cho phép tài khoản đã tồn tại trong danh mục hệ thống
+   * Đăng nhập qua Google SSO:
+   * Chặn hoàn toàn nếu tài khoản chưa được phân quyền trong hệ thống
    */
   public async loginWithGoogle(
     email: string,
