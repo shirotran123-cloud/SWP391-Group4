@@ -298,7 +298,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
     return localStorage.getItem('aita_gemini_api_key') || '';
   });
-  const [selectedAiModel, setSelectedAiModel] = useState<string>('gemini-3.8-flash');
+  const [selectedAiModel, setSelectedAiModel] = useState<string>('auto');
+  const [availableModelList, setAvailableModelList] = useState<string[]>([]);
   const [desiredTestCount, setDesiredTestCount] = useState<number>(5);
   const [lecturerPrompt, setLecturerPrompt] = useState<string>(
     'Tạo bài tập về Thuật toán Dijkstra tìm đường đi ngắn nhất, có tối ưu bằng Hàng đợi ưu tiên PriorityQueue, sinh viên phải áp dụng nguyên lý SOLID Single Responsibility (SRP).'
@@ -336,18 +337,26 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   };
 
   // Ping kiểm tra kết nối API Key với Google Gemini
+  // Ping kiểm tra kết nối API Key với Google Gemini
   const handleTestApiKey = async () => {
     if (!tempApiKey.trim()) {
       setPingStatus({ loading: false, message: 'Vui lòng nhập API Key trước khi kiểm tra.', success: false });
       return;
     }
-    setPingStatus({ loading: true, message: 'Đang kết nối tới máy chủ Google Gemini...', success: null });
-    const res = await GeminiAIService.pingKey(tempApiKey, selectedAiModel);
+    setPingStatus({ loading: true, message: 'Đang kết nối tới máy chủ Google Gemini (ModelService.ListModels)...', success: null });
+    const res = await GeminiAIService.pingKey(tempApiKey, selectedAiModel === 'auto' ? undefined : selectedAiModel);
     setPingStatus({
       loading: false,
       message: res.message + (res.latencyMs ? ` (Độ trễ: ${res.latencyMs}ms)` : ''),
       success: res.success,
     });
+    if (res.availableModels && res.availableModels.length > 0) {
+      setAvailableModelList(res.availableModels);
+      if (selectedAiModel === 'auto' || !res.availableModels.includes(selectedAiModel)) {
+        const best = res.availableModels.find((m) => m.includes('flash')) || res.availableModels[0];
+        setSelectedAiModel(best);
+      }
+    }
   };
 
   // Sinh đề tự động bằng 100% Google Gemini AI THẬT (UC-08)
@@ -385,7 +394,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         lecturerDescription: lecturerPrompt,
         difficulty: 'TRUNG BÌNH',
         allowedLanguages,
-        model: selectedAiModel,
+        model: selectedAiModel === 'auto' ? undefined : selectedAiModel,
         numTestCases: testCountToUse,
       });
 
@@ -2087,9 +2096,20 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   fontSize: '13px',
                 }}
               >
-                <option value="gemini-3.8-flash">gemini-3.8-flash (Khuyên dùng - Chuẩn Google Official, Siêu tốc 1-2s & Phản hồi sáng tạo)</option>
-                <option value="gemini-2.5-flash">gemini-2.5-flash (Thế hệ Flash 2.5)</option>
-                <option value="gemini-1.5-flash">gemini-1.5-flash (Bản cũ)</option>
+                <option value="auto">✨ Tự Động Chọn Mô Hình Flash Nhanh Nhất (Khuyên Dùng - Auto Detect)</option>
+                {availableModelList.length > 0 ? (
+                  availableModelList.map((m) => (
+                    <option key={m} value={m}>
+                      {m} {m.includes('flash') ? '(Siêu tốc 1-2s)' : '(Chuyên sâu)'}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="gemini-2.0-flash">gemini-2.0-flash (Thế hệ Flash 2.0)</option>
+                    <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest (Bản Flash mới nhất)</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro (Mô hình chuyên sâu)</option>
+                  </>
+                )}
               </select>
             </div>
 

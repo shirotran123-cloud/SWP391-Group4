@@ -49,21 +49,13 @@ export class GeminiAIService {
   }
 
   /**
-   * Danh sách model Google Gemini khả dụng
-   */
-  public static readonly SUPPORTED_MODELS = [
-    { id: 'gemini-3.8-flash', name: 'Gemini 3.8 Flash (Khuyên dùng - Chuẩn Google Official, Phản hồi siêu tốc 1-2s)' },
-    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-    { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
-  ];
-
-  /**
-   * Kiểm tra tính hợp lệ của API Key với Google Gemini AI THẬT
+   * Kiểm tra tính hợp lệ của API Key với Google Gemini AI THẬT bằng ModelService.ListModels
+   * Trả về danh sách chính xác các mô hình mà tài khoản Google của bạn có quyền sử dụng.
    */
   public static async pingKey(
     apiKey: string,
-    model: string = 'gemini-3.8-flash'
-  ): Promise<{ success: boolean; message: string; latencyMs: number }> {
+    model?: string
+  ): Promise<{ success: boolean; message: string; latencyMs: number; availableModels?: string[] }> {
     const startTime = Date.now();
     try {
       const cleanKey = apiKey.trim();
@@ -71,59 +63,55 @@ export class GeminiAIService {
         return { success: false, message: 'Khóa API Key không được để trống.', latencyMs: 0 };
       }
 
-      const targetModel = (model || 'gemini-3.8-flash').trim();
-
-      // Thử gọi trực tiếp model được chọn
-      const directUrl = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}?key=${cleanKey}`;
-      const response = await fetch(directUrl, { method: 'GET' });
+      // Gọi trực tiếp ModelService.ListModels như khuyến nghị của Google để lấy danh mục model khả dụng
+      const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`;
+      const response = await fetch(url, { method: 'GET' });
       const latencyMs = Date.now() - startTime;
 
-      if (response.ok) {
-        const data = await response.json();
-        const displayName = data.displayName || targetModel;
+      if (!response.ok) {
+        const errText = await response.text();
+        let errorDetail = response.statusText;
+        try {
+          const errObj = JSON.parse(errText);
+          errorDetail = errObj.error?.message || errorDetail;
+        } catch {
+          // ignore
+        }
         return {
-          success: true,
-          message: `Kết nối thành công tới ${displayName} (${targetModel})! Độ trễ: ${latencyMs}ms`,
+          success: false,
+          message: `Lỗi kết nối (${response.status}): ${errorDetail}`,
           latencyMs,
         };
       }
 
-      // Nếu model cụ thể trả về 404, kiểm tra xem API Key có hợp lệ bằng cách lấy danh sách models
-      if (response.status === 404) {
-        try {
-          const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
-          if (listRes.ok) {
-            const listData = await listRes.json();
-            const availableModels: string[] = (listData.models || []).map((m: any) => (m.name || '').replace('models/', ''));
-            return {
-              success: true,
-              message: `API Key hợp lệ! Danh sách mô hình Google cấp quyền cho bạn: ${availableModels.slice(0, 3).join(', ')}.`,
-              latencyMs: Date.now() - startTime,
-            };
-          }
-        } catch {
-          // ignore
-        }
+      const data = await response.json();
+      const validModels: string[] = (data.models || [])
+        .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m: any) => (m.name || '').replace('models/', ''));
+
+      if (validModels.length === 0) {
+        return {
+          success: false,
+          message: 'API Key hợp lệ nhưng Google chưa cấp quyền generateContent cho mô hình nào.',
+          latencyMs,
+        };
       }
 
-      const errText = await response.text();
-      let errorDetail = response.statusText;
-      try {
-        const errObj = JSON.parse(errText);
-        errorDetail = errObj.error?.message || errorDetail;
-      } catch {
-        // ignore
-      }
+      const preferred = (model || '').replace('models/', '');
+      const chosenModel = validModels.includes(preferred)
+        ? preferred
+        : (validModels.find(m => m.includes('flash')) || validModels[0]);
 
       return {
-        success: false,
-        message: `Lỗi kết nối (${response.status}): ${errorDetail}`,
+        success: true,
+        message: `Kết nối thành công tới Google Gemini! Tìm thấy ${validModels.length} mô hình khả dụng. (Mô hình đề xuất: ${chosenModel})`,
         latencyMs,
+        availableModels: validModels,
       };
     } catch (err: any) {
       return {
         success: false,
-        message: `Lỗi kết nối máy chủ Google: ${err.message || 'Không thể gửi yêu cầu'}`,
+        message: `Lỗi kết nối: ${err.message || 'Không thể gửi yêu cầu tới máy chủ Google'}`,
         latencyMs: Date.now() - startTime,
       };
     }
@@ -131,9 +119,9 @@ export class GeminiAIService {
 
   /**
    * GỌI 100% GOOGLE GEMINI AI THẬT ĐỂ SOẠN ĐỀ BÀI VÀ TESTCASES
-   * KHÔNG sử dụng bất kỳ đề mẫu hardcode nào.
-   * KHÔNG giới hạn timeout 10 giây giả tạo (chờ kết quả thực tế từ Google AI).
-   * Trả về kết quả AI sinh ra hoặc quăng lỗi chính xác từ Google AI nếu có sự cố.
+   * Tự động tra cứu danh sách models khả dụng thực tế của tài khoản (ModelService.ListModels)
+   * để không bao giờ bị lỗi 404 Model Not Found.
+   * KHÔNG dùng bất kỳ đề mẫu hardcode nào.
    */
   public static async generateAssignment(
     apiKey: string,
@@ -152,17 +140,52 @@ export class GeminiAIService {
     const cleanKey = apiKey.trim();
 
     if (!cleanKey) {
-      throw new Error('Chưa cung cấp Google Gemini API Key. Vui lòng cấu hình API Key trước khi sinh đề.');
+      throw new Error('Chưa cung cấp Google Gemini API Key. Vui lòng bấm "Nhập Key Ngay" để cấu hình.');
     }
-
-    const preferredModel = (options.model || 'gemini-3.8-flash').trim();
 
     // Trích xuất số lượng testcases từ văn bản giảng viên hoặc options
     const extractedCount = GeminiAIService.extractRequestedCount(options.lecturerDescription);
     const targetTestCount = options.numTestCases || extractedCount || 5;
 
-    // Sinh mã ngẫu nhiên để kích thích AI tạo ra bối cảnh và ý tưởng mới lạ mỗi lần
+    // Sinh mã hạt giống ngẫu nhiên để buộc AI luôn sinh đề mới mẻ mỗi lần bấm
     const randomSeed = Math.random().toString(36).substring(2, 8);
+
+    // 1. TỰ ĐỘNG TRA CỨU DANH SÁCH MÔ HÌNH KHẢ DỤNG THỰC TẾ TỪ GOOGLE
+    let modelsToTry: string[] = [];
+    try {
+      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const availableFromGoogle: string[] = (listData.models || [])
+          .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+          .map((m: any) => m.name);
+
+        if (availableFromGoogle.length > 0) {
+          const rawRequested = options.model || '';
+          const cleanedRequested = rawRequested.replace('models/', '');
+
+          const exactMatch = availableFromGoogle.find(m => m === `models/${cleanedRequested}` || m === cleanedRequested);
+          const flashModel = availableFromGoogle.find(m => m.toLowerCase().includes('flash'));
+          const primaryChoice = exactMatch || flashModel || availableFromGoogle[0];
+
+          modelsToTry = [primaryChoice, ...availableFromGoogle.filter(m => m !== primaryChoice)];
+        }
+      }
+    } catch (listErr) {
+      console.warn('Không thể tự động liệt kê models từ Google, sử dụng danh sách phổ biến:', listErr);
+    }
+
+    if (modelsToTry.length === 0) {
+      const requested = options.model ? [options.model.startsWith('models/') ? options.model : `models/${options.model}`] : [];
+      modelsToTry = Array.from(new Set([
+        ...requested,
+        'models/gemini-2.0-flash',
+        'models/gemini-1.5-flash-latest',
+        'models/gemini-1.5-flash',
+        'models/gemini-1.5-pro',
+        'models/gemini-pro'
+      ]));
+    }
 
     const systemPrompt = `Bạn là chuyên gia khảo thí AI tại Đại học FPT.
 Nhiệm vụ: Soạn thảo đề thi lập trình chi tiết, sáng tạo, thực tế và độc đáo theo yêu cầu của Giảng viên.
@@ -203,22 +226,16 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
 - TRỌNG SỐ ĐIỂM: Phân bổ các trọng số điểm khác nhau cho từng testcase theo độ khó (ví dụ test dễ 1.5đ, trung bình 2.0đ, ẩn/biên 2.5đ... tổng cộng khoảng 10.0đ).
 - BỐI CẢNH THỰC TẾ: Hãy đưa bài toán vào ngữ cảnh kỹ thuật đời thực hấp dẫn (như mạng viễn thông, drone y tế, giao thông thông minh, tài chính, logistics, hệ thống phân tán...).`;
 
-    // Danh sách các model để thử gọi
-    const candidateModels = Array.from(new Set([
-      preferredModel,
-      'gemini-3.8-flash',
-      'gemini-2.5-flash',
-      'gemini-1.5-flash'
-    ]));
-
     let lastError: Error | null = null;
     let successfulModel = '';
     let parsedData: any = null;
 
-    for (const modelToTry of candidateModels) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelToTry}:generateContent?key=${cleanKey}`;
+    // 2. GỌI TRỰC TIẾP LÊN MÁY CHỦ GOOGLE GEMINI AI
+    for (const modelToTry of modelsToTry) {
+      const endpoint = modelToTry.startsWith('models/') ? modelToTry : `models/${modelToTry}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/${endpoint}:generateContent?key=${cleanKey}`;
 
+      try {
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -269,19 +286,19 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
         }
 
         parsedData = JSON.parse(cleaned);
-        successfulModel = modelToTry;
-        break; // Thành công từ Google AI thật!
+        successfulModel = modelToTry.replace('models/', '');
+        break; // Gọi AI thành công 100%!
       } catch (err: any) {
         lastError = err;
         console.warn(`Lỗi khi gọi model ${modelToTry}:`, err.message);
-        // Nếu lỗi là 400 (API Key sai), không cần thử model khác, quăng lỗi ngay
-        if (err.message?.includes('400') || err.message?.includes('API_KEY_INVALID')) {
+        // Nếu lỗi là 400 (API Key sai), không cần thử model khác, báo lỗi ngay
+        if (err.message?.includes('400') || err.message?.includes('API_KEY_INVALID') || err.message?.includes('API key not valid')) {
           throw err;
         }
       }
     }
 
-    // NẾU TẤT CẢ MODEL ĐỀU LỖI: QUĂNG LỖI THẬT, TUYỆT ĐỐI KHÔNG DÙNG ĐỀ MẪU HARDCODE
+    // NẾU TẤT CẢ MODEL ĐỀU LỖI: QUĂNG LỖI THẬT TỪ GOOGLE, TUYỆT ĐỐI KHÔNG DÙNG ĐỀ MẪU HARDCODE
     if (!parsedData) {
       throw new Error(
         lastError?.message ||
