@@ -210,6 +210,8 @@ export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
 // Sinh vien: ${studentEmail}
 // Bai tap: ASM-SWP-01 (Thuat toan Sap xep O(N log N))
 // Ngon ngu: Java 17 (OpenJDK)
+// ⚠️ LƯU Ý HỘI ĐỒNG: File nộp thực tế trên máy chủ là PRJ301-1.zip (3.23 MB - Nộp nhầm file đồ án Web PRJ301).
+// Do đó hệ thống tự động cho 0 điểm. Sinh viên gửi đơn phúc khảo kèm mã nguồn QuickSort chuẩn bên dưới để xin chấm lại:
 // ================================================================
 package com.aita.sorting;
 
@@ -263,32 +265,60 @@ public class Solution {
     const passedTestcases = details?.passedTestcases ?? 2;
     const totalTestcases = details?.totalTestcases ?? 2;
 
-    const testcases = [
-      {
-        id: 'TC-01',
-        title: 'Mẫu I/O cơ bản (6 phần tử ngẫu nhiên)',
-        input: '6\\n5 2 9 1 5 6',
-        expected: '1 2 5 5 6 9',
-        actual: '1 2 5 5 6 9',
-        status: 'PASSED',
-        timeMs: 68,
-        memoryMb: 36,
-        score: 4.0,
-        maxScore: 4.0,
-      },
-      {
-        id: 'TC-02',
-        title: 'Hidden Benchmark O(N log N) - 100,000 phần tử ngẫu nhiên',
-        input: '100000\\n[Array 100,000 integers in range -10^6..10^6]',
-        expected: '100,000 số nguyên sắp xếp tăng dần, thời gian < 2000ms',
-        actual: 'Sắp xếp chính xác 100% trong 131ms',
-        status: details?.passedTestcases === 1 ? 'FAILED' : 'PASSED',
-        timeMs: 131,
-        memoryMb: 94,
-        score: details?.passedTestcases === 1 ? 0 : 3.0,
-        maxScore: 3.0,
-      },
-    ];
+    const isInvalid = (originalScore === 0 && passedTestcases === 0);
+    const testcases = isInvalid
+      ? [
+          {
+            id: 'TC-01',
+            title: 'Mẫu I/O cơ bản (6 phần tử ngẫu nhiên)',
+            input: '6\n5 2 9 1 5 6',
+            expected: '1 2 5 5 6 9',
+            actual: 'LỖI: Không phát hiện I/O giải thuật sắp xếp (File zip nộp lên là PRJ301-1.zip)',
+            status: 'FAILED',
+            timeMs: 0,
+            memoryMb: 0,
+            score: 0.0,
+            maxScore: 4.0,
+          },
+          {
+            id: 'TC-02',
+            title: 'Hidden Benchmark O(N log N) - 100,000 phần tử ngẫu nhiên',
+            input: '100000\n[Array 100,000 integers in range -10^6..10^6]',
+            expected: '100,000 số nguyên sắp xếp tăng dần, thời gian < 2000ms',
+            actual: 'LỖI: Tiến trình bị hủy do bài nộp không hợp lệ (Invalid Submission 0đ)',
+            status: 'FAILED',
+            timeMs: 0,
+            memoryMb: 0,
+            score: 0.0,
+            maxScore: 3.0,
+          },
+        ]
+      : [
+          {
+            id: 'TC-01',
+            title: 'Mẫu I/O cơ bản (6 phần tử ngẫu nhiên)',
+            input: '6\n5 2 9 1 5 6',
+            expected: '1 2 5 5 6 9',
+            actual: '1 2 5 5 6 9',
+            status: 'PASSED',
+            timeMs: 68,
+            memoryMb: 36,
+            score: 4.0,
+            maxScore: 4.0,
+          },
+          {
+            id: 'TC-02',
+            title: 'Hidden Benchmark O(N log N) - 100,000 phần tử ngẫu nhiên',
+            input: '100000\n[Array 100,000 integers in range -10^6..10^6]',
+            expected: '100,000 số nguyên sắp xếp tăng dần, thời gian < 2000ms',
+            actual: passedTestcases === 1 ? 'TLE 2005ms: Vượt quá giới hạn 2.0s' : 'Sắp xếp chính xác 100% trong 131ms',
+            status: passedTestcases === 1 ? 'FAILED' : 'PASSED',
+            timeMs: passedTestcases === 1 ? 2005 : 131,
+            memoryMb: 94,
+            score: passedTestcases === 1 ? 0 : 3.0,
+            maxScore: 3.0,
+          },
+        ];
 
     const aiRating = details?.aiRating || {
       cleanCodeScore: 8.5,
