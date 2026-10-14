@@ -390,12 +390,15 @@ export class CourseRepository implements OnModuleInit {
     }
   }
 
-    // 3. Cập nhật bộ nhớ đệm
+    // 3. Cập nhật bộ nhớ đệm (Lưu theo cả Mã SV lẫn Email để hỗ trợ truy vấn)
     for (const s of students) {
-      if (!this.studentEnrollments.has(s.studentCode)) {
-        this.studentEnrollments.set(s.studentCode, new Set());
+      const keys = [s.studentCode, s.email, s.email?.toLowerCase()].filter(Boolean) as string[];
+      for (const k of keys) {
+        if (!this.studentEnrollments.has(k)) {
+          this.studentEnrollments.set(k, new Set());
+        }
+        this.studentEnrollments.get(k)!.add(classId);
       }
-      this.studentEnrollments.get(s.studentCode)!.add(classId);
     }
 
     return {
@@ -436,10 +439,18 @@ export class CourseRepository implements OnModuleInit {
       }
     }
 
-    // Fallback: Tìm qua memory map hoặc trả về tất cả các lớp đang mở
-    const enrolledClassIds = this.studentEnrollments.get(studentId);
-    if (enrolledClassIds && enrolledClassIds.size > 0) {
-      return Array.from(this.records.values()).filter((c) => enrolledClassIds.has(c.courseId));
+    // Fallback: Tìm qua memory map theo cả studentId, email, lowercase
+    const keysToSearch = [studentId, studentId?.toLowerCase()].filter(Boolean) as string[];
+    const matchedClassIds = new Set<string>();
+    for (const k of keysToSearch) {
+      const ids = this.studentEnrollments.get(k);
+      if (ids) {
+        ids.forEach((id) => matchedClassIds.add(id));
+      }
+    }
+
+    if (matchedClassIds.size > 0) {
+      return Array.from(this.records.values()).filter((c) => matchedClassIds.has(c.courseId));
     }
 
     // Nếu sinh viên chưa có môn riêng, mặc định cho thấy môn SWP391 chuẩn

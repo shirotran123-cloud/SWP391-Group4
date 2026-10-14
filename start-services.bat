@@ -10,7 +10,7 @@ start "AITA API Gateway (Port 3000)" cmd /k "npm run start --prefix api-gateway"
 
 timeout /t 3 /nobreak >nul
 
-echo [2/3] Khoi dong AITA GenAI & AST Hub (Port 3001)...
+echo [2/3] Khoi dong AITA GenAI ^& AST Hub (Port 3001)...
 start "AITA GenAI Hub (Port 3001)" cmd /k "npm run server --prefix genai-hub"
 
 timeout /t 2 /nobreak >nul
