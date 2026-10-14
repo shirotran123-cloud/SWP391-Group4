@@ -163,13 +163,6 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
   const passedCount = submissions.filter(
     (s) => s.status === 'PASSED' || s.status === 'COMPLETED' || (s.score && s.score >= 5.0)
   ).length;
-  const avgScore =
-    totalSubmissions > 0
-      ? (
-          submissions.reduce((acc, s) => acc + (s.score ?? s.details?.score ?? 0), 0) /
-          totalSubmissions
-        ).toFixed(1)
-      : '0.0';
 
   // Filter
   const filteredSubmissions = submissions.filter((s) => {
@@ -258,13 +251,6 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>TỔNG BÀI ĐÃ NỘP</div>
             <div style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
               {totalSubmissions} <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-dim)' }}>bài</span>
-            </div>
-          </div>
-
-          <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>ĐIỂM TRUNG BÌNH (GPA)</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#10b981', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Award size={22} /> {avgScore} <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-dim)' }}>/ 10.0</span>
             </div>
           </div>
 
