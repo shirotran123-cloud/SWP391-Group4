@@ -83,6 +83,30 @@ async function main(): Promise<boolean> {
   gate(extractFirstSource(passZip, 'python') === null, 'demo extract ignores wrong-language zip (py filter on java zip)');
   gate(extractFirstSource(passZip, 'java')!.includes('Arrays.sort'), 'demo extract matches java extension');
 
+  // 7. Code-identity hardening: keyword-stuffed non-source scores 0.
+  const stuffedTxt = ('sorting memo print via System out Scanner read for ( item while ( next sort( list output result record line number N total order arrange sequence value data element entry point item set group batch row column table view tone note remark comment detail summary brief story text prose paragraph passage phrase sentence remark again repeat loop around over under through across beyond within without above below between among along across plus minus times divide equal total whole each every all any some few many much more most other such only own same than too very can will just should now here there then when where which while for print sort Scanner System out output read list order arrange ').repeat(12);
+  gate(!/[{;}]/.test(stuffedTxt), 'stuffed fixture has no code-structure marker');
+  const stuffedRes = analyzeSourceCode(stuffedTxt, 'java', { tc1TimeMs: 0, tc2TimeMs: 0 });
+  gate(stuffedRes.score === 0 && stuffedRes.tc1Status === 'FAILED' && stuffedRes.tc2Status === 'FAILED', 'keyword-stuffed txt scores 0/FAILED');
+  gate(stuffedRes.codeSmells[0]?.rule === 'Invalid Submission' && stuffedRes.cleanCodeScore === 0, 'keyword-stuffed txt flagged INVALID');
+  const noIdentity = ('sorting memo print via System out Scanner read for ( item while ( next sort( list output result record line total order arrange sequence value data element entry point item set group batch row table view tone note remark detail summary brief story text prose paragraph passage phrase sentence again repeat loop around over under through across beyond within without above below between among along plus minus times divide total whole each every all any some few many much more most other such only own same than too very can will just should now here there then when where which while for print sort Scanner System out output read list order ').repeat(4);
+  const noIdentityRes = analyzeSourceCode(noIdentity, 'java', { tc1TimeMs: 0, tc2TimeMs: 0 });
+  gate(noIdentityRes.score === 0 && noIdentityRes.tc1Status === 'FAILED', 'code without identity marker scores 0');
+  gate(analyzeSourceCode(passCode!, 'java', { tc1TimeMs: 80, tc2TimeMs: 140 }).score === 9.8, 'identity gate keeps PASS at 9.8');
+  gate(analyzeSourceCode(srpCode!, 'java', { tc1TimeMs: 80, tc2TimeMs: 140 }).score === 5.7, 'identity gate keeps SRP at 5.7');
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const AdmZipTest = require('adm-zip');
+  const txtOnlyZip = path.join(root, 'txt-only-identity-check.zip');
+  try {
+    const z = new AdmZipTest();
+    z.addFile('notes.txt', Buffer.from(stuffedTxt, 'utf-8'));
+    z.writeZip(txtOnlyZip);
+    gate(extractFirstSource(txtOnlyZip, 'java') === null, 'txt-only zip extracts null (java filter)');
+    gate(extractFirstSource(txtOnlyZip) === null, 'txt-only zip extracts null (default filter)');
+  } finally {
+    try { fs.unlinkSync(txtOnlyZip); } catch { /* ignore */ }
+  }
+
   console.log(`---\nDEMO-REAL: ${passed} passed, ${failed} failed`);
   return failed === 0;
 }

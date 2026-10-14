@@ -50,6 +50,9 @@ async function main(): Promise<void> {
     process.env.AITA_TEST_PORT = "3113";
     const { runHttpSuite } = require("./verify-gateway");
     if (!(await runHttpSuite())) code = 1;
+    process.env.AITA_TEST_PORT = "3126";
+    const { runTestCasesSuite } = require("./test-cases.test");
+    if (!(await runTestCasesSuite())) code = 1;
   } finally {
     // Suites write COV/GATE/TEST rows into cwd data stores; restore seeds.
     restoreStores(snap);
