@@ -59,21 +59,14 @@ function extractSourceCodeFromZip(filePath: string, language: string): string | 
     };
     const targetExts = extMap[language.toLowerCase()] || ['.java', '.py', '.cpp', '.cs'];
 
-    // Tìm file source code khớp ngôn ngữ
+    // Tìm file source code khớp ngôn ngữ (kể cả file rỗng — để scoring gate
+    // phát hiện INVALID thay vì chấm nhầm file khác; không fallback đọc bừa).
     for (const entry of entries) {
       if (!entry.isDirectory && !entry.entryName.includes('__MACOSX')) {
         const name = entry.entryName.toLowerCase();
         if (targetExts.some((ext) => name.endsWith(ext))) {
           return zip.readAsText(entry);
         }
-      }
-    }
-
-    // Fallback: thử đọc bất kỳ file text nào
-    for (const entry of entries) {
-      if (!entry.isDirectory && !entry.entryName.includes('__MACOSX')) {
-        const content = zip.readAsText(entry);
-        if (content && content.trim().length > 50) return content;
       }
     }
 

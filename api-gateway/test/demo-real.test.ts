@@ -73,6 +73,16 @@ async function main(): Promise<boolean> {
   gate(demoSrc.includes('grading-core'), 'demo imports the real grading-core module');
   void gradeSource;
 
+  // 6. No-code hardening: wrong-extension / empty / gibberish score 0.
+  const noJava = analyzeSourceCode('plain english report '.repeat(30), 'java', { tc1TimeMs: 0, tc2TimeMs: 0 });
+  gate(noJava.score === 0 && noJava.tc1Status === 'FAILED', 'non-code text scores 0/FAILED');
+  const emptySrc = analyzeSourceCode('', 'java', { tc1TimeMs: 0, tc2TimeMs: 0 });
+  gate(emptySrc.score === 0 && emptySrc.codeSmells[0]?.rule === 'Invalid Submission', 'empty source flagged INVALID');
+  const shortJava = analyzeSourceCode('public class Main {}', 'java', { tc1TimeMs: 0, tc2TimeMs: 0 });
+  gate(shortJava.score === 0, 'short skeleton scores 0');
+  gate(extractFirstSource(passZip, 'python') === null, 'demo extract ignores wrong-language zip (py filter on java zip)');
+  gate(extractFirstSource(passZip, 'java')!.includes('Arrays.sort'), 'demo extract matches java extension');
+
   console.log(`---\nDEMO-REAL: ${passed} passed, ${failed} failed`);
   return failed === 0;
 }
