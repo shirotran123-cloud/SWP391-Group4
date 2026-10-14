@@ -21,13 +21,13 @@ function generateFallbackSubId(): string {
 }
 
 const mockTask: Task = {
-  id: 'TASK-SWP391-SPRINT2',
-  title: 'Xây dựng Thuật toán Sắp xếp Tối ưu & Cây Cú pháp AST',
-  course: 'SWP391 - Đề Án Phát Triển Phần Mềm (Agile Scrum)',
-  deadline: new Date(Date.now() + 2 * 3600 * 1000 + 45 * 60 * 1000).toISOString(),
+  id: 'ASM-SWP-01',
+  title: 'Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị',
+  course: 'SWP391 - Đồ Án Phát Triển Phần Mềm (Agile Scrum)',
+  deadline: new Date(Date.now() + 5 * 24 * 3600 * 1000 + 4 * 3600 * 1000).toISOString(),
   maxSizeMb: 10,
   allowedExtensions: ['.zip'],
-  description: 'Xây dựng mô đun sắp xếp danh sách giao dịch đơn hàng động 100,000 phần tử trong hệ sinh thái E-Commerce. Thuật toán bắt buộc đạt O(N log N), tuân thủ nguyên lý Đơn trách nhiệm (SRP), phân tách I/O và cấu trúc cây cú pháp AST chống gian lận.',
+  description: 'Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian O(log N) và tuân thủ các nguyên lý SOLID (SRP, DIP).',
 };
 
 const mockSourceCodeStudent = `package com.aita.autograder;

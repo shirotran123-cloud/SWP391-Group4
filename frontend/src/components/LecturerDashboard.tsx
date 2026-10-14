@@ -574,6 +574,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setPublishedAssignments(updatedAsms);
     try {
       localStorage.setItem('aita_published_assignments', JSON.stringify(updatedAsms));
+      window.dispatchEvent(new Event('aita_published_assignments_updated'));
     } catch {
       // ignore
     }
@@ -607,6 +608,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setPublishedAssignments(updated);
     try {
       localStorage.setItem('aita_published_assignments', JSON.stringify(updated));
+      window.dispatchEvent(new Event('aita_published_assignments_updated'));
     } catch {
       // ignore
     }
@@ -619,6 +621,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setPublishedAssignments(updated);
     try {
       localStorage.setItem('aita_published_assignments', JSON.stringify(updated));
+      window.dispatchEvent(new Event('aita_published_assignments_updated'));
     } catch {
       // ignore
     }

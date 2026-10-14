@@ -80,76 +80,6 @@ interface SubmissionViewProps {
 
 const defaultAssignmentPool: StudentTaskItem[] = [
   {
-    id: 'TASK-SWP391-SPRINT2',
-    courseId: 'COURSE-SWP391',
-    courseCode: 'SWP391',
-    course: 'SWP391 - Đồ Án Phát Triển Phần Mềm (Agile Scrum)',
-    title: 'Xây dựng Thuật toán Sắp xếp Tối ưu & Cây Cú pháp AST',
-    description: 'Xây dựng mô đun sắp xếp danh sách giao dịch đơn hàng động 100,000 phần tử trong hệ thống E-Commerce. Thuật toán bắt buộc đạt độ phức tạp O(N log N), tuân thủ nguyên lý Đơn trách nhiệm (SOLID SRP), phân tách I/O và cấu trúc cây cú pháp AST chống gian lận.',
-    deadline: new Date(Date.now() + 2 * 3600 * 1000 + 42 * 60 * 1000).toISOString(),
-    timeLimitMs: 2000,
-    memoryLimitMb: 512,
-    allowedLanguages: ['java', 'python', 'cpp', 'dotnet'],
-    allowedExtensions: ['.zip'],
-    maxSizeMb: 10,
-    testCasesCount: 5,
-    status: 'PUBLISHED',
-    rubrics: [
-      { criterion: 'Tính đúng đắn thuật toán & 100% Testcases Sandbox', maxScore: 5.0, description: 'Vượt qua toàn bộ bộ testcases cơ sở và testcases dữ liệu lớn (TLE check)' },
-      { criterion: 'Thiết kế Hướng đối tượng & SOLID (SRP, DIP)', maxScore: 2.5, description: 'Tách riêng bộ sắp xếp Sort Engine khỏi console I/O, sử dụng interface ISorter' },
-      { criterion: 'Tối ưu độ phức tạp O(N log N) & Clean Code', maxScore: 1.5, description: 'Mã nguồn tường minh, đặt tên chuẩn CamelCase, tối ưu thời gian CPU < 2000ms' },
-      { criterion: 'Liêm chính học thuật & AST Winnowing', maxScore: 1.0, description: 'Mã nguồn độc lập, mức độ tương đồng AST với sinh viên khác dưới 25%' },
-    ],
-    technicalRequirements: {
-      problemContext: 'Trong hệ thống xử lý giao dịch thương mại điện tử quy mô lớn, khi có đợt siêu khuyến mãi Flash-Sale, hàng trăm nghìn đơn hàng đổ về đồng thời cần được sắp xếp theo mức độ ưu tiên và thời gian đặt hàng. Sinh viên cần xây dựng thuật toán sắp xếp mảng động N phần tử, đảm bảo thời gian chạy tối đa không vượt quá 2000ms cho 100,000 phần tử (bắt buộc O(N log N)). Hệ thống tự động AITA sẽ phân tích mã nguồn qua cây cú pháp trừu tượng AST để đánh giá nguyên lý Đơn trách nhiệm (SRP) và kiểm tra tính liêm chính học thuật.',
-      inputFormat: [
-        'Dòng 1: Một số nguyên dương N biểu diễn số lượng phần tử cần xử lý (1 ≤ N ≤ 100,000).',
-        'Dòng 2: Gồm N số nguyên A[1], A[2], ..., A[N] cách nhau bởi khoảng trắng (-10^9 ≤ A[i] ≤ 10^9).',
-      ],
-      outputFormat: [
-        'In ra trên một dòng duy nhất chuỗi N số nguyên đã được sắp xếp theo thứ tự tăng dần, mỗi phần tử cách nhau đúng một khoảng trắng.',
-        'Kết thúc dòng bằng ký tự xuống dòng (\\n). Không in các chuỗi thông báo thừa như "Nhap N:".',
-      ],
-      constraints: [
-        'Giới hạn số lượng phần tử: 1 ≤ N ≤ 100,000 (Bộ testcase kiểm tra hiệu năng giới hạn TLE).',
-        'Giá trị phần tử: -10^9 ≤ A[i] ≤ 10^9 (Cần chú ý kiểu dữ liệu nguyên 64-bit nếu tính toán phát sinh).',
-        'Thời gian thực thi tối đa: 2000 ms (2.0 giây). Các thuật toán O(N^2) như Bubble Sort, Insertion Sort sẽ bị xử thua TLE.',
-        'Bộ nhớ RAM cấp phát: 512 MB trong môi trường Docker Sandbox biệt lập.',
-      ],
-      complexityRequirements: [
-        'Độ phức tạp thời gian (Time Complexity): Bắt buộc đạt O(N log N) trong trường hợp trung bình và xấu nhất (khuyến khích QuickSort 3-Way hoặc MergeSort).',
-        'Độ phức tạp không gian (Space Complexity): O(N) hoặc tối ưu O(1) in-place.',
-      ],
-      solidGuidelines: [
-        'Single Responsibility Principle (SRP): Tách riêng class thực thi sắp xếp (ví dụ: QuickSortOrderSorter) và class đọc ghi luồng dữ liệu (Solution / ConsoleRunner). Tuyệt đối không gộp chung logic sort và in ấn vào một hàm duy nhất.',
-        'Dependency Inversion Principle (DIP): Định nghĩa interface ISorter để tầng gọi không phụ thuộc trực tiếp vào cài đặt cụ thể của thuật toán.',
-      ],
-      packagingGuide: {
-        entryPoint: 'Solution.java (Java) / main.py (Python) / main.cpp (C++)',
-        directoryStructure: 'solution.zip\\n├── Solution.java\\n└── (các class / interface phụ trợ nếu có)',
-        rules: [
-          'Chỉ nộp file có định dạng nén chuẩn .zip, dung lượng tối đa không vượt quá 10MB.',
-          'Mã nguồn chính phải chứa hàm main() nhận dữ liệu từ STDIN và in ra STDOUT.',
-          'Nghiêm cấm: Gọi System.exit(), gọi lệnh thực thi hệ điều hành Runtime.getRuntime().exec(), mở kết nối Socket/HTTP mạng ra ngoài.',
-        ],
-      },
-    },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Mảng Ngẫu Nhiên Cơ Bản)',
-        input: '5\\n4 2 5 1 3',
-        expectedOutput: '1 2 3 4 5',
-        explanation: 'Mảng ban đầu gồm 5 phần tử [4, 2, 5, 1, 3] được thuật toán sắp xếp tăng dần thành [1, 2, 3, 4, 5].',
-      },
-      {
-        name: 'Testcase Mẫu 2 (Số Âm & Phần Tử Trùng Lặp)',
-        input: '6\\n10 0 -5 10 -2 0',
-        expectedOutput: '-5 -2 0 0 10 10',
-        explanation: 'Mảng chứa số âm (-5, -2) và các giá trị trùng lặp (hai số 0, hai số 10). Thuật toán cần xử lý chính xác và ổn định.',
-      },
-    ],
-  },
-  {
     id: 'ASM-SWP-01',
     courseId: 'COURSE-SWP391',
     courseCode: 'SWP391',
@@ -604,52 +534,81 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Tải danh sách bài tập đã xuất bản (Đồng bộ với LecturerDashboard) và lịch sử nộp bài
+  // 1. Tải danh sách bài tập đã xuất bản (Đồng bộ thời gian thực 100% với Giảng viên)
   useEffect(() => {
     loadAssignmentsAndSubmissions();
+
+    const handleSync = () => {
+      loadAssignmentsAndSubmissions();
+    };
+
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('aita_published_assignments_updated', handleSync);
+
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('aita_published_assignments_updated', handleSync);
+    };
   }, [studentId]);
 
   const loadAssignmentsAndSubmissions = () => {
-    let combinedPool: StudentTaskItem[] = [...defaultAssignmentPool];
+    let listToDisplay: StudentTaskItem[] = [];
 
-    // Đọc từ localStorage do Giảng viên vừa tạo và xuất bản
     try {
       const savedPublished = localStorage.getItem('aita_published_assignments');
+      let publishedList: any[] = [];
       if (savedPublished) {
-        const parsed: any[] = JSON.parse(savedPublished);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const formattedFromLecturer: StudentTaskItem[] = parsed.map((item) => ({
-            id: item.id || `ASM-${Date.now()}`,
-            courseId: item.courseId || 'COURSE-SWP391',
-            courseCode: item.courseId ? item.courseId.replace('COURSE-', '') : 'SWP391',
-            course: `${item.courseId ? item.courseId.replace('COURSE-', '') : 'SWP391'} - Bài Tập Giảng Viên Đã Giao`,
-            title: item.title,
-            description: item.description,
-            deadline: item.deadline ? (item.deadline.includes('T') ? item.deadline : `${item.deadline}T23:59:00`) : new Date(Date.now() + 7 * 86400000).toISOString(),
-            timeLimitMs: item.timeLimitMs || 2000,
-            memoryLimitMb: item.memoryLimitMb || 512,
-            allowedLanguages: item.allowedLanguages || ['java', 'python', 'cpp'],
-            allowedExtensions: ['.zip'],
-            maxSizeMb: 10,
-            testCasesCount: item.testCases ? item.testCases.length : 5,
-            rubrics: item.rubrics || [],
-            status: item.status || 'PUBLISHED',
-          }));
-
-          // Gộp các bài tập từ Giảng viên lên trước, không bị trùng lặp ID
-          const map = new Map<string, StudentTaskItem>();
-          formattedFromLecturer.forEach((item) => map.set(item.id, item));
-          combinedPool.forEach((item) => {
-            if (!map.has(item.id)) map.set(item.id, item);
-          });
-          combinedPool = Array.from(map.values());
+        try {
+          publishedList = JSON.parse(savedPublished);
+        } catch {
+          publishedList = [];
         }
       }
+
+      // Nếu chưa có trong localStorage, sử dụng defaultAssignmentPool làm nguồn chuẩn ban đầu
+      if (!Array.isArray(publishedList) || publishedList.length === 0) {
+        publishedList = defaultAssignmentPool;
+        try {
+          localStorage.setItem('aita_published_assignments', JSON.stringify(defaultAssignmentPool));
+        } catch {
+          // ignore
+        }
+      }
+
+      // Đồng bộ trực tiếp từ danh sách bài tập Giảng viên đã giao - KHÔNG tự động chèn thêm bài tập ảo
+      listToDisplay = publishedList.map((item) => {
+        const matchedTemplate = defaultAssignmentPool.find(
+          (t) => t.id === item.id || t.title.toLowerCase().trim() === (item.title || '').toLowerCase().trim()
+        );
+        const courseId = item.courseId || 'COURSE-SWP391';
+        const courseCode = item.courseCode || courseId.replace('COURSE-', '').replace('CRS-', '');
+
+        return {
+          id: item.id || `ASM-${Date.now()}`,
+          courseId: courseId,
+          courseCode: courseCode,
+          course: item.course || `${courseCode} - Bài Tập Giảng Viên Đã Giao`,
+          title: item.title,
+          description: item.description,
+          deadline: item.deadline ? (item.deadline.includes('T') ? item.deadline : `${item.deadline}T23:59:00`) : new Date(Date.now() + 7 * 86400000).toISOString(),
+          timeLimitMs: item.timeLimitMs || matchedTemplate?.timeLimitMs || 2000,
+          memoryLimitMb: item.memoryLimitMb || matchedTemplate?.memoryLimitMb || 512,
+          allowedLanguages: item.allowedLanguages || matchedTemplate?.allowedLanguages || ['java', 'python', 'cpp'],
+          allowedExtensions: item.allowedExtensions || ['.zip'],
+          maxSizeMb: item.maxSizeMb || 10,
+          testCasesCount: item.testCases ? item.testCases.length : (matchedTemplate?.testCasesCount || 5),
+          rubrics: item.rubrics && item.rubrics.length > 0 ? item.rubrics : matchedTemplate?.rubrics,
+          technicalRequirements: matchedTemplate?.technicalRequirements,
+          sampleTestCases: matchedTemplate?.sampleTestCases,
+          status: item.status || 'PUBLISHED',
+        };
+      });
     } catch (e) {
       console.warn('Không thể đọc aita_published_assignments:', e);
+      listToDisplay = [...defaultAssignmentPool];
     }
 
-    setAssignmentList(combinedPool);
+    setAssignmentList(listToDisplay);
 
     // Đọc lịch sử nộp bài của sinh viên
     try {
@@ -663,7 +622,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
     // Nếu props task được truyền vào cụ thể ban đầu, mở nó
     if (task) {
-      const matched = combinedPool.find((t) => t.id === task.id);
+      const matched = listToDisplay.find((t: StudentTaskItem) => t.id === task.id);
       setSelectedTask(matched || { ...task, allowedExtensions: ['.zip'], maxSizeMb: 10 });
     }
   };
