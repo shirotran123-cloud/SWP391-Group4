@@ -422,17 +422,51 @@ export class CourseRepository implements OnModuleInit {
           [studentId],
         );
         if (rows.length > 0) {
-          return rows.map((r) => ({
-            courseId: r.class_id,
-            courseCode: r.class_code,
-            courseName: r.class_name,
-            description: r.description || '',
-            semester: r.semester,
-            instructorId: r.lecturer_id,
-            isActive: r.is_active,
-            createdAt: new Date(r.created_at),
-            updatedAt: new Date(r.updated_at),
-          }));
+          const seen = new Set<string>();
+          const result: CourseRecord[] = [];
+          for (const r of rows) {
+            const upper = (r.class_code || r.class_id || '').toUpperCase();
+            let norm = r.class_code;
+            if (upper.includes('SWP391')) norm = 'SWP391';
+            else if (upper.includes('PRN211')) norm = 'PRN211';
+            else if (upper.includes('CSD201') || upper.includes('CSD')) norm = 'CSD201';
+
+            if (!seen.has(norm)) {
+              seen.add(norm);
+              result.push({
+                courseId: r.class_id,
+                courseCode: norm,
+                courseName: r.class_name,
+                description: r.description || '',
+                semester: r.semester,
+                instructorId: r.lecturer_id,
+                isActive: r.is_active,
+                createdAt: new Date(r.created_at),
+                updatedAt: new Date(r.updated_at),
+              });
+            }
+          }
+          // Luôn đảm bảo sinh viên có môn CSD201
+          if (!seen.has('CSD201')) {
+            const csdClass = await this.postgres.safeQuery<any>(
+              `SELECT * FROM classes WHERE class_code ILIKE '%CSD%' OR class_id ILIKE '%CSD%' LIMIT 1`
+            );
+            if (csdClass.length > 0) {
+              const c = csdClass[0];
+              result.push({
+                courseId: c.class_id,
+                courseCode: 'CSD201',
+                courseName: c.class_name,
+                description: c.description || '',
+                semester: c.semester,
+                instructorId: c.lecturer_id,
+                isActive: c.is_active,
+                createdAt: new Date(c.created_at),
+                updatedAt: new Date(c.updated_at),
+              });
+            }
+          }
+          if (result.length > 0) return result;
         }
       } catch (err: any) {
         this.logger.warn(`[CourseRepository] findCoursesByStudent error: ${err.message}`);
@@ -449,17 +483,54 @@ export class CourseRepository implements OnModuleInit {
       }
     }
 
+    let coursesToReturn: CourseRecord[] = [];
     if (matchedClassIds.size > 0) {
-      return Array.from(this.records.values()).filter((c) => matchedClassIds.has(c.courseId));
+      coursesToReturn = Array.from(this.records.values()).filter((c) => matchedClassIds.has(c.courseId));
+    } else {
+      coursesToReturn = Array.from(this.records.values());
     }
 
-    // Nếu sinh viên chưa có môn riêng, mặc định cho thấy môn SWP391 chuẩn
-    return Array.from(this.records.values()).slice(0, 2);
+    // Chuẩn hóa và gom nhóm theo 3 môn cốt lõi: SWP391, PRN211, CSD201
+    const seenCodes = new Set<string>();
+    const coreCourses: CourseRecord[] = [];
+
+    for (const c of coursesToReturn) {
+      const code = (c.courseCode || c.courseId || '').toUpperCase();
+      let norm = '';
+      if (code.includes('SWP391')) norm = 'SWP391';
+      else if (code.includes('PRN211')) norm = 'PRN211';
+      else if (code.includes('CSD201') || code.includes('CSD')) norm = 'CSD201';
+
+      if (norm && !seenCodes.has(norm)) {
+        seenCodes.add(norm);
+        coreCourses.push({
+          ...c,
+          courseCode: norm,
+        });
+      }
+    }
+
+    // Bổ sung môn cốt lõi nếu chưa có (đặc biệt là CSD201 theo yêu cầu)
+    for (const targetNorm of ['SWP391', 'PRN211', 'CSD201']) {
+      if (!seenCodes.has(targetNorm)) {
+        const found = Array.from(this.records.values()).find((c) => {
+          const upper = (c.courseCode || c.courseId || '').toUpperCase();
+          return upper.includes(targetNorm);
+        });
+        if (found) {
+          seenCodes.add(targetNorm);
+          coreCourses.push({
+            ...found,
+            courseCode: targetNorm,
+          });
+        }
+      }
+    }
+
+    if (coreCourses.length > 0) return coreCourses;
+    return Array.from(this.records.values()).slice(0, 3);
   }
 
-  /**
-   * Lấy danh sách sinh viên ghi danh trong lớp
-   */
   public async getStudentsInCourse(classId: string): Promise<EnrolledStudentInfo[]> {
     if (this.postgres.isAvailable()) {
       try {

@@ -95,27 +95,56 @@ export function App() {
   // Danh sách môn học sinh viên đang tham gia (nạp từ PostgreSQL qua API)
   const [enrolledCourses, setEnrolledCourses] = useState<Array<{ courseId: string; courseCode: string; courseName: string; semester: string; description?: string }>>([
     {
-      courseId: 'CRS-SWP391',
-      courseCode: 'SE1701-SWP391',
-      courseName: 'Application Development Project (SWP391)',
+      courseId: 'COURSE-SWP391',
+      courseCode: 'SWP391',
+      courseName: 'Application Development Project',
       semester: 'Fall 2026',
-      description: 'Dự án Phát triển phần mềm theo chuẩn Agile Scrum',
+      description: 'Dự Án Phát triển phần mềm theo chuẩn Agile Scrum',
+    },
+    {
+      courseId: 'COURSE-PRN211',
+      courseCode: 'PRN211',
+      courseName: 'Basic Cross-Platform .NET Application',
+      semester: 'Fall 2026',
+      description: 'Lập trình ứng dụng đa nền tảng với .NET C#',
+    },
+    {
+      courseId: 'CRS-CSD201',
+      courseCode: 'CSD201',
+      courseName: 'Data Structures and Algorithms (CSD201)',
+      semester: 'Fall 2026',
+      description: 'Cấu trúc dữ liệu và giải thuật nâng cao (Cây AVL, Dijkstra, Winnowing)',
     },
   ]);
-  const [selectedStudentCourseId, setSelectedStudentCourseId] = useState<string>('CRS-SWP391');
+  const [selectedStudentCourseId, setSelectedStudentCourseId] = useState<string>('ALL');
 
-  // Fetch danh sách môn học của sinh viên từ server
   useEffect(() => {
-    if (currentUser && currentUser.role === 'STUDENT') {
+    if (currentUser?.role === 'STUDENT') {
       const studentId = currentUser.userId || 'SE170000';
       fetch(`${API_BASE_URL}/api/v1/courses/student/${studentId}`)
         .then((res) => res.json())
         .then((data) => {
           const list = data.data || data || [];
           if (Array.isArray(list) && list.length > 0) {
-            setEnrolledCourses(list);
-            if (!list.some((c: any) => c.courseId === selectedStudentCourseId)) {
-              setSelectedStudentCourseId(list[0].courseId);
+            const seen = new Set<string>();
+            const deduped: any[] = [];
+            for (const c of list) {
+              const upper = (c.courseCode || c.courseId || '').toUpperCase();
+              let norm = c.courseCode;
+              if (upper.includes('SWP391')) norm = 'SWP391';
+              else if (upper.includes('PRN211')) norm = 'PRN211';
+              else if (upper.includes('CSD201') || upper.includes('CSD')) norm = 'CSD201';
+
+              if (!seen.has(norm)) {
+                seen.add(norm);
+                deduped.push({
+                  ...c,
+                  courseCode: norm,
+                });
+              }
+            }
+            if (deduped.length > 0) {
+              setEnrolledCourses(deduped);
             }
           }
         })
@@ -231,6 +260,8 @@ export function App() {
       setActiveView('admin');
     } else {
       setActiveView('student');
+      setStudentActiveTab('submission');
+      setSelectedStudentCourseId('ALL');
     }
   };
 
@@ -658,11 +689,18 @@ export function App() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
                 {enrolledCourses.map((c) => {
-                  const isSelected = c.courseId === selectedStudentCourseId;
+                  const isSelected = selectedStudentCourseId === c.courseId || selectedStudentCourseId === c.courseCode;
                   return (
                     <div
                       key={c.courseId}
-                      onClick={() => setSelectedStudentCourseId(c.courseId)}
+                      onClick={() => {
+                        const targetId = c.courseCode || c.courseId;
+                        if (selectedStudentCourseId === targetId || selectedStudentCourseId === c.courseId) {
+                          setSelectedStudentCourseId('ALL');
+                        } else {
+                          setSelectedStudentCourseId(targetId);
+                        }
+                      }}
                       style={{
                         padding: '14px 18px',
                         borderRadius: '12px',
@@ -808,15 +846,11 @@ export function App() {
 
             {studentActiveTab === 'submission' ? (
               <SubmissionView
-                task={{
-                  ...mockTask,
-                  course: (() => {
-                    const active = enrolledCourses.find((c) => c.courseId === selectedStudentCourseId);
-                    return active ? `${active.courseCode} - ${active.courseName}` : mockTask.course;
-                  })(),
-                }}
                 studentId={currentUser.userId}
                 studentName={currentUser.fullName}
+                enrolledCourses={enrolledCourses}
+                selectedCourseId={selectedStudentCourseId}
+                onSelectCourse={(courseId) => setSelectedStudentCourseId(courseId)}
                 onSubmit={(file, taskItem) => handleSubmission(file, undefined, taskItem)}
               />
             ) : studentActiveTab === 'history' ? (

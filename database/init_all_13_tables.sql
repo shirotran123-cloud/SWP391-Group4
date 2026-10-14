@@ -357,7 +357,10 @@ INSERT INTO class_members (member_id, class_id, user_id, status)
 VALUES
     ('MB-001', 'CRS-SWP391', 'SE170000', 'ACTIVE'),
     ('MB-002', 'CRS-SWP391', 'SE170123', 'ACTIVE'),
-    ('MB-003', 'CRS-SWP391', 'SE170456', 'ACTIVE')
+    ('MB-003', 'CRS-SWP391', 'SE170456', 'ACTIVE'),
+    ('MB-004', 'CRS-CSD201', 'SE170000', 'ACTIVE'),
+    ('MB-005', 'CRS-CSD201', 'SE170123', 'ACTIVE'),
+    ('MB-006', 'CRS-CSD201', 'SE170456', 'ACTIVE')
 ON CONFLICT (class_id, user_id) DO NOTHING;
 
 -- 5. Seed Assignments

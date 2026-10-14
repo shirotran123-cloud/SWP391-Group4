@@ -36,10 +36,21 @@ export interface StudentSubmissionRecord {
   status: 'QUEUED' | 'GRADED' | 'SUBMITTED';
 }
 
+export interface EnrolledCourseItem {
+  courseId: string;
+  courseCode: string;
+  courseName: string;
+  semester?: string;
+  description?: string;
+}
+
 interface SubmissionViewProps {
   task?: Task;
   studentId?: string;
   studentName?: string;
+  enrolledCourses?: EnrolledCourseItem[];
+  selectedCourseId?: string;
+  onSelectCourse?: (courseId: string) => void;
   onSubmit: (file: File, task?: Task) => void;
 }
 
@@ -151,6 +162,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   task,
   studentId = 'SE170000',
   studentName = 'Sinh Viên',
+  enrolledCourses = [],
+  selectedCourseId = 'ALL',
+  onSelectCourse,
   onSubmit,
 }) => {
   // Danh sách các bài tập đang mở
@@ -162,6 +176,16 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCourseFilter, setSelectedCourseFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'URGENT' | 'SUBMITTED'>('ALL');
+  // Đồng bộ môn học đang chọn từ thanh điều hướng môn học bên ngoài
+  useEffect(() => {
+    if (!selectedCourseId || selectedCourseId === 'ALL') {
+      setSelectedCourseFilter('ALL');
+    } else {
+      const normalized = selectedCourseId.replace(/.*-/, '').trim().toUpperCase();
+      setSelectedCourseFilter(normalized);
+    }
+  }, [selectedCourseId]);
+
 
   // Lịch sử nộp bài của sinh viên
   const [submissionHistory, setSubmissionHistory] = useState<Record<string, StudentSubmissionRecord>>({});
@@ -299,34 +323,49 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
   // Lấy danh sách các môn học để đưa vào bộ lọc
   const courseOptions = useMemo(() => {
+    if (enrolledCourses && enrolledCourses.length > 0) {
+      return enrolledCourses.map((c) => c.courseCode.replace(/.*-/, '').trim().toUpperCase());
+    }
     const set = new Set<string>();
     assignmentList.forEach((a) => {
-      if (a.courseCode) set.add(a.courseCode);
-      else if (a.course) {
-        const code = a.course.split('-')[0].trim();
-        set.add(code);
-      }
+      const code = a.courseCode || a.course?.split('-')[0].trim();
+      if (code) set.add(code.toUpperCase());
     });
     return Array.from(set);
-  }, [assignmentList]);
+  }, [enrolledCourses, assignmentList]);
 
   // Lọc bài tập theo tìm kiếm, môn học và trạng thái
   const filteredAssignments = useMemo(() => {
-    return assignmentList.filter((item) => {
-      // Tìm kiếm
-      const matchSearch =
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.course.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.id.toLowerCase().includes(searchQuery.toLowerCase());
-      if (!matchSearch) return false;
+    const enrolledSet = new Set<string>(
+      enrolledCourses && enrolledCourses.length > 0
+        ? enrolledCourses.map((c) => c.courseCode.replace(/.*-/, '').trim().toUpperCase())
+        : ['SWP391', 'PRN211', 'CSD201']
+    );
 
-      // Môn học
+    return assignmentList.filter((item) => {
+      // 1. Chỉ hiện bài tập của môn sinh viên đang học (Enrolled Courses)
+      const itemCode = (item.courseCode || item.course?.split('-')[0].trim() || '').toUpperCase();
+      const isEnrolled = Array.from(enrolledSet).some((ec: string) => itemCode.includes(ec) || ec.includes(itemCode));
+      if (!isEnrolled) return false;
+
+      // 2. Lọc theo môn học đang chọn
       if (selectedCourseFilter !== 'ALL') {
-        const itemCode = item.courseCode || item.course.split('-')[0].trim();
-        if (itemCode !== selectedCourseFilter) return false;
+        const filterCode = selectedCourseFilter.toUpperCase();
+        const matchesFilter = itemCode.includes(filterCode) || filterCode.includes(itemCode);
+        if (!matchesFilter) return false;
       }
 
-      // Trạng thái deadline
+      // 3. Tìm kiếm từ khóa
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchSearch =
+          item.title.toLowerCase().includes(query) ||
+          item.course?.toLowerCase().includes(query) ||
+          item.id.toLowerCase().includes(query);
+        if (!matchSearch) return false;
+      }
+
+      // 4. Trạng thái deadline
       const meta = getDeadlineMetadata(item.deadline);
       const isSubmitted = !!submissionHistory[item.id];
 
@@ -336,15 +375,26 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
       return true;
     });
-  }, [assignmentList, searchQuery, selectedCourseFilter, statusFilter, submissionHistory]);
+  }, [assignmentList, enrolledCourses, selectedCourseFilter, searchQuery, statusFilter, submissionHistory]);
 
   // Thống kê nhanh
   const stats = useMemo(() => {
-    let total = assignmentList.length;
+    const enrolledSet = new Set<string>(
+      enrolledCourses && enrolledCourses.length > 0
+        ? enrolledCourses.map((c) => c.courseCode.replace(/.*-/, '').trim().toUpperCase())
+        : ['SWP391', 'PRN211', 'CSD201']
+    );
+
+    const relevant = assignmentList.filter((item) => {
+      const itemCode = (item.courseCode || item.course?.split('-')[0].trim() || '').toUpperCase();
+      return Array.from(enrolledSet).some((ec: string) => itemCode.includes(ec) || ec.includes(itemCode));
+    });
+
+    let total = relevant.length;
     let submitted = 0;
     let urgent = 0;
 
-    assignmentList.forEach((a) => {
+    relevant.forEach((a) => {
       if (submissionHistory[a.id]) {
         submitted++;
       } else {
@@ -359,7 +409,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
       urgent,
       submitted,
     };
-  }, [assignmentList, submissionHistory]);
+  }, [assignmentList, enrolledCourses, submissionHistory]);
 
   // Xử lý tính toán mã băm SHA-256
   const calculateSha256 = async (file: File): Promise<string> => {
@@ -1157,7 +1207,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             }}
           >
             <option value="ALL">Tất Cả Môn Học</option>
-            {courseOptions.map((c) => (
+            {courseOptions.map((c: string) => (
               <option key={c} value={c}>
                 {c}
               </option>
