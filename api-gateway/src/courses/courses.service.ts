@@ -20,9 +20,11 @@ export class CoursesService {
   ) {}
 
   public async createCourse(dto: CreateCourseDto): Promise<CourseRecord> {
-    const existingById = await this.courseRepo.findById(dto.courseId);
+    const courseId = dto.courseId?.trim() || ('CRS-' + dto.courseCode.trim().toUpperCase());
+
+    const existingById = await this.courseRepo.findById(courseId);
     if (existingById) {
-      throw new ConflictException(`Khóa học với mã ID ${dto.courseId} đã tồn tại!`);
+      throw new ConflictException(`Khóa học với mã ID ${courseId} đã tồn tại!`);
     }
 
     const existingByCode = await this.courseRepo.findByCode(dto.courseCode);
@@ -37,7 +39,7 @@ export class CoursesService {
     }
 
     const record = await this.courseRepo.create({
-      courseId: dto.courseId,
+      courseId,
       courseCode: dto.courseCode,
       courseName: dto.courseName,
       description: dto.description,
