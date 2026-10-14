@@ -581,6 +581,50 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 <span><strong>giangvien.edu@gmail.com</strong> (Hợp lệ • Lecturer)</span>
               </button>
 
+                            <button
+                type="button"
+                onClick={() => verifyEmailWithBackend('admin@aita.fpt.edu.vn', 'Quản Trị Viên AITA')}
+                style={{
+                  padding: '7px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(245, 158, 11, 0.5)',
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  color: '#fcd34d',
+                  fontSize: '11.5px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 600,
+                }}
+              >
+                <UserCheck size={14} />
+                <span>👑 <strong>admin@aita.fpt.edu.vn</strong> (Hợp lệ • Admin Quản Trị)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => verifyEmailWithBackend('admin.aita@gmail.com', 'Quản Trị Viên AITA (Gmail)')}
+                style={{
+                  padding: '7px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(245, 158, 11, 0.5)',
+                  background: 'rgba(245, 158, 11, 0.12)',
+                  color: '#fcd34d',
+                  fontSize: '11.5px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 600,
+                }}
+              >
+                <UserCheck size={14} />
+                <span>👑 <strong>admin.aita@gmail.com</strong> (Hợp lệ • Admin Gmail)</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => verifyEmailWithBackend('chua_dang_ky@gmail.com', 'Người Lạ')}

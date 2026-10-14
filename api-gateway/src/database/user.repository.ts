@@ -73,6 +73,15 @@ export class UserRepository {
         updatedAt: new Date(),
       },
       {
+        userId: 'ADMIN002',
+        email: 'admin.aita@gmail.com',
+        fullName: 'Quản Trị Viên AITA (Gmail)',
+        role: 'ADMIN',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
         userId: 'GV001',
         email: 'trungdt@fe.edu.vn',
         fullName: 'ThS. Đinh Thành Trung',
