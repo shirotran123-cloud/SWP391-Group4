@@ -96,7 +96,7 @@ export class SubmissionsController {
     return {
       statusCode: HttpStatus.OK,
       total: submissions.length,
-      data: submissions,
+      data: submissions.map((s) => ({ ...s, result: s.details ?? undefined })),
     };
   }
 
@@ -108,7 +108,7 @@ export class SubmissionsController {
     }
     return {
       statusCode: HttpStatus.OK,
-      data: submission,
+      data: { ...submission, result: submission.details ?? undefined },
     };
   }
 

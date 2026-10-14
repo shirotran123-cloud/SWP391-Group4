@@ -18,7 +18,7 @@ cd api-gateway
 $env:TS_NODE_COMPILER_OPTIONS='{"module":"commonjs","moduleResolution":"node"}'
 npx ts-node --transpile-only ../demo/demo-nop-bai-tinh-diem.ts
 ```
-- PASS ~9.8, SRP-FAIL ~5.7, INVALID 0
+- PASS ~9.8 (overall PASSED 2/2), SRP-FAIL ~5.7 (overall FAILED 1/2 — rớt 1 testcase là rớt cả bài, điểm thành phần giữ nguyên), INVALID 0
 - Demo import trực tiếp `api-gateway/src/queue/grading-core.ts` (cùng module worker dùng), timing cố định nên điểm ổn định giữa các lần chạy
 
 ## Demo UI

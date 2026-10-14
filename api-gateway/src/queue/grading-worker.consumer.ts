@@ -371,15 +371,18 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const finalScore = analysis.score;
     const scoreBreakdown = buildScoreBreakdown(analysis);
 
+    // Quy tắc đạt: phải pass TOÀN BỘ testcase mới PASSED (rớt 1 = FAILED toàn bài).
+    // Điểm số từng phần (scoreBreakdown) giữ nguyên để giảng viên thấy chi tiết.
+    const totalTestcases = 2;
     const completedPayload = {
       submissionId,
       status: 'COMPLETED' as const,
-      overallResult: (passedCount > 0 ? 'PASSED' : 'FAILED') as 'PASSED' | 'FAILED',
+      overallResult: (passedCount === totalTestcases ? 'PASSED' : 'FAILED') as 'PASSED' | 'FAILED',
       score: finalScore,
       scoreBreakdown,
       maxScore: 10.0,
       passedTestcases: passedCount,
-      totalTestcases: 2,
+      totalTestcases,
       executionTimeMs: totalExecMs,
       aiRating: {
         cleanCodeScore: analysis.cleanCodeScore,

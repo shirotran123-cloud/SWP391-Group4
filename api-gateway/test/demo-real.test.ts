@@ -59,6 +59,14 @@ async function main(): Promise<boolean> {
   gate(srpCase.tc1 === 'PASSED' && srpCase.tc2 === 'FAILED', 'SRP TC1 pass TC2 fail (O(N^2))');
   gate(invalidCase.score === 0 && invalidCase.tc1 === 'FAILED' && invalidCase.tc2 === 'FAILED', 'INVALID 0/10 FAILED');
 
+  // 3b. Overall rule: all testcases must pass (worker: passedCount === total).
+  const overallOf = (tc1: string, tc2: string) =>
+    ([tc1, tc2].filter((s) => s === 'PASSED').length === 2 ? 'PASSED' : 'FAILED');
+  gate(overallOf(passCase.tc1, passCase.tc2) === 'PASSED', 'PASS overall PASSED (2/2)');
+  gate(overallOf(srpCase.tc1, srpCase.tc2) === 'FAILED', 'SRP overall FAILED (1/2 — rot 1 la rot ca bai)');
+  gate(overallOf(invalidCase.tc1, invalidCase.tc2) === 'FAILED', 'INVALID overall FAILED (0/2)');
+  gate(passCase.breakdown.total === passCase.score && srpCase.breakdown.total === srpCase.score, 'breakdown total equals score (diem thanh phan giu nguyen)');
+
   // 4. Validation uses the real shared rules.
   gate(validateSubmissionFile(null, 'java', ['java'])?.code === 'MISSING_FILE', 'validation missing file');
   gate(validateSubmissionFile({ originalname: 'a.rar', size: 10 }, 'java', ['java'])?.code === 'NOT_ZIP', 'validation non-zip rejected');
