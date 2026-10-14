@@ -4,6 +4,11 @@ import { GradingGateway } from '../websocket/grading.gateway';
 import { SubmissionRepository } from '../database/submission.repository';
 import { SUBMISSION_STATUS, QUEUE_CONFIG } from '../common/constants/queue.constants';
 import { SandboxService } from '../sandbox/sandbox.service';
+import {
+  analyzeSourceCode as analyzeSourceCodeCore,
+  buildScoreBreakdown,
+  type SourceAnalysis,
+} from './grading-core';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as AdmZip from 'adm-zip';
@@ -26,141 +31,15 @@ const TESTCASES = [
   },
 ];
 
-// ─── Code patterns đánh giá chất lượng ──────────────────────────────────────
-const SORT_PATTERNS = {
-  // Các thuật toán sắp xếp hiệu quả
-  efficientSort: [
-    /Arrays\.sort/i,
-    /Collections\.sort/i,
-    /\.sort\(/i,
-    /mergeSort|quickSort|heapSort/i,
-    /sorted\(/i,      // Python
-    /sort\(/i,
-    /std::sort/i,
-    /Array\.Sort/i,   // C#
-  ],
-  // Các dấu hiệu nhận dạng code sắp xếp
-  hasLoop: [/for\s*\(|while\s*\(|for\s+\w/],
-  hasComparison: [/[<>]=?\s*[a-zA-Z_]|[a-zA-Z_]\s*[<>]=?/],
-  hasOutput: [/System\.out|print|cout|Console\./i],
-  hasInput: [/Scanner|input\(\)|cin|Console\.Read/i],
-  // Vi phạm SRP (Single Responsibility)
-  srpViolation: [/sortAnd|andPrint|andSave|AndDisplay|AndOutput/i],
-};
+// ─── Code patterns + scoring core live in ./grading-core.ts (shared with demo) ──
+// (moved: SORT_PATTERNS, analyzeSourceCode, buildScoreBreakdown)
 
 /**
- * Phân tích nội dung source code để tính điểm
- * Trả về: { score, cleanCodeScore, solidScore, codeSmells, explanation, verdict }
+ * Worker-local wrapper kept for backward compatibility: delegates to the
+ * shared core in `./grading-core.ts` (single source of truth for the formula).
  */
-function analyzeSourceCode(code: string, language: string): {
-  score: number;
-  cleanCodeScore: number;
-  solidScore: { s: number; o: number; l: number; i: number; d: number };
-  codeSmells: Array<{ line: number; rule: string; description: string }>;
-  explanation: string;
-  tc1Status: 'PASSED' | 'FAILED';
-  tc2Status: 'PASSED' | 'FAILED';
-  tc1TimeMs: number;
-  tc2TimeMs: number;
-} {
-  const lines = code.split('\n');
-  const codeSmells: Array<{ line: number; rule: string; description: string }> = [];
-
-  // ── Kiểm tra có đủ cấu trúc cơ bản không ──────────────────────────────────
-  const hasOutput = SORT_PATTERNS.hasOutput.some((p) => p.test(code));
-  const hasInput = SORT_PATTERNS.hasInput.some((p) => p.test(code));
-  const hasLoop = SORT_PATTERNS.hasLoop.some((p) => p.test(code));
-  const hasEfficientSort = SORT_PATTERNS.efficientSort.some((p) => p.test(code));
-  const hasSrpViolation = SORT_PATTERNS.srpViolation.some((p) => p.test(code));
-  const codeLength = code.trim().length;
-
-  // Nếu code quá ngắn / rỗng / không có cấu trúc → FAILED hoàn toàn
-  if (codeLength < 50 || (!hasLoop && !hasEfficientSort) || !hasOutput) {
-    return {
-      score: 0,
-      cleanCodeScore: 0,
-      solidScore: { s: 0, o: 0, l: 0, i: 0, d: 0 },
-      codeSmells: [{ line: 1, rule: 'Invalid Submission', description: 'File không chứa code giải thuật sắp xếp hợp lệ.' }],
-      explanation: 'Bài nộp không hợp lệ: không phát hiện cấu trúc giải thuật sắp xếp, vòng lặp hoặc xuất kết quả.',
-      tc1Status: 'FAILED',
-      tc2Status: 'FAILED',
-      tc1TimeMs: 0,
-      tc2TimeMs: 0,
-    };
-  }
-
-  // ── Tính điểm Testcase dựa trên chất lượng code ───────────────────────────
-  // TC1 pass nếu có I/O và thuật toán sắp xếp
-  const tc1Pass = hasInput && hasOutput && (hasEfficientSort || hasLoop);
-  // TC2 pass nếu dùng thuật toán hiệu quả (O(n log n))
-  const tc2Pass = hasEfficientSort;
-  const tc1TimeMs = hasEfficientSort ? Math.floor(50 + Math.random() * 60) : Math.floor(1500 + Math.random() * 500);
-  const tc2TimeMs = hasEfficientSort ? Math.floor(100 + Math.random() * 80) : Math.floor(1800 + Math.random() * 200);
-
-  // ── SRP violation detection ────────────────────────────────────────────────
-  if (hasSrpViolation) {
-    lines.forEach((line, idx) => {
-      if (SORT_PATTERNS.srpViolation.some((p) => p.test(line))) {
-        codeSmells.push({
-          line: idx + 1,
-          rule: 'Single Responsibility Principle',
-          description: `Phương thức tại dòng ${idx + 1} vi phạm SRP: đang gánh vác nhiều trách nhiệm (sắp xếp + in kết quả + lưu DB).`,
-        });
-      }
-    });
-  }
-
-  // ── Kiểm tra magic number ──────────────────────────────────────────────────
-  const magicNumberLines: number[] = [];
-  lines.forEach((line, idx) => {
-    const match = line.match(/\b([2-9]\d{2,})\b/);
-    if (match && !line.trim().startsWith('//') && !line.trim().startsWith('*')) {
-      magicNumberLines.push(idx + 1);
-    }
-  });
-  if (magicNumberLines.length > 0) {
-    codeSmells.push({
-      line: magicNumberLines[0],
-      rule: 'Magic Number',
-      description: `Phát hiện hằng số cứng tại dòng ${magicNumberLines[0]}. Nên đặt thành hằng số có tên (named constant).`,
-    });
-  }
-
-  // ── Tính điểm SOLID ────────────────────────────────────────────────────────
-  const sScore = hasSrpViolation ? 5.5 : 9.0;
-  const oScore = 8.5; // Không thể kiểm tra tĩnh hoàn toàn
-  const lScore = 9.0;
-  const iScore = 9.0;
-  const dScore = hasInput ? 8.5 : 7.5;
-
-  const solidAvg = (sScore + oScore + lScore + iScore + dScore) / 5;
-  const cleanCodeScore = hasEfficientSort
-    ? Math.min(10, 7.0 + (hasSrpViolation ? 0 : 1.5) + (magicNumberLines.length === 0 ? 1.0 : 0))
-    : 4.5;
-
-  // ── Tính điểm tổng ────────────────────────────────────────────────────────
-  let baseScore = 0;
-  if (tc1Pass) baseScore += 4.0;   // 4 điểm cho TC1
-  if (tc2Pass) baseScore += 3.0;   // 3 điểm cho TC2
-  baseScore += (cleanCodeScore / 10) * 2.0; // 2 điểm cho Clean Code
-  baseScore += (solidAvg / 10) * 1.0;       // 1 điểm cho SOLID
-  const finalScore = Math.min(10, Math.round(baseScore * 10) / 10);
-
-  const explanation = hasEfficientSort
-    ? `Mã nguồn sử dụng thuật toán sắp xếp hiệu quả O(N log N). ${hasSrpViolation ? 'Tuy nhiên, cần tách biệt logic sắp xếp khỏi phần I/O để tuân thủ SRP.' : 'Cấu trúc mã nguồn rõ ràng, phân tách trách nhiệm tốt.'} Điểm Clean Code: ${cleanCodeScore.toFixed(1)}/10.`
-    : `Mã nguồn sử dụng thuật toán sắp xếp chưa tối ưu (O(N²)). Testcase 2 với 100,000 phần tử có thể bị TLE. Nên dùng Arrays.sort() hoặc thuật toán MergeSort/QuickSort để đạt O(N log N).`;
-
-  return {
-    score: finalScore,
-    cleanCodeScore,
-    solidScore: { s: sScore, o: oScore, l: lScore, i: iScore, d: dScore },
-    codeSmells,
-    explanation,
-    tc1Status: tc1Pass ? 'PASSED' : 'FAILED',
-    tc2Status: tc2Pass ? 'PASSED' : 'FAILED',
-    tc1TimeMs,
-    tc2TimeMs,
-  };
+function analyzeSourceCode(code: string, language: string): SourceAnalysis {
+  return analyzeSourceCodeCore(code, language);
 }
 
 /**
@@ -497,14 +376,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const passedCount = [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
     const totalExecMs = analysis.tc1TimeMs + analysis.tc2TimeMs;
     const finalScore = analysis.score;
-    const solidAvg = (analysis.solidScore.s + analysis.solidScore.o + analysis.solidScore.l + analysis.solidScore.i + analysis.solidScore.d) / 5;
-    const scoreBreakdown = {
-      testcase1: analysis.tc1Status === 'PASSED' ? 4.0 : 0,
-      testcase2: analysis.tc2Status === 'PASSED' ? 3.0 : 0,
-      cleanCode: Math.round((analysis.cleanCodeScore / 10) * 2 * 10) / 10,
-      solid: Math.round((solidAvg / 10) * 10 * 10) / 10,
-      total: finalScore,
-    };
+    const scoreBreakdown = buildScoreBreakdown(analysis);
 
     const completedPayload = {
       submissionId,

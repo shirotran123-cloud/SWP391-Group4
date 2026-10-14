@@ -38,6 +38,8 @@ async function main(): Promise<void> {
     // In-process drivers first (no ports needed beyond their own).
     const { runCoverGates } = require("./cover-gates");
     if (!(await runCoverGates())) code = 1;
+    const { runDemoRealSuite } = require("./demo-real.test");
+    if (!(await runDemoRealSuite())) code = 1;
     // HTTP suites each boot on their own port; stagger to avoid clashes.
     process.env.AITA_TEST_PORT = process.env.AITA_TEST_PORT || "3111";
     const { runGatewayCover80 } = require("./cover-80-gateway");
