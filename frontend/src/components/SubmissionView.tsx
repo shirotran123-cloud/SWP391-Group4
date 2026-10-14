@@ -3,7 +3,8 @@ import {
   UploadCloud, FileArchive, X, Send, ShieldCheck, Clock,
   BookOpen, AlertTriangle, CheckCircle, Search,
   ArrowLeft, Cpu, HardDrive, Code, ChevronRight,
-  Award, RefreshCw, Layers, AlertOctagon, Hash, Lock, Bug
+  Award, RefreshCw, Layers, AlertOctagon, Hash, Lock, Bug,
+  FileText, Copy, Check, Terminal, Info, CheckSquare, Sparkles
 } from 'lucide-react';
 import { CountdownTimer } from './CountdownTimer';
 import type { Task } from '../types';
@@ -12,6 +13,27 @@ export interface RubricItem {
   criterion: string;
   maxScore: number;
   description: string;
+}
+
+export interface SampleTestCase {
+  name: string;
+  input: string;
+  expectedOutput: string;
+  explanation: string;
+}
+
+export interface TechnicalRequirement {
+  problemContext: string;
+  inputFormat: string[];
+  outputFormat: string[];
+  constraints: string[];
+  complexityRequirements: string[];
+  solidGuidelines: string[];
+  packagingGuide?: {
+    entryPoint: string;
+    directoryStructure: string;
+    rules: string[];
+  };
 }
 
 export interface StudentTaskItem extends Task {
@@ -23,6 +45,8 @@ export interface StudentTaskItem extends Task {
   rubrics?: RubricItem[];
   testCasesCount?: number;
   status?: string;
+  technicalRequirements?: TechnicalRequirement;
+  sampleTestCases?: SampleTestCase[];
 }
 
 export interface StudentSubmissionRecord {
@@ -56,6 +80,76 @@ interface SubmissionViewProps {
 
 const defaultAssignmentPool: StudentTaskItem[] = [
   {
+    id: 'TASK-SWP391-SPRINT2',
+    courseId: 'COURSE-SWP391',
+    courseCode: 'SWP391',
+    course: 'SWP391 - Đồ Án Phát Triển Phần Mềm (Agile Scrum)',
+    title: 'Xây dựng Thuật toán Sắp xếp Tối ưu & Cây Cú pháp AST',
+    description: 'Xây dựng mô đun sắp xếp danh sách giao dịch đơn hàng động 100,000 phần tử trong hệ thống E-Commerce. Thuật toán bắt buộc đạt độ phức tạp O(N log N), tuân thủ nguyên lý Đơn trách nhiệm (SOLID SRP), phân tách I/O và cấu trúc cây cú pháp AST chống gian lận.',
+    deadline: new Date(Date.now() + 2 * 3600 * 1000 + 42 * 60 * 1000).toISOString(),
+    timeLimitMs: 2000,
+    memoryLimitMb: 512,
+    allowedLanguages: ['java', 'python', 'cpp', 'dotnet'],
+    allowedExtensions: ['.zip'],
+    maxSizeMb: 10,
+    testCasesCount: 5,
+    status: 'PUBLISHED',
+    rubrics: [
+      { criterion: 'Tính đúng đắn thuật toán & 100% Testcases Sandbox', maxScore: 5.0, description: 'Vượt qua toàn bộ bộ testcases cơ sở và testcases dữ liệu lớn (TLE check)' },
+      { criterion: 'Thiết kế Hướng đối tượng & SOLID (SRP, DIP)', maxScore: 2.5, description: 'Tách riêng bộ sắp xếp Sort Engine khỏi console I/O, sử dụng interface ISorter' },
+      { criterion: 'Tối ưu độ phức tạp O(N log N) & Clean Code', maxScore: 1.5, description: 'Mã nguồn tường minh, đặt tên chuẩn CamelCase, tối ưu thời gian CPU < 2000ms' },
+      { criterion: 'Liêm chính học thuật & AST Winnowing', maxScore: 1.0, description: 'Mã nguồn độc lập, mức độ tương đồng AST với sinh viên khác dưới 25%' },
+    ],
+    technicalRequirements: {
+      problemContext: 'Trong hệ thống xử lý giao dịch thương mại điện tử quy mô lớn, khi có đợt siêu khuyến mãi Flash-Sale, hàng trăm nghìn đơn hàng đổ về đồng thời cần được sắp xếp theo mức độ ưu tiên và thời gian đặt hàng. Sinh viên cần xây dựng thuật toán sắp xếp mảng động N phần tử, đảm bảo thời gian chạy tối đa không vượt quá 2000ms cho 100,000 phần tử (bắt buộc O(N log N)). Hệ thống tự động AITA sẽ phân tích mã nguồn qua cây cú pháp trừu tượng AST để đánh giá nguyên lý Đơn trách nhiệm (SRP) và kiểm tra tính liêm chính học thuật.',
+      inputFormat: [
+        'Dòng 1: Một số nguyên dương N biểu diễn số lượng phần tử cần xử lý (1 ≤ N ≤ 100,000).',
+        'Dòng 2: Gồm N số nguyên A[1], A[2], ..., A[N] cách nhau bởi khoảng trắng (-10^9 ≤ A[i] ≤ 10^9).',
+      ],
+      outputFormat: [
+        'In ra trên một dòng duy nhất chuỗi N số nguyên đã được sắp xếp theo thứ tự tăng dần, mỗi phần tử cách nhau đúng một khoảng trắng.',
+        'Kết thúc dòng bằng ký tự xuống dòng (\\n). Không in các chuỗi thông báo thừa như "Nhap N:".',
+      ],
+      constraints: [
+        'Giới hạn số lượng phần tử: 1 ≤ N ≤ 100,000 (Bộ testcase kiểm tra hiệu năng giới hạn TLE).',
+        'Giá trị phần tử: -10^9 ≤ A[i] ≤ 10^9 (Cần chú ý kiểu dữ liệu nguyên 64-bit nếu tính toán phát sinh).',
+        'Thời gian thực thi tối đa: 2000 ms (2.0 giây). Các thuật toán O(N^2) như Bubble Sort, Insertion Sort sẽ bị xử thua TLE.',
+        'Bộ nhớ RAM cấp phát: 512 MB trong môi trường Docker Sandbox biệt lập.',
+      ],
+      complexityRequirements: [
+        'Độ phức tạp thời gian (Time Complexity): Bắt buộc đạt O(N log N) trong trường hợp trung bình và xấu nhất (khuyến khích QuickSort 3-Way hoặc MergeSort).',
+        'Độ phức tạp không gian (Space Complexity): O(N) hoặc tối ưu O(1) in-place.',
+      ],
+      solidGuidelines: [
+        'Single Responsibility Principle (SRP): Tách riêng class thực thi sắp xếp (ví dụ: QuickSortOrderSorter) và class đọc ghi luồng dữ liệu (Solution / ConsoleRunner). Tuyệt đối không gộp chung logic sort và in ấn vào một hàm duy nhất.',
+        'Dependency Inversion Principle (DIP): Định nghĩa interface ISorter để tầng gọi không phụ thuộc trực tiếp vào cài đặt cụ thể của thuật toán.',
+      ],
+      packagingGuide: {
+        entryPoint: 'Solution.java (Java) / main.py (Python) / main.cpp (C++)',
+        directoryStructure: 'solution.zip\\n├── Solution.java\\n└── (các class / interface phụ trợ nếu có)',
+        rules: [
+          'Chỉ nộp file có định dạng nén chuẩn .zip, dung lượng tối đa không vượt quá 10MB.',
+          'Mã nguồn chính phải chứa hàm main() nhận dữ liệu từ STDIN và in ra STDOUT.',
+          'Nghiêm cấm: Gọi System.exit(), gọi lệnh thực thi hệ điều hành Runtime.getRuntime().exec(), mở kết nối Socket/HTTP mạng ra ngoài.',
+        ],
+      },
+    },
+    sampleTestCases: [
+      {
+        name: 'Testcase Mẫu 1 (Mảng Ngẫu Nhiên Cơ Bản)',
+        input: '5\\n4 2 5 1 3',
+        expectedOutput: '1 2 3 4 5',
+        explanation: 'Mảng ban đầu gồm 5 phần tử [4, 2, 5, 1, 3] được thuật toán sắp xếp tăng dần thành [1, 2, 3, 4, 5].',
+      },
+      {
+        name: 'Testcase Mẫu 2 (Số Âm & Phần Tử Trùng Lặp)',
+        input: '6\\n10 0 -5 10 -2 0',
+        expectedOutput: '-5 -2 0 0 10 10',
+        explanation: 'Mảng chứa số âm (-5, -2) và các giá trị trùng lặp (hai số 0, hai số 10). Thuật toán cần xử lý chính xác và ổn định.',
+      },
+    ],
+  },
+  {
     id: 'ASM-SWP-01',
     courseId: 'COURSE-SWP391',
     courseCode: 'SWP391',
@@ -75,6 +169,38 @@ const defaultAssignmentPool: StudentTaskItem[] = [
       { criterion: 'Clean Code & Tối ưu O(N log N)', maxScore: 2.5, description: 'Mã nguồn rõ ràng, đặt tên biến chuẩn, tối ưu thời gian' },
       { criterion: 'Thiết kế Hướng đối tượng & SOLID', maxScore: 2.5, description: 'Tuân thủ Single Responsibility và Dependency Inversion' },
     ],
+    technicalRequirements: {
+      problemContext: 'Xây dựng cấu trúc cây tìm kiếm nhị phân Generic BST<T extends Comparable<T>> quản lý danh mục sản phẩm. Hỗ trợ các thao tác chèn (Insert), xóa (Delete), tìm kiếm (Search) và duyệt cây In-Order / Pre-Order.',
+      inputFormat: [
+        'Dòng 1: Số lượng thao tác Q (1 ≤ Q ≤ 50,000).',
+        'Q dòng tiếp theo: Mỗi dòng chứa lệnh INSERT x, DELETE x hoặc SEARCH x.',
+      ],
+      outputFormat: [
+        'Với thao tác SEARCH x: In ra FOUND hoặc NOT_FOUND trên một dòng.',
+        'Kết thúc toàn bộ thao tác: In ra chuỗi duyệt In-Order của cây.',
+      ],
+      constraints: [
+        '1 ≤ Q ≤ 50,000 thao tác.',
+        'Giá trị phần tử: -10^6 ≤ x ≤ 10^6.',
+        'Thời gian chạy tối đa: 2000 ms, RAM 512MB.',
+      ],
+      complexityRequirements: [
+        'Tìm kiếm, chèn, xóa trung bình: O(log N).',
+        'Duyệt cây: O(N).',
+      ],
+      solidGuidelines: [
+        'Tách Node class thành Generic class riêng biệt.',
+        'Sử dụng Interface IBstTree<T> để đóng gói các hành vi của cây.',
+      ],
+    },
+    sampleTestCases: [
+      {
+        name: 'Testcase Mẫu 1 (Thao Tác Chèn & Duyệt In-Order)',
+        input: '5\\nINSERT 20\\nINSERT 10\\nINSERT 30\\nINSERT 25\\nSEARCH 30',
+        expectedOutput: 'FOUND\\n10 20 25 30',
+        explanation: 'Chèn các nút vào cây BST, tìm thấy 30 in FOUND, sau đó duyệt In-Order thu được dãy tăng dần 10 20 25 30.',
+      },
+    ],
   },
   {
     id: 'ASM-SWP-02',
@@ -83,7 +209,7 @@ const defaultAssignmentPool: StudentTaskItem[] = [
     course: 'SWP391 - Đồ Án Phát Triển Phần Mềm (Agile Scrum)',
     title: 'Thuật toán Sắp xếp & Tối ưu O(N log N) 3-Way Partitioning',
     description: 'Cài đặt giải thuật QuickSort tối ưu hóa phân hoạch 3 phần (3-Way Partitioning) nhằm triệt tiêu hoàn toàn trường hợp suy biến trên tập dữ liệu trùng lặp.',
-    deadline: new Date(Date.now() + 18 * 3600 * 1000 + 30 * 60 * 1000).toISOString(), // Còn ~18 giờ (GẤP)
+    deadline: new Date(Date.now() + 18 * 3600 * 1000 + 30 * 60 * 1000).toISOString(),
     timeLimitMs: 1500,
     memoryLimitMb: 256,
     allowedLanguages: ['java', 'python', 'cpp'],
@@ -94,6 +220,34 @@ const defaultAssignmentPool: StudentTaskItem[] = [
     rubrics: [
       { criterion: 'Đúng đắn Testcases & O(N log N)', maxScore: 7.0, description: 'Vượt qua bộ testcases biên và bão hòa' },
       { criterion: 'Clean Code & SOLID SRP', maxScore: 3.0, description: 'Tách biệt thuật toán và hàm tiện ích' },
+    ],
+    technicalRequirements: {
+      problemContext: 'Khi mảng có nhiều phần tử trùng lặp (ví dụ: mảng toàn số 1 và 0), thuật toán QuickSort truyền thống sẽ suy biến thành O(N^2). Sinh viên cần triển khai giải thuật phân hoạch 3 đoạn (Dutch National Flag Algorithm) chia mảng thành: nhỏ hơn pivot, bằng pivot và lớn hơn pivot, đảm bảo O(N log N) ngay cả khi tất cả phần tử đều bằng nhau.',
+      inputFormat: [
+        'Dòng 1: Số nguyên dương N (1 ≤ N ≤ 200,000).',
+        'Dòng 2: N số nguyên cách nhau bởi khoảng trắng.',
+      ],
+      outputFormat: [
+        'In ra mảng sau khi sắp xếp tăng dần trên một dòng.',
+      ],
+      constraints: [
+        '1 ≤ N ≤ 200,000.',
+        'Thời gian thực thi tối đa: 1500 ms.',
+      ],
+      complexityRequirements: [
+        'Độ phức tạp thời gian: O(N log N) trong mọi trường hợp trùng lặp.',
+      ],
+      solidGuidelines: [
+        'Tách logic phân hoạch (PartitionEngine) độc lập với hàm sắp xếp đệ quy.',
+      ],
+    },
+    sampleTestCases: [
+      {
+        name: 'Testcase Mẫu 1 (Trùng Lặp Cao)',
+        input: '7\\n2 1 2 0 1 2 0',
+        expectedOutput: '0 0 1 1 2 2 2',
+        explanation: 'Phân hoạch 3 phần sắp xếp chính xác trong O(N) khi số lượng giá trị phân biệt nhỏ.',
+      },
     ],
   },
   {
@@ -115,6 +269,39 @@ const defaultAssignmentPool: StudentTaskItem[] = [
       { criterion: 'Cân bằng cây AVL & Phép xoay chuẩn', maxScore: 6.0, description: 'Thực hiện chính xác hệ số cân bằng Balance Factor' },
       { criterion: 'Độ phức tạp O(log N)', maxScore: 4.0, description: 'Đảm bảo chiều cao cây không vượt quá 1.44 log2(N)' },
     ],
+    technicalRequirements: {
+      problemContext: 'Cài đặt cây nhị phân tìm kiếm tự cân bằng AVL Tree. Mỗi nút lưu trữ giá trị và chiều cao (height). Sau mỗi thao tác chèn hoặc xóa, tính toán hệ số cân bằng Balance Factor = height(left) - height(right). Nếu Balance Factor không thuộc {-1, 0, 1}, phải kích hoạt phép xoay tương ứng (Left Rotation, Right Rotation, Left-Right Rotation, Right-Left Rotation).',
+      inputFormat: [
+        'Dòng 1: Số nguyên dương N là số lượng thao tác (1 ≤ N ≤ 50,000).',
+        'N dòng tiếp theo: Mỗi dòng là lệnh INSERT x hoặc DELETE x.',
+      ],
+      outputFormat: [
+        'Dòng 1: Duyệt cây theo thứ tự In-Order sau khi hoàn tất chuỗi thao tác.',
+        'Dòng 2: In ra thông tin gốc và chiều cao dạng "Root: X | Height: Y".',
+      ],
+      constraints: [
+        '1 ≤ N ≤ 50,000.',
+        'Giá trị nút: -10^6 ≤ x ≤ 10^6.',
+        'Thời gian chạy tối đa: 2000 ms, RAM 512MB.',
+        'Không được dùng thư viện có sẵn như std::map hay java.util.TreeMap.',
+      ],
+      complexityRequirements: [
+        'Thời gian chèn/xóa/tìm kiếm: O(log N) nghiêm ngặt.',
+        'Không gian bộ nhớ: O(N).',
+      ],
+      solidGuidelines: [
+        'Node class lưu trữ height và các con trỏ.',
+        'Tách logic xoay (rotateLeft, rotateRight) thành các hàm helper sạch sẽ.',
+      ],
+    },
+    sampleTestCases: [
+      {
+        name: 'Testcase Mẫu 1 (Xoay Kép Left-Right)',
+        input: '3\\nINSERT 30\\nINSERT 10\\nINSERT 20',
+        expectedOutput: '10 20 30\\nRoot: 20 | Height: 2',
+        explanation: 'Chèn 30 -> 10 -> 20 tạo thành thế mất cân bằng LR tại nút 30. Thực hiện xoay kép đưa 20 lên làm gốc, chiều cao đạt 2.',
+      },
+    ],
   },
   {
     id: 'ASM-CSD-02',
@@ -135,28 +322,232 @@ const defaultAssignmentPool: StudentTaskItem[] = [
       { criterion: 'Đúng đắn Dijkstra O((V+E)log V)', maxScore: 7.0, description: 'Vượt qua 100% testcases đồ thị lớn' },
       { criterion: 'Thiết kế Hướng đối tượng', maxScore: 3.0, description: 'Đóng gói Graph, Vertex, Edge tách bạch' },
     ],
+    technicalRequirements: {
+      problemContext: 'Cho đồ thị có hướng G = (V, E) với trọng số các cạnh w ≥ 0 đại diện cho mạng lưới các trung tâm định tuyến dữ liệu. Tìm độ dài đường đi ngắn nhất từ đỉnh xuất phát S đến tất cả các đỉnh còn lại trong đồ thị. Bắt buộc sử dụng hàng đợi ưu tiên Min-Heap để tối ưu độ phức tạp thời gian đạt O((V + E) log V).',
+      inputFormat: [
+        'Dòng 1: Ba số nguyên V (số đỉnh), E (số cạnh), S (đỉnh nguồn) (1 ≤ V ≤ 10,000; 1 ≤ E ≤ 100,000; 1 ≤ S ≤ V).',
+        'E dòng tiếp theo: Mỗi dòng gồm 3 số nguyên u, v, w biểu diễn cạnh có hướng từ u đến v với trọng số w (1 ≤ w ≤ 10^6).',
+      ],
+      outputFormat: [
+        'In ra trên một dòng khoảng cách ngắn nhất từ S đến lần lượt các đỉnh 1, 2, ..., V, cách nhau bởi khoảng trắng. Nếu không có đường đi đến đỉnh i, in ra -1.',
+      ],
+      constraints: [
+        '1 ≤ V ≤ 10,000 đỉnh.',
+        '1 ≤ E ≤ 100,000 cạnh.',
+        'Trọng số w không âm: 0 ≤ w ≤ 1,000,000.',
+        'Thời gian thực thi tối đa: 2500 ms.',
+      ],
+      complexityRequirements: [
+        'Thời gian: O((V + E) log V) sử dụng Min-Heap.',
+        'Bộ nhớ: O(V + E) danh sách kề.',
+      ],
+      solidGuidelines: [
+        'Đóng gói riêng các class: Edge, NodeDistance, Graph, DijkstraSolver.',
+      ],
+    },
+    sampleTestCases: [
+      {
+        name: 'Testcase Mẫu 1 (Đồ Thị 4 Đỉnh Có Hướng)',
+        input: '4 4 1\\n1 2 2\\n1 3 5\\n2 3 1\\n3 4 3',
+        expectedOutput: '0 2 3 6',
+        explanation: 'Đường đi từ 1: Đến 1 là 0, đến 2 là 2, đến 3 là 1->2->3 = 3, đến 4 là 1->2->3->4 = 6.',
+      },
+    ],
   },
   {
-    id: 'ASM-PRO-01',
-    courseId: 'COURSE-PRO192',
-    courseCode: 'PRO192',
-    course: 'PRO192 - Lập Trình Hướng Đối Tượng Cơ Bản (Java OOP)',
-    title: 'Hệ Thống Quản Lý Thư Viện Hướng Đối Tượng & SOLID DIP',
-    description: 'Thiết kế mô hình hướng đối tượng quản lý tài liệu thư viện, áp dụng Kế thừa, Đa hình và Dependency Inversion Principle (DIP).',
-    deadline: new Date(Date.now() + 2 * 24 * 3600 * 1000 + 5 * 3600 * 1000).toISOString(),
-    timeLimitMs: 1500,
-    memoryLimitMb: 256,
-    allowedLanguages: ['java'],
+    id: 'ASM-49243',
+    courseId: 'COURSE-CSD201',
+    courseCode: 'CSD201',
+    course: 'CSD201 - Cấu Trúc Dữ Liệu & Giải Thuật Nâng Cao',
+    title: 'Hệ thống Quản lý Edge CDN - Định tuyến Lát cắt Video thông minh với Cây AVL',
+    description: 'Trong hạ tầng Cloud & CDN Streaming toàn cầu, việc duy trì độ trễ thấp cho hàng triệu người xem đồng thời yêu cầu phân phối các lát cắt video đến các Edge Node tối ưu. Triển khai cây AVL tự cân bằng lưu trữ tải trọng băng thông máy chủ theo thời gian thực.',
+    deadline: new Date(Date.now() + 12 * 24 * 3600 * 1000 + 16 * 3600 * 1000).toISOString(),
+    timeLimitMs: 2000,
+    memoryLimitMb: 512,
+    allowedLanguages: ['java', 'cpp', 'python'],
+    allowedExtensions: ['.zip'],
+    maxSizeMb: 10,
+    testCasesCount: 6,
+    status: 'PUBLISHED',
+    rubrics: [
+      { criterion: 'Cân bằng AVL & Định tuyến O(log N)', maxScore: 6.0, description: 'Phân phối lát cắt video đúng Edge Server tối ưu' },
+      { criterion: 'Cập nhật tải trọng động & Clean Architecture', maxScore: 4.0, description: 'Cập nhật tải server và tái cân bằng cây tức thời' },
+    ],
+    technicalRequirements: {
+      problemContext: 'Xây dựng mô đun định tuyến Edge CDN Server cho hệ thống live-streaming. Mỗi Edge Server có ServerID và Capacity khả dụng. Yêu cầu sinh viên duy trì một cây AVL có khóa là Capacity để khi có yêu cầu truyền lát cắt video dung lượng S (MB), hệ thống sẽ tìm kiếm Edge Server có Capacity nhỏ nhất thỏa mãn Capacity ≥ S trong thời gian O(log N). Sau đó trừ dung lượng đã cấp và tái cân bằng cây.',
+      inputFormat: [
+        'Dòng 1: Số nguyên dương N là số lượng thao tác (1 ≤ N ≤ 50,000).',
+        'N dòng tiếp theo: Chứa câu lệnh ADD_SERVER id capacity, ALLOCATE size hoặc RELEASE id size.',
+      ],
+      outputFormat: [
+        'Với mỗi lệnh ALLOCATE: In ra ServerID được chọn. Nếu không có server nào đủ dung lượng, in ra REJECT.',
+      ],
+      constraints: [
+        '1 ≤ N ≤ 50,000.',
+        'Thời gian thực thi tối đa: 2000 ms, RAM 512MB.',
+      ],
+      complexityRequirements: [
+        'Truy vấn định tuyến & cập nhật tải: O(log N).',
+      ],
+      solidGuidelines: [
+        'Áp dụng Factory Pattern hoặc Strategy Pattern trong việc lựa chọn thuật toán định tuyến.',
+      ],
+    },
+    sampleTestCases: [
+      {
+        name: 'Testcase Mẫu 1 (Định Tuyến Cắt Video)',
+        input: '4\\nADD_SERVER S1 100\\nADD_SERVER S2 200\\nALLOCATE 150\\nALLOCATE 200',
+        expectedOutput: 'S2\\nREJECT',
+        explanation: 'S1 có 100, S2 có 200. Yêu cầu 150 chọn S2 (còn lại 50). Yêu cầu tiếp theo 200 bị REJECT vì không server nào đủ dung lượng.',
+      },
+    ],
+  },
+  {
+    id: 'ASM-PRN-01',
+    courseId: 'COURSE-PRN211',
+    courseCode: 'PRN211',
+    course: 'PRN211 - Lập Trình Ứng Dụng Đa Nền Tảng .NET',
+    title: 'Xử lý Luồng Dữ liệu Bất Đồng Bộ (.NET C# Async/Await & Task Parallel)',
+    description: 'Xây dựng ứng dụng .NET C# xử lý hàng loạt tác vụ phân tích dữ liệu đa luồng bất đồng bộ (async/await, Task.WhenAll) và truy vấn LINQ tối ưu bộ nhớ.',
+    deadline: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
+    timeLimitMs: 2000,
+    memoryLimitMb: 512,
+    allowedLanguages: ['dotnet', 'csharp', 'java'],
     allowedExtensions: ['.zip'],
     maxSizeMb: 10,
     testCasesCount: 5,
     status: 'PUBLISHED',
     rubrics: [
-      { criterion: 'Đúng đắn tính năng nghiệp vụ OOP', maxScore: 6.0, description: 'Quản lý mượn/trả sách, tính phí phạt tự động' },
-      { criterion: 'Tuân thủ SOLID & Interface', maxScore: 4.0, description: 'Áp dụng DIP và Loose Coupling' },
+      { criterion: 'Tính đúng đắn đa luồng & Không Deadlock', maxScore: 6.0, description: 'Sử dụng Task.WhenAll và CancellationToken hợp lệ' },
+      { criterion: 'Tối ưu LINQ & Garbage Collection', maxScore: 4.0, description: 'Sử dụng IAsyncEnumerable và hạn chế cấp phát bộ nhớ rác' },
+    ],
+    technicalRequirements: {
+      problemContext: 'Xây dựng dịch vụ phân tích dữ liệu tổng hợp từ nhiều nguồn API song song trong ứng dụng .NET Core. Yêu cầu triển khai xử lý bất đồng bộ không gây nghẽn ThreadPool (Non-blocking I/O), xử lý ngoại lệ AggregateException chuẩn mực.',
+      inputFormat: [
+        'Dòng 1: Số nguyên N tác vụ cần xử lý.',
+        'N dòng tiếp theo: Tên tác vụ và thời gian trễ mô phỏng.',
+      ],
+      outputFormat: [
+        'In ra danh sách tác vụ hoàn thành theo thứ tự thời gian và tổng thời gian xử lý.',
+      ],
+      constraints: [
+        'Thời gian chạy tối đa: 2000 ms, RAM 512MB.',
+      ],
+      complexityRequirements: [
+        'Xử lý song song N tác vụ với Task.WhenAll.',
+      ],
+      solidGuidelines: [
+        'Dependency Injection với IDataProcessor service.',
+      ],
+    },
+    sampleTestCases: [
+      {
+        name: 'Testcase Mẫu 1 (Xử Lý Song Song)',
+        input: '3\\nTaskA 100\\nTaskB 50\\nTaskC 80',
+        expectedOutput: 'COMPLETED: TaskB, TaskC, TaskA\\nTOTAL_ELAPSED: ~100ms',
+        explanation: '3 tác vụ chạy đồng thời, TaskB hoàn thành nhanh nhất (50ms), tiếp theo là TaskC (80ms) và TaskA (100ms).',
+      },
     ],
   },
 ];
+
+// Helper nạp yêu cầu kỹ thuật đầy đủ cho bất kỳ bài tập nào
+const getEffectiveRequirements = (task: StudentTaskItem): TechnicalRequirement => {
+  if (task.technicalRequirements) return task.technicalRequirements;
+
+  const code = (task.courseCode || task.course || '').toUpperCase();
+  if (code.includes('CSD')) {
+    return {
+      problemContext: `Bài tập thuộc môn Cấu Trúc Dữ Liệu & Giải Thuật (${task.courseCode || 'CSD201'}). Yêu cầu sinh viên cài đặt cấu trúc dữ liệu nâng cao (Cây tự cân bằng AVL, Hàng đợi ưu tiên Min-Heap, Đồ thị), giải quyết bài toán với độ phức tạp thời gian tối ưu, hạn chế tối đa rò rỉ bộ nhớ trong môi trường Docker Sandbox.`,
+      inputFormat: [
+        'Dòng 1: Số nguyên dương N biểu diễn số lượng phần tử hoặc số lượng thao tác truy vấn (1 ≤ N ≤ 100,000).',
+        'N dòng tiếp theo: Mỗi dòng chứa câu lệnh thao tác (INSERT value, DELETE value, FIND value hoặc QUERY từ đỉnh u đến v).',
+      ],
+      outputFormat: [
+        'In ra kết quả của các truy vấn theo đúng thứ tự trên từng dòng tới STDOUT.',
+        'Đối với cây AVL: In thứ tự duyệt In-Order hoặc Pre-Order khi kết thúc thao tác.',
+        'Đối với thuật toán đồ thị: In khoảng cách ngắn nhất hoặc chuỗi các đỉnh trên đường đi.',
+      ],
+      constraints: [
+        `Giới hạn thời gian (Time Limit): ${task.timeLimitMs || 2000} ms cho toàn bộ testcases.`,
+        `Giới hạn bộ nhớ (Memory Limit): ${task.memoryLimitMb || 512} MB trong Docker Sandbox.`,
+        'Độ phức tạp thời gian bắt buộc: O(log N) cho các thao tác cây AVL, O((V + E) log V) cho Dijkstra.',
+        'Không được sử dụng các cấu trúc dữ liệu có sẵn của ngôn ngữ nếu đề bài yêu cầu tự cài đặt con trỏ Node.',
+      ],
+      complexityRequirements: [
+        'Thời gian (Time Complexity): O(log N) cho tìm kiếm/chèn/xóa.',
+        'Không gian (Space Complexity): O(N) cho bộ nhớ lưu trữ cây/đồ thị.',
+      ],
+      solidGuidelines: [
+        'Single Responsibility Principle (SRP): Tách bạch Node, Tree/Graph và lớp Runner/I-O.',
+        'Clean Code: Đặt tên biến tường minh (height, balanceFactor, leftChild, rightChild).',
+      ],
+    };
+  }
+
+  return {
+    problemContext: `Đề bài yêu cầu sinh viên xây dựng giải thuật xử lý dữ liệu chuẩn hóa trong dự án phần mềm (${task.courseCode || 'SWP391'}). Mã nguồn phải được đóng gói theo chuẩn Clean Code, áp dụng các nguyên lý SOLID và đảm bảo vượt qua các trường hợp kiểm thử biên trong môi trường Docker Sandbox.`,
+    inputFormat: [
+      'Dòng 1: Số nguyên dương N biểu diễn số lượng phần tử trong tập dữ liệu (1 ≤ N ≤ 100,000).',
+      'Dòng 2: Gồm N số nguyên A[1], A[2], ..., A[N] cách nhau bởi khoảng trắng (-10^9 ≤ A[i] ≤ 10^9).',
+    ],
+    outputFormat: [
+      'In ra trên một dòng duy nhất chuỗi kết quả đã được xử lý/sắp xếp, các phần tử cách nhau đúng một khoảng trắng.',
+      'Kết thúc bằng ký tự xuống dòng (\\n).',
+    ],
+    constraints: [
+      `Giới hạn thời gian (Time Limit): ${task.timeLimitMs || 2000} ms. Các giải thuật O(N^2) sẽ bị lỗi Time Limit Exceeded (TLE).`,
+      `Giới hạn bộ nhớ (RAM Limit): ${task.memoryLimitMb || 512} MB.`,
+      'Không được in ra các thông báo phụ (như "Nhap N:") làm sai lệch kết quả đối chiếu testcases.',
+    ],
+    complexityRequirements: [
+      'Độ phức tạp thời gian: O(N log N) trong mọi trường hợp.',
+      'Độ phức tạp không gian: Tối đa O(N).',
+    ],
+    solidGuidelines: [
+      'Single Responsibility (SRP): Tách riêng logic thuật toán và logic in ấn màn hình.',
+      'Dependency Inversion (DIP): Sử dụng Interface trừu tượng để decoupling mã nguồn.',
+    ],
+  };
+};
+
+// Helper nạp testcase mẫu cho bất kỳ bài tập nào
+const getEffectiveSampleTestCases = (task: StudentTaskItem): SampleTestCase[] => {
+  if (task.sampleTestCases && task.sampleTestCases.length > 0) {
+    return task.sampleTestCases;
+  }
+  const code = (task.courseCode || task.course || '').toUpperCase();
+  if (code.includes('CSD')) {
+    return [
+      {
+        name: 'Testcase Mẫu 1 (Thao Tác Cây Cân Bằng)',
+        input: '5\\nINSERT 50\\nINSERT 30\\nINSERT 70\\nINSERT 20\\nINSERT 40',
+        expectedOutput: '20 30 40 50 70',
+        explanation: 'Chèn 5 phần tử vào cây AVL. Cây duy trì hệ số cân bằng và in ra thứ tự tăng dần.',
+      },
+      {
+        name: 'Testcase Mẫu 2 (Trường Hợp Cân Bằng Biên)',
+        input: '3\\nINSERT 10\\nINSERT 20\\nINSERT 30',
+        expectedOutput: '10 20 30\\nRoot: 20',
+        explanation: 'Chèn 10 -> 20 -> 30 kích hoạt phép xoay đơn RR, đưa 20 lên làm gốc.',
+      },
+    ];
+  }
+  return [
+    {
+      name: 'Testcase Mẫu 1 (Dữ Liệu Cơ Sở)',
+      input: '5\\n4 2 5 1 3',
+      expectedOutput: '1 2 3 4 5',
+      explanation: 'Dãy 5 số nguyên [4, 2, 5, 1, 3] được sắp xếp theo thứ tự tăng dần thành [1, 2, 3, 4, 5].',
+    },
+    {
+      name: 'Testcase Mẫu 2 (Số Âm & Trùng Lặp)',
+      input: '6\\n10 0 -5 10 -2 0',
+      expectedOutput: '-5 -2 0 0 10 10',
+      explanation: 'Dãy chứa các số âm và các giá trị trùng lặp. Thuật toán duy trì tính ổn định và sắp xếp chính xác trong O(N log N).',
+    },
+  ];
+};
 
 export const SubmissionView: React.FC<SubmissionViewProps> = ({
   task,
@@ -176,6 +567,19 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCourseFilter, setSelectedCourseFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'URGENT' | 'SUBMITTED'>('ALL');
+  // Tab chi tiết thông tin bài tập (Đề bài, Testcase mẫu, Barem điểm, Hướng dẫn nộp)
+  const [activeDetailTab, setActiveDetailTab] = useState<'SPEC' | 'SAMPLES' | 'RUBRICS' | 'GUIDE'>('SPEC');
+  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+
+  const handleCopyCode = (text: string, label: string) => {
+    try {
+      navigator.clipboard.writeText(text);
+      setCopiedSnippet(label);
+      setTimeout(() => setCopiedSnippet(null), 2000);
+    } catch (e) {
+      console.warn('Copy failed', e);
+    }
+  };
   // Đồng bộ môn học đang chọn từ thanh điều hướng môn học bên ngoài
   useEffect(() => {
     if (!selectedCourseId || selectedCourseId === 'ALL') {
@@ -641,57 +1045,72 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
         {/* Khung Thông Tin Bài Tập & Đếm Ngược Deadline */}
         <div className="glass-panel" style={{ padding: '28px', marginBottom: '24px' }}>
+          {/* Hàng 1: Tiêu Đề, Mã Môn & Đồng Hồ Đếm Ngược */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
             <div style={{ flex: 1, minWidth: '300px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                 <span
                   style={{
                     fontSize: '11px',
                     fontWeight: 800,
                     padding: '3px 10px',
                     borderRadius: '6px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    backgroundColor: 'rgba(99, 102, 241, 0.25)',
                     color: 'var(--accent-cyan)',
-                    border: '1px solid rgba(99, 102, 241, 0.35)',
+                    border: '1px solid rgba(99, 102, 241, 0.4)',
                     textTransform: 'uppercase',
                   }}
                 >
                   {selectedTask.courseCode || 'SWP391'}
                 </span>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  Mã bài tập: {selectedTask.id}
+                  Mã bài tập: <strong>{selectedTask.id}</strong>
+                </span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: submissionHistory[selectedTask.id] ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                    color: submissionHistory[selectedTask.id] ? '#34d399' : '#fbbf24',
+                    border: `1px solid ${submissionHistory[selectedTask.id] ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)'}`,
+                  }}
+                >
+                  {submissionHistory[selectedTask.id] ? '✓ ĐÃ NỘP BÀI' : '⏳ CHƯA HOÀN THÀNH'}
                 </span>
               </div>
 
-              <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', lineHeight: '1.3', marginBottom: '10px' }}>
+              <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', lineHeight: '1.3', marginBottom: '8px' }}>
                 {selectedTask.title}
               </h1>
 
-              <p style={{ color: '#d1d5db', fontSize: '14px', lineHeight: '1.6' }}>
+              <p style={{ color: '#d1d5db', fontSize: '14px', lineHeight: '1.6', marginBottom: '12px' }}>
                 {selectedTask.description}
               </p>
             </div>
 
             {/* Đồng hồ đếm ngược thời gian thực */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', minWidth: '220px' }}>
               <CountdownTimer deadline={isDeadlineSimulatedExpired ? new Date(Date.now() - 3600000).toISOString() : selectedTask.deadline} />
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                Hạn chót: {new Date(selectedTask.deadline).toLocaleString('vi-VN')}
-              </span>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Clock size={13} color="var(--accent-cyan)" />
+                <span>Hạn nộp: <strong>{new Date(selectedTask.deadline).toLocaleString('vi-VN')}</strong></span>
+              </div>
             </div>
           </div>
 
-          {/* Thông số kỹ thuật Docker Sandbox */}
+          {/* Hàng 2: 4 Thông Số Kỹ Thuật Sandbox */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
               gap: '12px',
               padding: '16px',
               borderRadius: '12px',
-              backgroundColor: 'rgba(10, 15, 29, 0.7)',
+              backgroundColor: 'rgba(10, 15, 29, 0.75)',
               border: '1px solid rgba(255, 255, 255, 0.08)',
-              marginTop: '16px',
+              marginBottom: '24px',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -735,33 +1154,454 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             </div>
           </div>
 
-          {/* Barem tiêu chí chấm điểm nếu có */}
-          {selectedTask.rubrics && selectedTask.rubrics.length > 0 && (
-            <div style={{ marginTop: '20px' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Award size={15} color="var(--accent-amber)" /> Barem Đánh Giá Học Thuật & Chấm Điểm
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
-                {selectedTask.rubrics.map((r, i) => (
+          {/* Hàng 3: THANH ĐIỀU HƯỚNG TAB CHI TIẾT (4 TABS) */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '8px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              paddingBottom: '12px',
+              marginBottom: '20px',
+              overflowX: 'auto',
+            }}
+          >
+            {[
+              { key: 'SPEC', label: 'Yêu Cầu Kỹ Thuật & Đề Bài', icon: <FileText size={15} /> },
+              { key: 'SAMPLES', label: 'Testcase Mẫu & Ví Dụ', icon: <Code size={15} />, badge: `${getEffectiveSampleTestCases(selectedTask).length} Mẫu` },
+              { key: 'RUBRICS', label: 'Barem Điểm & SOLID', icon: <Award size={15} />, badge: 'Thang 10đ' },
+              { key: 'GUIDE', label: 'Cấu Trúc File & Sandbox', icon: <Layers size={15} /> },
+            ].map((tab) => {
+              const active = activeDetailTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveDetailTab(tab.key as any)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '9px 16px',
+                    borderRadius: '10px',
+                    border: active ? '1.5px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.08)',
+                    backgroundColor: active ? 'rgba(99, 102, 241, 0.22)' : 'rgba(255, 255, 255, 0.03)',
+                    color: active ? '#ffffff' : 'var(--text-muted)',
+                    fontSize: '13px',
+                    fontWeight: active ? 700 : 500,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {tab.icon}
+                  <span>{tab.label}</span>
+                  {tab.badge && (
+                    <span
+                      style={{
+                        fontSize: '10px',
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        backgroundColor: active ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)',
+                        color: '#ffffff',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Hàng 4: NỘI DUNG TỪNG TAB CHI TIẾT */}
+          {(() => {
+            const req = getEffectiveRequirements(selectedTask);
+            const samples = getEffectiveSampleTestCases(selectedTask);
+
+            if (activeDetailTab === 'SPEC') {
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {/* Bối cảnh nghiệp vụ & Bài toán */}
                   <div
-                    key={i}
                     style={{
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.06)',
+                      padding: '16px 20px',
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                      border: '1px solid rgba(99, 102, 241, 0.2)',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#ffffff' }}>{r.criterion}</span>
-                      <span style={{ fontSize: '12px', fontWeight: 800, color: 'var(--accent-emerald)' }}>+{r.maxScore}đ</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)', fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>
+                      <BookOpen size={16} /> Bối Cảnh Nghiệp Vụ & Đề Bài Chi Tiết
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{r.description}</div>
+                    <p style={{ fontSize: '13.5px', color: '#e5e7eb', lineHeight: '1.65', margin: 0 }}>
+                      {req.problemContext}
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+
+                  {/* 2 Cột Quy chuẩn Input & Output */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '14px' }}>
+                    {/* Quy chuẩn Đầu vào (STDIN) */}
+                    <div
+                      style={{
+                        padding: '16px 18px',
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
+                        <Terminal size={15} /> Quy Chuẩn Dữ Liệu Đầu Vào (STDIN)
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#d1d5db', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {req.inputFormat.map((line, idx) => (
+                          <li key={idx}>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Quy chuẩn Đầu ra (STDOUT) */}
+                    <div
+                      style={{
+                        padding: '16px 18px',
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#34d399', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
+                        <CheckSquare size={15} /> Quy Chuẩn Dữ Liệu Đầu Ra (STDOUT)
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#d1d5db', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {req.outputFormat.map((line, idx) => (
+                          <li key={idx}>{line}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  {/* Ràng buộc Kỹ thuật & Độ Phức Tạp */}
+                  <div
+                    style={{
+                      padding: '16px 20px',
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(245, 158, 11, 0.06)',
+                      border: '1px solid rgba(245, 158, 11, 0.25)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
+                      <AlertTriangle size={15} /> Ràng Buộc Kỹ Thuật & Giới Hạn Hiệu Năng
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
+                      {req.constraints.map((c, idx) => (
+                        <div key={idx} style={{ fontSize: '12.5px', color: '#f3f4f6', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                          <span style={{ color: '#fbbf24', fontWeight: 700 }}>•</span>
+                          <span>{c}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Yêu cầu SOLID & Clean Code */}
+                  <div
+                    style={{
+                      padding: '16px 20px',
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(168, 85, 247, 0.06)',
+                      border: '1px solid rgba(168, 85, 247, 0.25)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c084fc', fontSize: '13.5px', fontWeight: 700, marginBottom: '8px' }}>
+                      <Sparkles size={15} /> Hướng Dẫn Tuân Thủ SOLID & Clean Architecture (AST Analysis)
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#e5e7eb', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {req.solidGuidelines.map((sg, idx) => (
+                        <li key={idx}>{sg}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              );
+            }
+
+            if (activeDetailTab === 'SAMPLES') {
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    Dưới đây là các bộ dữ liệu kiểm thử mẫu giúp bạn chạy thử nghiệm trên máy cục bộ trước khi đóng gói nộp bài. Bấm nút <strong>Sao chép</strong> để dán nhanh vào môi trường IDE.
+                  </div>
+
+                  {samples.map((tc, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        padding: '18px',
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}>
+                          <Code size={16} color="var(--accent-cyan)" />
+                          <span>{tc.name}</span>
+                        </div>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', backgroundColor: 'rgba(255, 255, 255, 0.08)', padding: '2px 8px', borderRadius: '4px' }}>
+                          Mẫu #{idx + 1}
+                        </span>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                        {/* Đầu vào mẫu */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8' }}>ĐẦU VÀO (STDIN):</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyCode(tc.input, `input-${idx}`)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '11px',
+                                color: '#e5e7eb',
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                border: 'none',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {copiedSnippet === `input-${idx}` ? <Check size={11} color="#34d399" /> : <Copy size={11} />}
+                              <span>{copiedSnippet === `input-${idx}` ? 'Đã chép!' : 'Sao chép'}</span>
+                            </button>
+                          </div>
+                          <pre
+                            style={{
+                              margin: 0,
+                              padding: '12px',
+                              borderRadius: '8px',
+                              backgroundColor: '#0a0f1d',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              color: '#f8fafc',
+                              fontSize: '12.5px',
+                              fontFamily: 'Consolas, Monaco, monospace',
+                              whiteSpace: 'pre-wrap',
+                              overflowX: 'auto',
+                            }}
+                          >
+                            {tc.input}
+                          </pre>
+                        </div>
+
+                        {/* Đầu ra mong đợi */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399' }}>ĐẦU RA MONG ĐỢI (STDOUT):</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyCode(tc.expectedOutput, `output-${idx}`)}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                fontSize: '11px',
+                                color: '#e5e7eb',
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                border: 'none',
+                                padding: '2px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                              }}
+                            >
+                              {copiedSnippet === `output-${idx}` ? <Check size={11} color="#34d399" /> : <Copy size={11} />}
+                              <span>{copiedSnippet === `output-${idx}` ? 'Đã chép!' : 'Sao chép'}</span>
+                            </button>
+                          </div>
+                          <pre
+                            style={{
+                              margin: 0,
+                              padding: '12px',
+                              borderRadius: '8px',
+                              backgroundColor: '#0a0f1d',
+                              border: '1px solid rgba(52, 211, 153, 0.25)',
+                              color: '#34d399',
+                              fontSize: '12.5px',
+                              fontFamily: 'Consolas, Monaco, monospace',
+                              whiteSpace: 'pre-wrap',
+                              overflowX: 'auto',
+                            }}
+                          >
+                            {tc.expectedOutput}
+                          </pre>
+                        </div>
+                      </div>
+
+                      {/* Giải thích logic */}
+                      <div
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: '8px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                          fontSize: '12.5px',
+                          color: '#d1d5db',
+                          lineHeight: '1.5',
+                        }}
+                      >
+                        <strong style={{ color: '#fbbf24' }}>💡 Giải thích bước chạy: </strong>
+                        {tc.explanation}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+
+            if (activeDetailTab === 'RUBRICS') {
+              const rubrics = selectedTask.rubrics && selectedTask.rubrics.length > 0
+                ? selectedTask.rubrics
+                : [
+                    { criterion: 'Tính đúng đắn thuật toán & Vượt qua 100% Testcases', maxScore: 5.0, description: 'Vượt qua toàn bộ bộ testcases cơ sở và testcases dữ liệu lớn (TLE check)' },
+                    { criterion: 'Thiết kế Hướng đối tượng & SOLID (SRP, DIP)', maxScore: 2.5, description: 'Tách riêng bộ xử lý nghiệp vụ khỏi I/O, sử dụng interface ISorter' },
+                    { criterion: 'Tối ưu độ phức tạp O(N log N) & Clean Code', maxScore: 1.5, description: 'Mã nguồn tường minh, đặt tên chuẩn CamelCase, tối ưu thời gian CPU < 2000ms' },
+                    { criterion: 'Liêm chính học thuật & AST Winnowing', maxScore: 1.0, description: 'Mã nguồn độc lập, mức độ tương đồng AST với sinh viên khác dưới 25%' },
+                  ];
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                    Hệ thống AITA sử dụng quy trình chấm điểm 2 tầng: Tầng 1 thực thi testcases trong Docker Sandbox cô lập, Tầng 2 phân tích cây cú pháp trừu tượng AST bằng mô hình GenAI để đánh giá tính tuân thủ nguyên lý SOLID và liêm chính học thuật.
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+                    {rubrics.map((r, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          padding: '16px',
+                          borderRadius: '12px',
+                          backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 800, color: '#ffffff' }}>{r.criterion}</span>
+                            <span
+                              style={{
+                                fontSize: '13px',
+                                fontWeight: 800,
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                color: 'var(--accent-emerald)',
+                                border: '1px solid rgba(16, 185, 129, 0.4)',
+                              }}
+                            >
+                              +{r.maxScore}đ
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5' }}>{r.description}</div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--accent-cyan)' }}>
+                          <CheckCircle size={12} /> Tự động đánh giá bởi AITA Autograding Engine
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Thông tin Liêm chính học thuật */}
+                  <div
+                    style={{
+                      padding: '14px 18px',
+                      borderRadius: '10px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                      border: '1px solid rgba(16, 185, 129, 0.25)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                    }}
+                  >
+                    <ShieldCheck size={24} color="#34d399" />
+                    <div style={{ fontSize: '12.5px', color: '#d1d5db', lineHeight: '1.5' }}>
+                      <strong style={{ color: '#ffffff' }}>Giám sát Liêm chính học thuật AST: </strong>
+                      Mọi bài nộp sẽ được tạo chữ ký k-gram thông qua giải thuật Winnowing AST. Nếu độ tương đồng vượt quá 70%, bài nộp sẽ bị tự động đánh dấu nghi vấn gian lận và chuyển tới hội đồng giảng viên xem xét.
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            if (activeDetailTab === 'GUIDE') {
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '14px' }}>
+                    {/* Hướng dẫn cấu trúc thư mục .zip */}
+                    <div
+                      style={{
+                        padding: '18px',
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
+                        <FileArchive size={16} /> Cấu Trúc File Nén .ZIP Hợp Lệ
+                      </div>
+                      <p style={{ fontSize: '12.5px', color: '#d1d5db', marginBottom: '10px' }}>
+                        Nén trực tiếp các file mã nguồn vào thư mục gốc của tệp <code>.zip</code>:
+                      </p>
+                      <pre
+                        style={{
+                          margin: 0,
+                          padding: '12px',
+                          borderRadius: '8px',
+                          backgroundColor: '#0a0f1d',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          color: '#f8fafc',
+                          fontSize: '12px',
+                          fontFamily: 'Consolas, Monaco, monospace',
+                          lineHeight: '1.6',
+                        }}
+                      >
+{`solution.zip
+├── Solution.java (hoặc Main.java / main.py / main.cpp)
+├── OrderSorter.java (nếu tách class SRP)
+└── ISorter.java (nếu áp dụng DIP)`}
+                      </pre>
+                    </div>
+
+                    {/* Ràng buộc Sandbox */}
+                    <div
+                      style={{
+                        padding: '18px',
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
+                        <Lock size={16} /> Quy Định An Toàn Docker Sandbox
+                      </div>
+                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px', color: '#d1d5db', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        <li>File nén chỉ chứa mã nguồn (.java, .py, .cpp, .cs). Không đính kèm file .class, .exe hoặc file rác.</li>
+                        <li>Dung lượng file tối đa: <strong>10 MB</strong>. Vượt quá sẽ bị chặn theo chuẩn <em>BR-01</em>.</li>
+                        <li>Nghiêm cấm: Gọi <code>System.exit()</code>, mở kết nối mạng Socket/HTTP, truy xuất file hệ thống.</li>
+                        <li>Thời hạn nộp bài: Sau khi hết thời gian đếm ngược, cổng nộp bài tự động khóa theo chuẩn <em>BR-02</em>.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            return null;
+          })()}
         </div>
 
         {/* Thông báo nếu đã có bài nộp trước đó */}

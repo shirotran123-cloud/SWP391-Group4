@@ -27,7 +27,7 @@ const mockTask: Task = {
   deadline: new Date(Date.now() + 2 * 3600 * 1000 + 45 * 60 * 1000).toISOString(),
   maxSizeMb: 10,
   allowedExtensions: ['.zip'],
-  description: 'Nộp file nén .zip chứa mã nguồn hoàn chỉnh (Java / C++ / Python) để hệ thống tự động giải nén, kiểm tra SHA-256, chạy testcases trong Docker Sandbox và đánh giá Clean Code / SOLID.',
+  description: 'Xây dựng mô đun sắp xếp danh sách giao dịch đơn hàng động 100,000 phần tử trong hệ sinh thái E-Commerce. Thuật toán bắt buộc đạt O(N log N), tuân thủ nguyên lý Đơn trách nhiệm (SRP), phân tách I/O và cấu trúc cây cú pháp AST chống gian lận.',
 };
 
 const mockSourceCodeStudent = `package com.aita.autograder;
