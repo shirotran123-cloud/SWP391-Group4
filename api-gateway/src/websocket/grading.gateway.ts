@@ -79,6 +79,14 @@ export interface GradingCompletedPayload {
     sourceCodeA: string;
     sourceCodeB: string;
     matchedTokens: Array<{ lineA: [number, number]; lineB: [number, number] }>;
+    // Optional diagnostic fields surfaced so the client can label the match without
+    // recomputing it locally (isFlagged >= 70%, status per the plagiarism engine).
+    isFlagged?: boolean;
+    status?: string;
+    jaccardSimilarity?: number;
+    winnowingContainment?: number;
+    astStructuralSimilarity?: number;
+    executionTimeMs?: number;
   };
   completedAt: string;
 }

@@ -429,7 +429,14 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
           sourceCodeA: top.sourceCodeA,
           sourceCodeB: top.sourceCodeB,
           matchedTokens: top.matchedTokens,
-        } as any;
+          // Chẩn đoán bổ sung để client hiển thị nhãn mà không phải tự tính lại.
+          isFlagged: top.isFlagged,
+          status: top.status,
+          jaccardSimilarity: top.jaccardSimilarity,
+          winnowingContainment: top.winnowingContainment,
+          astStructuralSimilarity: top.astStructuralSimilarity,
+          executionTimeMs: plagiarismResult.executionTimeMs,
+        };
         plagiarismDetail =
           `Đã đối chiếu ${plagiarismResult.comparedCount} bài nộp (${plagiarismResult.engine}). ` +
           `Tương đồng cao nhất ${top.similarityRate}% với ${top.matchedStudentName} ` +
