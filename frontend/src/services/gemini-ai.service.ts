@@ -1,4 +1,4 @@
-export interface GeneratedTestCase {
+﻿export interface GeneratedTestCase {
   input: string;
   output: string;
   weight: number;
@@ -316,7 +316,7 @@ Nhiệm vụ: Soạn thảo đề thi lập trình chi tiết, phong phú, độ
 BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (không dùng markdown backticks \`\`\`json, không viết bất kỳ văn bản nào ngoài JSON) theo đúng cấu trúc:
 {
   "title": "Tên bài tập ngắn gọn, súc tích mang tính ứng dụng cao",
-  "description": "Mô tả bối cảnh bài toán thực tế sinh động, yêu cầu giải thuật, định dạng Input/Output và ràng buộc kỹ thuật rõ ràng",
+  "description": "Mô tả bài toán chi tiết, có cấu trúc rõ ràng: Bối cảnh nghiệp vụ thực tế; Yêu cầu kỹ thuật: 1. 2. 3.; Định dạng Đầu vào (StdIn): - Dòng 1...; Định dạng Đầu ra (StdOut): - In ra...; Ràng buộc: - 1 <= N <= ... Tuyệt đối không viết dồn cục thành một đoạn văn duy nhất.",
   "timeLimitMs": 2000,
   "memoryLimitMb": 512,
   "testCases": [

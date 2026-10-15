@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   UploadCloud, FileArchive, X, Send, ShieldCheck, Clock,
   BookOpen, AlertTriangle, CheckCircle, Search,
@@ -7,6 +7,8 @@ import {
   FileText, Copy, Check, Terminal, Info, CheckSquare, Sparkles
 } from 'lucide-react';
 import { CountdownTimer } from './CountdownTimer';
+import { AssignmentDescriptionView } from './AssignmentDescriptionView';
+import { parseAssignmentDescription } from '../utils/assignmentParser';
 import type { Task } from '../types';
 
 export interface RubricItem {
@@ -384,6 +386,22 @@ const defaultAssignmentPool: StudentTaskItem[] = [
 // Helper nạp yêu cầu kỹ thuật đầy đủ cho bất kỳ bài tập nào
 const getEffectiveRequirements = (task: StudentTaskItem): TechnicalRequirement => {
   if (task.technicalRequirements) return task.technicalRequirements;
+
+  // Tự động phân tích description nếu bài tập có đặc tả
+  const parsed = parseAssignmentDescription(task.description || '');
+  if (parsed.technicalRequirements.length > 0 || parsed.inputFormat.length > 0) {
+    return {
+      problemContext: parsed.overview || task.description,
+      inputFormat: parsed.inputFormat.length > 0 ? parsed.inputFormat : ['Dữ liệu vào từ luồng chuẩn STDIN.'],
+      outputFormat: parsed.outputFormat.length > 0 ? parsed.outputFormat : ['In kết quả xử lý ra luồng chuẩn STDOUT.'],
+      constraints: parsed.constraints.length > 0 ? parsed.constraints : [
+        `Giới hạn thời gian (Time Limit): ${task.timeLimitMs || 2000} ms.`,
+        `Giới hạn bộ nhớ (RAM Limit): ${task.memoryLimitMb || 512} MB.`,
+      ],
+      complexityRequirements: parsed.technicalRequirements.filter(r => r.toLowerCase().includes('o(')),
+      solidGuidelines: parsed.technicalRequirements.filter(r => r.toLowerCase().includes('srp') || r.toLowerCase().includes('solid')),
+    };
+  }
 
   const code = (task.courseCode || task.course || '').toUpperCase();
   if (code.includes('CSD')) {
@@ -1044,9 +1062,18 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 {selectedTask.title}
               </h1>
 
-              <p style={{ color: '#d1d5db', fontSize: '14px', lineHeight: '1.6', marginBottom: '12px' }}>
-                {selectedTask.description}
-              </p>
+              <div style={{ marginBottom: '14px' }}>
+                <AssignmentDescriptionView
+                  mode="HEADER_COMPACT"
+                  description={selectedTask.description}
+                  title={selectedTask.title}
+                  timeLimitMs={selectedTask.timeLimitMs}
+                  memoryLimitMb={selectedTask.memoryLimitMb}
+                  courseCode={selectedTask.courseCode}
+                  testCasesCount={selectedTask.testCasesCount}
+                  allowedLanguages={selectedTask.allowedLanguages}
+                />
+              </div>
             </div>
 
             {/* Đồng hồ đếm ngược thời gian thực */}
@@ -1180,106 +1207,16 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
             if (activeDetailTab === 'SPEC') {
               return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {/* Bối cảnh nghiệp vụ & Bài toán */}
-                  <div
-                    style={{
-                      padding: '16px 20px',
-                      borderRadius: '12px',
-                      backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                      border: '1px solid rgba(99, 102, 241, 0.2)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)', fontSize: '14px', fontWeight: 700, marginBottom: '8px' }}>
-                      <BookOpen size={16} /> Bối Cảnh Nghiệp Vụ & Đề Bài Chi Tiết
-                    </div>
-                    <p style={{ fontSize: '13.5px', color: '#e5e7eb', lineHeight: '1.65', margin: 0 }}>
-                      {req.problemContext}
-                    </p>
-                  </div>
-
-                  {/* 2 Cột Quy chuẩn Input & Output */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '14px' }}>
-                    {/* Quy chuẩn Đầu vào (STDIN) */}
-                    <div
-                      style={{
-                        padding: '16px 18px',
-                        borderRadius: '12px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
-                        <Terminal size={15} /> Quy Chuẩn Dữ Liệu Đầu Vào (STDIN)
-                      </div>
-                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#d1d5db', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {req.inputFormat.map((line, idx) => (
-                          <li key={idx}>{line}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    {/* Quy chuẩn Đầu ra (STDOUT) */}
-                    <div
-                      style={{
-                        padding: '16px 18px',
-                        borderRadius: '12px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#34d399', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
-                        <CheckSquare size={15} /> Quy Chuẩn Dữ Liệu Đầu Ra (STDOUT)
-                      </div>
-                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#d1d5db', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                        {req.outputFormat.map((line, idx) => (
-                          <li key={idx}>{line}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-
-                  {/* Ràng buộc Kỹ thuật & Độ Phức Tạp */}
-                  <div
-                    style={{
-                      padding: '16px 20px',
-                      borderRadius: '12px',
-                      backgroundColor: 'rgba(245, 158, 11, 0.06)',
-                      border: '1px solid rgba(245, 158, 11, 0.25)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
-                      <AlertTriangle size={15} /> Ràng Buộc Kỹ Thuật & Giới Hạn Hiệu Năng
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '10px' }}>
-                      {req.constraints.map((c, idx) => (
-                        <div key={idx} style={{ fontSize: '12.5px', color: '#f3f4f6', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                          <span style={{ color: '#fbbf24', fontWeight: 700 }}>•</span>
-                          <span>{c}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Yêu cầu SOLID & Clean Code */}
-                  <div
-                    style={{
-                      padding: '16px 20px',
-                      borderRadius: '12px',
-                      backgroundColor: 'rgba(168, 85, 247, 0.06)',
-                      border: '1px solid rgba(168, 85, 247, 0.25)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#c084fc', fontSize: '13.5px', fontWeight: 700, marginBottom: '8px' }}>
-                      <Sparkles size={15} /> Hướng Dẫn Tuân Thủ SOLID & Clean Architecture (AST Analysis)
-                    </div>
-                    <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#e5e7eb', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      {req.solidGuidelines.map((sg, idx) => (
-                        <li key={idx}>{sg}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+                <AssignmentDescriptionView
+                  mode="FULL_SPEC"
+                  description={selectedTask.description}
+                  title={selectedTask.title}
+                  timeLimitMs={selectedTask.timeLimitMs}
+                  memoryLimitMb={selectedTask.memoryLimitMb}
+                  courseCode={selectedTask.courseCode}
+                  testCasesCount={selectedTask.testCasesCount}
+                  allowedLanguages={selectedTask.allowedLanguages}
+                />
               );
             }
 
