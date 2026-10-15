@@ -237,6 +237,9 @@ export class AuthService {
     return {
       success: true,
       message: `Mã OTP đã được gửi về hòm thư ${lowerEmail}. Vui lòng kiểm tra email để lấy mã xác nhận đăng nhập.`,
+      // Chế độ MOCK (chưa cấu hình SMTP): trả mã về cho client để không chặn luồng demo/kiểm thử.
+      // Khi SMTP đã cấu hình, debugOtp LUÔN là undefined nên mã không bao giờ lộ ra ngoài.
+      debugOtp: this.mailService.isMock() ? otp : undefined,
     };
   }
 

@@ -5,9 +5,16 @@ import * as nodemailer from 'nodemailer';
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   private transporter: nodemailer.Transporter | null = null;
+  private readonly isMockMode: boolean;
 
   constructor() {
+    this.isMockMode = !(process.env.SMTP_USER && process.env.SMTP_PASS);
     this.initTransporter();
+  }
+
+  /** True when no SMTP credentials are configured, so OTPs are printed to the log instead of emailed. */
+  public isMock(): boolean {
+    return this.isMockMode;
   }
 
   private initTransporter() {
