@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Scale, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, RefreshCw, Award } from 'lucide-react';
 import type { Appeal } from '../types';
 import { AppealModal } from './AppealModal';
@@ -88,7 +88,7 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
               Theo Dõi Khiếu Nại &amp; Phúc Khảo Điểm (Appeals)
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-              Sinh viên có quyền gửi tối đa <strong>2 đơn phúc khảo</strong> cho mỗi bài nộp trong vòng <strong>48 giờ</strong> sau khi công bố kết quả.
+              Sinh viên có quyền gửi tối đa <strong>2 đơn phúc khảo cho MỖI bài nộp độc lập</strong> trong vòng <strong>48 giờ</strong> sau khi công bố kết quả (Quy tắc BR-05). Mỗi bài tập đều có hạn mức 2 lượt riêng biệt, không tính gộp toàn khóa học.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>

@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   FileCode, Download, RefreshCw, CheckCircle, XCircle, Clock,
   Award, Copy, Check, Scale, Search, Filter, ShieldCheck,
-  AlertCircle, Sparkles, ExternalLink, ArrowRight
+  AlertCircle, Sparkles, ExternalLink, ArrowRight, MessageSquare
 } from 'lucide-react';
 import { AppealModal } from './AppealModal';
+import type { Appeal } from '../types';
 
 export interface SubmissionItem {
   submissionId: string;
@@ -47,16 +48,49 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
   onOpenAppealModal,
 }) => {
   const [submissions, setSubmissions] = useState<SubmissionItem[]>([]);
+  const [appealsBySubmission, setAppealsBySubmission] = useState<Record<string, Appeal[]>>({});
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PASSED' | 'FAILED' | 'QUEUED'>('ALL');
 
-  // Modal appeal nội bộ nếu không dùng callback ngoài
+  // Modal appeal nội bộ
   const [appealModalOpen, setAppealModalOpen] = useState(false);
   const [appealSubId, setAppealSubId] = useState('');
   const [appealScore, setAppealScore] = useState<number | undefined>(undefined);
+
+  const fetchAppeals = async () => {
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/v1/appeals?studentId=${encodeURIComponent(studentId || 'SE170000')}`);
+      let allAppeals: Appeal[] = [];
+      if (res.ok) {
+        const json = await res.json();
+        allAppeals = json.data || [];
+      }
+      if (allAppeals.length === 0) {
+        const fallbackRes = await fetch(`${apiBaseUrl}/api/v1/appeals`);
+        if (fallbackRes.ok) {
+          const fallbackJson = await fallbackRes.json();
+          allAppeals = fallbackJson.data || [];
+        }
+      }
+
+      const map: Record<string, Appeal[]> = {};
+      for (const app of allAppeals) {
+        if (!map[app.submissionId]) {
+          map[app.submissionId] = [];
+        }
+        map[app.submissionId].push(app);
+      }
+      for (const k in map) {
+        map[k].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      }
+      setAppealsBySubmission(map);
+    } catch (err) {
+      console.warn('Lỗi tải danh sách phúc khảo:', err);
+    }
+  };
 
   const fetchSubmissions = async () => {
     setLoading(true);
@@ -70,7 +104,6 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
           return;
         }
       }
-      // Nếu server chưa có bài nộp của studentId cụ thể, thử fetch tất cả bài nộp demo
       const allRes = await fetch(`${apiBaseUrl}/api/v1/submissions?limit=20`);
       if (allRes.ok) {
         const allJson = await allRes.json();
@@ -83,38 +116,17 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
       setSubmissions([]);
     } catch (err) {
       console.warn('Lỗi tải danh sách bài nộp:', err);
-      // Fallback demo data
-      setSubmissions([
-        {
-          submissionId: 'SUB-270782-579IZL',
-          studentId: studentId || 'SE170000',
-          assignmentId: 'TASK-SWP391-SPRINT2',
-          language: 'java',
-          fileName: 'Solution_QuickSort_3Way.zip',
-          fileSizeBytes: 1048576,
-          sha256Hash: '3e5be8e8c41d8f0f31574334d0d089837abc64a19d0b055e3651ac5339c71640',
-          status: 'PASSED',
-          score: 9.5,
-          createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-          details: {
-            score: 9.5,
-            passedTestcases: 2,
-            totalTestcases: 2,
-            aiRating: {
-              cleanCodeScore: 8.5,
-              solidScore: { s: 7.0, o: 9.0, l: 8.5, i: 9.0, d: 8.0 },
-              explanation: 'Mã nguồn cấu trúc chặt chẽ, thuật toán O(N log N) chuẩn xác.',
-            },
-          },
-        },
-      ]);
     } finally {
       setLoading(false);
     }
   };
 
+  const refreshAll = async () => {
+    await Promise.all([fetchSubmissions(), fetchAppeals()]);
+  };
+
   useEffect(() => {
-    void fetchSubmissions();
+    void refreshAll();
   }, [studentId]);
 
   const handleCopy = (id: string) => {
@@ -148,7 +160,10 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
   };
 
   const handleOpenAppeal = (sub: SubmissionItem) => {
-    const finalScore = sub.score ?? sub.details?.score ?? 0;
+    const subAppeals = appealsBySubmission[sub.submissionId] || [];
+    const acceptedApp = subAppeals.slice().reverse().find((a) => a.status === 'ACCEPTED' && a.adjustedScore !== undefined);
+    const finalScore = acceptedApp?.adjustedScore ?? sub.score ?? sub.details?.score ?? 0;
+
     if (onOpenAppealModal) {
       onOpenAppealModal(sub.submissionId, finalScore);
     } else {
@@ -160,9 +175,12 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
 
   // Metrics
   const totalSubmissions = submissions.length;
-  const passedCount = submissions.filter(
-    (s) => s.status === 'PASSED' || s.status === 'COMPLETED' || (s.score && s.score >= 5.0)
-  ).length;
+  const passedCount = submissions.filter((s) => {
+    const subAppeals = appealsBySubmission[s.submissionId] || [];
+    const acceptedApp = subAppeals.slice().reverse().find((a) => a.status === 'ACCEPTED' && a.adjustedScore !== undefined);
+    const effScore = acceptedApp?.adjustedScore ?? s.score ?? s.details?.score;
+    return s.status === 'PASSED' || s.status === 'COMPLETED' || (effScore !== undefined && effScore >= 5.0);
+  }).length;
 
   // Filter
   const filteredSubmissions = submissions.filter((s) => {
@@ -172,11 +190,15 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
       s.fileName.toLowerCase().includes(searchTerm.toLowerCase());
     if (!matchSearch) return false;
 
+    const subAppeals = appealsBySubmission[s.submissionId] || [];
+    const acceptedApp = subAppeals.slice().reverse().find((a) => a.status === 'ACCEPTED' && a.adjustedScore !== undefined);
+    const effScore = acceptedApp?.adjustedScore ?? s.score ?? s.details?.score;
+
     if (statusFilter === 'ALL') return true;
     if (statusFilter === 'PASSED')
-      return s.status === 'PASSED' || s.status === 'COMPLETED' || (s.score && s.score >= 5.0);
+      return s.status === 'PASSED' || s.status === 'COMPLETED' || (effScore !== undefined && effScore >= 5.0);
     if (statusFilter === 'FAILED')
-      return s.status === 'FAILED' || (s.score !== undefined && s.score < 5.0);
+      return s.status === 'FAILED' || (effScore !== undefined && effScore < 5.0);
     if (statusFilter === 'QUEUED')
       return s.status === 'QUEUED' || s.status === 'IN_PROGRESS';
     return true;
@@ -195,13 +217,13 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
               Lịch Sử Bài Nộp &amp; Điểm Số
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
-              Xem danh sách bài tập đã nộp, điểm số chi tiết từng tiêu chí, tải lại mã nguồn gốc (.zip) và khiếu nại phúc khảo.
+              Xem danh sách bài tập đã nộp, điểm số chi tiết từng tiêu chí, tải lại mã nguồn gốc (.zip) và quản lý khiếu nại phúc khảo theo quy tắc BR-05 (2 lượt/bài nộp).
             </p>
           </div>
 
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
-              onClick={fetchSubmissions}
+              onClick={refreshAll}
               disabled={loading}
               style={{
                 display: 'inline-flex',
@@ -262,17 +284,17 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
           </div>
 
           <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>BẢO MẬT &amp; INTEGRITY</div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#38bdf8', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ShieldCheck size={16} /> SHA-256 Hashing Immutability
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>QUY TẮC PHÚC KHẢO BR-05</div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#fbbf24', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Scale size={16} /> 2 lượt độc lập / mỗi bài tập
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="glass-panel" style={{ padding: '16px 20px', marginBottom: '20px', display: 'flex', gap: '14px', alignItems: 'center', flexWrap: 'wrap' }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: '240px' }}>
+      {/* Thanh tìm kiếm & Bộ lọc */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+        <div style={{ position: 'relative', flex: '1', minWidth: '260px', maxWidth: '480px' }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input
             type="text"
@@ -336,7 +358,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
             {searchTerm ? 'Không tìm thấy bài nộp nào phù hợp bộ lọc' : 'Bạn chưa có bài nộp nào'}
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 24px' }}>
-            Khi nộp bài tập qua hệ thống chấm điểm tự động Docker Sandbox, toàn bộ kết quả chấm, điểm số và file zip sẽ được lưu giữ tại đây.
+            Khi nộp bài tập qua hệ thống chấm điểm tự động Docker Sandbox, toàn bộ kết quả chấm, điểm số và file zip sẽ được lưu trữ tại đây.
           </p>
           {onNavigateToSubmit && (
             <button
@@ -362,8 +384,22 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {filteredSubmissions.map((sub) => {
-            const finalScore = sub.score ?? sub.details?.score;
-            const isPassed = finalScore !== undefined ? finalScore >= 5.0 : sub.status === 'PASSED';
+            const subAppeals = appealsBySubmission[sub.submissionId] || [];
+            const appealsCount = subAppeals.length;
+            const isMaxAppeals = appealsCount >= 2;
+            const latestAppeal = appealsCount > 0 ? subAppeals[appealsCount - 1] : null;
+
+            // Tìm đơn phúc khảo được chấp thuận có điểm điều chỉnh
+            const acceptedAppealWithScore = subAppeals.slice().reverse().find(
+              (a) => a.status === 'ACCEPTED' && a.adjustedScore !== undefined
+            );
+
+            const originalScore = sub.score ?? sub.details?.score;
+            const displayScore = acceptedAppealWithScore?.adjustedScore !== undefined
+              ? acceptedAppealWithScore.adjustedScore
+              : originalScore;
+
+            const isPassed = displayScore !== undefined ? displayScore >= 5.0 : sub.status === 'PASSED';
             const cleanCodeScore = sub.details?.aiRating?.cleanCodeScore;
             const testcaseText =
               sub.details?.passedTestcases !== undefined && sub.details?.totalTestcases !== undefined
@@ -377,14 +413,16 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 style={{
                   padding: '22px 24px',
                   borderRadius: '16px',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  border: acceptedAppealWithScore
+                    ? '1px solid rgba(16, 185, 129, 0.4)'
+                    : '1px solid rgba(255, 255, 255, 0.08)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '16px',
                   transition: 'border-color 0.2s ease',
                 }}
               >
-                {/* Dòng 1: Header bài nộp */}
+                {/* Dòng 1: Header bài nộp & Điểm số */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                     {/* Badge trạng thái */}
@@ -394,11 +432,11 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                       </span>
                     ) : isPassed ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '12px', fontWeight: 700 }}>
-                        <CheckCircle size={14} /> ĐẠT ({finalScore !== undefined ? `${finalScore}/10` : 'PASS'})
+                        <CheckCircle size={14} /> ĐẠT ({displayScore !== undefined ? `${displayScore.toFixed(1)}/10` : 'PASS'})
                       </span>
                     ) : (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', fontSize: '12px', fontWeight: 700 }}>
-                        <XCircle size={14} /> CHƯA ĐẠT ({finalScore !== undefined ? `${finalScore}/10` : 'FAIL'})
+                        <XCircle size={14} /> CHƯA ĐẠT ({displayScore !== undefined ? `${displayScore.toFixed(1)}/10` : 'FAIL'})
                       </span>
                     )}
 
@@ -428,17 +466,55 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
 
                     {/* Ngôn ngữ */}
                     <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.06)', color: 'var(--text-dim)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
-                      {sub.language || 'Java'}
+                      {sub.language}
                     </span>
+
+                    {/* Badge số lần đã phúc khảo của bài này */}
+                    {appealsCount > 0 && (
+                      <span
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          backgroundColor: isMaxAppeals ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                          color: isMaxAppeals ? '#f87171' : '#fbbf24',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <Scale size={12} /> Phúc khảo: {appealsCount}/2 lượt
+                      </span>
+                    )}
                   </div>
 
-                  {/* Điểm số to rõ ràng */}
+                  {/* Điểm số hiển thị góc phải */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Điểm Tổng Hợp</div>
-                      <div style={{ fontSize: '22px', fontWeight: 900, color: finalScore !== undefined && finalScore >= 5.0 ? '#10b981' : '#f43f5e' }}>
-                        {finalScore !== undefined ? `${finalScore.toFixed(1)} / 10.0` : 'Chờ chấm'}
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          color: acceptedAppealWithScore ? '#10b981' : 'var(--text-muted)',
+                          textTransform: 'uppercase',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          gap: '4px',
+                        }}
+                      >
+                        {acceptedAppealWithScore && <Sparkles size={12} />}
+                        {acceptedAppealWithScore ? 'Điểm Sau Phúc Khảo' : 'Điểm Tổng Hợp'}
                       </div>
+                      <div style={{ fontSize: '24px', fontWeight: 900, color: displayScore !== undefined && displayScore >= 5.0 ? '#10b981' : '#f43f5e' }}>
+                        {displayScore !== undefined ? `${displayScore.toFixed(1)} / 10.0` : 'Chờ chấm'}
+                      </div>
+                      {acceptedAppealWithScore && originalScore !== undefined && (
+                        <div style={{ fontSize: '11px', color: 'var(--text-dim)', textDecoration: 'line-through' }}>
+                          Điểm gốc: {originalScore.toFixed(1)}/10.0
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -500,6 +576,131 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                   </div>
                 )}
 
+                {/* KHỐI THÔNG TIN PHÚC KHẢO (NẾU BÀI NỘP NÀY ĐÃ GỬI ĐƠN PHÚC KHẢO) */}
+                {appealsCount > 0 && (
+                  <div
+                    style={{
+                      padding: '16px 18px',
+                      borderRadius: '12px',
+                      backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px',
+                    }}
+                  >
+                    {/* Header thông tin phúc khảo */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Scale size={18} color="#818cf8" />
+                        <span style={{ fontSize: '14px', fontWeight: 800, color: '#e0e7ff' }}>
+                          Thông Tin Phúc Khảo Bài Nộp (Đã sử dụng: {appealsCount}/2 lượt của bài này)
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontStyle: 'italic' }}>
+                          — Quy tắc BR-05
+                        </span>
+                      </div>
+
+                      <div>
+                        {latestAppeal?.status === 'ACCEPTED' && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '12px', fontWeight: 700 }}>
+                            <CheckCircle size={14} /> ĐÃ CHẤP THUẬN CẬP NHẬT ĐIỂM
+                          </span>
+                        )}
+                        {latestAppeal?.status === 'REJECTED' && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', fontSize: '12px', fontWeight: 700 }}>
+                            <XCircle size={14} /> ĐÃ TỪ CHỐI KHIẾU NẠI
+                          </span>
+                        )}
+                        {(latestAppeal?.status === 'PENDING' || latestAppeal?.status === 'IN_REVIEW') && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', fontSize: '12px', fontWeight: 700 }}>
+                            <Clock size={14} /> ĐANG CHỜ GIẢNG VIÊN XEM XÉT
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Danh sách từng lần phúc khảo: Lần 1, Lần 2 */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {subAppeals.map((app, appIdx) => (
+                        <div
+                          key={app.appealId || appIdx}
+                          style={{
+                            padding: '12px 14px',
+                            borderRadius: '10px',
+                            backgroundColor: 'rgba(0, 0, 0, 0.25)',
+                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 800, color: '#a5b4fc', backgroundColor: 'rgba(99, 102, 241, 0.18)', padding: '2px 8px', borderRadius: '6px' }}>
+                                Lần {appIdx + 1}/2
+                              </span>
+                              <code style={{ fontSize: '12px', color: '#cbd5e1' }}>{app.appealId}</code>
+                              <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
+                                ({new Date(app.createdAt).toLocaleString('vi-VN')})
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: app.status === 'ACCEPTED' ? '#10b981' : app.status === 'REJECTED' ? '#f43f5e' : '#fbbf24' }}>
+                              {app.status === 'ACCEPTED' ? '✓ Đã chấp thuận' : app.status === 'REJECTED' ? '✕ Đã từ chối' : '⏳ Chờ xem xét'}
+                            </span>
+                          </div>
+
+                          {/* Lý do sinh viên gửi */}
+                          <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>
+                            <strong style={{ color: '#94a3b8' }}>Lý do bạn khiếu nại: </strong>
+                            &ldquo;{app.reason}&rdquo;
+                          </div>
+
+                          {/* Kết quả phản hồi của Giảng viên */}
+                          {app.status === 'ACCEPTED' && (
+                            <div style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: '12px', color: '#6ee7b7' }}>
+                              <div style={{ fontWeight: 700, color: '#34d399', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <Award size={14} /> Phản hồi từ Giảng viên ({app.reviewerId || 'Giảng viên phụ trách'}):
+                              </div>
+                              <div>{app.resolutionNote || 'Đã đồng ý điều chỉnh điểm theo khiếu nại.'}</div>
+                              {app.adjustedScore !== undefined && (
+                                <div style={{ marginTop: '5px', fontWeight: 800, color: '#10b981', fontSize: '13px' }}>
+                                  ➔ Điểm số điều chỉnh chính thức: {app.adjustedScore} / 10.0
+                                  {app.resolvedAt && (
+                                    <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 400, marginLeft: '8px' }}>
+                                      (Duyệt ngày: {new Date(app.resolvedAt).toLocaleString('vi-VN')})
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {app.status === 'REJECTED' && (
+                            <div style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.25)', fontSize: '12px', color: '#fda4af' }}>
+                              <div style={{ fontWeight: 700, color: '#fb7185', marginBottom: '3px' }}>
+                                ✕ Phản hồi từ Giảng viên ({app.reviewerId || 'Giảng viên phụ trách'}):
+                              </div>
+                              <div>{app.resolutionNote || 'Không chấp thuận khiếu nại. Điểm số giữ nguyên theo kết quả ban đầu.'}</div>
+                              {app.resolvedAt && (
+                                <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: '3px' }}>
+                                  Thời gian xử lý: {new Date(app.resolvedAt).toLocaleString('vi-VN')}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {(app.status === 'PENDING' || app.status === 'IN_REVIEW') && (
+                            <div style={{ fontSize: '11px', color: '#fbbf24', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                              <Clock size={12} /> Đơn đang trong danh sách chờ Giảng viên phúc tra. Kết quả sẽ được cập nhật tự động tại đây.
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Dòng 4: CÁC NÚT HÀNH ĐỘNG (Tải lại file zip & Phúc khảo) */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '14px' }}>
                   <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -536,27 +737,46 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                       {downloadingId === sub.submissionId ? 'Đang tải...' : 'Tải lại bài (.zip)'}
                     </button>
 
-                    {/* NÚT PHÚC KHẢO / KHIẾU NẠI ĐIỂM */}
+                    {/* NÚT PHÚC KHẢO / KHIẾU NẠI ĐIỂM (Làm mờ, vô hiệu hóa nếu đã dùng đủ 2 lượt) */}
                     <button
                       type="button"
-                      onClick={() => handleOpenAppeal(sub)}
+                      onClick={() => !isMaxAppeals && handleOpenAppeal(sub)}
+                      disabled={isMaxAppeals}
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '7px',
                         padding: '9px 16px',
                         borderRadius: '9px',
-                        backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                        border: '1px solid rgba(245, 158, 11, 0.35)',
-                        color: '#fbbf24',
+                        backgroundColor: isMaxAppeals
+                          ? 'rgba(255, 255, 255, 0.04)'
+                          : appealsCount === 1
+                            ? 'rgba(245, 158, 11, 0.18)'
+                            : 'rgba(245, 158, 11, 0.12)',
+                        border: isMaxAppeals
+                          ? '1px dashed rgba(255, 255, 255, 0.2)'
+                          : '1px solid rgba(245, 158, 11, 0.4)',
+                        color: isMaxAppeals ? '#94a3b8' : '#fbbf24',
                         fontSize: '13px',
                         fontWeight: 700,
-                        cursor: 'pointer',
+                        opacity: isMaxAppeals ? 0.45 : 1,
+                        cursor: isMaxAppeals ? 'not-allowed' : 'pointer',
                         transition: 'all 0.15s ease',
                       }}
-                      title="Nộp đơn phúc khảo cho bài nộp này"
+                      title={
+                        isMaxAppeals
+                          ? 'Bài nộp này đã sử dụng tối đa 2/2 lượt phúc khảo theo quy tắc BR-05. Không thể khiếu nại thêm.'
+                          : appealsCount === 1
+                            ? 'Gửi đơn phúc khảo lần 2 cho riêng bài nộp này (còn 1 lượt)'
+                            : 'Gửi đơn khiếu nại & phúc khảo cho riêng bài nộp này (tối đa 2 lượt)'
+                      }
                     >
-                      <Scale size={15} /> Phúc khảo bài này
+                      <Scale size={15} />
+                      {isMaxAppeals
+                        ? 'Hết lượt phúc khảo (2/2)'
+                        : appealsCount === 1
+                          ? 'Phúc khảo lần 2 (1/2 lượt)'
+                          : 'Phúc khảo bài này (0/2 lượt)'}
                     </button>
                   </div>
                 </div>
@@ -566,12 +786,15 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
         </div>
       )}
 
-      {/* Modal phúc khảo nội bộ khi mở trực tiếp từ bảng */}
+      {/* Modal phúc khảo nội bộ khi mở trực tiếp từ từng bài nộp */}
       <AppealModal
         isOpen={appealModalOpen}
         onClose={() => {
           setAppealModalOpen(false);
-          void fetchSubmissions();
+          void refreshAll();
+        }}
+        onAppealSuccess={() => {
+          void refreshAll();
         }}
         submissionId={appealSubId}
         studentId={studentId}

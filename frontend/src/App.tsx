@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { SubmissionView } from './components/SubmissionView';
 import { LiveGradingModal } from './components/LiveGradingModal';
 import { LoginView } from './components/LoginView';
@@ -859,7 +859,6 @@ export function App() {
                 studentName={currentUser?.fullName || 'Sinh viên'}
                 apiBaseUrl={API_BASE_URL}
                 onNavigateToSubmit={() => setStudentActiveTab('submission')}
-                onOpenAppealModal={() => setStudentActiveTab('appeals')}
               />
             ) : studentActiveTab === 'benchmark' ? (
               <RblBenchmarkView
