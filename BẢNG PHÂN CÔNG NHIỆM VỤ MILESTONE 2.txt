@@ -1,0 +1,77 @@
+BẢNG PHÂN CÔNG NHIỆM VỤ MILESTONE 2 (TUẦN 5 – TUẦN 6)
+Dự án: AITA – Intelligent Autograding Platform
+Nhóm: Group 4 (SWP391)
+
+1. ĐINH THÀNH TRUNG – Team Leader & System Architect
+Phân hệ phụ trách: API Gateway, Redis Queue Coordinator, WebSocket Server & Core Database.
+Trọng tâm Milestone 2:
+Workflow 0 & Core CRUD: Hoàn thiện bảng USERS, COURSES, ASSIGNMENTS, SUBMISSIONS và CRUD APIs trong api-gateway.
+Workflow 2 Main Pipeline: Kết nối hàng đợi Redis BullMQ điều phối luồng: nhận file zip $\rightarrow$ đẩy sang Docker Worker $\rightarrow$ đẩy sang GenAI & AST $\rightarrow$ tổng hợp kết quả.
+Socket.IO Stream: Bắn sự kiện thời gian thực (testcase:evaluated, grading:completed, ai:reviewed) về đúng submission_id của client.
+Exception Path Coordinator: Xử lý ngoại lệ khi hàng đợi bị nghẽn (BullMQ Retry & Dead Letter Queue - DLQ).
+Cam kết Git & Process:
+Mục tiêu Commit: Tối thiểu 8 – 10 commits (VD: feat(gateway): add crud assignments, feat(queue): implement dlq retry, fix(websocket): room authorization).
+AI Debugging Logs: 6 logs về tối ưu BullMQ concurrency, WebSocket room leaks, multipart streaming.
+
+2. TRẦN CÔNG TIẾN – DevOps & Security Engineer
+Phân hệ phụ trách: Phân hệ 2 – Docker Autograding Sandbox & Security Seccomp.
+Trọng tâm Milestone 2:
+Sandbox Worker hoàn chỉnh: Tự động tạo container độc lập cho 4 ngôn ngữ (C++, Java, Python, .NET), gắn bind mount code và thực thi không có mạng (--network none).
+Thực thi Exception Path 1 (Crash & Vi phạm tài nguyên):
+Đánh chặn lỗi vòng lặp vô hạn $\rightarrow$ Watchdog 2.0s bắn hạ SIGKILL (Time Limit Exceeded - TLE).
+Đánh chặn tràn bộ nhớ $\rightarrow$ Linux OOM Killer dập tắt khi vượt 512MB RAM (Memory Limit Exceeded - MLE).
+Đánh chặn lỗi truy cập bộ nhớ SIGSEGV (exit code 139) và chuyển stderr về cho GenAI Hub.
+Tự động dọn dẹp (Teardown): Lệnh xóa container chạy ngầm trong $\le 1.0$s không để lại container rác (orphaned containers).
+Cam kết Git & Process:
+Mục tiêu Commit: Tối thiểu 8 – 10 commits (VD: feat(sandbox): add java17 runner, feat(security): seccomp syscall tuning, test(sandbox): automated oom testcase).
+AI Debugging Logs: 6 logs về Seccomp clone/fork vs compiler, OOM Killer exit code 137, Dockerode stream buffer.
+
+3. NGUYỄN HOÀNG VINH (BẠN) – AI Engineer & Prompt Specialist
+Phân hệ phụ trách: Phân hệ 3 – GenAI Core, Semantic Reviewer & Rubric Engine.
+Trọng tâm Milestone 2:
+Workflow 1 (Data Setup): Module sinh đề thi, test cases mẫu và rubric tiêu chí đa mức tự động cho giảng viên (ExamGeneratorService - UC-08).
+Workflow 2 (Main AI Review): Đánh giá tất định Clean Code & SOLID (temperature = 0.2, JSON Schema mode), gán dòng vi phạm cụ thể cho 4 ngôn ngữ (C++, Java, C, Python).
+Thực thi Exception Path 2 (Tấn công Prompt Injection):
+PromptSanitizer quét comment mã nguồn, cách ly bằng vùng CDATA, trung hòa chỉ thị độc hại và gắn cờ cảnh báo SECURITY_AUDIT.
+Hỗ trợ Exception Path 1 (Socratic Compiler Explainer):
+Khi Sandbox báo lỗi biên dịch hoặc Segfault, dịch lỗi sang tiếng Việt sư phạm kèm gợi ý sửa bài không lộ code mẫu.
+Độ ổn định Multi-Key Pool: Quản lý xoay vòng API Keys, tự động cooldown khi gặp lỗi 429 và retry tối đa 2 lần.
+Cam kết Git & Process:
+Mục tiêu Commit: Nâng từ 2 lên $\ge 8$ commits (VD: test: add language heuristics testcases, feat(genai): add token usage metrics, docs: swagger api docs).
+AI Debugging Logs: 6 logs đầy đủ (đã có sẵn kịch bản gỡ lỗi UTF-8 BOM, Circular Dependency, Injection Regex...).
+
+4. TRẦN THANH NGUYÊN – RBL Core & Plagiarism Lead
+Phân hệ phụ trách: Phân hệ 4 – AST Plagiarism Detection Engine & Winnowing Fingerprinting.
+Trọng tâm Milestone 2:
+AST Tokenizer & Normalization: Chuẩn hóa mã nguồn (đổi tên biến về token chung, chuẩn hóa cấu trúc vòng lặp for/while/do-while).
+Thuật toán Winnowing: Chia K-grams, băm Rolling Hash và chọn dấu vân tay (fingerprints) để lưu vào CSDL.
+Thực thi Exception Path 3 (Phát hiện đạo văn học thuật):
+So khớp độ tương đồng Jaccard giữa các bài nộp trong cùng Assignment.
+Nếu $\ge 70%$ $\rightarrow$ Đánh dấu trạng thái FLAGGED_PLAGIARISM.
+Xuất danh sách các đoạn token trùng lặp (matched_tokens_json) để đẩy sang Frontend hiển thị.
+CSDL Đạo văn: Hoàn thiện bảng PLAGIARISM_REPORTS và PLAGIARISM_MATCHES.
+Cam kết Git & Process:
+Mục tiêu Commit: Tối thiểu 8 – 10 commits (VD: feat(ast): implement rolling hash, feat(winnowing): k-gram sliding window, test(plagiarism): benchmark similar pairs).
+AI Debugging Logs: 6 logs về tối ưu độ phức tạp thời gian Winnowing, chuẩn hóa AST trees, false positive tuning.
+
+5. VĂN THÁI TRUNG – Frontend & UI/UX Lead
+Phân hệ phụ trách: Phân hệ 1/Presentation – React 19 + Vite Dashboard & Visualizers.
+Trọng tâm Milestone 2:
+Giao diện Nộp bài (Workflow 1 & 2 Start): Kéo thả file .zip, kiểm tra dung lượng $\le 10$MB tại client, đồng hồ đếm ngược Deadline (CountdownTimer.tsx, SubmissionView.tsx).
+Theo dõi tiến độ Real-time (LiveGradingModal.tsx):
+Lắng nghe Socket.IO từ Gateway: Hiển thị thanh trạng thái nhảy mượt mà: Đang xếp hàng $\rightarrow$ Đang biên dịch $\rightarrow$ Chạy Testcases (Pass/Fail) $\rightarrow$ Đang quét Đạo văn $\rightarrow$ AI Phân tích Clean Code.
+Trực quan hóa kết quả đầu ra:
+Tích hợp SolidRadarChart.tsx hiển thị điểm Clean Code và 5 trục SOLID nhận từ Phân hệ 3 của Vinh.
+Tích hợp MonacoDiffViewer.tsx hiển thị 2 bài code song song (Side-by-side) bôi đỏ đoạn nghi vấn sao chép nhận từ Phân hệ 4 của Nguyên.
+Hiển thị hộp thoại Socratic Hint giải thích lỗi khi sinh viên bị dính Exception Path (Compiler/Segfault).
+Cam kết Git & Process:
+Mục tiêu Commit: Tối thiểu 8 – 10 commits (VD: feat(ui): add radar chart animation, feat(diff): integrate monaco editor, fix(socket): reconnect listener).
+AI Debugging Logs: 6 logs về Socket.IO state re-renders, Monaco diff markers, responsive layout.
+
+BẢNG TỔNG HỢP GIAO VIỆC (QUICK MATRIX ĐỂ NỘP BÁO CÁO)
+Thành viên	Vai trò	Module phụ trách	Đóng góp vào Workflows	Cam kết Commits
+Đinh Thành Trung	Leader & Architect	API Gateway, Redis Queue, WebSocket	Workflow 0 (Hạ tầng), Main Flow Orchestrator	$\ge 8$ commits
+Trần Công Tiến	DevOps Engineer	Docker Sandbox, Seccomp Profile	Main Flow (Chấm code), Exception 1 (TLE/MLE/Crash)	$\ge 8$ commits
+Nguyễn Hoàng Vinh	AI Engineer	GenAI Hub (OpenAI/Gemini), Prompt Defense	Workflow 1 (Sinh đề), Exception 2 (Prompt Hack)	$\ge 8$ commits
+Trần Thanh Nguyên	RBL AST Lead	AST Normalizer, Winnowing Plagiarism	Main Flow (AST scan), Exception 3 (Đạo văn $\ge 70%$)	$\ge 8$ commits
+Văn Thái Trung	Frontend Lead	React UI, Monaco Diff, Radar Chart	Toàn bộ giao diện người dùng, Live Stream Modal	$\ge 8$ commits
