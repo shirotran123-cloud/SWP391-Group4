@@ -44,20 +44,22 @@ const GoogleIcon = () => (
 
 const PRESET_ACCOUNTS = [
   { email: 'trungse170000@fpt.edu.vn', name: 'Đinh Thành Trung', role: 'STUDENT' as const, label: 'Sinh viên FPT', color: '#10b981' },
-  { email: 'giangvien.edu@gmail.com', name: 'ThS. Giảng Viên AITA', role: 'INSTRUCTOR' as const, label: 'Giảng viên AITA', color: '#818cf8' },
+  { email: 'sinhvien.test@fpt.edu.vn', name: 'Sinh viên Kiểm Thử', role: 'STUDENT' as const, label: 'Sinh viên FPT', color: '#10b981' },
   { email: 'admin@aita.fpt.edu.vn', name: 'Quản trị viên Hệ thống', role: 'ADMIN' as const, label: 'Admin', color: '#f59e0b' },
-  { email: 'vthaitrung2k6@gmail.com', name: 'Vũ Thái Trung', role: 'STUDENT' as const, label: 'Gmail Cá Nhân', color: '#06b6d4' },
+  { email: 'admin.aita@gmail.com', name: 'Quản Trị Viên AITA (Gmail)', role: 'ADMIN' as const, label: 'Admin', color: '#f59e0b' },
 ];
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const [step, setStep] = useState<'EMAIL' | 'OTP'>('EMAIL');
   const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
   const [targetEmail, setTargetEmail] = useState('');
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [debugOtp, setDebugOtp] = useState<string | null>(null);
+  const [smtpConfigured, setSmtpConfigured] = useState<boolean>(true);
   const [countdown, setCountdown] = useState(60);
 
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -82,13 +84,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
 
   if (!isOpen) return null;
 
-  const handleRequestOtp = async (emailToSend: string) => {
+  const handleRequestOtp = async (emailToSend: string, passwordToSend?: string) => {
     const trimmed = emailToSend.trim().toLowerCase();
+    const password = (passwordToSend ?? passwordInput).trim();
     setErrorMsg(null);
     setSuccessMsg(null);
 
     if (!trimmed) {
       setErrorMsg('Vui lòng nhập địa chỉ Gmail hoặc FPT Email!');
+      return;
+    }
+
+    // Backend bắt buộc mật khẩu: /api/v1/auth/request-otp trả 401 nếu thiếu.
+    if (!password) {
+      setErrorMsg('Vui lòng nhập mật khẩu để tiếp tục.');
       return;
     }
 
@@ -103,7 +112,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       const res = await fetch(`${API_BASE_URL}/api/v1/auth/request-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: trimmed }),
+        body: JSON.stringify({ email: trimmed, password }),
       });
 
       const data = await res.json();
@@ -114,12 +123,30 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
         return;
       }
 
+      // Tài khoản GV đặc biệt: backend bỏ qua OTP và trả token trực tiếp.
+      if (data.data?.bypassOtp && data.data?.token && data.data?.user) {
+        localStorage.setItem('aita_token', data.data.token);
+        localStorage.setItem('aita_user', JSON.stringify(data.data.user));
+        setSuccessMsg('Đăng nhập thành công!');
+        setTimeout(() => {
+          onLoginSuccess(data.data.user, data.data.token);
+          onClose();
+        }, 250);
+        return;
+      }
+
       setTargetEmail(trimmed);
       setStep('OTP');
       setOtpDigits(['', '', '', '', '', '']);
       setCountdown(60);
+      // Khi chưa cấu hình SMTP, backend chạy chế độ MOCK và trả mã qua debugOtp.
       setDebugOtp(data.data?.debugOtp || null);
-      setSuccessMsg(`Mã xác thực OTP đã được gửi đến ${trimmed}.`);
+      setSmtpConfigured(Boolean(data.data?.debugOtp));
+      setSuccessMsg(
+        data.data?.debugOtp
+          ? 'Máy chủ chưa cấu hình SMTP nên mã OTP được hiển thị ngay bên dưới (chế độ MOCK).'
+          : `Mã xác thực OTP đã được gửi đến ${trimmed}.`
+      );
     } catch {
       setErrorMsg('Không thể kết nối đến máy chủ xác thực.');
     } finally {
@@ -363,6 +390,52 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               </div>
             </div>
 
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type="password"
+                  value={passwordInput}
+                  onChange={(e) => {
+                    setPasswordInput(e.target.value);
+                    setErrorMsg(null);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void handleRequestOtp(emailInput);
+                    }
+                  }}
+                  placeholder="Mật khẩu (bắt buộc theo chính sách xác thực)..."
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px 12px 40px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    background: 'rgba(15, 23, 42, 0.8)',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <ShieldCheck size={16} color="#94a3b8" />
+                </div>
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px', lineHeight: 1.5 }}>
+                Lần đăng nhập đầu tiên: mật khẩu bạn nhập sẽ được đặt làm mật khẩu tài khoản.
+                Các lần sau phải nhập đúng mật khẩu đó.
+              </div>
+            </div>
+
             <button
               onClick={() => handleRequestOtp(emailInput)}
               disabled={loading}
@@ -416,7 +489,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                   key={acc.email}
                   onClick={() => {
                     setEmailInput(acc.email);
-                    void handleRequestOtp(acc.email);
+                    // Tài khoản demo dùng mật khẩu mặc định để đăng nhập một chạm.
+                    if (!passwordInput.trim()) setPasswordInput('123456');
+                    void handleRequestOtp(acc.email, passwordInput.trim() || '123456');
                   }}
                   disabled={loading}
                   style={{
@@ -443,7 +518,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
           </div>
         ) : (
           <div>
-            {debugOtp && (
+            {debugOtp ? (
               <div
                 style={{
                   padding: '10px 12px',
@@ -457,8 +532,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
                   <Sparkles size={14} color="#38bdf8" />
-                  <span>Mã OTP Demo: <strong style={{ color: '#fff', fontSize: '14px', letterSpacing: '1px' }}>{debugOtp}</strong></span>
+                  <span>Mã OTP (chế độ MOCK do chưa cấu hình SMTP): <strong style={{ color: '#fff', fontSize: '15px', letterSpacing: '2px' }}>{debugOtp}</strong></span>
                 </div>
+              </div>
+            ) : (
+              <div
+                style={{
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  backgroundColor: 'rgba(148, 163, 184, 0.10)',
+                  border: '1px solid rgba(148, 163, 184, 0.30)',
+                  marginBottom: '16px',
+                  fontSize: '11.5px',
+                  color: 'var(--text-muted)',
+                  lineHeight: 1.5,
+                }}
+              >
+                Mã OTP đã được gửi tới email. Nếu chưa nhận được, hãy kiểm tra hộp thư spam,
+                hoặc xem mã trong terminal của API Gateway.
               </div>
             )}
 
@@ -551,8 +642,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                   }}
                 >
                   Gửi lại mã
-                </button>
-              )}
+                </button>              )}
             </div>
           </div>
         )}

@@ -9,11 +9,14 @@ import {
   Sparkles,
   UserX,
   UserCheck,
+  KeyRound,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserProfile) => void;
+  /** Mở luồng đăng nhập bằng email + mật khẩu + OTP (dành cho tài khoản FPT/Gmail đã được cấp). */
+  onOpenOtpLogin?: () => void;
 }
 
 const API_BASE_URL = 'http://localhost:3000';
@@ -44,7 +47,7 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
+export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenOtpLogin }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [blockedEmail, setBlockedEmail] = useState<string | null>(null);
@@ -385,6 +388,53 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             )}
           </button>
         </div>
+
+        {/* ĐĂNG NHẬP BẰNG EMAIL FPT + MẬT KHẨU + OTP (tài khoản đã được cấp trên hệ thống) */}
+        {onOpenOtpLogin && (
+          <div style={{ marginBottom: '18px' }}>
+            <button
+              onClick={onOpenOtpLogin}
+              style={{
+                width: '100%',
+                padding: '15px 24px',
+                borderRadius: '14px',
+                border: '1px solid rgba(16, 185, 129, 0.45)',
+                background: 'rgba(16, 185, 129, 0.14)',
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '15px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.24)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.14)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }}
+            >
+              <KeyRound size={18} color="#34d399" />
+              <span>Đăng nhập Sinh viên / Giảng viên (Email + Mật khẩu + OTP)</span>
+            </button>
+            <div
+              style={{
+                fontSize: '11.5px',
+                color: 'var(--text-muted)',
+                marginTop: '8px',
+                lineHeight: 1.5,
+                textAlign: 'center',
+              }}
+            >
+              Dùng cho tài khoản FPT/Gmail đã được cấp quyền trên hệ thống AITA.
+            </div>
+          </div>
+        )}
 
         <p
           style={{

@@ -544,7 +544,19 @@ export function App() {
 
   // NẾU CHƯA ĐĂNG NHẬP: BẮT BUỘC HIỂN THỊ MÀN HÌNH ĐĂNG NHẬP ĐẦU TIÊN
   if (!currentUser) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <>
+        <LoginView
+          onLoginSuccess={handleLoginSuccess}
+          onOpenOtpLogin={() => setIsLoginModalOpen(true)}
+        />
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => setIsLoginModalOpen(false)}
+          onLoginSuccess={(user) => handleLoginSuccess(user)}
+        />
+      </>
+    );
   }
 
   // Phân quyền màn hình: Giảng viên và Sinh viên hoàn toàn độc lập, không chuyển đổi qua lại
