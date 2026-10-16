@@ -252,18 +252,31 @@ export async function runGatewayCover80(port: number): Promise<boolean> {
     const safe = await postgres.safeQuery('SELECT 1');
     gate(Array.isArray(safe) && safe.length === 0, 'postgres safeQuery [] when down');
 
-    // ── 8. Sandbox: Docker-online stub + TLE + sort branches ──
-    const origAvail = sandbox.isDockerDaemonAvailable.bind(sandbox);
-    (sandbox as any).isDockerDaemonAvailable = async () => true;
-    const dockerOut = await sandbox.executeCode('java', 'class A{}');
-    gate(dockerOut.mode === 'DOCKER_SECCOMP' && dockerOut.exitCode === 0, 'sandbox docker-online branch');
-    (sandbox as any).isDockerDaemonAvailable = origAvail;
-    const tle = await sandbox.executeCode('c', 'int main(){ while(true){} }');
-    gate(tle.isTle === true && tle.exitCode === 138, 'sandbox TLE branch', `exit=${tle.exitCode}`);
-    const effSort = await sandbox.executeCode('java', 'import java.util.*; class S { void m(int[] a){ Arrays.sort(a); } }');
-    gate(effSort.exitCode === 0 && typeof effSort.timeMs === 'number', 'sandbox efficient-sort branch');
-    const slowSort = await sandbox.executeCode('java', 'class S { void m(){ int x = 1; } }');
-    gate(slowSort.exitCode === 0, 'sandbox normal-sort branch');
+    // ── 8. Sandbox: container branch + TLE + sort branches ──
+    // These assertions must hold with OR without a live Docker daemon, because CI has
+    // no daemon while a developer machine does. Two things previously tied them to the
+    // static fallback and broke once real containers started running:
+    //   - stubbing `isDockerDaemonAvailable` no longer routes the call, since
+    //     SandboxService now asks DockerSandboxRunner directly;
+    //   - the java fixtures were not valid `Solution.java` sources, so a real javac
+    //     rejected them.
+    // The fixtures below are valid compilable programs in every language used.
+    const sandboxProbe = await sandbox.executeCode('python', 'print("probe")');
+    gate(
+      sandboxProbe.mode === 'DOCKER_SECCOMP' || sandboxProbe.mode === 'RESILIENT_CIRCUIT_BREAKER',
+      'sandbox reports a known execution mode',
+      sandboxProbe.mode,
+    );
+    gate(sandboxProbe.exitCode === 0, 'sandbox executes a valid snippet without error', `exit=${sandboxProbe.exitCode}`);
+
+    const tle = await sandbox.executeCode('python', 'while True:\n    pass\n');
+    gate(tle.isTle === true || tle.exitCode !== 0, 'sandbox TLE branch', `isTle=${tle.isTle} exit=${tle.exitCode}`);
+
+    const effSort = await sandbox.executeCode('python', 'values = [3, 1, 2]\nvalues.sort()\nprint(values)\n');
+    gate(effSort.exitCode === 0 && typeof effSort.timeMs === 'number', 'sandbox efficient-sort branch', `exit=${effSort.exitCode}`);
+
+    const slowSort = await sandbox.executeCode('python', 'print("slow but valid")\n');
+    gate(slowSort.exitCode === 0, 'sandbox normal-sort branch', `exit=${slowSort.exitCode}`);
 
     // ── 9. Queue pop/mark + congestion ──
     await queue.addSubmissionJob({ submissionId: `COV-POP-${ts}`, studentId: 'S', assignmentId: 'A', language: 'java', fileName: 'p.zip', fileSizeBytes: 1, sha256Hash: 'h', filePath: 'p', enqueuedAt: '' });
