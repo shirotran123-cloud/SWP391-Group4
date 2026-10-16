@@ -444,6 +444,11 @@ These are genuine defects discovered during Milestone 2 verification, not cosmet
 | 7 | **Medium** | The frontend discarded the gateway's real AST result and always displayed its locally computed fallback | Prefer `data.plagiarismMatch` from the WebSocket payload, fall back locally only when absent |
 | 8 | **Medium** | Seven of eight repositories ignored PostgreSQL entirely; starting a real database changed no behaviour | Added write-through + boot hydration to all eight, with transaction bootstrap and missing-table reporting |
 | 9 | **Medium** | `QueueModule` did not import the modules providing `SandboxService`/`PlagiarismService`, so the gateway failed to boot after step 6 was wired (`Nest can't resolve dependencies of the GradingWorkerConsumer`) | Registered `PlagiarismModule` and `SandboxModule` in `QueueModule` |
+| 10 | **Critical** | `SandboxService.executeInDocker()` never started a container — it returned a hard-coded `'1 2 3 4 5\n'`. Submissions were scored by **regex-matching the source**, so a wrong answer that merely *looked* like a sort scored the same as a correct one | Replaced with `DockerSandboxRunner`: real `docker run`, stdin from a bind-mounted file, stdout compared against the expected output |
+| 11 | **High** | Docker was probed only over **TCP 2375**, which Docker Desktop on Windows never opens (it uses a named pipe). Installing Docker therefore changed nothing — the gateway still reported OFFLINE and fell back to static analysis | Detection delegates to dockerode's default endpoint resolution; verified it now reaches `//./pipe/dockerDesktopLinuxEngine` |
+| 12 | **Medium** | `import Docker from 'dockerode'` compiled to `dockerode_1.default`, which is `undefined` — the package exports its constructor directly, so detection failed with `is not a constructor` | Switched to `require('dockerode')` with an explicit `InstanceType` type |
+| 13 | **Medium** | Test cases were hard-coded in the worker (`TESTCASES`), so teacher-authored cases from Workflow 1 were never executed | The worker now loads `test_cases` for the assignment from the database, falling back to the built-in set only when none exist |
+| 14 | **Medium** | `passedTestcases` contradicted `scoreBreakdown`: an assignment with one test case reported `1/2` passing while every component read 0, and TC2 was awarded 3.0 points for a test that never ran | Tally and weights are now derived from the test cases actually executed; a single-case assignment consolidates the full 7.0 TC weight |
 
 ---
 
@@ -451,13 +456,19 @@ These are genuine defects discovered during Milestone 2 verification, not cosmet
 
 Stated plainly so the panel can weigh them:
 
-1. **No live infrastructure.** Docker daemon, Redis and PostgreSQL are all absent from this
-   machine. Sandbox execution runs through the resilient fallback engine (which detects and
-   reports TLE/MLE/fork-bomb/segfault using structural analysis rather than a real container);
-   the queue runs in-memory instead of Redis; repositories write JSON instead of Postgres.
-   The real code paths exist and compile, but the following are **compile-verified and
-   offline-path-tested only**: the container's cgroup/seccomp enforcement, BullMQ's real retry
-   and DLQ semantics, the schema bootstrap `COMMIT`/`ROLLBACK`, and `ON CONFLICT` upserts.
+1. **Docker — NOW LIVE AND VERIFIED (was a limitation in earlier revisions).** Docker Desktop
+   29.8.2 is installed and the daemon runs, with `python:3.11-slim`, `gcc:13` and
+   `eclipse-temurin:17-jdk` present locally. Sandbox execution therefore runs in a **real
+   container**: `--network none`, 512 MB RAM, 1 CPU, `pids-limit=64`, read-only rootfs, all
+   capabilities dropped, seccomp profile, `< 1 s` teardown. `docker-sandbox.test.ts` passes
+   **19/19 in real-execution mode** (correct output, wrong answer, TLE via watchdog).
+   Verified live end-to-end: correct code scores **9.6/10** with `2/2` test cases passing,
+   while a statically identical but logically wrong submission scores **2.6/10** with `0/2` —
+   a difference only real execution can produce.
+   **Still absent:** Redis and PostgreSQL. The queue runs in-memory instead of Redis, and
+   repositories write JSON rather than Postgres, so **BullMQ's real retry/DLQ semantics, the
+   schema bootstrap `COMMIT`/`ROLLBACK`, and `ON CONFLICT` upserts remain compile-verified and
+   offline-path-tested only.**
 2. **No live LLM keys.** The GenAI Hub serves its deterministic offline provider. The
    `GENAI_HUB_HTTP` path is genuinely exercised, but the payload is the offline engine's
    output, not a live GPT-4o/Gemini response.
