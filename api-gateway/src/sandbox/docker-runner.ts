@@ -1,5 +1,5 @@
-﻿/**
- * AITA Docker Sandbox Runner â€” REAL containerised code execution.
+/**
+ * AITA Docker Sandbox Runner — REAL containerised code execution.
  *
  * This is the piece that was previously missing: `SandboxService.executeInDocker()`
  * used to return a hard-coded `'1 2 3 4 5\n'` without ever starting a container, so
@@ -8,13 +8,14 @@
  *
  * Responsibilities:
  *   1. Resolve the Docker endpoint. Docker Desktop on Windows exposes a NAMED PIPE
- *      (`//./pipe/docker_engine`), not TCP 2375 â€” probing only TCP means Docker is
+ *      (`//./pipe/docker_engine`), not TCP 2375 — probing only TCP means Docker is
  *      never detected on a normal developer machine.
  *   2. Compile + run the student's source inside a locked-down container
  *      (512 MB RAM, 1 CPU, pids-limit 64, `--network none`, read-only rootfs,
  *      all capabilities dropped, seccomp profile).
- *   3. Feed a test case on stdin and capture stdout/stderr, translating the
- *      exit status into TLE / MLE / SIGSEGV / COMPILE_ERROR verdicts.
+ *   3. Feed each test case on stdin via a bind-mounted input FILE (the way real
+ *      online judges do it) and capture stdout/stderr, translating the exit status
+ *      into TLE / MLE / SIGSEGV / COMPILE_ERROR verdicts.
  *
  * Everything degrades safely: if Docker is absent or the image is missing, the
  * caller falls back to the static analyser (see SandboxService).
@@ -29,9 +30,9 @@ import * as path from 'path';
 // both CJS and the transpiled TS output.
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const DockerConstructor = require('dockerode') as typeof import('dockerode');
-type Docker = InstanceType<typeof DockerConstructor>;
 type DockerOptions = import('dockerode').DockerOptions;
 type Container = import('dockerode').Container;
+type DockerClient = InstanceType<typeof DockerConstructor>;
 
 export type SandboxVerdict =
   | 'PASSED'
@@ -75,9 +76,9 @@ interface LanguageSpec {
   image: string;
   /** File name written into the sandbox directory. */
   filename: string;
-  /** Compile command, or null for interpreted languages. */
+  /** Compile command, or omitted for interpreted languages. */
   compile?: string[];
-  /** Run command executed once per test case (file is compiled once, run many times). */
+  /** Program invocation; the runner appends the stdin redirect itself. */
   run: string[];
 }
 
@@ -87,13 +88,12 @@ const LANGUAGES: Record<string, LanguageSpec> = {
   python: {
     image: 'python:3.11-slim',
     filename: 'Solution.py',
-    // -I = isolated mode: no user site-packages, no env leakage.
+    // -I = isolated mode: no user site-packages, no environment leakage.
     run: ['python3', '-I', `${SANDBOX_DIR}/Solution.py`],
   },
   java: {
     image: 'eclipse-temurin:17-jdk',
     filename: 'Solution.java',
-    // javac needs a writable output dir -> use /tmp (tmpfs mount).
     compile: ['javac', '-d', '/tmp/classes', `${SANDBOX_DIR}/Solution.java`],
     run: ['java', '-Xmx384m', '-XX:+UseSerialGC', '-cp', '/tmp/classes', 'Solution'],
   },
@@ -112,8 +112,11 @@ const LANGUAGES: Record<string, LanguageSpec> = {
   dotnet: {
     image: 'mcr.microsoft.com/dotnet/sdk:8.0',
     filename: 'Program.cs',
-    // `dotnet run` needs a writable project dir; build into tmpfs.
-    compile: ['sh', '-c', `cd /tmp && dotnet new console -o app --force >/dev/null 2>&1 && cp ${SANDBOX_DIR}/Program.cs /tmp/app/Program.cs && cd /tmp/app && dotnet build -c Release -o /tmp/out >/dev/null`],
+    compile: [
+      'sh',
+      '-c',
+      `cd /tmp && dotnet new console -o app --force >/dev/null 2>&1 && cp ${SANDBOX_DIR}/Program.cs /tmp/app/Program.cs && cd /tmp/app && dotnet build -c Release -o /tmp/out >/dev/null`,
+    ],
     run: ['dotnet', '/tmp/out/app.dll'],
   },
 };
@@ -123,9 +126,10 @@ const MEMORY_LIMIT_BYTES = 512 * 1024 * 1024;
 const PIDS_LIMIT = 64;
 /** Container teardown budget from the SRS (<= 1.0s). */
 const TEARDOWN_BUDGET_MS = 1000;
+const MAX_OUTPUT_CHARS = 20000;
 
 export class DockerSandboxRunner {
-  private docker: Docker | null = null;
+  private docker: DockerClient | null = null;
   private available: boolean | null = null;
   private availabilityReason = '';
   private readonly seccompPath: string;
@@ -152,7 +156,7 @@ export class DockerSandboxRunner {
    *
    * Docker Desktop on Windows/macOS uses a named pipe / unix socket, NOT TCP:2375.
    * dockerode picks the right default when constructed with no arguments, so we let
-   * it decide and only fall back to an explicit TCP host when configured via env.
+   * it decide and only override when DOCKER_HOST / DOCKER_SOCKET is configured.
    */
   public async isAvailable(): Promise<boolean> {
     if (this.available !== null) return this.available;
@@ -160,14 +164,12 @@ export class DockerSandboxRunner {
     try {
       const options: DockerOptions = {};
       if (process.env.DOCKER_HOST) {
-        // e.g. tcp://127.0.0.1:2375 or npipe:////./pipe/docker_engine
         options.host = process.env.DOCKER_HOST;
       } else if (process.env.DOCKER_SOCKET) {
         options.socketPath = process.env.DOCKER_SOCKET;
       }
 
       this.docker = new DockerConstructor(options);
-      // ping() rejects quickly when the daemon is not reachable.
       await Promise.race([
         this.docker.ping(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('docker ping timeout (1500ms)')), 1500)),
@@ -234,20 +236,12 @@ export class DockerSandboxRunner {
     }
 
     const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aita-sandbox-'));
-    // The container runs unprivileged but the compiled-artefact dir must be writable
-    // by the sandbox user, so widen permissions on the bind-mounted folder only.
     fs.writeFileSync(path.join(workDir, spec.filename), sourceCode, 'utf-8');
-    try {
-      fs.chmodSync(workDir, 0o777);
-      fs.chmodSync(path.join(workDir, spec.filename), 0o644);
-    } catch {
-      // Windows hosts ignore POSIX modes; the container user is root in the images we use.
-    }
 
     try {
-      // â”€â”€ Compile step (only if the language needs one) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── Compile step (only for compiled languages) ─────────────────────────
       if (spec.compile) {
-        const compileResult = await this.runOnce(spec, workDir, spec.compile, '', DEFAULT_TIME_LIMIT_MS * 5);
+        const compileResult = await this.runOnce(spec, workDir, spec.compile, null, DEFAULT_TIME_LIMIT_MS * 5);
         if (compileResult.exitCode !== 0) {
           return {
             available: true,
@@ -262,11 +256,19 @@ export class DockerSandboxRunner {
         }
       }
 
-      // â”€â”€ Run every test case â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── Run every test case ────────────────────────────────────────────────
       const results: TestCaseExecutionResult[] = [];
-      for (const tc of testCases) {
+      for (let i = 0; i < testCases.length; i++) {
+        const tc = testCases[i];
         const limit = tc.timeLimitMs && tc.timeLimitMs > 0 ? tc.timeLimitMs : DEFAULT_TIME_LIMIT_MS;
-        const runResult = await this.runOnce(spec, workDir, spec.run, tc.input, limit);
+        // Feed input through a bind-mounted FILE + shell redirect rather than by
+        // attaching an interactive stdin duplex. Half-closing a hijacked dockerode
+        // stream proved unreliable (the container exited 0 with EMPTY stdout), and
+        // file redirection is how real online judges feed a run anyway.
+        const inputFile = `input_${i}.txt`;
+        fs.writeFileSync(path.join(workDir, inputFile), tc.input ?? '', 'utf-8');
+
+        const runResult = await this.runOnce(spec, workDir, spec.run, inputFile, limit);
         const matched = this.outputsMatch(runResult.stdout, tc.expectedOutput);
         results.push({
           ...runResult,
@@ -286,14 +288,17 @@ export class DockerSandboxRunner {
   }
 
   /**
-   * Starts one container, writes stdin, waits for exit under a watchdog, and always
-   * removes the container (SRS: teardown <= 1.0s, no orphaned containers).
+   * Starts one container, waits for exit under a watchdog, captures the logs, and
+   * always removes the container (SRS: teardown <= 1.0s, no orphaned containers).
+   *
+   * `inputFile` is a file name inside the bind-mounted sandbox dir; when provided the
+   * program is invoked through `sh -c "exec <cmd> < /sandbox/<file>"`.
    */
   private async runOnce(
     spec: LanguageSpec,
     workDir: string,
     cmd: string[],
-    stdin: string,
+    inputFile: string | null,
     timeLimitMs: number,
   ): Promise<TestCaseExecutionResult> {
     const docker = this.docker!;
@@ -301,21 +306,23 @@ export class DockerSandboxRunner {
     let container: Container | null = null;
     let timedOut = false;
 
+    // Redirection has to happen in a shell, and `exec` keeps the program as PID 1 so
+    // the watchdog's SIGKILL reaches it directly.
+    const finalCmd = inputFile
+      ? ['sh', '-c', `exec ${cmd.map((a) => this.shellQuote(a)).join(' ')} < ${SANDBOX_DIR}/${inputFile}`]
+      : cmd;
+
     const securityOpt: string[] = [];
     if (fs.existsSync(this.seccompPath)) {
-      // Docker's seccomp option accepts an inline JSON string.
       securityOpt.push(`seccomp=${fs.readFileSync(this.seccompPath, 'utf-8')}`);
     }
 
     try {
       container = await docker.createContainer({
         Image: spec.image,
-        Cmd: cmd,
+        Cmd: finalCmd,
         WorkingDir: SANDBOX_DIR,
         Tty: false,
-        AttachStdin: true,
-        AttachStdout: true,
-        AttachStderr: true,
         NetworkDisabled: true,
         HostConfig: {
           Memory: MEMORY_LIMIT_BYTES,
@@ -327,7 +334,7 @@ export class DockerSandboxRunner {
           IpcMode: 'none',
           ReadonlyRootfs: true,
           // Writable tmpfs for compiler output; /sandbox itself stays read-only.
-          Tmpfs: { '/tmp': 'rw,size=64m,exec' },
+          Tmpfs: { '/tmp': 'rw,size=128m,exec' },
           CapDrop: ['ALL'],
           SecurityOpt: securityOpt.length ? securityOpt : undefined,
           Binds: [`${workDir}:${SANDBOX_DIR}:ro`],
@@ -335,28 +342,24 @@ export class DockerSandboxRunner {
         },
       });
 
-      const stream = await container.attach({ stream: true, stdin: true, stdout: true, stderr: true });
       await container.start();
-
-      // Feed stdin, then close it so programs reading until EOF terminate.
-      if (stdin) stream.write(stdin.endsWith('\n') ? stdin : `${stdin}\n`);
-      stream.end();
-
-      // Drain stdout/stderr, demultiplexing the Docker stream header.
-      let stdout = '';
-      let stderr = '';
-      const chunks: Buffer[] = [];
-      stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-      const drained = new Promise<void>((resolve) => stream.on('end', () => resolve()));
 
       const waitResult = await this.waitWithWatchdog(container, timeLimitMs);
       timedOut = waitResult.timedOut;
       const exitCode = waitResult.exitCode;
 
-      await Promise.race([drained, new Promise((r) => setTimeout(r, 300))]);
-      const demuxed = this.demux(Buffer.concat(chunks));
-      stdout = demuxed.stdout;
-      stderr = demuxed.stderr;
+      // logs() is far more reliable than a hijacked attach stream here: it returns the
+      // already-buffered output, so short-lived programs cannot outrun our reader.
+      let stdout = '';
+      let stderr = '';
+      try {
+        const raw = (await container.logs({ stdout: true, stderr: true })) as unknown as Buffer;
+        const demuxed = this.demux(Buffer.isBuffer(raw) ? raw : Buffer.from(String(raw)));
+        stdout = demuxed.stdout;
+        stderr = demuxed.stderr;
+      } catch (logErr: any) {
+        stderr = `[Sandbox] could not read container logs: ${logErr?.message || String(logErr)}`;
+      }
 
       return {
         verdict: 'FAILED',
@@ -378,7 +381,7 @@ export class DockerSandboxRunner {
         timedOut: false,
       };
     } finally {
-      // Always remove the container, even on the timeout path.
+      // Always remove the container, including on the timeout path.
       if (container) {
         const started = Date.now();
         try {
@@ -388,11 +391,16 @@ export class DockerSandboxRunner {
         }
         const teardownMs = Date.now() - started;
         if (teardownMs > TEARDOWN_BUDGET_MS) {
-          // Surfaced via stderr of the caller's log, not thrown.
           process.stderr.write(`[Sandbox] teardown took ${teardownMs}ms (> ${TEARDOWN_BUDGET_MS}ms budget)\n`);
         }
       }
     }
+  }
+
+  /** Minimal POSIX single-quote escaping for arguments passed through `sh -c`. */
+  private shellQuote(value: string): string {
+    if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) return value;
+    return `'${value.replace(/'/g, `'\\''`)}'`;
   }
 
   /** Waits for the container to exit, killing it when the time limit is exceeded. */
@@ -401,7 +409,6 @@ export class DockerSandboxRunner {
     timeLimitMs: number,
   ): Promise<{ exitCode: number; timedOut: boolean }> {
     let timedOut = false;
-    const waitPromise = container.wait();
 
     const watchdog = new Promise<{ StatusCode: number }>((resolve) => {
       setTimeout(async () => {
@@ -415,7 +422,8 @@ export class DockerSandboxRunner {
       }, timeLimitMs);
     });
 
-    const result: any = await Promise.race([waitPromise.catch(() => ({ StatusCode: -1 })), watchdog]);
+    const waitPromise = container.wait().catch(() => ({ StatusCode: -1 }));
+    const result: any = await Promise.race([waitPromise, watchdog]);
     return { exitCode: typeof result?.StatusCode === 'number' ? result.StatusCode : -1, timedOut };
   }
 
@@ -425,9 +433,8 @@ export class DockerSandboxRunner {
     timeLimitMs: number,
     matched: boolean,
   ): SandboxVerdict {
-    if (result.timedOut || result.exitCode === 137 && result.timeMs >= timeLimitMs) {
-      return 'TIME_LIMIT_EXCEEDED';
-    }
+    // Our own watchdog SIGKILL is distinguishable from an OOM kill by the flag.
+    if (result.timedOut) return 'TIME_LIMIT_EXCEEDED';
     if (result.exitCode === 137) return 'MEMORY_LIMIT_EXCEEDED';
     if (result.exitCode === 139) return 'RUNTIME_ERROR'; // SIGSEGV
     if (result.exitCode === 134) return 'RUNTIME_ERROR'; // SIGABRT
@@ -462,7 +469,12 @@ export class DockerSandboxRunner {
     while (offset + 8 <= buffer.length) {
       const streamType = buffer[offset];
       // Frame header: [type(1)][0][0][0][size(4, big-endian)]
-      if ((streamType !== 1 && streamType !== 2) || buffer[offset + 1] !== 0 || buffer[offset + 2] !== 0 || buffer[offset + 3] !== 0) {
+      if (
+        (streamType !== 1 && streamType !== 2) ||
+        buffer[offset + 1] !== 0 ||
+        buffer[offset + 2] !== 0 ||
+        buffer[offset + 3] !== 0
+      ) {
         break;
       }
       const size = buffer.readUInt32BE(offset + 4);
@@ -481,7 +493,7 @@ export class DockerSandboxRunner {
     return { stdout, stderr };
   }
 
-  private truncate(value: string, max = 20000): string {
+  private truncate(value: string, max = MAX_OUTPUT_CHARS): string {
     if (value.length <= max) return value;
     return `${value.slice(0, max)}\n... [TRUNCATED ${value.length - max} chars]`;
   }
