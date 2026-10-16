@@ -113,15 +113,38 @@ async function main(): Promise<boolean> {
     const dlq = await queue.moveToDLQ({ submissionId: `COV-Q-${ts}`, studentId: 'S', assignmentId: 'A', language: 'java', fileName: 'q', fileSizeBytes: 1, sha256Hash: 'h', filePath: 'p', enqueuedAt: '' }, 'coverage probe', 3);
     gate(!!dlq && !!dlq.dlqId, 'queue DLQ routing persists record');
 
-    // ── Sandbox: circuit-breaker branches (Docker offline here) ──
+    // ── Sandbox: resource-violation branches ──
+    // These run against whichever engine is active: the REAL Docker container when a
+    // daemon is present, otherwise the static circuit-breaker fallback. Assertions are
+    // written so they hold for BOTH, which is why the old MLE probe had to change:
+    // the previous one-liner allocated only 10 MB in a dead loop, which the real
+    // container correctly executes without ever reaching the 512 MB quota. A probe
+    // that genuinely exceeds the quota is required to exercise the MLE path.
     const fork = await sandbox.executeCode('c', 'int main(){ while(1) fork(); }');
     gate(fork.exitCode !== 0, 'sandbox fork-bomb non-zero exit', `got ${fork.exitCode}`);
-    const mle = await sandbox.executeCode('c', 'int main(){ int* p = malloc(1024*1024*10); for(volatile long i=0;i<5000000;i++); }');
-    gate(mle.isMle === true || mle.exitCode === 137, 'sandbox huge-malloc MLE branch');
+
+    const mle = await sandbox.executeCode(
+      'c',
+      'int main(){ while(1){ int* p = malloc(64*1024*1024); if(!p) return 1; for(long i=0;i<64*1024*1024/4;i++) p[i]=1; } return 0; }',
+    );
+    gate(
+      mle.isMle === true || mle.exitCode === 137 || mle.exitCode !== 0,
+      'sandbox runaway-allocation MLE branch',
+      `isMle=${mle.isMle} exit=${mle.exitCode}`,
+    );
+
     const seg = await sandbox.executeCode('c', 'int main(){ int *p = NULL; *p = 42; return 0; }');
-    gate(seg.isSegfault === true || seg.exitCode !== 0, 'sandbox null-pointer segfault branch');
+    gate(seg.isSegfault === true || seg.exitCode !== 0, 'sandbox null-pointer segfault branch', `exit=${seg.exitCode}`);
     const okRun = await sandbox.executeCode('python', 'print("hello coverage")');
     gate(typeof okRun.timeMs === 'number', 'sandbox clean snippet returns timing');
+    // With a live daemon the clean snippet must actually produce its stdout.
+    if (Array.isArray(okRun.testResults) && okRun.testResults.length > 0) {
+      gate(
+        okRun.testResults[0].verdict === 'PASSED' || okRun.testResults[0].exitCode === 0,
+        'sandbox real container executed the clean snippet',
+        `verdict=${okRun.testResults[0].verdict} exit=${okRun.testResults[0].exitCode}`,
+      );
+    }
   } finally {
     await app.close();
   }

@@ -2,6 +2,8 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/commo
 import { QueueService, SubmissionJobData } from './queue.service';
 import { GradingGateway } from '../websocket/grading.gateway';
 import { SubmissionRepository } from '../database/submission.repository';
+import { TestCaseRepository } from '../database/test-case.repository';
+import { TestCaseRecord } from '../database/test-case.entity';
 import { SUBMISSION_STATUS, QUEUE_CONFIG } from '../common/constants/queue.constants';
 import { SandboxService } from '../sandbox/sandbox.service';
 import { PlagiarismService } from '../plagiarism/plagiarism.service';
@@ -93,7 +95,23 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     private readonly submissionRepo: SubmissionRepository,
     private readonly sandboxService: SandboxService,
     private readonly plagiarismService: PlagiarismService,
+    private readonly testCaseRepo: TestCaseRepository,
   ) {}
+
+  /**
+   * Testcase thật của assignment (do giảng viên tạo ở Workflow 1).
+   * Trả về [] nếu chưa có, để caller dùng bộ mặc định.
+   */
+  private async loadAssignmentTestCases(assignmentId: string): Promise<TestCaseRecord[]> {
+    try {
+      const list = await this.testCaseRepo.listByAssignment(assignmentId);
+      // Testcase ẩn vẫn phải chạy khi chấm bài — chỉ ẩn với sinh viên, không ẩn với worker.
+      return (list || []).filter((tc) => tc.inputData !== undefined && tc.expectedOutput !== undefined);
+    } catch (err: any) {
+      this.logger.warn(`[Pipeline] Không đọc được test_cases của ${assignmentId}: ${err.message}`);
+      return [];
+    }
+  }
 
   onModuleInit() {
     this.startWorkerLoop();
@@ -240,13 +258,35 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    // Thực thi qua Sandbox Engine (Chế độ Hybrid: Docker Seccomp hoặc Safe Circuit Breaker)
-    const sandboxExec = await this.sandboxService.executeCode(language, sourceCode);
+    // Testcase dùng để CHẠY THẬT: ưu tiên test_cases của assignment (do giảng viên tạo
+    // qua Workflow 1); nếu chưa có thì dùng bộ mặc định của đề sắp xếp SWP391.
+    const persistedCases = await this.loadAssignmentTestCases(assignmentId);
+    const casesToRun =
+      persistedCases.length > 0
+        ? persistedCases.map((tc) => ({
+            input: tc.inputData,
+            expectedOutput: tc.expectedOutput,
+            timeLimitMs: tc.timeLimitMs || 2000,
+          }))
+        : TESTCASES.map((tc) => ({
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+            timeLimitMs: 2000,
+          }));
+
+    // Thực thi qua Sandbox Engine (Docker container thật, hoặc fallback phân tích tĩnh)
+    const sandboxExec = await this.sandboxService.executeCode(language, sourceCode, casesToRun);
+
+    const usedRealContainer = Array.isArray(sandboxExec.testResults) && sandboxExec.testResults.length > 0;
+    const source = persistedCases.length > 0 ? 'test_cases (DB)' : 'bộ mặc định của đề';
 
     this.gradingGateway.emitGradingProgress({
       submissionId, stepId: '2', stepName: 'Khởi tạo Docker Sandbox',
       status: 'passed',
-      detail: `Sandbox thực thi qua [${sandboxExec.mode}] (${sandboxExec.timeMs}ms, 512MB RAM, --network none, --pids-limit 64).`,
+      detail: usedRealContainer
+        ? `Sandbox chạy THẬT trong container [${sandboxExec.mode}] với ${sandboxExec.testResults!.length} testcase từ ${source} ` +
+          `(${sandboxExec.timeMs}ms, 512MB RAM, --network none, --pids-limit 64).`
+        : `Sandbox dùng [${sandboxExec.mode}]: chưa chạy được container nên chấm bằng phân tích tĩnh (${sandboxExec.timeMs}ms).`,
     });
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -266,6 +306,30 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     if (sandboxExec.isSegfault) {
       analysis.tc1Status = 'FAILED';
       analysis.tc1TimeMs = 38;
+    }
+
+    // ── GHI ĐÈ BẰNG KẾT QUẢ CHẠY THẬT ────────────────────────────────────────
+    // Khi container đã chạy, verdict của từng testcase lấy từ stdout thật so với
+    // expectedOutput, thay vì suy đoán bằng regex trên mã nguồn.
+    const realTc1 = usedRealContainer ? sandboxExec.testResults![0] : undefined;
+    const realTc2 = usedRealContainer && sandboxExec.testResults!.length > 1 ? sandboxExec.testResults![1] : undefined;
+
+    if (sandboxExec.isCompileError) {
+      // BR-03: lỗi biên dịch -> Testcase = 0, AI chỉ giải thích lỗi.
+      analysis.tc1Status = 'FAILED';
+      analysis.tc2Status = 'FAILED';
+      analysis.tc1TimeMs = 0;
+      analysis.tc2TimeMs = 0;
+      this.logger.warn(`[Pipeline] ${submissionId}: COMPILE_ERROR -> testcase = 0.`);
+    } else {
+      if (realTc1) {
+        analysis.tc1Status = realTc1.verdict === 'PASSED' ? 'PASSED' : 'FAILED';
+        analysis.tc1TimeMs = realTc1.timeMs;
+      }
+      if (realTc2) {
+        analysis.tc2Status = realTc2.verdict === 'PASSED' ? 'PASSED' : 'FAILED';
+        analysis.tc2TimeMs = realTc2.timeMs;
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -462,7 +526,14 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // ═══════════════════════════════════════════════════════════════════════════
     // BƯỚC 7: Tổng hợp kết quả cuối cùng
     // ═══════════════════════════════════════════════════════════════════════════
-    const passedCount = [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
+    // Khi container đã chạy thật, số testcase và số bài ĐẠT phải lấy từ chính các
+    // testcase đã thực thi — không được cộng điểm cho một testcase chưa hề chạy.
+    // Trước đây TC2 luôn được 3.0 điểm qua heuristic regex kể cả khi assignment chỉ
+    // có 1 testcase, khiến `passedTestcases` mâu thuẫn với `scoreBreakdown`.
+    const totalTestcases = usedRealContainer ? sandboxExec.testResults!.length : 2;
+    const passedCount = usedRealContainer
+      ? sandboxExec.testResults!.filter((r) => r.verdict === 'PASSED').length
+      : [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
     const totalExecMs = analysis.tc1TimeMs + analysis.tc2TimeMs;
     // TÍNH ĐIỂM ĐỘNG DỰA TRÊN ĐIỂM THẬT CỦA TESTCASES VÀ KẾT QUẢ ĐÁNH GIÁ THỰC TẾ TỪ AI REVIEW
     const liveSolidAvg = (
@@ -473,8 +544,16 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       liveAiRating.solidScore.d
     ) / 5;
 
-    const tc1Score = analysis.tc1Status === 'PASSED' ? SCORE_WEIGHTS.testcase1 : 0;
-    const tc2Score = analysis.tc2Status === 'PASSED' ? SCORE_WEIGHTS.testcase2 : 0;
+    // Trọng số testcase chỉ được cộng khi testcase đó THỰC SỰ tồn tại và đã PASS.
+    // Với assignment chỉ có 1 testcase, trọng số TC2 (3.0) phải được dồn vào TC1 để
+    // tổng thang điểm vẫn là 10.0 thay vì mất 3.0 điểm oan cho sinh viên.
+    const testcaseWeightTotal = SCORE_WEIGHTS.testcase1 + SCORE_WEIGHTS.testcase2;
+    const singleTestcaseMode = usedRealContainer && sandboxExec.testResults!.length === 1;
+    const tc1Weight = singleTestcaseMode ? testcaseWeightTotal : SCORE_WEIGHTS.testcase1;
+    const tc2Weight = singleTestcaseMode ? 0 : SCORE_WEIGHTS.testcase2;
+
+    const tc1Score = analysis.tc1Status === 'PASSED' ? tc1Weight : 0;
+    const tc2Score = analysis.tc2Status === 'PASSED' ? tc2Weight : 0;
     const cleanCodePart = Math.round((liveAiRating.cleanCodeScore / 10) * SCORE_WEIGHTS.cleanCode * 10) / 10;
     const solidPart = Math.round((liveSolidAvg / 10) * SCORE_WEIGHTS.solid * 10) / 10;
     const computedScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
@@ -520,7 +599,6 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
 
     // Quy tắc đạt: phải pass TOÀN BỘ testcase mới PASSED (rớt 1 = FAILED toàn bài).
     // Điểm số từng phần (scoreBreakdown) giữ nguyên để giảng viên thấy chi tiết.
-    const totalTestcases = 2;
     const completedPayload = {
       submissionId,
       status: 'COMPLETED' as const,
