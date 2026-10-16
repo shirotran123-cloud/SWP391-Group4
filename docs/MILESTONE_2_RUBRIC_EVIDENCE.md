@@ -407,25 +407,27 @@ canonical engine in `genai-hub/src/ast-engine`, which is out of scope for Milest
 |:---|:---|:---|
 | Gateway aggregated | `test/run-coverage-all.ts` | **all gateway suites green** |
 | Gateway E2E (12 suites) | `test/verify-gateway.ts` | **30 assertions PASS** |
-| Gateway branch coverage driver | `test/cover-80-gateway.ts` | **85 passed, 0 failed** |
+| Gateway branch coverage driver | `test/cover-80-gateway.ts` | **86 passed, 0 failed** |
 | Gateway goal gates | `test/verify-goal-gates.ts` | **16 passed, 0 failed** |
-| Gateway gate suite | `test/cover-gates.ts` | **19 passed, 0 failed** |
+| Gateway gate suite | `test/cover-gates.ts` | **20 passed, 0 failed** |
 | Realistic end-to-end | `test/demo-real.test.ts` | **39 passed, 0 failed** |
 | Test case CRUD | `test/test-cases.test.ts` | **12 passed, 0 failed** |
 | AST plagiarism | `test/plagiarism-ast.test.ts` | **63 passed, 0 failed** |
-| Pipeline step 6 (new) | `test/grading-plagiarism-e2e.test.ts` | **14 passed, 0 failed** |
-| Workflow 1 (new) | `test/exams-workflow1.test.ts` | **34 passed, 0 failed** |
+| Pipeline step 6 | `test/grading-plagiarism-e2e.test.ts` | **22 passed, 0 failed** |
+| Workflow 1 | `test/exams-workflow1.test.ts` | **33–34 passed, 0 failed** |
+| **Docker real execution (Python, Java, C++)** | `test/docker-sandbox.test.ts` | **26 passed, 0 failed (real execution)** |
 | GenAI Hub (11 suites) | `genai-hub` `npm test` | **53 passed, 0 failed** |
 | Sandbox exception paths | `test-exception-paths.ts` | **3 / 3 PASS** |
-| Sandbox benchmarks | `test-sandbox-benchmarks.ts` | **100% DoD**, teardown 124 ms (≤ 1000 ms), 0 orphaned |
+| Sandbox benchmarks | `test-sandbox-benchmarks.ts` | **100% DoD**, teardown ~126 ms (≤ 1000 ms), 0 orphaned |
 | Database schema | `npm run verify:schema` | **9 passed, 0 failed** |
 
-**Total: 11 automated suites on the gateway (378 assertions), 53 GenAI tests, 3 sandbox
-security tests, 9 schema assertions — 0 failures.**
+**Total: 12 automated suites on the gateway (≈400 assertions), 53 GenAI tests, 26 real
+container-execution tests, 3 sandbox security tests, 9 schema assertions — 0 failures.**
+Live API verification adds a further **13/13** checks for multi-language grading and
+**8/8** for Workflow 1 plus exception paths (see §1.3 and §7).
 
 Static checks: `tsc --noEmit` clean in `api-gateway`, `genai-hub`, `sandbox/worker`;
-`tsc -b` clean in `frontend`; `npm run build --prefix frontend` succeeds
-(`dist/assets/index-*.js` 1,123 kB / 310 kB gzip).
+`tsc -b` clean in `frontend`; `npm run build --prefix frontend` succeeds.
 
 ---
 
@@ -449,6 +451,10 @@ These are genuine defects discovered during Milestone 2 verification, not cosmet
 | 12 | **Medium** | `import Docker from 'dockerode'` compiled to `dockerode_1.default`, which is `undefined` — the package exports its constructor directly, so detection failed with `is not a constructor` | Switched to `require('dockerode')` with an explicit `InstanceType` type |
 | 13 | **Medium** | Test cases were hard-coded in the worker (`TESTCASES`), so teacher-authored cases from Workflow 1 were never executed | The worker now loads `test_cases` for the assignment from the database, falling back to the built-in set only when none exist |
 | 14 | **Medium** | `passedTestcases` contradicted `scoreBreakdown`: an assignment with one test case reported `1/2` passing while every component read 0, and TC2 was awarded 3.0 points for a test that never ran | Tally and weights are now derived from the test cases actually executed; a single-case assignment consolidates the full 7.0 TC weight |
+| 15 | **High** | Java and C++ **compiled successfully but could not run**: build output was written to `/tmp`, a per-container tmpfs, so the binary was gone when the separate run container started (`Could not find or load main class Solution`, `exec: /tmp/a.out: not found`). Python was unaffected because it is interpreted — the defect was invisible until Java/C++ were actually exercised | Build artefacts now go to a dedicated writable mount (`/build`) that persists across the compile and run containers |
+| 16 | **Medium** | Mounting a writable directory *inside* the read-only sandbox bind failed on Docker Desktop for Windows with an opaque `HTTP 500 ... OCI runtime create failed` | The build directory is a separate top-level mount; source and test inputs stay **read-only**, so a submission still cannot tamper with its own source or the expected output |
+| 17 | **Medium** | Docker detection used a **1500 ms** ping timeout. A cold Windows named pipe regularly exceeds that, so a healthy daemon was reported as offline and the platform silently reverted to static scoring | The probe now retries 3 times with an 8 s timeout and linear back-off |
+| 18 | **Medium** | A compile failure was reported with a fabricated testcase tally (`0/2` for a single-case assignment) and the `compileError` flag never reached the client | Compile failures now report the true testcase count, set `compileError`/`compileOutput`/`executedInContainer` on the payload, and fail the sandbox progress step so the student sees why they scored 0 |
 
 ---
 
@@ -488,9 +494,10 @@ Stated plainly so the panel can weigh them:
 
 | Rubric item | Weight | Target (Excellent) | Delivered | Verdict |
 |:---|:---:|:---|:---|:---:|
-| **Workflow Implementation** | 50% | Workflow 1 + Workflow 2 (main flow + ≥ 2 exception paths) fully functional | Workflow 0 (CRUD foundation) + Workflow 1 (exam/rubric generation with real persistence) + Workflow 2 (7-step pipeline **including a real AST/Winnowing plagiarism scan**) + **6** exception paths | **Excellent** |
+| **Workflow Implementation** | 50% | Workflow 1 + Workflow 2 (main flow + ≥ 2 exception paths) fully functional | Workflow 0 (CRUD foundation) + Workflow 1 (exam/rubric generation with real persistence) + Workflow 2 (7-step pipeline that **executes submissions in a real Docker container** and runs a **real AST/Winnowing plagiarism scan**) + **6** exception paths | **Excellent** |
 | **Codebase & Database** | 30% | Multi-layered design, complete CRUD classes, DB ≥ 10 tables, normalized, full PK/FK | 6-layer architecture, 12 controllers / 59 routes, 9 repositories, 15 tables, **15/15 PK**, **21 FK**, **0 dangling refs**, 13/13 SSOT entities, documented alias columns | **Excellent** |
-| **Process** | 20% | ≥ 8 commits/member + ≥ 6 AI debugging logs | **64** commits, **8–19 per member** (all ≥ 8), **0 empty**, 100% conventional-commit compliant; **5 log documents × 6 sessions = 30** AI debugging logs | **Excellent** |
+| **Process** | 20% | ≥ 8 commits/member + ≥ 6 AI debugging logs | **79** commits, **13–23 per member** (all ≥ 8), **0 empty**, 100% conventional-commit compliant; **5 log documents × 6 sessions = 30** AI debugging logs | **Excellent** |
 
 **Overall: all three Milestone 2 criteria are satisfied at the "Excellent" band**, subject to
-the limitations disclosed in §7.
+the limitations disclosed in §7 — of which only **Redis and PostgreSQL** remain unverified,
+since **Docker execution is now live and proven end-to-end**.

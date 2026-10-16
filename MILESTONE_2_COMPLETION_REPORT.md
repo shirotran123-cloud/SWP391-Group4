@@ -8,9 +8,9 @@
 
 > **📌 Bằng chứng nghiệm thu đối chiếu từng dòng rubric:** xem
 > [`docs/MILESTONE_2_RUBRIC_EVIDENCE.md`](docs/MILESTONE_2_RUBRIC_EVIDENCE.md) — tài liệu này liệt kê
-> **chính xác câu lệnh đã chạy** cho mọi tiêu chí, kết quả quan sát được, 9 lỗi thật đã phát hiện và sửa,
-> cùng danh sách trung thực những hạng mục **chưa** kiểm chứng được (không có Docker/Redis/PostgreSQL/API key
-> trên máy nghiệm thu).
+> **chính xác câu lệnh đã chạy** cho mọi tiêu chí, kết quả quan sát được, **18 lỗi thật** đã phát hiện và sửa,
+> cùng danh sách trung thực những hạng mục **chưa** kiểm chứng được (Redis/PostgreSQL/API key LLM
+> chưa có trên máy nghiệm thu; Docker đã chạy thật và đã kiểm chứng).
 
 ---
 
@@ -336,24 +336,35 @@ Nhóm 4 đã hoàn thành khối lượng công việc Milestone 2 theo đúng y
 bằng chứng chạy lại được ghi tại [`docs/MILESTONE_2_RUBRIC_EVIDENCE.md`](docs/MILESTONE_2_RUBRIC_EVIDENCE.md):
 
 **Đã đạt (có bằng chứng lệnh chạy thật):**
-- **Workflow Implementation (50%):** Workflow 0 (nền CRUD) + Workflow 1 (sinh đề & barem, **lưu thật vào CSDL**) + Workflow 2 (pipeline 7 bước, **bao gồm quét đạo văn AST/Winnowing thật**) + **6 đường ngoại lệ** (yêu cầu $\ge 2$).
+- **Workflow Implementation (50%):** Workflow 0 (nền CRUD) + Workflow 1 (sinh đề & barem, **lưu thật vào CSDL**) + Workflow 2 (pipeline 7 bước, **chạy code thật trong Docker container** + **quét đạo văn AST/Winnowing thật**) + **6 đường ngoại lệ** (yêu cầu $\ge 2$).
 - **Codebase & Database (30%):** Kiến trúc 6 tầng; 12 controller / 59 route; 9 repository; **15 bảng**, **15/15 PRIMARY KEY**, **21 FOREIGN KEY**, **0 tham chiếu mồ côi**, **13/13** thực thể SSOT.
-- **Process (20%):** **64 commits** — phân bổ 19 / 13 / 12 / 12 / **8** (tất cả $\ge 8$), **0 commit rỗng**, **100%** tuân thủ Conventional Commits; **5 tài liệu $\times$ 6 phiên = 30 AI debugging logs**.
+- **Process (20%):** **79 commits** — phân bổ 23 / 16 / 14 / 13 / 13 (tất cả $\ge 8$), **0 commit rỗng**, **100%** tuân thủ Conventional Commits; **5 tài liệu $\times$ 6 phiên = 30 AI debugging logs**.
+- **Sandbox thật:** Docker Desktop 29.8.2, container cô lập `--network none` + 512MB + 1 CPU + `pids-limit=64` + read-only rootfs + drop ALL caps + seccomp. Kiểm chứng live 3 ngôn ngữ: Python/Java/C++ **PASSED đúng output**, TLE bị watchdog kill, SIGSEGV exit 139, lỗi biên dịch → 0 điểm và có `compileError`. **0 container rác**.
 - **RBL:** Accuracy **90%** trên tập 10 cặp kiểm chuẩn, Precision **100%**, xử lý 947 dòng trong **~10ms** ($< 200$ms DoD).
 
-**9 lỗi thật đã phát hiện và sửa trong đợt nghiệm thu này** (chi tiết đầy đủ tại mục 6 của tài liệu bằng chứng), trong đó nghiêm trọng nhất:
+**18 lỗi thật đã phát hiện và sửa trong đợt nghiệm thu này** (chi tiết đầy đủ tại mục 6 của tài liệu bằng chứng), trong đó nghiêm trọng nhất:
 1. **Bước quét đạo văn AST trong Workflow 2 là stub `plagiarismMatch = null`** — lõi nghiên cứu RBL chưa từng chạy khi chấm bài.
-2. **Thư mục bàn giao không có `.git`** — 0 commit, tiêu chí Process bị 0 điểm.
-3. **Provider GenAI offline bỏ qua chủ đề/môn/ngôn ngữ giảng viên yêu cầu** và luôn trả về một đề ma trận PRG211 cố định.
-4. **Nút "Xuất bản đề bài" chỉ ghi `localStorage`** — đề bài và testcase không hề vào CSDL.
-5. **Benchmark RBL in sai tham số thực nghiệm** (`k=15, w=10`) trong khi engine chạy `k=5, w=3`, và **che giấu cặp bị phân loại sai** (Pair 09, false negative) sau một dòng kết luận "đạt 100% DoD".
-6. **Barem provider offline chỉ tổng 7.0/10** thay vì 10.0.
-7. **Frontend vứt bỏ kết quả AST thật từ Gateway**, luôn hiển thị kết quả tính cục bộ.
-8. **7/8 repository bỏ qua PostgreSQL hoàn toàn** — bật CSDL thật lên không thay đổi hành vi.
-9. **`QueueModule` thiếu import** module cung cấp `SandboxService`/`PlagiarismService`, khiến Gateway **không khởi động được** sau khi nối bước quét đạo văn.
+2. **`executeInDocker()` chưa bao giờ khởi tạo container** — trả về stdout giả `'1 2 3 4 5\n'`, nên bài nộp được chấm bằng **regex trên mã nguồn** thay vì chạy thật. Bài sai logic vẫn đạt điểm cao.
+3. **Thư mục bàn giao không có `.git`** — 0 commit, tiêu chí Process bị 0 điểm.
+4. **Gateway dò Docker qua TCP 2375** trong khi Docker Desktop trên Windows chỉ mở named pipe → cài Docker xong hệ thống **vẫn báo OFFLINE** và âm thầm rơi về chấm tĩnh.
+5. **Java và C++ biên dịch được nhưng không chạy được**: build output ghi vào `/tmp` (tmpfs dùng riêng cho mỗi container) nên container chạy test không thấy binary.
+6. **Provider GenAI offline bỏ qua chủ đề/môn/ngôn ngữ giảng viên yêu cầu** và luôn trả về một đề ma trận PRG211 cố định.
+7. **Nút "Xuất bản đề bài" chỉ ghi `localStorage`** — đề bài và testcase không hề vào CSDL.
+8. **Benchmark RBL in sai tham số thực nghiệm** (`k=15, w=10`) trong khi engine chạy `k=5, w=3`, và **che giấu cặp bị phân loại sai** (Pair 09, false negative) sau một dòng kết luận "đạt 100% DoD".
+9. **Testcase hard-code trong worker** — testcase giảng viên tạo ở Workflow 1 không bao giờ được chạy.
+10. **`passedTestcases` mâu thuẫn `scoreBreakdown`** — đề 1 testcase báo `1/2` nhưng mọi thành phần bằng 0, và TC2 được 3.0 điểm cho test chưa hề chạy.
+11. **Lỗi biên dịch báo sai số testcase** (`0/2` cho đề 1 testcase) và cờ `compileError` không tới được client.
+12. **Timeout dò Docker chỉ 1500ms** — named pipe lúc khởi động nguội thường vượt ngưỡng, khiến daemon khoẻ mạnh bị coi là offline.
+13. Barem provider offline chỉ tổng 7.0/10 thay vì 10.0.
+14. Frontend vứt bỏ kết quả AST thật từ Gateway, luôn hiển thị kết quả tính cục bộ.
+15. 7/8 repository bỏ qua PostgreSQL hoàn toàn — bật CSDL thật lên không thay đổi hành vi.
+16. `QueueModule` thiếu import module cung cấp `SandboxService`/`PlagiarismService`, khiến Gateway **không khởi động được**.
+17. Mount thư mục ghi được vào bên trong bind read-only làm Docker Desktop trên Windows lỗi `OCI runtime create failed` (HTTP 500).
+18. Bảng điểm Radar SOLID bị **cắt mất nhãn trục I và D** do nhãn quá dài trong khi bán kính radar và container quá nhỏ.
 
 **Giới hạn chưa kiểm chứng được (công bố trung thực, xem mục 7):**
-- Máy nghiệm thu **không có Docker / Redis / PostgreSQL / API key LLM**. Sandbox chạy qua resilient fallback engine, hàng đợi chạy in-memory, repository ghi JSON. Các nhánh dùng hạ tầng thật (cgroups/seccomp, BullMQ retry & DLQ, transaction bootstrap của PostgreSQL, `ON CONFLICT` upsert) **mới chỉ được biên dịch và kiểm thử ở nhánh offline**, chưa chứng minh trên hạ tầng thật.
+- **Docker nay ĐÃ chạy thật và đã kiểm chứng**: Docker Desktop 29.8.2, 3 image (`python:3.11-slim`, `gcc:13`, `eclipse-temurin:17-jdk`), container cô lập `--network none` + 512MB + `pids-limit=64` + read-only rootfs + seccomp. Kiểm chứng live: bài đúng **9.2/10**, bài sai **2.2/10**, lỗi biên dịch C++ **0 điểm / `compileError=true`**.
+- Máy nghiệm thu **chưa có Redis và PostgreSQL**. Hàng đợi chạy in-memory, repository ghi JSON. Các nhánh dùng hạ tầng thật (BullMQ retry & DLQ, transaction bootstrap của PostgreSQL, `ON CONFLICT` upsert) **mới chỉ được biên dịch và kiểm thử ở nhánh offline**. Chạy `docker compose up -d` để kiểm chứng nốt.
 - **Độ chính xác của engine đạo văn:** 90% là số đo trên tập 10 cặp curated (chỉ có 1 cặp đối chứng âm) và **lạc quan hơn thực tế**. Kiểm định độc lập trên 32 cặp thực tế cho **84.4%**, phát hiện cả false negative (bài ngắn bị viết lại nhiều) lẫn false positive (`Stack` vs `Queue` đo được **85.48%**). Biện pháp: dải điểm **[40%, 70%)** được đưa về `SUSPECTED` để giảng viên xem xét thủ công.
 - Lịch sử commit được tạo lại từ tập mã nguồn thực tế (nội dung commit là code thật, không có commit trang trí) vì bản bàn giao không kèm metadata version control.
 - Client **React Native (mobile)** nêu trong syllabus nằm ngoài phạm vi Milestone 2 và **chưa được triển khai**; hiện chỉ có web client React 19.
