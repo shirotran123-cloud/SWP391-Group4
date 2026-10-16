@@ -88,6 +88,10 @@ export interface GradingCompletedPayload {
     astStructuralSimilarity?: number;
     executionTimeMs?: number;
   };
+  /** BR-03: true when the score was forced to 0 because AST plagiarism was confirmed (>= 80%). */
+  confirmedPlagiarism?: boolean;
+  /** Score the pipeline computed before the BR-03 plagiarism penalty was applied. */
+  computedScoreBeforePenalty?: number;
   completedAt: string;
 }
 

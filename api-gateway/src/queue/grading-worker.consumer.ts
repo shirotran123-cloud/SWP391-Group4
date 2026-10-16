@@ -477,15 +477,45 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const tc2Score = analysis.tc2Status === 'PASSED' ? SCORE_WEIGHTS.testcase2 : 0;
     const cleanCodePart = Math.round((liveAiRating.cleanCodeScore / 10) * SCORE_WEIGHTS.cleanCode * 10) / 10;
     const solidPart = Math.round((liveSolidAvg / 10) * SCORE_WEIGHTS.solid * 10) / 10;
-    const finalScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
+    const computedScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
 
-    const scoreBreakdown: ScoreBreakdown = {
+    // ─────────────────────────────────────────────────────────────────────────
+    // BR-03: đạo văn AST >= 80% đã xác nhận -> ĐIỂM = 0 KHÔNG THỂ HOÀN TÁC.
+    // Trước đây quy tắc này KHÔNG được áp dụng: pipeline chỉ gắn cờ rồi vẫn tính
+    // điểm bình thường, nên bài đạo văn vẫn có thể đạt điểm cao.
+    // ─────────────────────────────────────────────────────────────────────────
+    const CONFIRMED_PLAGIARISM_THRESHOLD = 80.0;
+    const plagiarismRate = plagiarismMatch ? plagiarismMatch.similarityRate : 0;
+    const isConfirmedPlagiarism = plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD;
+
+    let finalScore = computedScore;
+    let scoreBreakdown: ScoreBreakdown = {
       testcase1: tc1Score,
       testcase2: tc2Score,
       cleanCode: cleanCodePart,
       solid: solidPart,
-      total: finalScore,
+      total: computedScore,
     };
+
+    if (isConfirmedPlagiarism) {
+      finalScore = 0;
+      scoreBreakdown = {
+        testcase1: 0,
+        testcase2: 0,
+        cleanCode: 0,
+        solid: 0,
+        total: 0,
+      };
+      this.logger.warn(
+        `[BR-03] Submission ${submissionId} bị xác nhận đạo văn ${plagiarismRate}% (>= ${CONFIRMED_PLAGIARISM_THRESHOLD}%). ` +
+          `Điểm bị đặt về 0 (không thể hoàn tác). Điểm tính toán trước đó: ${computedScore}/10.`,
+      );
+      this.gradingGateway.emitGradingProgress({
+        submissionId, stepId: '6', stepName: 'Phân tích AST & Winnowing',
+        status: 'failed',
+        detail: `BR-03: Đạo văn ${plagiarismRate}% (>= ${CONFIRMED_PLAGIARISM_THRESHOLD}%) — điểm bị đặt về 0 và không thể hoàn tác.`,
+      });
+    }
 
 
     // Quy tắc đạt: phải pass TOÀN BỘ testcase mới PASSED (rớt 1 = FAILED toàn bài).
@@ -509,6 +539,9 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
         explanation: liveAiRating.explanation,
       },
       plagiarismMatch,
+      // BR-03: cờ cho client biết điểm đã bị đặt về 0 do đạo văn đã xác nhận.
+      confirmedPlagiarism: isConfirmedPlagiarism,
+      computedScoreBeforePenalty: computedScore,
       completedAt: new Date().toISOString(),
     };
 

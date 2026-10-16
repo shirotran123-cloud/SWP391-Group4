@@ -329,6 +329,41 @@ async function main(): Promise<boolean> {
       check(match.sourceCodeA !== match.sourceCodeB, 'the two compared sources are genuinely different files');
     }
 
+    // ── BR-03: confirmed plagiarism (>= 80%) forces the score to 0 ────────────
+    if (match && match.similarityRate >= 80) {
+      check(
+        completed!.confirmedPlagiarism === true,
+        'BR-03: payload flags confirmedPlagiarism when similarity >= 80%',
+        `confirmedPlagiarism=${completed!.confirmedPlagiarism} similarity=${match.similarityRate}`,
+      );
+      check(
+        completed!.score === 0,
+        'BR-03: final score is forced to 0 for confirmed plagiarism (irreversible)',
+        `score=${completed!.score}`,
+      );
+      check(
+        completed!.scoreBreakdown !== undefined && completed!.scoreBreakdown.total === 0,
+        'BR-03: score breakdown total is zeroed too, not just the headline score',
+        `breakdown.total=${completed!.scoreBreakdown ? completed!.scoreBreakdown.total : 'n/a'}`,
+      );
+      check(
+        typeof completed!.computedScoreBeforePenalty === 'number' && completed!.computedScoreBeforePenalty > 0,
+        'BR-03: the pre-penalty score is preserved for the audit trail',
+        `computedScoreBeforePenalty=${completed!.computedScoreBeforePenalty}`,
+      );
+    } else if (match) {
+      check(
+        completed!.confirmedPlagiarism === false,
+        'BR-03: a 70-79% match is flagged but does NOT zero the score (needs >= 80%)',
+        `similarity=${match.similarityRate}`,
+      );
+      check(
+        completed!.score > 0 || completed!.scoreBreakdown === undefined,
+        'BR-03: score is left intact below the 80% threshold',
+        `score=${completed!.score}`,
+      );
+    }
+
     // ── Submission C: genuinely unrelated code must NOT be flagged ───────────
     const pathC = writeSubmissionZip(tempDir, 'submission-c', UNRELATED_CODE);
     const subC = `SUB-PLAGC-${Date.now()}`;
@@ -368,6 +403,81 @@ async function main(): Promise<boolean> {
       );
     } else {
       check(true, 'unrelated submission reported no plagiarism match at all');
+    }
+
+    // ── Submission D: near-verbatim copy of A -> BR-03 must zero the score ───
+    // Same algorithm AND nearly the same tokens (only comments and whitespace differ),
+    // so the similarity lands in the >= 80% "confirmed plagiarism" band.
+    const nearCopy = ORIGINAL_CODE.replace(
+      'def bubble_sort(values):',
+      '# rewritten by a friend\ndef bubble_sort(values):',
+    );
+    const pathD = writeSubmissionZip(tempDir, 'submission-d', nearCopy);
+    const subD = `SUB-PLAGD-${Date.now()}`;
+    await submissionRepo.create({
+      submissionId: subD,
+      studentId: 'SE170789',
+      assignmentId,
+      language: 'python',
+      fileName: 'Solution.zip',
+      fileSizeBytes: fs.statSync(pathD).size,
+      sha256Hash: 'd'.repeat(64),
+      filePath: pathD,
+      status: SUBMISSION_STATUS.QUEUED,
+    } as any);
+
+    completedPayloads.length = 0;
+    await worker.executeGradingPipeline({
+      submissionId: subD,
+      studentId: 'SE170789',
+      assignmentId,
+      language: 'python',
+      fileName: 'Solution.zip',
+      fileSizeBytes: fs.statSync(pathD).size,
+      sha256Hash: 'd'.repeat(64),
+      filePath: pathD,
+      enqueuedAt: new Date().toISOString(),
+    } as any);
+
+    const completedD = completedPayloads.find((p) => p.submissionId === subD);
+    check(!!completedD, 'pipeline emitted grading:completed for the near-verbatim copy');
+
+    const matchD = completedD && completedD.plagiarismMatch;
+    if (matchD && matchD.similarityRate >= 80) {
+      check(
+        matchD.similarityRate >= 80,
+        'near-verbatim copy reaches the BR-03 confirmed-plagiarism band (>= 80%)',
+        `similarityRate=${matchD.similarityRate}`,
+      );
+      check(
+        completedD!.score === 0,
+        'BR-03: near-verbatim copy is scored 0',
+        `score=${completedD!.score}`,
+      );
+      check(
+        completedD!.confirmedPlagiarism === true,
+        'BR-03: confirmedPlagiarism flag set for the near-verbatim copy',
+        `confirmedPlagiarism=${completedD!.confirmedPlagiarism}`,
+      );
+      check(
+        completedD!.scoreBreakdown !== undefined &&
+          completedD!.scoreBreakdown.testcase1 === 0 &&
+          completedD!.scoreBreakdown.testcase2 === 0,
+        'BR-03: every score component is zeroed, not only the total',
+        JSON.stringify(completedD!.scoreBreakdown),
+      );
+      const persisted = await submissionRepo.findById(subD);
+      check(
+        !!persisted && persisted.score === 0,
+        'BR-03: the zeroed score is what gets persisted to the submissions store',
+        `persisted score=${persisted ? persisted.score : 'n/a'}`,
+      );
+    } else {
+      check(
+        false,
+        'near-verbatim copy should reach >= 80% similarity for the BR-03 test',
+        `similarityRate=${matchD ? matchD.similarityRate : 'no match'}`,
+      );
     }
 
     // ── Fingerprints must have been persisted for every submission ───────────
