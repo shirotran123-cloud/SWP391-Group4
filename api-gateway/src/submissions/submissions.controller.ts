@@ -1,3 +1,4 @@
+import * as AdmZip from 'adm-zip';
 import {
   Controller,
   Post,
@@ -193,4 +194,66 @@ export class SubmissionsController {
       message: `Đang phát lại luồng chấm bài cho submission ${id} qua WebSocket`,
     };
   }
+  /**
+   * Trích xuất và xem trực tiếp mã nguồn của bài nộp
+   */
+  @Get(':id/source')
+  public async getSubmissionSourceCode(@Param('id') id: string) {
+    const submission = await this.submissionsService.getSubmissionById(id);
+    if (!submission) {
+      throw new NotFoundException(`Không tìm thấy bài nộp với ID: ${id}`);
+    }
+
+    if (submission.details?.sourceCode) {
+      return {
+        statusCode: HttpStatus.OK,
+        submissionId: id,
+        fileName: submission.fileName,
+        language: submission.language,
+        sourceCode: submission.details.sourceCode,
+      };
+    }
+
+    // Cố gắng giải nén từ file .zip trên ổ cứng
+    let resolvedPath = submission.filePath;
+    if (!resolvedPath || !fs.existsSync(resolvedPath)) {
+      resolvedPath = path.resolve(process.cwd(), 'uploads', 'submissions', `${id}.zip`);
+    }
+
+    if (resolvedPath && fs.existsSync(resolvedPath)) {
+      try {
+        const zip = new AdmZip(resolvedPath);
+        const zipEntries = zip.getEntries();
+        const codeEntry =
+          zipEntries.find(
+            (entry: any) =>
+              !entry.isDirectory &&
+              (entry.entryName.toLowerCase().includes('solution.') ||
+                /\.(java|cpp|c|py|cs|js|ts)$/i.test(entry.entryName)),
+          ) || zipEntries.find((entry: any) => !entry.isDirectory);
+
+        if (codeEntry) {
+          const codeText = codeEntry.getData().toString('utf8');
+          return {
+            statusCode: HttpStatus.OK,
+            submissionId: id,
+            fileName: codeEntry.entryName,
+            language: submission.language,
+            sourceCode: codeText,
+          };
+        }
+      } catch (err) {
+        // fallback
+      }
+    }
+
+    return {
+      statusCode: HttpStatus.OK,
+      submissionId: id,
+      fileName: submission.fileName,
+      language: submission.language,
+      sourceCode: '// Không tìm thấy mã nguồn cho bài nộp này.',
+    };
+  }
+
 }

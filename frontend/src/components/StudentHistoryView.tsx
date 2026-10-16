@@ -1,4 +1,5 @@
-﻿import React, { useState, useEffect } from 'react';
+import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
+import React, { useState, useEffect } from 'react';
 import {
   FileCode, Download, RefreshCw, CheckCircle, XCircle, Clock,
   Award, Copy, Check, Scale, Search, Filter, ShieldCheck,
@@ -22,6 +23,7 @@ export interface SubmissionItem {
     score?: number;
     passedTestcases?: number;
     totalTestcases?: number;
+    executionTimeMs?: number;
     aiRating?: {
       cleanCodeScore?: number;
       solidScore?: { s: number; o: number; l: number; i: number; d: number };
@@ -29,6 +31,8 @@ export interface SubmissionItem {
       codeSmells?: Array<{ line: number; rule: string; description: string }>;
     };
     explanation?: string;
+    sourceCode?: string;
+    scoreBreakdown?: any;
   };
 }
 
@@ -54,6 +58,32 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PASSED' | 'FAILED' | 'QUEUED'>('ALL');
+
+  // Modal xem chi tiet bai nop & danh gia AI
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedDetailSubmission, setSelectedDetailSubmission] = useState<SubmissionDetailData | null>(null);
+
+  const handleOpenDetailModal = (sub: SubmissionItem) => {
+    setSelectedDetailSubmission({
+      submissionId: sub.submissionId,
+      studentId: sub.studentId,
+      studentName: studentName,
+      assignmentId: sub.assignmentId,
+      assignmentTitle: sub.assignmentId,
+      fileName: sub.fileName,
+      language: sub.language,
+      submittedAt: sub.createdAt,
+      score: sub.score ?? sub.details?.score,
+      scoreBreakdown: sub.details?.scoreBreakdown,
+      passedTestcases: sub.details?.passedTestcases,
+      totalTestcases: sub.details?.totalTestcases,
+      executionTimeMs: (sub.details as any)?.executionTimeMs,
+      sha256: sub.sha256Hash,
+      sourceCode: sub.details?.sourceCode,
+      aiRating: sub.details?.aiRating as any,
+    });
+    setDetailModalOpen(true);
+  };
 
   // Modal appeal nội bộ
   const [appealModalOpen, setAppealModalOpen] = useState(false);
@@ -715,6 +745,29 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                     {/* NÚT TẢI LẠI FILE BÀI NỘP (.ZIP) */}
                     <button
                       type="button"
+                      onClick={() => handleOpenDetailModal(sub)}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '7px',
+                        padding: '9px 18px',
+                        borderRadius: '9px',
+                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        border: 'none',
+                        color: '#ffffff',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title="Xem toan bo ma nguon da nop, chi tiet testcase va danh gia AI"
+                    >
+                      <Sparkles size={15} /> Xem Chi Tiết (Code & AI)
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => handleDownloadZip(sub)}
                       disabled={downloadingId === sub.submissionId}
                       style={{
@@ -787,6 +840,24 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
       )}
 
       {/* Modal phúc khảo nội bộ khi mở trực tiếp từ từng bài nộp */}
+      {/* Modal Xem Chi Tiet Bai Nop */}
+      <SubmissionDetailModal
+        isOpen={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        submission={selectedDetailSubmission}
+        apiBaseUrl={apiBaseUrl}
+        onOpenAppeal={(subId, currentScore) => {
+          setDetailModalOpen(false);
+          setAppealSubId(subId);
+          setAppealScore(currentScore);
+          setAppealModalOpen(true);
+        }}
+        onDownloadZip={(sub) => {
+          const matchSub = submissions.find((s) => s.submissionId === sub.submissionId);
+          if (matchSub) handleDownloadZip(matchSub);
+        }}
+      />
+
       <AppealModal
         isOpen={appealModalOpen}
         onClose={() => {

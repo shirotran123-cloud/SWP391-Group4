@@ -17,6 +17,7 @@ export interface TechnicalRequirementProp {
 interface AssignmentDescriptionViewProps {
   description: string;
   technicalRequirements?: TechnicalRequirementProp;
+  starterCode?: string;
   title?: string;
   timeLimitMs?: number;
   memoryLimitMb?: number;
@@ -30,6 +31,7 @@ interface AssignmentDescriptionViewProps {
 export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps> = ({
   description,
   technicalRequirements,
+  starterCode,
   title,
   timeLimitMs = 2000,
   memoryLimitMb = 512,
@@ -366,6 +368,80 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
           )}
         </div>
       </div>
+      {/* KHỐI 5: KHUNG MÃ NGUỒN KHỞI TẠO (STARTER CODE) CHO SINH VIÊN */}
+      {starterCode && (
+        <div
+          style={{
+            padding: '20px 22px',
+            borderRadius: '14px',
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            border: '1px solid rgba(129, 140, 248, 0.35)',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a5b4fc', fontSize: '14px', fontWeight: 800 }}>
+              <Code size={18} color="#818cf8" />
+              <span>KHUNG MÃ NGUỒN KHỞI TẠO (STARTER CODE)</span>
+              <span style={{ fontSize: '11px', color: '#34d399', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.3)', fontWeight: 700 }}>
+                Chuẩn SRP &amp; Kiến Trúc
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                try {
+                  navigator.clipboard.writeText(starterCode);
+                  setCopiedId('starter-code-spec');
+                  setTimeout(() => setCopiedId(null), 2500);
+                } catch (e) {
+                  console.error('Failed to copy starter code', e);
+                }
+              }}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 14px',
+                borderRadius: '8px',
+                backgroundColor: copiedId === 'starter-code-spec' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(99, 102, 241, 0.22)',
+                border: copiedId === 'starter-code-spec' ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(99, 102, 241, 0.45)',
+                color: copiedId === 'starter-code-spec' ? '#34d399' : '#ffffff',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {copiedId === 'starter-code-spec' ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+              <span>{copiedId === 'starter-code-spec' ? 'Đã sao chép vào Clipboard!' : 'Sao Chép Khung Code'}</span>
+            </button>
+          </div>
+
+          <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', margin: '0 0 12px 0', lineHeight: '1.5' }}>
+            💡 <strong>Hướng dẫn sinh viên:</strong> Hãy sao chép khung mã nguồn này vào file <code>Solution.java</code>, hoàn thiện các phương thức nghiệp vụ đánh dấu <code>// TODO</code> tuân thủ nguyên lý <strong>Single Responsibility Principle (SRP)</strong> và nén thành file <code>.zip</code> để nộp.
+          </p>
+
+          <pre
+            style={{
+              margin: 0,
+              padding: '16px',
+              borderRadius: '10px',
+              backgroundColor: '#070a13',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#f8fafc',
+              fontSize: '12.5px',
+              fontFamily: 'Consolas, Monaco, monospace',
+              whiteSpace: 'pre-wrap',
+              overflowX: 'auto',
+              lineHeight: '1.6',
+            }}
+          >
+            {starterCode}
+          </pre>
+        </div>
+      )}
     </div>
   );
 };

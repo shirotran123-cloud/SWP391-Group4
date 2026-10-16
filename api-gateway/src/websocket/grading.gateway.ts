@@ -59,6 +59,7 @@ export interface GradingCompletedPayload {
   passedTestcases: number;
   totalTestcases: number;
   executionTimeMs: number;
+  sourceCode?: string;
   aiRating?: {
     cleanCodeScore: number;
     solidScore: {

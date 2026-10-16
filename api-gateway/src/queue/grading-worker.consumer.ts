@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+﻿import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { QueueService, SubmissionJobData } from './queue.service';
 import { GradingGateway } from '../websocket/grading.gateway';
 import { SubmissionRepository } from '../database/submission.repository';
@@ -7,7 +7,9 @@ import { SandboxService } from '../sandbox/sandbox.service';
 import {
   analyzeSourceCode as analyzeSourceCodeCore,
   buildScoreBreakdown,
+  SCORE_WEIGHTS,
   type SourceAnalysis,
+  type ScoreBreakdown,
 } from './grading-core';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -325,16 +327,63 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // ═══════════════════════════════════════════════════════════════════════════
     this.gradingGateway.emitGradingProgress({
       submissionId, stepId: '5', stepName: 'GenAI Review (GPT-4o/Gemini)',
-      status: 'in_progress', detail: 'Phân tích Clean Code & 5 nguyên lý SOLID qua Schema Mode...',
+      status: 'in_progress', detail: 'Dang ket noi GenAI Hub (Port 3001) de phan tich Clean Code & 5 nguyen ly SOLID...',
     });
-    await sleep(500);
 
-    const aiReviewPayload = {
-      submissionId,
+    let liveAiRating = {
       cleanCodeScore: analysis.cleanCodeScore,
       solidScore: analysis.solidScore,
       codeSmells: analysis.codeSmells,
       explanation: analysis.explanation,
+    };
+
+    try {
+      const ext = language.toLowerCase() === 'java' ? 'java' : language.toLowerCase() === 'python' ? 'py' : 'cpp';
+      const aiResponse = await fetch('http://localhost:3001/api/v1/ai/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          submissionId,
+          language,
+          sourceFiles: [{ filename: `Solution.${ext}`, content: sourceCode }],
+          assignmentTopic: assignmentId || 'Thuat toan Octree VRAM & Huong doi tuong SOLID',
+          learningOutcomes: ['Clean Code', 'SOLID Principles'],
+        }),
+        signal: AbortSignal.timeout(20000),
+      });
+
+      if (aiResponse.ok) {
+        const aiData = await aiResponse.json();
+        if (aiData && aiData.solid_breakdown) {
+          liveAiRating = {
+            cleanCodeScore: aiData.clean_code_score ?? analysis.cleanCodeScore,
+            solidScore: {
+              s: aiData.solid_breakdown.srp ?? 8.5,
+              o: aiData.solid_breakdown.ocp ?? 8.5,
+              l: aiData.solid_breakdown.lsp ?? 9.0,
+              i: aiData.solid_breakdown.isp ?? 9.0,
+              d: aiData.solid_breakdown.dip ?? 8.0,
+            },
+            codeSmells: Array.isArray(aiData.feedback_json) ? aiData.feedback_json.map((f) => ({
+              line: f.line_start || 1,
+              rule: f.rule || f.smell_type || 'Clean Code',
+              description: `${f.smell_type || 'Code Smell'}: ${f.suggestion || ''}`,
+            })) : analysis.codeSmells,
+            explanation: aiData.overall_summary || analysis.explanation,
+          };
+          this.logger.log(`[Worker:AI] Nhan ket qua AI Review THAT tu GenAI Hub thanh cong! (CleanCode: ${liveAiRating.cleanCodeScore}, Smells: ${liveAiRating.codeSmells.length})`);
+        }
+      }
+    } catch (aiErr) {
+      this.logger.warn(`[Worker:AI] GenAI Hub offline/timeout (${aiErr.message}), fallback ve bo phan tich tinh.`);
+    }
+
+    const aiReviewPayload = {
+      submissionId,
+      cleanCodeScore: liveAiRating.cleanCodeScore,
+      solidScore: liveAiRating.solidScore,
+      codeSmells: liveAiRating.codeSmells,
+      explanation: liveAiRating.explanation,
       reviewedAt: new Date().toISOString(),
     };
 
@@ -342,10 +391,9 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     this.gradingGateway.emitGradingProgress({
       submissionId, stepId: '5', stepName: 'GenAI Review (GPT-4o/Gemini)',
       status: 'passed',
-      detail: `AI Review hoàn tất: Clean Code ${analysis.cleanCodeScore.toFixed(1)}/10, SOLID avg ${((analysis.solidScore.s + analysis.solidScore.o + analysis.solidScore.l + analysis.solidScore.i + analysis.solidScore.d) / 5).toFixed(1)}/10`,
+      detail: `AI Review hoan tat: Clean Code ${liveAiRating.cleanCodeScore.toFixed(1)}/10, SOLID avg ${((liveAiRating.solidScore.s + liveAiRating.solidScore.o + liveAiRating.solidScore.l + liveAiRating.solidScore.i + liveAiRating.solidScore.d) / 5).toFixed(1)}/10`,
     });
 
-    // ═══════════════════════════════════════════════════════════════════════════
     // BƯỚC 6: AST Plagiarism – Winnowing Fingerprinting
     // ═══════════════════════════════════════════════════════════════════════════
     this.gradingGateway.emitGradingProgress({
@@ -368,8 +416,29 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // ═══════════════════════════════════════════════════════════════════════════
     const passedCount = [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
     const totalExecMs = analysis.tc1TimeMs + analysis.tc2TimeMs;
-    const finalScore = analysis.score;
-    const scoreBreakdown = buildScoreBreakdown(analysis);
+    // TÍNH ĐIỂM ĐỘNG DỰA TRÊN ĐIỂM THẬT CỦA TESTCASES VÀ KẾT QUẢ ĐÁNH GIÁ THỰC TẾ TỪ AI REVIEW
+    const liveSolidAvg = (
+      liveAiRating.solidScore.s +
+      liveAiRating.solidScore.o +
+      liveAiRating.solidScore.l +
+      liveAiRating.solidScore.i +
+      liveAiRating.solidScore.d
+    ) / 5;
+
+    const tc1Score = analysis.tc1Status === 'PASSED' ? SCORE_WEIGHTS.testcase1 : 0;
+    const tc2Score = analysis.tc2Status === 'PASSED' ? SCORE_WEIGHTS.testcase2 : 0;
+    const cleanCodePart = Math.round((liveAiRating.cleanCodeScore / 10) * SCORE_WEIGHTS.cleanCode * 10) / 10;
+    const solidPart = Math.round((liveSolidAvg / 10) * SCORE_WEIGHTS.solid * 10) / 10;
+    const finalScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
+
+    const scoreBreakdown: ScoreBreakdown = {
+      testcase1: tc1Score,
+      testcase2: tc2Score,
+      cleanCode: cleanCodePart,
+      solid: solidPart,
+      total: finalScore,
+    };
+
 
     // Quy tắc đạt: phải pass TOÀN BỘ testcase mới PASSED (rớt 1 = FAILED toàn bài).
     // Điểm số từng phần (scoreBreakdown) giữ nguyên để giảng viên thấy chi tiết.
@@ -384,11 +453,12 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       passedTestcases: passedCount,
       totalTestcases,
       executionTimeMs: totalExecMs,
+      sourceCode,
       aiRating: {
-        cleanCodeScore: analysis.cleanCodeScore,
-        solidScore: analysis.solidScore,
-        codeSmells: analysis.codeSmells,
-        explanation: analysis.explanation,
+        cleanCodeScore: liveAiRating.cleanCodeScore,
+        solidScore: liveAiRating.solidScore,
+        codeSmells: liveAiRating.codeSmells,
+        explanation: liveAiRating.explanation,
       },
       plagiarismMatch,
       completedAt: new Date().toISOString(),

@@ -249,15 +249,24 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
           </div>
         )}
 
-        {isCompleted && (
+        {isCompleted && aiRating && (
           <div style={{ marginTop: '20px', padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.25)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
             <Sparkles size={20} color="var(--accent-primary)" style={{ marginTop: '2px', flexShrink: 0 }} />
             <div>
               <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '4px' }}>
-                💡 Gợi Ý Sư Phạm Socratic (Xử Lý Tình Huống Ngoại Lệ)
+                💡 Gợi Ý Sư Phạm AI (Định Hướng Kiến Trúc & SOLID)
               </h4>
-              <p style={{ fontSize: '13px', color: '#d1d5db', lineHeight: '1.5' }}>
-                Gợi ý sư phạm: Hàm <code style={{ backgroundColor: 'rgba(0,0,0,0.3)', padding: '2px 6px', borderRadius: '4px', color: '#f43f5e' }}>sortAndPrintAndSaveToDatabase</code> đang đảm nhận quá nhiều trách nhiệm (vừa sắp xếp, vừa hiển thị, vừa lưu DB). Hãy thử tách thành các phương thức độc lập để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.
+              <p style={{ fontSize: '13px', color: '#d1d5db', lineHeight: '1.5', margin: 0 }}>
+                {aiRating.codeSmells && aiRating.codeSmells.length > 0 ? (
+                  <span>
+                    <strong>Phát hiện vi phạm: </strong>
+                    {aiRating.codeSmells[0].description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử refactor lại các phương thức để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.
+                  </span>
+                ) : (
+                  <span>
+                    ✨ <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện Code Smells nào, phân tách trách nhiệm giữa các class/module rõ ràng và tuân thủ tốt nguyên lý <strong>Single Responsibility Principle (SRP)</strong>.
+                  </span>
+                )}
               </p>
             </div>
           </div>

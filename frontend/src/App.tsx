@@ -13,6 +13,7 @@ import { Terminal, Shield, LogOut, FileCode, Sparkles, Upload, BookOpen, LayoutD
 import { io, Socket } from 'socket.io-client';
 
 import { PlagiarismService } from './services/plagiarism.service';
+import JSZip from 'jszip';
 
 const API_BASE_URL = 'http://localhost:3000';
 
@@ -227,11 +228,21 @@ export function App() {
 
     socket.on('grading:completed', (data: any) => {
       if (data.aiRating) setAiRating(data.aiRating);
+      if (data.sourceCode) setCurrentSourceCode(data.sourceCode);
       if (data.plagiarismMatch) setPlagiarismMatch(data.plagiarismMatch);
       if (data.score !== undefined) setScore(data.score);
       if (data.scoreBreakdown) setScoreBreakdown(data.scoreBreakdown);
       if (data.executionTimeMs !== undefined) setExecutionTimeMs(data.executionTimeMs);
-      persistGradingResult({ score: data.score, scoreBreakdown: data.scoreBreakdown, submissionId: data.submissionId });
+      persistGradingResult({
+        score: data.score,
+        scoreBreakdown: data.scoreBreakdown,
+        submissionId: data.submissionId,
+        sourceCode: data.sourceCode,
+        aiRating: data.aiRating,
+        passedTestcases: data.passedTestcases,
+        totalTestcases: data.totalTestcases,
+        executionTimeMs: data.executionTimeMs,
+      });
       setSteps((prev) =>
         prev.map((s) => (s.status === 'in_progress' || s.status === 'pending' ? { ...s, status: 'passed' } : s))
       );
@@ -272,7 +283,18 @@ export function App() {
     setActiveView('student');
   };
 
-  const persistGradingResult = (result: { score?: number; scoreBreakdown?: ScoreBreakdown; submissionId?: string }) => {
+  const persistGradingResult = (data: {
+    score?: number;
+    scoreBreakdown?: ScoreBreakdown;
+    submissionId?: string;
+    sourceCode?: string;
+    aiRating?: AIRating;
+    passedTestcases?: number;
+    totalTestcases?: number;
+    executionTimeMs?: number;
+    fileName?: string;
+    sha256?: string;
+  }) => {
     const user = currentUserRef.current;
     const assignmentId = currentAssignmentIdRef.current;
     if (!user || !assignmentId) return;
@@ -281,15 +303,25 @@ export function App() {
     try {
       const saved = localStorage.getItem(storageKey);
       const history = saved ? JSON.parse(saved) : {};
-      const current = history[assignmentId];
-      if (!current) return;
+      const current = history[assignmentId] || {};
       history[assignmentId] = {
         ...current,
-        submissionId: result.submissionId || current.submissionId,
-        score: result.score,
+        assignmentId,
+        submissionId: data.submissionId || current.submissionId,
+        score: data.score !== undefined ? data.score : current.score,
+        scoreBreakdown: data.scoreBreakdown || current.scoreBreakdown,
         status: 'GRADED',
+        sourceCode: data.sourceCode || current.sourceCode,
+        aiRating: data.aiRating || current.aiRating,
+        passedTestcases: data.passedTestcases ?? current.passedTestcases ?? 2,
+        totalTestcases: data.totalTestcases ?? current.totalTestcases ?? 2,
+        executionTimeMs: data.executionTimeMs ?? current.executionTimeMs ?? 185,
+        submittedAt: current.submittedAt || new Date().toISOString(),
+        fileName: data.fileName || current.fileName || 'Solution.zip',
+        sha256: data.sha256 || current.sha256,
       };
       localStorage.setItem(storageKey, JSON.stringify(history));
+      window.dispatchEvent(new Event('aita_student_submissions_updated'));
     } catch (err) {
       console.warn('Không thể cập nhật lịch sử điểm:', err);
     }
@@ -321,7 +353,28 @@ export function App() {
         computedPlagiarism = await PlagiarismService.evaluateBenchmarkPair(benchmarkPairId);
       }
     } else if (file) {
-      if (!file.name.toLowerCase().endsWith('.zip')) {
+      if (file.name.toLowerCase().endsWith('.zip')) {
+        try {
+          const zip = await JSZip.loadAsync(file);
+          const candidateKeys = Object.keys(zip.files).filter(
+            (k) => !zip.files[k].dir && !k.startsWith('__MACOSX') && !k.endsWith('.DS_Store')
+          );
+          const bestKey =
+            candidateKeys.find((k) => k.toLowerCase().includes('solution.')) ||
+            candidateKeys.find((k) => /\.(java|cpp|c|py|cs|js|ts)$/i.test(k)) ||
+            candidateKeys[0];
+
+          if (bestKey && zip.files[bestKey]) {
+            const unzippedText = await zip.files[bestKey].async('text');
+            if (unzippedText && unzippedText.trim().length > 0) {
+              codeToGrade = unzippedText;
+              setCurrentSourceCode(unzippedText);
+            }
+          }
+        } catch (zipErr) {
+          console.warn('Lỗi khi giải nén file zip trong trình duyệt:', zipErr);
+        }
+      } else {
         try {
           const text = await file.text();
           if (text && text.trim().length > 0) {
@@ -331,8 +384,6 @@ export function App() {
         } catch (err) {
           console.warn('Không thể đọc file dạng văn bản thuần:', err);
         }
-      } else {
-        setCurrentSourceCode(mockSourceCodeStudent);
       }
       computedPlagiarism = undefined;
     }
@@ -384,7 +435,17 @@ export function App() {
               if (data.score !== undefined) setScore(data.score);
               if (data.scoreBreakdown) setScoreBreakdown(data.scoreBreakdown);
               if (data.executionTimeMs !== undefined) setExecutionTimeMs(data.executionTimeMs);
-              persistGradingResult({ score: data.score, scoreBreakdown: data.scoreBreakdown, submissionId: data.submissionId });
+              if (data.sourceCode) setCurrentSourceCode(data.sourceCode);
+              persistGradingResult({
+                score: data.score,
+                scoreBreakdown: data.scoreBreakdown,
+                submissionId: data.submissionId,
+                sourceCode: data.sourceCode,
+                aiRating: data.aiRating,
+                passedTestcases: data.passedTestcases,
+                totalTestcases: data.totalTestcases,
+                executionTimeMs: data.executionTimeMs,
+              });
               setSteps((prev) => prev.map((s) => ({ ...s, status: 'passed' })));
               setIsCompleted(true);
             });
