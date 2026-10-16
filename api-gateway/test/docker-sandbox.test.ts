@@ -67,6 +67,67 @@ const INFINITE_PY = `while True:
     pass
 `;
 
+/** Valid compilable Java solution; reads n then n integers and prints them sorted. */
+const JAVA_SORT = `import java.util.*;
+
+public class Solution {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        if (!sc.hasNextInt()) return;
+        int n = sc.nextInt();
+        int[] values = new int[n];
+        for (int i = 0; i < n; i++) values[i] = sc.nextInt();
+        Arrays.sort(values);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < n; i++) {
+            if (i > 0) sb.append(' ');
+            sb.append(values[i]);
+        }
+        System.out.println(sb.toString());
+    }
+}
+`;
+
+const JAVA_BROKEN = `public class Solution {
+    public static void main(String[] args) {
+        this is not valid java
+    }
+}
+`;
+
+/** Valid compilable C++ solution. */
+const CPP_SORT = `#include <iostream>
+#include <vector>
+#include <algorithm>
+using namespace std;
+
+int main() {
+    int n;
+    if (!(cin >> n)) return 0;
+    vector<int> values(n);
+    for (int i = 0; i < n; i++) cin >> values[i];
+    sort(values.begin(), values.end());
+    for (int i = 0; i < n; i++) {
+        if (i) cout << ' ';
+        cout << values[i];
+    }
+    cout << "\\n";
+    return 0;
+}
+`;
+
+/** Deliberately dereferences a null pointer to exercise the SIGSEGV path. */
+const CPP_SEGV = `#include <iostream>
+using namespace std;
+
+int main() {
+    int* p = nullptr;
+    *p = 42;
+    cout << "unreachable" << endl;
+    return 0;
+}
+`;
+
 async function main(): Promise<boolean> {
   const runner = getDockerSandboxRunner();
 
@@ -169,6 +230,58 @@ async function main(): Promise<boolean> {
   // A fresh runner instance must also detect the daemon (no sticky state).
   const second = new DockerSandboxRunner();
   check(await second.isAvailable(), 'a second runner instance also detects the daemon');
+
+  // ── Compiled languages ─────────────────────────────────────────────────────
+  // These regressions exist because build artefacts were originally written to /tmp,
+  // a per-container tmpfs, so the compiled binary was gone by the time the run
+  // container started. Java failed with "Could not find or load main class Solution"
+  // and C++ with "exec: /tmp/a.out: not found". Both must now genuinely execute.
+  if (await runner.hasImage('java')) {
+    const javaOk = await runner.runTestCases('java', JAVA_SORT, testCases);
+    check(!javaOk.compileError, 'java compiles without error', javaOk.compileError?.compileOutput?.slice(0, 160));
+    if (javaOk.results[0]) {
+      check(
+        javaOk.results[0].verdict === 'PASSED' && javaOk.results[0].matched === true,
+        'java binary is found and runs after compiling in a separate container',
+        `verdict=${javaOk.results[0].verdict} exit=${javaOk.results[0].exitCode} stderr=${JSON.stringify(javaOk.results[0].stderr.slice(0, 120))}`,
+      );
+      check(javaOk.results[0].stdout.trim() === '1 2 3 4 5', 'java stdout is correct', JSON.stringify(javaOk.results[0].stdout));
+    } else {
+      check(false, 'java should produce a run result');
+    }
+
+    const javaBroken = await runner.runTestCases('java', JAVA_BROKEN, testCases);
+    check(!!javaBroken.compileError, 'java syntax error is reported as COMPILE_ERROR');
+  } else {
+    console.log('--- java image absent, skipping java assertions');
+  }
+
+  if (await runner.hasImage('cpp')) {
+    const cppOk = await runner.runTestCases('cpp', CPP_SORT, testCases);
+    check(!cppOk.compileError, 'cpp compiles without error', cppOk.compileError?.compileOutput?.slice(0, 160));
+    if (cppOk.results[0]) {
+      check(
+        cppOk.results[0].verdict === 'PASSED' && cppOk.results[0].matched === true,
+        'cpp binary is found and runs after compiling in a separate container',
+        `verdict=${cppOk.results[0].verdict} exit=${cppOk.results[0].exitCode} stderr=${JSON.stringify(cppOk.results[0].stderr.slice(0, 120))}`,
+      );
+    } else {
+      check(false, 'cpp should produce a run result');
+    }
+
+    const cppSegv = await runner.runTestCases('cpp', CPP_SEGV, [
+      { input: '', expectedOutput: '', timeLimitMs: 5000 },
+    ]);
+    if (cppSegv.results[0]) {
+      check(
+        cppSegv.results[0].exitCode === 139,
+        'cpp null-pointer dereference exits with SIGSEGV (139)',
+        `exit=${cppSegv.results[0].exitCode} verdict=${cppSegv.results[0].verdict}`,
+      );
+    }
+  } else {
+    console.log('--- cpp image absent, skipping cpp assertions');
+  }
 
   console.log(`---\nDOCKER-SANDBOX: ${passed} passed, ${failed} failed (real execution)`);
   return failed === 0;

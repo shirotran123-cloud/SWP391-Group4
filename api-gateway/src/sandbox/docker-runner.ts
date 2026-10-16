@@ -84,6 +84,19 @@ interface LanguageSpec {
 
 const SANDBOX_DIR = '/sandbox';
 
+/**
+ * Build artefacts (javac classes, a.out, dotnet output) MUST be written to a path that
+ * survives between the compile container and the run containers. `/tmp` is a
+ * per-container tmpfs, so anything compiled there disappears before the test run
+ * ("Could not find or load main class Solution", "exec: /tmp/a.out: not found").
+ *
+ * A dedicated top-level mount is used rather than a sub-directory of /sandbox because
+ * Docker Desktop on Windows fails to create a nested mount point inside an
+ * already-mounted read-only bind ("failed to create shim task: OCI runtime create
+ * failed"), which surfaced as an opaque HTTP 500.
+ */
+const BUILD_DIR = '/build';
+
 const LANGUAGES: Record<string, LanguageSpec> = {
   python: {
     image: 'python:3.11-slim',
@@ -94,30 +107,35 @@ const LANGUAGES: Record<string, LanguageSpec> = {
   java: {
     image: 'eclipse-temurin:17-jdk',
     filename: 'Solution.java',
-    compile: ['javac', '-d', '/tmp/classes', `${SANDBOX_DIR}/Solution.java`],
-    run: ['java', '-Xmx384m', '-XX:+UseSerialGC', '-cp', '/tmp/classes', 'Solution'],
+    // Build output MUST land in the bind-mounted /sandbox directory: it is the only
+    // path that survives between the compile container and the run containers. /tmp is
+    // a per-container tmpfs, so classes written there are gone by the time we run the
+    // tests ("Could not find or load main class Solution").
+    compile: ['javac', '-d', BUILD_DIR, `${SANDBOX_DIR}/Solution.java`],
+    run: ['java', '-Xmx384m', '-XX:+UseSerialGC', '-cp', BUILD_DIR, 'Solution'],
   },
   cpp: {
     image: 'gcc:13',
     filename: 'Solution.cpp',
-    compile: ['g++', '-O2', '-std=c++17', '-o', '/tmp/a.out', `${SANDBOX_DIR}/Solution.cpp`],
-    run: ['/tmp/a.out'],
+    compile: ['g++', '-O2', '-std=c++17', '-o', `${BUILD_DIR}/a.out`, `${SANDBOX_DIR}/Solution.cpp`],
+    run: [`${BUILD_DIR}/a.out`],
   },
   c: {
     image: 'gcc:13',
     filename: 'Solution.c',
-    compile: ['gcc', '-O2', '-std=c11', '-o', '/tmp/a.out', `${SANDBOX_DIR}/Solution.c`],
-    run: ['/tmp/a.out'],
+    compile: ['gcc', '-O2', '-std=c11', '-o', `${BUILD_DIR}/a.out`, `${SANDBOX_DIR}/Solution.c`],
+    run: [`${BUILD_DIR}/a.out`],
   },
   dotnet: {
     image: 'mcr.microsoft.com/dotnet/sdk:8.0',
     filename: 'Program.cs',
+    // Same reasoning as Java/C++: build into the shared bind mount, not /tmp.
     compile: [
       'sh',
       '-c',
-      `cd /tmp && dotnet new console -o app --force >/dev/null 2>&1 && cp ${SANDBOX_DIR}/Program.cs /tmp/app/Program.cs && cd /tmp/app && dotnet build -c Release -o /tmp/out >/dev/null`,
+      `dotnet new console -o ${BUILD_DIR}/app --force >/dev/null 2>&1 && cp ${SANDBOX_DIR}/Program.cs ${BUILD_DIR}/app/Program.cs && dotnet build ${BUILD_DIR}/app -c Release -o ${BUILD_DIR}/out >/dev/null`,
     ],
-    run: ['dotnet', '/tmp/out/app.dll'],
+    run: ['dotnet', `${BUILD_DIR}/out/app.dll`],
   },
 };
 
@@ -157,34 +175,56 @@ export class DockerSandboxRunner {
    * Docker Desktop on Windows/macOS uses a named pipe / unix socket, NOT TCP:2375.
    * dockerode picks the right default when constructed with no arguments, so we let
    * it decide and only override when DOCKER_HOST / DOCKER_SOCKET is configured.
+   *
+   * The probe is deliberately generous: the first request over a Windows named pipe
+   * can take well over a second while the Docker Desktop VM warms up, and a premature
+   * timeout made the whole platform silently fall back to static scoring even though
+   * the daemon was healthy. We therefore retry a few times before declaring it absent.
    */
   public async isAvailable(): Promise<boolean> {
     if (this.available !== null) return this.available;
 
-    try {
-      const options: DockerOptions = {};
-      if (process.env.DOCKER_HOST) {
-        options.host = process.env.DOCKER_HOST;
-      } else if (process.env.DOCKER_SOCKET) {
-        options.socketPath = process.env.DOCKER_SOCKET;
+    const ATTEMPTS = 3;
+    const PING_TIMEOUT_MS = 8000;
+    let lastError: any = null;
+
+    for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+      try {
+        const options: DockerOptions = {};
+        if (process.env.DOCKER_HOST) {
+          options.host = process.env.DOCKER_HOST;
+        } else if (process.env.DOCKER_SOCKET) {
+          options.socketPath = process.env.DOCKER_SOCKET;
+        }
+
+        this.docker = new DockerConstructor(options);
+        await Promise.race([
+          this.docker.ping(),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error(`docker ping timeout (${PING_TIMEOUT_MS}ms, attempt ${attempt}/${ATTEMPTS})`)),
+              PING_TIMEOUT_MS,
+            ),
+          ),
+        ]);
+
+        const info = await this.docker.info();
+        this.available = true;
+        this.availabilityReason = `daemon ${info.ServerVersion} on ${info.OperatingSystem}`;
+        return true;
+      } catch (err: any) {
+        lastError = err;
+        this.docker = null;
+        // Back off briefly before retrying; a cold named pipe often succeeds on retry.
+        if (attempt < ATTEMPTS) {
+          await new Promise((r) => setTimeout(r, 500 * attempt));
+        }
       }
-
-      this.docker = new DockerConstructor(options);
-      await Promise.race([
-        this.docker.ping(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('docker ping timeout (1500ms)')), 1500)),
-      ]);
-
-      const info = await this.docker.info();
-      this.available = true;
-      this.availabilityReason = `daemon ${info.ServerVersion} on ${info.OperatingSystem}`;
-      return true;
-    } catch (err: any) {
-      this.available = false;
-      this.availabilityReason = err?.message || 'docker daemon unreachable';
-      this.docker = null;
-      return false;
     }
+
+    this.available = false;
+    this.availabilityReason = lastError?.message || 'docker daemon unreachable';
+    return false;
   }
 
   public getAvailabilityReason(): string {
@@ -238,10 +278,15 @@ export class DockerSandboxRunner {
     const workDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aita-sandbox-'));
     fs.writeFileSync(path.join(workDir, spec.filename), sourceCode, 'utf-8');
 
+    // Separate writable directory mounted at BUILD_DIR. Keeping it OUTSIDE workDir lets
+    // us mount the source/inputs read-only while still giving the compiler somewhere to
+    // write. It is removed together with workDir in the finally block below.
+    const buildDir = fs.mkdtempSync(path.join(os.tmpdir(), 'aita-build-'));
+
     try {
       // ── Compile step (only for compiled languages) ─────────────────────────
       if (spec.compile) {
-        const compileResult = await this.runOnce(spec, workDir, spec.compile, null, DEFAULT_TIME_LIMIT_MS * 5);
+        const compileResult = await this.runOnce(spec, workDir, buildDir, spec.compile, null, DEFAULT_TIME_LIMIT_MS * 5);
         if (compileResult.exitCode !== 0) {
           return {
             available: true,
@@ -268,7 +313,7 @@ export class DockerSandboxRunner {
         const inputFile = `input_${i}.txt`;
         fs.writeFileSync(path.join(workDir, inputFile), tc.input ?? '', 'utf-8');
 
-        const runResult = await this.runOnce(spec, workDir, spec.run, inputFile, limit);
+        const runResult = await this.runOnce(spec, workDir, buildDir, spec.run, inputFile, limit);
         const matched = this.outputsMatch(runResult.stdout, tc.expectedOutput);
         results.push({
           ...runResult,
@@ -281,6 +326,11 @@ export class DockerSandboxRunner {
     } finally {
       try {
         fs.rmSync(workDir, { recursive: true, force: true });
+      } catch {
+        // ignore cleanup failures
+      }
+      try {
+        fs.rmSync(buildDir, { recursive: true, force: true });
       } catch {
         // ignore cleanup failures
       }
@@ -297,6 +347,7 @@ export class DockerSandboxRunner {
   private async runOnce(
     spec: LanguageSpec,
     workDir: string,
+    buildDir: string,
     cmd: string[],
     inputFile: string | null,
     timeLimitMs: number,
@@ -333,11 +384,14 @@ export class DockerSandboxRunner {
           NetworkMode: 'none',
           IpcMode: 'none',
           ReadonlyRootfs: true,
-          // Writable tmpfs for compiler output; /sandbox itself stays read-only.
+          // Writable tmpfs for scratch space used by compilers/interpreter caches.
           Tmpfs: { '/tmp': 'rw,size=128m,exec' },
           CapDrop: ['ALL'],
           SecurityOpt: securityOpt.length ? securityOpt : undefined,
-          Binds: [`${workDir}:${SANDBOX_DIR}:ro`],
+          // Source and inputs are mounted READ-ONLY; only the dedicated build directory
+          // is writable, so a submitted program cannot tamper with its own source or the
+          // test-case inputs while still allowing javac/g++/dotnet to emit artefacts.
+          Binds: [`${workDir}:${SANDBOX_DIR}:ro`, `${buildDir}:${BUILD_DIR}:rw`],
           LogConfig: { Type: 'json-file', Config: { 'max-size': '1m', 'max-file': '1' } },
         },
       });
