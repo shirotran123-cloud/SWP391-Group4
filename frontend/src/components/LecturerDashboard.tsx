@@ -37,7 +37,7 @@ import type { PlagiarismMatch } from '../types';
 
 import { GeminiAIService, type RubricCriterion } from '../services/gemini-ai.service';
 
-// Base URL cá»§a NestJS API Gateway (Workflow 1 persist: Ä‘á» bÃ i + test cases + barem)
+// Base URL của NestJS API Gateway (Workflow 1 persist: đề bài + test cases + barem)
 const API_BASE_URL = 'http://localhost:3000';
 
 interface LecturerDashboardProps {
@@ -84,7 +84,7 @@ interface SubmissionRecord {
   cleanCodeScore: number;
   solidScore: number;
   finalScore: number;
-  plagiarismStatus: 'AN TOÃ€N' | 'NGHI Váº¤N' | 'Äáº O VÄ‚N';
+  plagiarismStatus: 'AN TOÀN' | 'NGHI VẤN' | 'ĐẠO VĂN';
   similarityRate: number;
 }
 
@@ -92,27 +92,27 @@ const initialCourses: CourseItem[] = [
   {
     courseId: 'COURSE-SWP391',
     courseCode: 'SWP391',
-    courseName: 'Dá»± Ãn PhÃ¡t Triá»ƒn Pháº§n Má»m (Agile Scrum)',
-    semester: 'Há»c ká»³ Thu 2026',
-    instructorName: 'ThS. Äinh ThÃ nh Trung',
+    courseName: 'Dự Án Phát Triển Phần Mềm (Agile Scrum)',
+    semester: 'Học kỳ Thu 2026',
+    instructorName: 'ThS. Đinh Thành Trung',
     studentCount: 38,
     assignmentCount: 2,
   },
   {
     courseId: 'COURSE-PRO192',
     courseCode: 'PRO192',
-    courseName: 'Láº­p TrÃ¬nh HÆ°á»›ng Äá»‘i TÆ°á»£ng Java & SOLID',
-    semester: 'Há»c ká»³ Thu 2026',
-    instructorName: 'ThS. Äinh ThÃ nh Trung',
+    courseName: 'Lập Trình Hướng Đối Tượng Java & SOLID',
+    semester: 'Học kỳ Thu 2026',
+    instructorName: 'ThS. Đinh Thành Trung',
     studentCount: 42,
     assignmentCount: 1,
   },
   {
     courseId: 'COURSE-CSD201',
     courseCode: 'CSD201',
-    courseName: 'Cáº¥u TrÃºc Dá»¯ Liá»‡u & Giáº£i Thuáº­t NÃ¢ng Cao',
-    semester: 'Há»c ká»³ Thu 2026',
-    instructorName: 'ThS. Äinh ThÃ nh Trung',
+    courseName: 'Cấu Trúc Dữ Liệu & Giải Thuật Nâng Cao',
+    semester: 'Học kỳ Thu 2026',
+    instructorName: 'ThS. Đinh Thành Trung',
     studentCount: 35,
     assignmentCount: 1,
   },
@@ -122,8 +122,8 @@ const defaultPublishedAssignments: PublishedAssignment[] = [
   {
     id: 'ASM-SWP-01',
     courseId: 'COURSE-SWP391',
-    title: 'CÃ i Ä‘áº·t Thuáº­t toÃ¡n CÃ¢y TÃ¬m Kiáº¿m Nhá»‹ PhÃ¢n (BST) & Äá»“ Thá»‹',
-    description: 'CÃ i Ä‘áº·t Generic Binary Search Tree trong Java hoáº·c C++. Tá»‘i Æ°u hÃ³a Ä‘á»™ phá»©c táº¡p thá»i gian vÃ  tuÃ¢n thá»§ cÃ¡c nguyÃªn lÃ½ SOLID.',
+    title: 'Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị',
+    description: 'Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian và tuân thủ các nguyên lý SOLID.',
     deadline: '2026-10-26T23:59',
     timeLimitMs: 2000,
     memoryLimitMb: 512,
@@ -133,9 +133,9 @@ const defaultPublishedAssignments: PublishedAssignment[] = [
       { input: '3\n10 0 -5', output: '-5 0 10', weight: 3.5, isHidden: true },
     ],
     rubrics: [
-      { criterion: 'TÃ­nh Ä‘Ãºng Ä‘áº¯n thuáº­t toÃ¡n & VÆ°á»£t qua Testcases', maxScore: 5.0, description: 'Pass 100% testcases' },
-      { criterion: 'Clean Code & Tá»‘i Æ°u O(N log N)', maxScore: 2.5, description: 'MÃ£ nguá»“n rÃµ rÃ ng, Ä‘áº·t tÃªn chuáº©n' },
-      { criterion: 'Thiáº¿t káº¿ HÆ°á»›ng Ä‘á»‘i tÆ°á»£ng & SOLID', maxScore: 2.5, description: 'TuÃ¢n thá»§ SRP vÃ  DIP' },
+      { criterion: 'Tính đúng đắn thuật toán & Vượt qua Testcases', maxScore: 5.0, description: 'Pass 100% testcases' },
+      { criterion: 'Clean Code & Tối ưu O(N log N)', maxScore: 2.5, description: 'Mã nguồn rõ ràng, đặt tên chuẩn' },
+      { criterion: 'Thiết kế Hướng đối tượng & SOLID', maxScore: 2.5, description: 'Tuân thủ SRP và DIP' },
     ],
     starterCode: '// Java Starter Code BST',
     createdAt: '10/10/2026 08:30',
@@ -145,8 +145,8 @@ const defaultPublishedAssignments: PublishedAssignment[] = [
   {
     id: 'ASM-SWP-02',
     courseId: 'COURSE-SWP391',
-    title: 'Thuáº­t toÃ¡n Sáº¯p xáº¿p & Tá»‘i Æ°u O(N log N)',
-    description: 'CÃ i Ä‘áº·t giáº£i thuáº­t sáº¯p xáº¿p nhanh tá»‘i Æ°u 3-Way Partitioning trÃ¡nh suy biáº¿n trÃªn dá»¯ liá»‡u trÃ¹ng láº·p.',
+    title: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
+    description: 'Cài đặt giải thuật sắp xếp nhanh tối ưu 3-Way Partitioning tránh suy biến trên dữ liệu trùng lặp.',
     deadline: '2026-10-20T23:59',
     timeLimitMs: 1500,
     memoryLimitMb: 256,
@@ -156,8 +156,8 @@ const defaultPublishedAssignments: PublishedAssignment[] = [
       { input: '10\n10 9 8 7 6 5 4 3 2 1', output: '1 2 3 4 5 6 7 8 9 10', weight: 3.0, isHidden: true },
     ],
     rubrics: [
-      { criterion: 'ÄÃºng Ä‘áº¯n Testcases', maxScore: 7.0, description: 'VÆ°á»£t qua bá»™ testcases' },
-      { criterion: 'Clean Code & SOLID', maxScore: 3.0, description: 'TuÃ¢n thá»§ SRP' },
+      { criterion: 'Đúng đắn Testcases', maxScore: 7.0, description: 'Vượt qua bộ testcases' },
+      { criterion: 'Clean Code & SOLID', maxScore: 3.0, description: 'Tuân thủ SRP' },
     ],
     starterCode: '// Solution starter',
     createdAt: '08/10/2026 09:00',
@@ -167,8 +167,8 @@ const defaultPublishedAssignments: PublishedAssignment[] = [
   {
     id: 'ASM-CSD-01',
     courseId: 'COURSE-CSD201',
-    title: 'CÃ i Äáº·t CÃ¢y AVL Tá»± CÃ¢n Báº±ng (Self-Balancing Tree)',
-    description: 'Triá»ƒn khai cÃ¢y AVL vá»›i cÃ¡c phÃ©p xoay Ä‘Æ¡n vÃ  kÃ©p, kiá»ƒm tra cÃ¢n báº±ng 1,000 pháº§n tá»­.',
+    title: 'Cài Đặt Cây AVL Tự Cân Bằng (Self-Balancing Tree)',
+    description: 'Triển khai cây AVL với các phép xoay đơn và kép, kiểm tra cân bằng 1,000 phần tử.',
     deadline: '2026-10-30T23:59',
     timeLimitMs: 2000,
     memoryLimitMb: 512,
@@ -187,57 +187,57 @@ const mockSubmissionsList: SubmissionRecord[] = [
   {
     id: 'SUB-001',
     studentId: 'SE170000',
-    studentName: 'Äinh ThÃ nh Trung',
-    assignmentTitle: 'Thuáº­t toÃ¡n Sáº¯p xáº¿p & Tá»‘i Æ°u O(N log N)',
+    studentName: 'Đinh Thành Trung',
+    assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
     fileName: 'solution_sorting_v2.zip',
     submittedAt: '12/10/2026 14:22',
     testcaseScore: 7.0,
     cleanCodeScore: 9.0,
     solidScore: 8.5,
     finalScore: 9.5,
-    plagiarismStatus: 'AN TOÃ€N',
+    plagiarismStatus: 'AN TOÀN',
     similarityRate: 14.5,
   },
   {
     id: 'SUB-002',
     studentId: 'SE170123',
-    studentName: 'Tráº§n Thanh NguyÃªn',
-    assignmentTitle: 'Thuáº­t toÃ¡n Sáº¯p xáº¿p & Tá»‘i Æ°u O(N log N)',
+    studentName: 'Trần Thanh Nguyên',
+    assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
     fileName: 'sorting_fast.zip',
     submittedAt: '12/10/2026 14:15',
     testcaseScore: 6.5,
     cleanCodeScore: 8.0,
     solidScore: 8.0,
     finalScore: 8.8,
-    plagiarismStatus: 'AN TOÃ€N',
+    plagiarismStatus: 'AN TOÀN',
     similarityRate: 18.2,
   },
   {
     id: 'SUB-003',
     studentId: 'SE170456',
-    studentName: 'LÃª HoÃ ng Nam',
-    assignmentTitle: 'Thuáº­t toÃ¡n Sáº¯p xáº¿p & Tá»‘i Æ°u O(N log N)',
+    studentName: 'Lê Hoàng Nam',
+    assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
     fileName: 'sort_algorithm_final.zip',
     submittedAt: '12/10/2026 13:50',
     testcaseScore: 5.0,
     cleanCodeScore: 6.0,
     solidScore: 5.5,
     finalScore: 6.5,
-    plagiarismStatus: 'NGHI Váº¤N',
+    plagiarismStatus: 'NGHI VẤN',
     similarityRate: 72.8,
   },
   {
     id: 'SUB-004',
     studentId: 'SE170889',
-    studentName: 'Pháº¡m Minh Tuáº¥n',
-    assignmentTitle: 'Thuáº­t toÃ¡n Sáº¯p xáº¿p & Tá»‘i Æ°u O(N log N)',
+    studentName: 'Phạm Minh Tuấn',
+    assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
     fileName: 'assignment_sort.zip',
     submittedAt: '12/10/2026 12:10',
     testcaseScore: 4.0,
     cleanCodeScore: 5.0,
     solidScore: 4.5,
     finalScore: 5.0,
-    plagiarismStatus: 'Äáº O VÄ‚N',
+    plagiarismStatus: 'ĐẠO VĂN',
     similarityRate: 86.4,
   },
 ];
@@ -245,7 +245,7 @@ const mockSubmissionsList: SubmissionRecord[] = [
 export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiffViewer }) => {
   const [activeTab, setActiveTab] = useState<'COURSES' | 'CREATE_ASSIGNMENT' | 'EXCEL_IMPORT' | 'SUBMISSIONS' | 'RBL_LAB' | 'APPEALS'>('COURSES');
 
-  // Danh sÃ¡ch bÃ i ná»™p thá»±c táº¿ tá»« server & tráº¡ng thÃ¡i táº£i file zip
+  // Danh sách bài nộp thực tế từ server & trạng thái tải file zip
   const [realSubmissions, setRealSubmissions] = useState<SubmissionRecord[]>([]);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   // Modal xem chi tiet bai nop & Danh gia AI cho Giang vien
@@ -294,15 +294,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           const mapped: SubmissionRecord[] = serverList.map((s: any) => ({
             id: s.submissionId || s.id,
             studentId: s.studentId || 'SE-N/A',
-            studentName: s.studentName || s.studentId || 'Sinh viÃªn',
-            assignmentTitle: s.assignmentId || 'BÃ i ná»™p',
+            studentName: s.studentName || s.studentId || 'Sinh viên',
+            assignmentTitle: s.assignmentId || 'Bài nộp',
             fileName: s.fileName || `${s.submissionId || s.id}.zip`,
-            submittedAt: s.createdAt ? new Date(s.createdAt).toLocaleString('vi-VN') : 'Vá»«a xong',
+            submittedAt: s.createdAt ? new Date(s.createdAt).toLocaleString('vi-VN') : 'Vừa xong',
             testcaseScore: s.score !== undefined ? Math.round(s.score * 0.7 * 10) / 10 : 7.0,
             cleanCodeScore: s.result?.aiRating?.cleanCodeScore ?? 8.5,
             solidScore: 8.0,
             finalScore: s.score ?? 8.5,
-            plagiarismStatus: s.plagiarismStatus || 'AN TOÃ€N',
+            plagiarismStatus: s.plagiarismStatus || 'AN TOÀN',
             similarityRate: s.similarityRate ?? 15,
           }));
           setRealSubmissions(mapped);
@@ -339,7 +339,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
       } else {
-        // Fallback cho bÃ i máº«u demo
+        // Fallback cho bài mẫu demo
         const sampleCode = `// AITA Code Submission Archive: ${subId}\n// Sinh vien: ${preferredFileName || 'solution.zip'}\n\npublic class Solution {\n    public static void main(String[] args) {\n        System.out.println("AITA Grading Demo - Source Code Extracted");\n    }\n}`;
         const blob = new Blob([sampleCode], { type: 'application/zip' });
         const url = URL.createObjectURL(blob);
@@ -352,14 +352,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         URL.revokeObjectURL(url);
       }
     } catch (err: any) {
-      alert(`Lá»—i khi táº£i file zip: ${err.message}`);
+      alert(`Lỗi khi tải file zip: ${err.message}`);
     } finally {
       setDownloadingId(null);
     }
   };
 
 
-  // Quáº£n lÃ½ danh sÃ¡ch khÃ³a há»c vÃ  bÃ i táº­p Ä‘Ã£ giao
+  // Quản lý danh sách khóa học và bài tập đã giao
   const [courses, setCourses] = useState<CourseItem[]>(initialCourses);
   const [publishedAssignments, setPublishedAssignments] = useState<PublishedAssignment[]>(() => {
     try {
@@ -374,19 +374,19 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     return defaultPublishedAssignments;
   });
 
-  // MÃ´n há»c Ä‘ang xem chi tiáº¿t (náº¿u null thÃ¬ hiá»‡n danh sÃ¡ch táº¥t cáº£ mÃ´n há»c)
+  // Môn học đang xem chi tiết (nếu null thì hiện danh sách tất cả môn học)
   const [selectedCourseDetailId, setSelectedCourseDetailId] = useState<string | null>(null);
 
-  // Modal xem chi tiáº¿t Ä‘á» bÃ i Ä‘Ã£ giao
+  // Modal xem chi tiết đề bài đã giao
   const [previewAssignment, setPreviewAssignment] = useState<PublishedAssignment | null>(null);
 
-  // Toast thÃ´ng bÃ¡o xuáº¥t báº£n thÃ nh cÃ´ng
+  // Toast thông báo xuất bản thành công
   const [publishSuccessToast, setPublishSuccessToast] = useState<string | null>(null);
 
-  // Form state cho táº¡o Ä‘á» bÃ i
-  const [assignmentTitle, setAssignmentTitle] = useState('CÃ i Ä‘áº·t Thuáº­t toÃ¡n CÃ¢y TÃ¬m Kiáº¿m Nhá»‹ PhÃ¢n (BST) & Äá»“ Thá»‹');
+  // Form state cho tạo đề bài
+  const [assignmentTitle, setAssignmentTitle] = useState('Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị');
   const [selectedCourse, setSelectedCourse] = useState('COURSE-SWP391');
-  const [assignmentDesc, setAssignmentDesc] = useState('CÃ i Ä‘áº·t Generic Binary Search Tree trong Java hoáº·c C++. Tá»‘i Æ°u hÃ³a Ä‘á»™ phá»©c táº¡p thá»i gian vÃ  tuÃ¢n thá»§ cÃ¡c nguyÃªn lÃ½ SOLID.');
+  const [assignmentDesc, setAssignmentDesc] = useState('Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian và tuân thủ các nguyên lý SOLID.');
   const [deadlineDate, setDeadlineDate] = useState('2026-10-26T23:59');
   const [allowedLanguages, setAllowedLanguages] = useState<string[]>(['java', 'python', 'cpp']);
   const [timeLimitMs, setTimeLimitMs] = useState(2000);
@@ -397,10 +397,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   ]);
   const [createSuccessMsg, setCreateSuccessMsg] = useState<string | null>(null);
 
-  // TÃ­nh tá»•ng trá»ng sá»‘ testcases hiá»‡n táº¡i (xá»­ lÃ½ trÆ°á»ng há»£p tá»•ng khÃ¡c 10 hoáº·c báº±ng 14, 20...)
+  // Tính tổng trọng số testcases hiện tại (xử lý trường hợp tổng khác 10 hoặc bằng 14, 20...)
   const totalTestcaseWeight = testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0);
 
-  // Chuáº©n hÃ³a tá»· lá»‡ Ä‘iá»ƒm cÃ¡c testcases vá» thang mong muá»‘n (10.0Ä‘ hoáº·c 7.0Ä‘ theo Barem)
+  // Chuẩn hóa tỷ lệ điểm các testcases về thang mong muốn (10.0đ hoặc 7.0đ theo Barem)
   const handleNormalizeTestcases = (targetScore: number) => {
     if (totalTestcaseWeight <= 0 || testCases.length === 0) return;
     let accumulated = 0;
@@ -425,7 +425,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [availableModelList, setAvailableModelList] = useState<string[]>([]);
   const [desiredTestCount, setDesiredTestCount] = useState<number>(5);
   const [lecturerPrompt, setLecturerPrompt] = useState<string>(
-    'Táº¡o bÃ i táº­p vá» Thuáº­t toÃ¡n Dijkstra tÃ¬m Ä‘Æ°á»ng Ä‘i ngáº¯n nháº¥t, cÃ³ tá»‘i Æ°u báº±ng HÃ ng Ä‘á»£i Æ°u tiÃªn PriorityQueue, sinh viÃªn pháº£i Ã¡p dá»¥ng nguyÃªn lÃ½ SOLID Single Responsibility (SRP).'
+    'Tạo bài tập về Thuật toán Dijkstra tìm đường đi ngắn nhất, có tối ưu bằng Hàng đợi ưu tiên PriorityQueue, sinh viên phải áp dụng nguyên lý SOLID Single Responsibility (SRP).'
   );
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [tempApiKey, setTempApiKey] = useState(geminiApiKey);
@@ -453,7 +453,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [parsedCsvStudents, setParsedCsvStudents] = useState<Array<{ studentCode: string; fullName: string; email: string }>>([]);
   const [csvParseError, setCsvParseError] = useState<string | null>(null);
 
-  // LÆ°u API Key vÃ o LocalStorage
+  // Lưu API Key vào LocalStorage
   const handleSaveApiKey = () => {
     const trimmed = tempApiKey.trim();
     setGeminiApiKey(trimmed);
@@ -462,18 +462,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setAiErrorMsg(null);
   };
 
-  // Ping kiá»ƒm tra káº¿t ná»‘i API Key vá»›i Google Gemini
-  // Ping kiá»ƒm tra káº¿t ná»‘i API Key vá»›i Google Gemini
+  // Ping kiểm tra kết nối API Key với Google Gemini
+  // Ping kiểm tra kết nối API Key với Google Gemini
   const handleTestApiKey = async () => {
     if (!tempApiKey.trim()) {
-      setPingStatus({ loading: false, message: 'Vui lÃ²ng nháº­p API Key trÆ°á»›c khi kiá»ƒm tra.', success: false });
+      setPingStatus({ loading: false, message: 'Vui lòng nhập API Key trước khi kiểm tra.', success: false });
       return;
     }
-    setPingStatus({ loading: true, message: 'Äang káº¿t ná»‘i tá»›i mÃ¡y chá»§ Google Gemini (ModelService.ListModels)...', success: null });
+    setPingStatus({ loading: true, message: 'Đang kết nối tới máy chủ Google Gemini (ModelService.ListModels)...', success: null });
     const res = await GeminiAIService.pingKey(tempApiKey, selectedAiModel === 'auto' ? undefined : selectedAiModel);
     setPingStatus({
       loading: false,
-      message: res.message + (res.latencyMs ? ` (Äá»™ trá»…: ${res.latencyMs}ms)` : ''),
+      message: res.message + (res.latencyMs ? ` (Độ trễ: ${res.latencyMs}ms)` : ''),
       success: res.success,
     });
     if (res.availableModels && res.availableModels.length > 0) {
@@ -485,17 +485,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
-  // Sinh Ä‘á» tá»± Ä‘á»™ng báº±ng 100% Google Gemini AI THáº¬T (UC-08)
+  // Sinh đề tự động bằng 100% Google Gemini AI THẬT (UC-08)
   const handleAiGenerateAssignment = async () => {
     setAiErrorMsg(null);
     setCreateSuccessMsg(null);
     setAiSuccessBadge(null);
 
-    // Náº¿u chÆ°a cÃ³ API Key, má»Ÿ modal cáº¥u hÃ¬nh Ä‘á»ƒ ngÆ°á»i dÃ¹ng nháº­p
+    // Nếu chưa có API Key, mở modal cấu hình để người dùng nhập
     if (!geminiApiKey.trim()) {
       setTempApiKey('');
       setIsConfigModalOpen(true);
-      setAiErrorMsg('Báº¡n cáº§n cung cáº¥p Google Gemini API Key Ä‘á»ƒ há»‡ thá»‘ng káº¿t ná»‘i AI táº¡o Ä‘á» bÃ i.');
+      setAiErrorMsg('Bạn cần cung cấp Google Gemini API Key để hệ thống kết nối AI tạo đề bài.');
       return;
     }
 
@@ -507,19 +507,19 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
     try {
       const courseObj = courses.find((c) => c.courseId === selectedCourse);
-      const courseName = courseObj ? courseObj.courseName : 'Dá»± Ãn PhÃ¡t Triá»ƒn Pháº§n Má»m';
+      const courseName = courseObj ? courseObj.courseName : 'Dự Án Phát Triển Phần Mềm';
       const courseCode = courseObj ? courseObj.courseCode : 'SWP391';
 
       const detectedCount = GeminiAIService.extractRequestedCount(lecturerPrompt);
       const testCountToUse = detectedCount || desiredTestCount || 5;
 
-            // Æ¯u tiÃªn yÃªu cáº§u cá»¥ thá»ƒ cá»§a giáº£ng viÃªn; trÃ¡nh truyá»n láº¡i tiÃªu Ä‘á» cÅ© náº¿u Ä‘Ã£ bá»‹ gÃ¡n tá»« láº§n sinh trÆ°á»›c
+            // Ưu tiên yêu cầu cụ thể của giảng viên; tránh truyền lại tiêu đề cũ nếu đã bị gán từ lần sinh trước
       let topicToUse = lecturerPrompt?.trim() || '';
       if (!topicToUse) {
         if (assignmentTitle && !assignmentTitle.toLowerCase().includes('drone')) {
           topicToUse = assignmentTitle;
         } else {
-          topicToUse = `${courseCode} - Cáº¥u trÃºc dá»¯ liá»‡u & Thuáº­t toÃ¡n thá»±c táº¿`;
+          topicToUse = `${courseCode} - Cấu trúc dữ liệu & Thuật toán thực tế`;
         }
       }
 
@@ -528,7 +528,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         courseCode,
         topicPrompt: topicToUse,
         lecturerDescription: lecturerPrompt,
-        difficulty: 'TRUNG BÃŒNH',
+        difficulty: 'TRUNG BÌNH',
         allowedLanguages,
         model: (selectedAiModel && selectedAiModel !== 'auto' && !selectedAiModel.includes('tts')) ? selectedAiModel : undefined,
         numTestCases: testCountToUse,
@@ -558,14 +558,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         setReferenceSolution(result.referenceSolution);
       }
 
-      const badgeText = `âœ¨ Google Gemini AI (${result.modelUsed}) Ä‘Ã£ sinh Ä‘á» & barem thÃ nh cÃ´ng trong ${result.latencyMs}ms!`;
+      const badgeText = `✨ Google Gemini AI (${result.modelUsed}) đã sinh đề & barem thành công trong ${result.latencyMs}ms!`;
       setAiSuccessBadge(badgeText);
       setCreateSuccessMsg(
-        `ÄÃ£ táº¡o Ä‘á» bÃ i "${result.title}" kÃ¨m ${result.testCases.length} testcases vÃ  ${result.rubric.length} tiÃªu chÃ­ barem cháº¥m Ä‘iá»ƒm.`
+        `Đã tạo đề bài "${result.title}" kèm ${result.testCases.length} testcases và ${result.rubric.length} tiêu chí barem chấm điểm.`
       );
     } catch (err: any) {
-      console.error('Lá»—i khi gá»i Google Gemini AI:', err);
-      setAiErrorMsg(err.message || 'KhÃ´ng thá»ƒ káº¿t ná»‘i tá»›i Google Gemini AI. Vui lÃ²ng kiá»ƒm tra láº¡i API Key hoáº·c háº¡n má»©c quota.');
+      console.error('Lỗi khi gọi Google Gemini AI:', err);
+      setAiErrorMsg(err.message || 'Không thể kết nối tới Google Gemini AI. Vui lòng kiểm tra lại API Key hoặc hạn mức quota.');
     } finally {
       clearInterval(timerInterval);
       setIsAiGenerating(false);
@@ -573,8 +573,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
-  // LÆ°u & Xuáº¥t báº£n Ä‘á» bÃ i táº­p: PERSIST lÃªn API Gateway (Workflow 1) rá»“i lÆ°u cá»¥c bá»™ vÃ  Ä‘iá»u hÆ°á»›ng.
-  // TrÆ°á»›c Ä‘Ã¢y hÃ m nÃ y CHá»ˆ ghi localStorage nÃªn Ä‘á» bÃ i + testcases khÃ´ng há» vÃ o CSDL.
+  // Lưu & Xuất bản đề bài tập: PERSIST lên API Gateway (Workflow 1) rồi lưu cục bộ và điều hướng.
+  // Trước đây hàm này CHỈ ghi localStorage nên đề bài + testcases không hề vào CSDL.
   const persistAssignmentToGateway = async (asmId: string, courseCode: string): Promise<{ assignmentId: string; savedTestCases: number; warning?: string }> => {
     const res = await fetch(`${API_BASE_URL}/api/v1/assignments`, {
       method: 'POST',
@@ -595,10 +595,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
     if (!res.ok && res.status !== 409) {
       const body = await res.text().catch(() => '');
-      throw new Error(`KhÃ´ng lÆ°u Ä‘Æ°á»£c Ä‘á» bÃ i lÃªn Gateway (HTTP ${res.status}). ${body.slice(0, 160)}`);
+      throw new Error(`Không lưu được đề bài lên Gateway (HTTP ${res.status}). ${body.slice(0, 160)}`);
     }
 
-    // LÆ°u tá»«ng test case (cÃ´ng khai + áº©n) kÃ¨m barem trá»ng sá»‘
+    // Lưu từng test case (công khai + ẩn) kèm barem trọng số
     let savedTestCases = 0;
     const failed: string[] = [];
     for (let i = 0; i < testCases.length; i++) {
@@ -629,22 +629,22 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     return {
       assignmentId: asmId,
       savedTestCases,
-      warning: failed.length > 0 ? `Má»™t sá»‘ testcase chÆ°a lÆ°u Ä‘Æ°á»£c: ${failed.join(', ')}.` : undefined,
+      warning: failed.length > 0 ? `Một số testcase chưa lưu được: ${failed.join(', ')}.` : undefined,
     };
   };
 
   const handleSaveAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!assignmentTitle.trim()) {
-      setAiErrorMsg('Vui lÃ²ng nháº­p TiÃªu Ä‘á» bÃ i táº­p trÆ°á»›c khi xuáº¥t báº£n.');
+      setAiErrorMsg('Vui lòng nhập Tiêu đề bài tập trước khi xuất bản.');
       return;
     }
 
     const courseObj = courses.find((c) => c.courseId === selectedCourse);
-    const courseName = courseObj ? courseObj.courseName : 'Dá»± Ãn PhÃ¡t Triá»ƒn Pháº§n Má»m';
+    const courseName = courseObj ? courseObj.courseName : 'Dự Án Phát Triển Phần Mềm';
     const courseCode = courseObj ? courseObj.courseCode : 'SWP391';
 
-    // MÃ£ Ä‘á» bÃ i á»•n Ä‘á»‹nh theo ná»™i dung Ä‘á»ƒ báº¥m Xuáº¥t báº£n láº¡i KHÃ”NG táº¡o báº£n ghi trÃ¹ng.
+    // Mã đề bài ổn định theo nội dung để bấm Xuất bản lại KHÔNG tạo bản ghi trùng.
     const slug = (s: string) =>
       s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').toUpperCase().slice(0, 40);
     const asmId = `ASM-${slug(courseCode)}-${slug(assignmentTitle) || Date.now().toString().slice(-5)}`;
@@ -656,8 +656,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       savedTestCases = persisted.savedTestCases;
       persistWarning = persisted.warning;
     } catch (persistErr: any) {
-      // Gateway offline -> váº«n lÆ°u cá»¥c bá»™ Ä‘á»ƒ demo khÃ´ng bá»‹ cháº·n, nhÆ°ng bÃ¡o rÃµ cho giáº£ng viÃªn.
-      persistWarning = `ChÆ°a lÆ°u Ä‘Æ°á»£c lÃªn CSDL Gateway (${persistErr.message}). Äá» bÃ i chá»‰ Ä‘Æ°á»£c lÆ°u táº¡m trÃªn trÃ¬nh duyá»‡t.`;
+      // Gateway offline -> vẫn lưu cục bộ để demo không bị chặn, nhưng báo rõ cho giảng viên.
+      persistWarning = `Chưa lưu được lên CSDL Gateway (${persistErr.message}). Đề bài chỉ được lưu tạm trên trình duyệt.`;
       console.warn('[Workflow1] Persist failed:', persistErr);
     }
 
@@ -689,7 +689,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       // ignore
     }
 
-    // TÄƒng sá»‘ lÆ°á»£ng bÃ i táº­p cá»§a khÃ³a há»c
+    // Tăng số lượng bài tập của khóa học
     setCourses((prevCourses) =>
       prevCourses.map((c) =>
         c.courseId === selectedCourse ? { ...c, assignmentCount: c.assignmentCount + 1 } : c
@@ -697,13 +697,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     );
 
     const toastMsg = persistWarning
-      ? `âš ï¸ ÄÃƒ XUáº¤T Báº¢N (má»™t pháº§n): BÃ i táº­p "${assignmentTitle}" â€” ${persistWarning}`
-      : `ðŸŽ‰ ÄÃƒ XUáº¤T Báº¢N THÃ€NH CÃ”NG: BÃ i táº­p "${assignmentTitle}" (${savedTestCases}/${testCases.length} testcases Ä‘Ã£ lÆ°u vÃ o CSDL) Ä‘Ã£ giao cho lá»›p ${courseCode} (${courseName})!`;
+      ? `⚠️ ĐÃ XUẤT BẢN (một phần): Bài tập "${assignmentTitle}" — ${persistWarning}`
+      : `🎉 ĐÃ XUẤT BẢN THÀNH CÔNG: Bài tập "${assignmentTitle}" (${savedTestCases}/${testCases.length} testcases đã lưu vào CSDL) đã giao cho lớp ${courseCode} (${courseName})!`;
     setPublishSuccessToast(toastMsg);
     setCreateSuccessMsg(toastMsg);
     setAiErrorMsg(persistWarning ? persistWarning : null);
 
-    // Tá»° Äá»˜NG ÄIá»€U HÆ¯á»šNG SANG TRANG Cá»¦A MÃ”N Há»ŒC ÄÃ“
+    // TỰ ĐỘNG ĐIỀU HƯỚNG SANG TRANG CỦA MÔN HỌC ĐÓ
     setSelectedCourseDetailId(selectedCourse);
     setActiveTab('COURSES');
     try {
@@ -713,7 +713,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
-  // ÄÃ³ng hoáº·c má»Ÿ láº¡i bÃ i táº­p
+  // Đóng hoặc mở lại bài tập
   const handleToggleAssignmentStatus = (asmId: string) => {
     const updated = publishedAssignments.map((a) =>
       a.id === asmId ? { ...a, status: (a.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED') as 'PUBLISHED' | 'CLOSED', isNewlyCreated: false } : a
@@ -727,9 +727,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
-  // XÃ³a bÃ i táº­p khá»i lá»›p
+  // Xóa bài tập khỏi lớp
   const handleDeleteAssignment = (asmId: string, courseId: string) => {
-    if (!window.confirm('Báº¡n cÃ³ cháº¯c cháº¯n muá»‘n xÃ³a bÃ i táº­p nÃ y khá»i lá»›p há»c?')) return;
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bài tập này khỏi lớp học?')) return;
     const updated = publishedAssignments.filter((a) => a.id !== asmId);
     setPublishedAssignments(updated);
     try {
@@ -743,18 +743,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     );
   };
 
-  // State vÃ  modal táº¡o khÃ³a há»c má»›i
+  // State và modal tạo khóa học mới
   const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
   const [newCourseCode, setNewCourseCode] = useState('PRN211');
   const [newCourseName, setNewCourseName] = useState('Cross-Platform Application Development with .NET');
-  const [newCourseSemester, setNewCourseSemester] = useState('Há»c ká»³ Thu 2026');
-  const [newCourseDesc, setNewCourseDesc] = useState('Láº­p trÃ¬nh á»©ng dá»¥ng Ä‘a ná»n táº£ng vá»›i .NET Core & Clean Architecture');
+  const [newCourseSemester, setNewCourseSemester] = useState('Học kỳ Thu 2026');
+  const [newCourseDesc, setNewCourseDesc] = useState('Lập trình ứng dụng đa nền tảng với .NET Core & Clean Architecture');
   const [createCourseLoading, setCreateCourseLoading] = useState(false);
 
-  // State cho viá»‡c náº¡p Roster Excel vÃ o lá»›p
+  // State cho việc nạp Roster Excel vào lớp
   const [targetCourseId, setTargetCourseId] = useState<string>('CRS-SWP391');
 
-  // Táº£i danh sÃ¡ch khÃ³a há»c thá»±c táº¿ tá»« API Gateway (PostgreSQL 15)
+  // Tải danh sách khóa học thực tế từ API Gateway (PostgreSQL 15)
   const fetchLiveCourses = async () => {
     try {
       const res = await fetch('http://localhost:3000/api/v1/courses');
@@ -767,7 +767,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             courseCode: c.courseCode,
             courseName: c.courseName,
             semester: c.semester,
-            instructorName: 'ThS. Giáº£ng ViÃªn AITA',
+            instructorName: 'ThS. Giảng Viên AITA',
             studentCount: c.studentCount || 38,
             assignmentCount: 2,
           }));
@@ -789,7 +789,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const handleCreateNewCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCourseCode.trim() || !newCourseName.trim()) {
-      alert('Vui lÃ²ng nháº­p MÃ£ há»c pháº§n vÃ  TÃªn khÃ³a há»c!');
+      alert('Vui lòng nhập Mã học phần và Tên khóa học!');
       return;
     }
 
@@ -814,7 +814,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         courseCode: newCourseCode.trim().toUpperCase(),
         courseName: newCourseName.trim(),
         semester: newCourseSemester,
-        instructorName: 'ThS. Giáº£ng ViÃªn AITA',
+        instructorName: 'ThS. Giảng Viên AITA',
         studentCount: 0,
         assignmentCount: 0,
       };
@@ -822,9 +822,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       setCourses((prev) => [newCourseObj, ...prev.filter((c) => c.courseId !== generatedId)]);
       setTargetCourseId(generatedId);
       setIsCreateCourseModalOpen(false);
-      setPublishSuccessToast(`ðŸŽ‰ ÄÃ£ táº¡o thÃ nh cÃ´ng khÃ³a há»c má»›i [${newCourseCode}] vÃ  lÆ°u vÃ o PostgreSQL 15!`);
+      setPublishSuccessToast(`🎉 Đã tạo thành công khóa học mới [${newCourseCode}] và lưu vào PostgreSQL 15!`);
     } catch (err: any) {
-      alert(`Lá»—i táº¡o khÃ³a há»c: ${err.message}`);
+      alert(`Lỗi tạo khóa học: ${err.message}`);
     } finally {
       setCreateCourseLoading(false);
     }
@@ -832,12 +832,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   const handleDownloadSampleCsv = () => {
     const csvContent =
-      'MÃ£ Sinh ViÃªn,Há» VÃ  TÃªn,Email FPT\n' +
-      'SE170000,Äinh ThÃ nh Trung,trungdt.student@aita.fpt.edu.vn\n' +
-      'SE170123,Tráº§n Thanh NguyÃªn,nguyentt@aita.fpt.edu.vn\n' +
-      'SE201817,Nguyá»…n HoÃ ng Vinh,user.student@gmail.com\n' +
-      'SE712137,VÃµ ThÃ¡i Trung,vttrung2k6@gmail.com\n' +
-      'SE170456,LÃª HoÃ ng Nam,namlh@aita.fpt.edu.vn\n';
+      'Mã Sinh Viên,Họ Và Tên,Email FPT\n' +
+      'SE170000,Đinh Thành Trung,trungdt.student@aita.fpt.edu.vn\n' +
+      'SE170123,Trần Thanh Nguyên,nguyentt@aita.fpt.edu.vn\n' +
+      'SE201817,Nguyễn Hoàng Vinh,user.student@gmail.com\n' +
+      'SE712137,Võ Thái Trung,vttrung2k6@gmail.com\n' +
+      'SE170456,Lê Hoàng Nam,namlh@aita.fpt.edu.vn\n';
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -863,14 +863,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       try {
         const text = event.target?.result as string;
         if (!text || !text.trim()) {
-          setCsvParseError('File CSV Ä‘Æ°á»£c chá»n rá»—ng hoáº·c khÃ´ng cÃ³ dá»¯ liá»‡u!');
+          setCsvParseError('File CSV được chọn rỗng hoặc không có dữ liệu!');
           setParsedCsvStudents([]);
           return;
         }
 
         const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
         if (lines.length <= 1) {
-          setCsvParseError('File CSV chá»‰ cÃ³ dÃ²ng tiÃªu Ä‘á» hoáº·c khÃ´ng chá»©a báº£n ghi sinh viÃªn nÃ o!');
+          setCsvParseError('File CSV chỉ có dòng tiêu đề hoặc không chứa bản ghi sinh viên nào!');
           setParsedCsvStudents([]);
           return;
         }
@@ -894,13 +894,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         }
 
         if (students.length === 0) {
-          setCsvParseError('KhÃ´ng trÃ­ch xuáº¥t Ä‘Æ°á»£c sinh viÃªn nÃ o tá»« CSV! Kiá»ƒm tra cÃ¡c cá»™t: MÃ£ Sinh ViÃªn, Há» VÃ  TÃªn, Email.');
+          setCsvParseError('Không trích xuất được sinh viên nào từ CSV! Kiểm tra các cột: Mã Sinh Viên, Họ Và Tên, Email.');
           setParsedCsvStudents([]);
         } else {
           setParsedCsvStudents(students);
         }
       } catch (err: any) {
-        setCsvParseError('Lá»—i Ä‘á»c ná»™i dung file CSV: ' + err.message);
+        setCsvParseError('Lỗi đọc nội dung file CSV: ' + err.message);
         setParsedCsvStudents([]);
       }
     };
@@ -913,15 +913,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setSimulatedRollback(null);
 
     const studentsToImport = customStudents || (parsedCsvStudents.length > 0 ? parsedCsvStudents : (triggerError ? [
-      { studentCode: 'SE170000', fullName: 'Äinh ThÃ nh Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
-      { studentCode: 'SE170123', fullName: 'Tráº§n Thanh NguyÃªn', email: 'nguyentt@aita.fpt.edu.vn' },
-      { studentCode: 'SE170123_ERROR_ROLLBACK', fullName: 'Nguyá»…n VÄƒn Lá»—i (TrÃ¹ng MSSV)', email: 'loi@aita.fpt.edu.vn' },
+      { studentCode: 'SE170000', fullName: 'Đinh Thành Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
+      { studentCode: 'SE170123', fullName: 'Trần Thanh Nguyên', email: 'nguyentt@aita.fpt.edu.vn' },
+      { studentCode: 'SE170123_ERROR_ROLLBACK', fullName: 'Nguyễn Văn Lỗi (Trùng MSSV)', email: 'loi@aita.fpt.edu.vn' },
     ] : [
-      { studentCode: 'SE170000', fullName: 'Äinh ThÃ nh Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
-      { studentCode: 'SE170123', fullName: 'Tráº§n Thanh NguyÃªn', email: 'nguyentt@aita.fpt.edu.vn' },
-      { studentCode: 'SE201817', fullName: 'Nguyá»…n HoÃ ng Vinh', email: 'user.student@gmail.com' },
-      { studentCode: 'SE712137', fullName: 'VÃµ ThÃ¡i Trung', email: 'vttrung2k6@gmail.com' },
-      { studentCode: 'SE170456', fullName: 'LÃª HoÃ ng Nam', email: 'vinhtt@aita.fpt.edu.vn' },
+      { studentCode: 'SE170000', fullName: 'Đinh Thành Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
+      { studentCode: 'SE170123', fullName: 'Trần Thanh Nguyên', email: 'nguyentt@aita.fpt.edu.vn' },
+      { studentCode: 'SE201817', fullName: 'Nguyễn Hoàng Vinh', email: 'user.student@gmail.com' },
+      { studentCode: 'SE712137', fullName: 'Võ Thái Trung', email: 'vttrung2k6@gmail.com' },
+      { studentCode: 'SE170456', fullName: 'Lê Hoàng Nam', email: 'vinhtt@aita.fpt.edu.vn' },
     ]));
 
     try {
@@ -934,12 +934,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Lá»—i giao dá»‹ch SQL!');
+        throw new Error(data.message || data.error || 'Lỗi giao dịch SQL!');
       }
 
       setSimulatedRollback(false);
       setExcelStatus(
-        `âœ… GIAO Dá»ŠCH SQL THÃ€NH CÃ”NG (100% COMMIT): ÄÃ£ náº¡p vÃ  ghi danh thÃ nh cÃ´ng ${studentsToImport.length} sinh viÃªn vÃ o lá»›p [${courseIdToUse}] trong PostgreSQL 15! Sinh viÃªn Ä‘Äƒng nháº­p vÃ o sáº½ tháº¥y mÃ´n há»c ngay.`
+        `✅ GIAO DỊCH SQL THÀNH CÔNG (100% COMMIT): Đã nạp và ghi danh thành công ${studentsToImport.length} sinh viên vào lớp [${courseIdToUse}] trong PostgreSQL 15! Sinh viên đăng nhập vào sẽ thấy môn học ngay.`
       );
       setCourses((prev) =>
         prev.map((c) =>
@@ -949,7 +949,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     } catch (err: any) {
       setSimulatedRollback(true);
       setExcelStatus(
-        `âŒ GIAO Dá»ŠCH SQL THáº¤T Báº I: ${err.message}. Há»‡ thá»‘ng Ä‘Ã£ tá»± Ä‘á»™ng kÃ­ch hoáº¡t 100% SQL TRANSACTION ROLLBACK (R06) báº£o toÃ n dá»¯ liá»‡u PostgreSQL, khÃ´ng cÃ³ báº¥t ká»³ báº£n ghi má»“ cÃ´i nÃ o!`
+        `❌ GIAO DỊCH SQL THẤT BẠI: ${err.message}. Hệ thống đã tự động kích hoạt 100% SQL TRANSACTION ROLLBACK (R06) bảo toàn dữ liệu PostgreSQL, không có bất kỳ bản ghi mồ côi nào!`
       );
     } finally {
       setExcelLoading(false);
@@ -958,17 +958,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
-      {/* TiÃªu Ä‘á» Dashboard Giáº£ng ViÃªn */}
+      {/* Tiêu đề Dashboard Giảng Viên */}
       <div className="glass-panel" style={{ padding: '24px 28px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            Báº£ng Quáº£n Trá»‹ Giáº£ng ViÃªn â€¢ Vai TrÃ²: INSTRUCTOR
+            Bảng Quản Trị Giảng Viên • Vai Trò: INSTRUCTOR
           </span>
           <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
-            Cá»•ng Äiá»u HÃ nh Há»c Pháº§n & Kháº£o ThÃ­ Láº­p TrÃ¬nh
+            Cổng Điều Hành Học Phần & Khảo Thí Lập Trình
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '2px' }}>
-            Quáº£n lÃ½ Ä‘á» bÃ i, phÃ¢n cÃ´ng lá»›p há»c, tÃ­ch há»£p AI soáº¡n Ä‘á» tá»± Ä‘á»™ng vÃ  kiá»ƒm Ä‘á»‹nh Ä‘áº¡o vÄƒn AST
+            Quản lý đề bài, phân công lớp học, tích hợp AI soạn đề tự động và kiểm định đạo văn AST
           </p>
         </div>
 
@@ -994,7 +994,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             }}
           >
             <Key size={15} />
-            {geminiApiKey ? 'ÄÃ£ Cáº¥u HÃ¬nh Gemini AI Key' : 'âš™ï¸ Nháº­p Gemini AI Key'}
+            {geminiApiKey ? 'Đã Cấu Hình Gemini AI Key' : '⚙️ Nhập Gemini AI Key'}
           </button>
 
           <button
@@ -1012,7 +1012,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               cursor: 'pointer',
             }}
           >
-            <PlusCircle size={18} /> Táº¡o Äá» BÃ i Má»›i
+            <PlusCircle size={18} /> Tạo Đề Bài Mới
           </button>
         </div>
       </div>
@@ -1036,7 +1036,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <BookOpen size={16} /> 1. KhÃ³a Há»c & Lá»›p Há»c Pháº§n
+          <BookOpen size={16} /> 1. Khóa Học & Lớp Học Phần
         </button>
 
         <button
@@ -1056,7 +1056,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <Sparkles size={16} color="var(--accent-cyan)" /> 2. Soáº¡n Äá» & Barem AI (UC-08)
+          <Sparkles size={16} color="var(--accent-cyan)" /> 2. Soạn Đề & Barem AI (UC-08)
         </button>
 
         <button
@@ -1076,7 +1076,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <FileSpreadsheet size={16} color="#10b981" /> 3. Nháº­p Roster Excel (ACID Rollback)
+          <FileSpreadsheet size={16} color="#10b981" /> 3. Nhập Roster Excel (ACID Rollback)
         </button>
 
         <button
@@ -1096,7 +1096,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <Award size={16} /> 4. Sá»• Äiá»ƒm & BÃ i Ná»™p
+          <Award size={16} /> 4. Sổ Điểm & Bài Nộp
         </button>
 
         <button
@@ -1116,7 +1116,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <Sparkles size={16} /> 5. RBL Lab (NghiÃªn Cá»©u)
+          <Sparkles size={16} /> 5. RBL Lab (Nghiên Cứu)
         </button>
 
         <button
@@ -1136,24 +1136,24 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <Scale size={16} color="#fbbf24" /> 6. PhÃºc Kháº£o Äiá»ƒm (UC-06)
+          <Scale size={16} color="#fbbf24" /> 6. Phúc Khảo Điểm (UC-06)
         </button>
       </div>
 
 
-      {/* TAB 1: KHÃ“A Há»ŒC & Lá»šP (Báº¢NG QUáº¢N LÃ MÃ”N Há»ŒC & BÃ€I Táº¬P ÄÃƒ GIAO) */}
+      {/* TAB 1: KHÓA HỌC & LỚP (BẢNG QUẢN LÝ MÔN HỌC & BÀI TẬP ĐÃ GIAO) */}
       {activeTab === 'COURSES' && (
         <div>
-          {/* TRÆ¯á»œNG Há»¢P 1: XEM CHI TIáº¾T 1 MÃ”N Há»ŒC & CÃC BÃ€I Táº¬P ÄÃƒ GIAO */}
+          {/* TRƯỜNG HỢP 1: XEM CHI TIẾT 1 MÔN HỌC & CÁC BÀI TẬP ĐÃ GIAO */}
           {selectedCourseDetailId ? (() => {
             const currentCourse = courses.find((c) => c.courseId === selectedCourseDetailId);
             const courseAssignments = publishedAssignments.filter((a) => a.courseId === selectedCourseDetailId);
-            const courseCode = currentCourse ? currentCourse.courseCode : 'MÃ”N Há»ŒC';
-            const courseName = currentCourse ? currentCourse.courseName : 'Chi tiáº¿t mÃ´n há»c';
+            const courseCode = currentCourse ? currentCourse.courseCode : 'MÔN HỌC';
+            const courseName = currentCourse ? currentCourse.courseName : 'Chi tiết môn học';
 
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {/* Banner ThÃ´ng BÃ¡o Xuáº¥t Báº£n ThÃ nh CÃ´ng náº¿u cÃ³ */}
+                {/* Banner Thông Báo Xuất Bản Thành Công nếu có */}
                 {publishSuccessToast && (
                   <div
                     style={{
@@ -1179,12 +1179,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       onClick={() => setPublishSuccessToast(null)}
                       style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '18px', fontWeight: 700 }}
                     >
-                      Ã—
+                      ×
                     </button>
                   </div>
                 )}
 
-                {/* Header ThÃ´ng Tin MÃ´n Há»c */}
+                {/* Header Thông Tin Môn Học */}
                 <div className="glass-panel" style={{ padding: '24px 28px', borderRadius: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                     <button
@@ -1204,7 +1204,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         gap: '6px',
                       }}
                     >
-                      <ArrowLeft size={16} /> Quay Láº¡i Danh SÃ¡ch MÃ´n Há»c
+                      <ArrowLeft size={16} /> Quay Lại Danh Sách Môn Học
                     </button>
 
                     <div style={{ display: 'flex', gap: '10px' }}>
@@ -1226,7 +1226,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           gap: '6px',
                         }}
                       >
-                        <PlusCircle size={16} /> + Giao ThÃªm Äá» Má»›i (AI)
+                        <PlusCircle size={16} /> + Giao Thêm Đề Mới (AI)
                       </button>
 
                       <button
@@ -1246,7 +1246,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           gap: '6px',
                         }}
                       >
-                        <Award size={16} /> Xem Sá»• Äiá»ƒm Lá»›p
+                        <Award size={16} /> Xem Sổ Điểm Lớp
                       </button>
                     </div>
                   </div>
@@ -1261,34 +1261,34 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   </div>
 
                   <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
-                    Giáº£ng viÃªn: <strong>{currentCourse?.instructorName}</strong> â€¢ {currentCourse?.semester} â€¢ SÄ© sá»‘: <strong style={{ color: '#ffffff' }}>{currentCourse?.studentCount}</strong> sinh viÃªn
+                    Giảng viên: <strong>{currentCourse?.instructorName}</strong> • {currentCourse?.semester} • Sĩ số: <strong style={{ color: '#ffffff' }}>{currentCourse?.studentCount}</strong> sinh viên
                   </p>
 
                   <div style={{ display: 'flex', gap: '20px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                    <span>Tá»•ng sá»‘ bÃ i táº­p Ä‘Ã£ giao: <strong style={{ color: 'var(--accent-cyan)' }}>{courseAssignments.length}</strong> bÃ i</span>
-                    <span>Äang má»Ÿ ná»™p bÃ i: <strong style={{ color: '#34d399' }}>{courseAssignments.filter((a) => a.status === 'PUBLISHED').length}</strong> bÃ i</span>
+                    <span>Tổng số bài tập đã giao: <strong style={{ color: 'var(--accent-cyan)' }}>{courseAssignments.length}</strong> bài</span>
+                    <span>Đang mở nộp bài: <strong style={{ color: '#34d399' }}>{courseAssignments.filter((a) => a.status === 'PUBLISHED').length}</strong> bài</span>
                   </div>
                 </div>
 
-                {/* TiÃªu Ä‘á» Danh SÃ¡ch BÃ i Táº­p */}
+                {/* Tiêu đề Danh Sách Bài Tập */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                   <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FolderKanban size={20} color="var(--accent-cyan)" /> Danh SÃ¡ch CÃ¡c BÃ i Táº­p ÄÃ£ Giao Cá»§a MÃ´n Há»c
+                    <FolderKanban size={20} color="var(--accent-cyan)" /> Danh Sách Các Bài Tập Đã Giao Của Môn Học
                   </h3>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    Hiá»ƒn thá»‹ {courseAssignments.length} bÃ i táº­p
+                    Hiển thị {courseAssignments.length} bài tập
                   </span>
                 </div>
 
-                {/* Danh SÃ¡ch Card BÃ i Táº­p ÄÃ£ Giao */}
+                {/* Danh Sách Card Bài Tập Đã Giao */}
                 {courseAssignments.length === 0 ? (
                   <div className="glass-panel" style={{ padding: '48px', borderRadius: '16px', textAlign: 'center' }}>
                     <FileText size={44} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
                     <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', marginBottom: '6px' }}>
-                      ChÆ°a CÃ³ BÃ i Táº­p NÃ o ÄÆ°á»£c Giao Cho MÃ´n Há»c NÃ y
+                      Chưa Có Bài Tập Nào Được Giao Cho Môn Học Này
                     </h4>
                     <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
-                      Giáº£ng viÃªn cÃ³ thá»ƒ sá»­ dá»¥ng Trá»£ lÃ½ Google Gemini AI Ä‘á»ƒ soáº¡n Ä‘á» vÃ  testcases chá»‰ trong 1 giÃ¢y.
+                      Giảng viên có thể sử dụng Trợ lý Google Gemini AI để soạn đề và testcases chỉ trong 1 giây.
                     </p>
                     <button
                       type="button"
@@ -1299,7 +1299,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       className="btn-primary"
                       style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
                     >
-                      âš¡ Soáº¡n Äá» BÃ i Táº­p Äáº§u TiÃªn Ngay
+                      ⚡ Soạn Đề Bài Tập Đầu Tiên Ngay
                     </button>
                   </div>
                 ) : (
@@ -1333,7 +1333,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                   border: `1px solid ${isPublished ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
                                 }}
                               >
-                                {isPublished ? 'ðŸŸ¢ ÄANG Má»ž Ná»˜P BÃ€I' : 'ðŸ”´ ÄÃƒ ÄÃ“NG Ná»˜P'}
+                                {isPublished ? '🟢 ĐANG MỞ NỘP BÀI' : '🔴 ĐÃ ĐÓNG NỘP'}
                               </span>
 
                               {asm.isNewlyCreated && (
@@ -1347,17 +1347,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                     color: '#ffffff',
                                   }}
                                 >
-                                  âœ¨ Má»šI XUáº¤T Báº¢N Vá»ªA XONG
+                                  ✨ MỚI XUẤT BẢN VỪA XONG
                                 </span>
                               )}
 
                               <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
-                                MÃ£: <strong>{asm.id}</strong> â€¢ Táº¡o lÃºc: {asm.createdAt}
+                                Mã: <strong>{asm.id}</strong> • Tạo lúc: {asm.createdAt}
                               </span>
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--accent-amber)', fontWeight: 600 }}>
-                              <Clock size={14} /> Háº¡n chÃ³t: {new Date(asm.deadline).toLocaleString('vi-VN')}
+                              <Clock size={14} /> Hạn chót: {new Date(asm.deadline).toLocaleString('vi-VN')}
                             </div>
                           </div>
 
@@ -1369,26 +1369,26 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             {asm.description.length > 200 ? `${asm.description.slice(0, 200)}...` : asm.description}
                           </p>
 
-                          {/* Chips ThÃ´ng sá»‘ ká»¹ thuáº­t */}
+                          {/* Chips Thông số kỹ thuật */}
                           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#c7d2fe' }}>
-                              ðŸ§ª {asm.testCases.length} Test Cases ({totalWeight.toFixed(1)}Ä‘)
+                              🧪 {asm.testCases.length} Test Cases ({totalWeight.toFixed(1)}đ)
                             </span>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-cyan)' }}>
-                              âš¡ Thá»i gian: {asm.timeLimitMs}ms
+                              ⚡ Thời gian: {asm.timeLimitMs}ms
                             </span>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
-                              ðŸ’¾ RAM: {asm.memoryLimitMb}MB
+                              💾 RAM: {asm.memoryLimitMb}MB
                             </span>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
-                              ðŸ’» {asm.allowedLanguages.join(', ').toUpperCase()}
+                              💻 {asm.allowedLanguages.join(', ').toUpperCase()}
                             </span>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 600 }}>
-                              ðŸ‘¥ {asm.submissionCount}/38 Sinh viÃªn Ä‘Ã£ ná»™p bÃ i
+                              👥 {asm.submissionCount}/38 Sinh viên đã nộp bài
                             </span>
                           </div>
 
-                          {/* CÃ¡c nÃºt hÃ nh Ä‘á»™ng cho bÃ i táº­p */}
+                          {/* Các nút hành động cho bài tập */}
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', flexWrap: 'wrap', gap: '8px' }}>
                             <div style={{ display: 'flex', gap: '8px' }}>
                               <button
@@ -1408,7 +1408,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                   gap: '5px',
                                 }}
                               >
-                                <Eye size={14} /> Xem Chi Tiáº¿t Äá» & Test Cases
+                                <Eye size={14} /> Xem Chi Tiết Đề & Test Cases
                               </button>
 
                               <button
@@ -1428,7 +1428,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                   gap: '5px',
                                 }}
                               >
-                                <Award size={14} /> Sá»• Äiá»ƒm BÃ i Ná»™p
+                                <Award size={14} /> Sổ Điểm Bài Nộp
                               </button>
                             </div>
 
@@ -1447,7 +1447,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                   cursor: 'pointer',
                                 }}
                               >
-                                {isPublished ? 'ÄÃ³ng Ná»™p BÃ i' : 'Má»Ÿ Láº¡i Ná»™p BÃ i'}
+                                {isPublished ? 'Đóng Nộp Bài' : 'Mở Lại Nộp Bài'}
                               </button>
 
                               <button
@@ -1467,7 +1467,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                   gap: '4px',
                                 }}
                               >
-                                <Trash2 size={13} /> XÃ³a
+                                <Trash2 size={13} /> Xóa
                               </button>
                             </div>
                           </div>
@@ -1479,15 +1479,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               </div>
             );
           })() : (
-            /* TRÆ¯á»œNG Há»¢P 2: DANH SÃCH Táº¤T Cáº¢ CÃC MÃ”N Há»ŒC & Lá»šP */
+            /* TRƯỜNG HỢP 2: DANH SÁCH TẤT CẢ CÁC MÔN HỌC & LỚP */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>
-                    CÃ¡c Lá»›p Há»c Pháº§n Äang Giáº£ng Dáº¡y ({courses.length} MÃ´n)
+                    Các Lớp Học Phần Đang Giảng Dạy ({courses.length} Môn)
                   </h3>
                   <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
-                    Chá»n báº¥t ká»³ mÃ´n há»c nÃ o Ä‘á»ƒ xem danh sÃ¡ch cÃ¡c bÃ i táº­p Ä‘Ã£ giao hoáº·c giao bÃ i táº­p má»›i
+                    Chọn bất kỳ môn học nào để xem danh sách các bài tập đã giao hoặc giao bài tập mới
                   </p>
                 </div>
 
@@ -1506,7 +1506,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     gap: '8px',
                   }}
                 >
-                  <PlusCircle size={16} /> + Táº¡o KhÃ³a Há»c Má»›i
+                  <PlusCircle size={16} /> + Tạo Khóa Học Mới
                 </button>
               </div>
 
@@ -1528,12 +1528,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       </h3>
 
                       <p style={{ fontSize: '13px', color: 'var(--text-dim)', marginBottom: '16px' }}>
-                        Giáº£ng viÃªn: {course.instructorName}
+                        Giảng viên: {course.instructorName}
                       </p>
 
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
-                        <span>SÄ© sá»‘: <strong style={{ color: '#ffffff' }}>{course.studentCount}</strong> sinh viÃªn</span>
-                        <span>ÄÃ£ giao: <strong style={{ color: 'var(--accent-cyan)' }}>{assignedCount}</strong> bÃ i táº­p</span>
+                        <span>Sĩ số: <strong style={{ color: '#ffffff' }}>{course.studentCount}</strong> sinh viên</span>
+                        <span>Đã giao: <strong style={{ color: 'var(--accent-cyan)' }}>{assignedCount}</strong> bài tập</span>
                       </div>
 
                       <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1556,7 +1556,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             gap: '6px',
                           }}
                         >
-                          <FolderKanban size={15} color="var(--accent-cyan)" /> ðŸ“‹ Xem CÃ¡c BÃ i Táº­p ÄÃ£ Giao ({assignedCount})
+                          <FolderKanban size={15} color="var(--accent-cyan)" /> 📋 Xem Các Bài Tập Đã Giao ({assignedCount})
                         </button>
 
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -1578,7 +1578,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                               cursor: 'pointer',
                             }}
                           >
-                            + Giao Äá» Má»›i (AI)
+                            + Giao Đề Mới (AI)
                           </button>
 
                           <button
@@ -1595,7 +1595,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                               cursor: 'pointer',
                             }}
                           >
-                            Báº£ng Äiá»ƒm
+                            Bảng Điểm
                           </button>
                         </div>
                       </div>
@@ -1608,14 +1608,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         </div>
       )}
 
-      {/* TAB 2: Táº O Äá»€ BÃ€I Táº¬P & GOOGLE GEMINI AI GENERATOR (UC-08) */}
+      {/* TAB 2: TẠO ĐỀ BÀI TẬP & GOOGLE GEMINI AI GENERATOR (UC-08) */}
       {activeTab === 'CREATE_ASSIGNMENT' && (
         <div className="glass-panel" style={{ padding: '32px', borderRadius: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>
-                  Soáº¡n Tháº£o Äá» BÃ i Táº­p & Sinh Barem Báº±ng Google Gemini AI Tháº­t
+                  Soạn Thảo Đề Bài Tập & Sinh Barem Bằng Google Gemini AI Thật
                 </h2>
                 <span
                   style={{
@@ -1628,11 +1628,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     border: `1px solid ${geminiApiKey ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
                   }}
                 >
-                  {geminiApiKey ? 'ðŸŸ¢ AI Tháº­t ÄÃ£ KÃ­ch Hoáº¡t' : 'ðŸŸ¡ ChÆ°a Cáº¥u HÃ¬nh Key'}
+                  {geminiApiKey ? '🟢 AI Thật Đã Kích Hoạt' : '🟡 Chưa Cấu Hình Key'}
                 </span>
               </div>
               <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-                Nháº­p chá»§ Ä‘á» hoáº·c báº¥m nÃºt sinh AI Ä‘á»ƒ Google Gemini tá»± Ä‘á»™ng biÃªn soáº¡n Ä‘á» bÃ i, bá»™ test cases áº©n/cÃ´ng khai vÃ  barem Clean Code / SOLID
+                Nhập chủ đề hoặc bấm nút sinh AI để Google Gemini tự động biên soạn đề bài, bộ test cases ẩn/công khai và barem Clean Code / SOLID
               </p>
             </div>
 
@@ -1657,7 +1657,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   cursor: 'pointer',
                 }}
               >
-                <Settings size={16} /> Cáº¥u HÃ¬nh Key
+                <Settings size={16} /> Cấu Hình Key
               </button>
 
               <button
@@ -1681,13 +1681,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               >
                 {isAiGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                 {isAiGenerating
-                  ? `Äang táº¡o Ä‘á»... (${aiTimerSeconds}s / tá»‘i Ä‘a 10s)`
-                  : 'âš¡ DÃ¹ng AI Sinh Äá» & Barem'}
+                  ? `Đang tạo đề... (${aiTimerSeconds}s / tối đa 10s)`
+                  : '⚡ Dùng AI Sinh Đề & Barem'}
               </button>
             </div>
           </div>
 
-          {/* Card Nháº­p YÃªu Cáº§u & MÃ´ Táº£ Cá»§a Giáº£ng ViÃªn Cho AI */}
+          {/* Card Nhập Yêu Cầu & Mô Tả Của Giảng Viên Cho AI */}
           <div
             style={{
               marginBottom: '24px',
@@ -1701,16 +1701,16 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sparkles size={20} color="var(--accent-cyan)" />
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>
-                  YÃªu Cáº§u & Ã TÆ°á»Ÿng Cá»¥ Thá»ƒ Cá»§a Giáº£ng ViÃªn (Prompt DÃ nh Cho AI Soáº¡n Äá»)
+                  Yêu Cầu & Ý Tưởng Cụ Thể Của Giảng Viên (Prompt Dành Cho AI Soạn Đề)
                 </h3>
               </div>
               <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 700 }}>
-                âš¡ Tá»‘c Ä‘á»™ cao (Báº£o vá»‡ thá»i gian thá»±c tá»‘i Ä‘a 10s)
+                ⚡ Tốc độ cao (Bảo vệ thời gian thực tối đa 10s)
               </span>
             </div>
 
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.5' }}>
-              Giáº£ng viÃªn nháº­p báº¥t ká»³ Ã½ tÆ°á»Ÿng, nghiá»‡p vá»¥ hoáº·c rÃ ng buá»™c thuáº­t toÃ¡n nÃ o. AI sáº½ bÃ¡m sÃ¡t 100% mÃ´ táº£ nÃ y Ä‘á»ƒ táº¡o Ä‘á» bÃ i, testcases vÃ  tiÃªu chÃ­ barem Ä‘iá»ƒm tÆ°Æ¡ng á»©ng:
+              Giảng viên nhập bất kỳ ý tưởng, nghiệp vụ hoặc ràng buộc thuật toán nào. AI sẽ bám sát 100% mô tả này để tạo đề bài, testcases và tiêu chí barem điểm tương ứng:
             </p>
 
             <textarea
@@ -1722,7 +1722,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 const parsed = GeminiAIService.extractRequestedCount(val);
                 if (parsed) setDesiredTestCount(parsed);
               }}
-              placeholder="VÃ­ dá»¥: 'Táº¡o bÃ i táº­p vá» cÃ¢y AVL, táº¡o 5 test case vá»›i cÃ¡c trá»ng sá»‘ khÃ¡c nhau, báº¯t buá»™c cÃ³ hÃ m xoay trÃ¡i vÃ  xoay pháº£i, kiá»ƒm tra xem cÃ¢y cÃ³ cÃ¢n báº±ng sau khi chÃ¨n 1000 pháº§n tá»­ khÃ´ng'..."
+              placeholder="Ví dụ: 'Tạo bài tập về cây AVL, tạo 5 test case với các trọng số khác nhau, bắt buộc có hàm xoay trái và xoay phải, kiểm tra xem cây có cân bằng sau khi chèn 1000 phần tử không'..."
               style={{
                 width: '100%',
                 padding: '12px 16px',
@@ -1737,10 +1737,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               }}
             />
 
-            {/* Thanh Chá»n Sá»‘ LÆ°á»£ng Test Cases Mong Muá»‘n */}
+            {/* Thanh Chọn Số Lượng Test Cases Mong Muốn */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <span style={{ fontSize: '12px', color: '#e5e7eb', fontWeight: 700 }}>
-                ðŸŽ¯ Sá»‘ lÆ°á»£ng Test Cases AI cáº§n sinh:
+                🎯 Số lượng Test Cases AI cần sinh:
               </span>
               {[3, 5, 7, 10].map((count) => {
                 const isSelected = desiredTestCount === count;
@@ -1762,24 +1762,24 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       transition: 'all 0.2s ease',
                     }}
                   >
-                    {count} Test Cases {count === 5 ? 'â˜… Chuáº©n' : ''}
+                    {count} Test Cases {count === 5 ? '★ Chuẩn' : ''}
                   </button>
                 );
               })}
               <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', marginLeft: '4px' }}>
-                âœ“ Há»‡ thá»‘ng sáº½ táº¡o Ä‘á»§ Ä‘Ãºng {desiredTestCount} testcases kÃ¨m trá»ng sá»‘ khÃ¡c nhau
+                ✓ Hệ thống sẽ tạo đủ đúng {desiredTestCount} testcases kèm trọng số khác nhau
               </span>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600 }}>Gá»£i Ã½ máº«u:</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600 }}>Gợi ý mẫu:</span>
                 {[
-                  'Äá»“ thá»‹ Dijkstra vá»›i PriorityQueue & SRP',
-                  'CÃ¢y AVL cÃ¢n báº±ng cÃ³ phÃ©p xoay trÃ¡i pháº£i',
-                  'Sáº¯p xáº¿p Quicksort tá»‘i Æ°u O(N log N)',
-                  'Quy hoáº¡ch Ä‘á»™ng Balo 0/1 tá»‘i Æ°u máº£ng 1D',
-                  'Thiáº¿t káº¿ Factory Pattern & SOLID DIP',
+                  'Đồ thị Dijkstra với PriorityQueue & SRP',
+                  'Cây AVL cân bằng có phép xoay trái phải',
+                  'Sắp xếp Quicksort tối ưu O(N log N)',
+                  'Quy hoạch động Balo 0/1 tối ưu mảng 1D',
+                  'Thiết kế Factory Pattern & SOLID DIP',
                 ].map((suggest) => (
                   <button
                     key={suggest}
@@ -1824,12 +1824,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 }}
               >
                 {isAiGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                {isAiGenerating ? 'Äang táº¡o siÃªu tá»‘c báº±ng Gemini...' : 'âš¡ Sinh Äá» Báº±ng AI Theo YÃªu Cáº§u NÃ y'}
+                {isAiGenerating ? 'Đang tạo siêu tốc bằng Gemini...' : '⚡ Sinh Đề Bằng AI Theo Yêu Cầu Này'}
               </button>
             </div>
           </div>
 
-          {/* ThÃ´ng bÃ¡o lá»—i AI náº¿u cÃ³ */}
+          {/* Thông báo lỗi AI nếu có */}
           {aiErrorMsg && (
             <div style={{ marginBottom: '20px', padding: '14px 18px', borderRadius: '10px', backgroundColor: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.4)', color: '#f43f5e', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -1841,12 +1841,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 onClick={() => setIsConfigModalOpen(true)}
                 style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #f43f5e', backgroundColor: 'transparent', color: '#f43f5e', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
               >
-                Nháº­p Key Ngay
+                Nhập Key Ngay
               </button>
             </div>
           )}
 
-          {/* Badge thÃ nh cÃ´ng tá»« AI */}
+          {/* Badge thành công từ AI */}
           {aiSuccessBadge && (
             <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.3)', color: 'var(--accent-cyan)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>{aiSuccessBadge}</span>
@@ -1868,7 +1868,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     gap: '4px',
                   }}
                 >
-                  <Code2 size={13} /> Xem Lá»i Giáº£i & Code Máº«u AI
+                  <Code2 size={13} /> Xem Lời Giải & Code Mẫu AI
                 </button>
               )}
             </div>
@@ -1885,14 +1885,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
-                  TiÃªu Äá» BÃ i Táº­p *
+                  Tiêu Đề Bài Tập *
                 </label>
                 <input
                   type="text"
                   value={assignmentTitle}
                   onChange={(e) => setAssignmentTitle(e.target.value)}
                   required
-                  placeholder="Nháº­p tÃªn bÃ i táº­p hoáº·c chá»§ Ä‘á»..."
+                  placeholder="Nhập tên bài tập hoặc chủ đề..."
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -1907,7 +1907,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
-                  Ãp Dá»¥ng Cho Há»c Pháº§n *
+                  Áp Dụng Cho Học Phần *
                 </label>
                 <select
                   value={selectedCourse}
@@ -1933,7 +1933,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
-                MÃ´ Táº£ YÃªu Cáº§u & RÃ ng Buá»™c Thuáº­t ToÃ¡n *
+                Mô Tả Yêu Cầu & Ràng Buộc Thuật Toán *
               </label>
               <textarea
                 rows={4}
@@ -1953,16 +1953,16 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               />
             </div>
 
-            {/* Cáº¥u hÃ¬nh háº¡n ngáº¡ch Sandbox */}
+            {/* Cấu hình hạn ngạch Sandbox */}
             <div style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Cpu size={16} /> Cáº¥u HÃ¬nh Giá»›i Háº¡n TÃ i NguyÃªn Docker Sandbox & Thá»i Gian Háº¡n Ná»™p
+                <Cpu size={16} /> Cấu Hình Giới Hạn Tài Nguyên Docker Sandbox & Thời Gian Hạn Nộp
               </h4>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    <Calendar size={14} style={{ display: 'inline', marginRight: '4px' }} /> Háº¡n ChÃ³t Ná»™p BÃ i (Deadline)
+                    <Calendar size={14} style={{ display: 'inline', marginRight: '4px' }} /> Hạn Chót Nộp Bài (Deadline)
                   </label>
                   <input
                     type="datetime-local"
@@ -1982,7 +1982,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    <Clock size={14} style={{ display: 'inline', marginRight: '4px' }} /> Giá»›i Háº¡n Thá»i Gian (ms)
+                    <Clock size={14} style={{ display: 'inline', marginRight: '4px' }} /> Giới Hạn Thời Gian (ms)
                   </label>
                   <input
                     type="number"
@@ -2005,7 +2005,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    <HardDrive size={14} style={{ display: 'inline', marginRight: '4px' }} /> Giá»›i Háº¡n RAM Sandbox (MB)
+                    <HardDrive size={14} style={{ display: 'inline', marginRight: '4px' }} /> Giới Hạn RAM Sandbox (MB)
                   </label>
                   <input
                     type="number"
@@ -2028,7 +2028,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    <Layers size={14} style={{ display: 'inline', marginRight: '4px' }} /> NgÃ´n Ngá»¯ Cho PhÃ©p
+                    <Layers size={14} style={{ display: 'inline', marginRight: '4px' }} /> Ngôn Ngữ Cho Phép
                   </label>
                   <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
                     {['java', 'python', 'cpp'].map((lang) => (
@@ -2054,7 +2054,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Layers size={16} color="var(--accent-primary)" /> Bá»™ Test Cases Tá»± Äá»™ng (StdIn / StdOut) - Tá»•ng {testCases.length} Test
+                    <Layers size={16} color="var(--accent-primary)" /> Bộ Test Cases Tự Động (StdIn / StdOut) - Tổng {testCases.length} Test
                   </h4>
                   <span
                     style={{
@@ -2067,7 +2067,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       border: `1px solid ${totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
                     }}
                   >
-                    Tá»•ng Äiá»ƒm TC: {totalTestcaseWeight.toFixed(1)}Ä‘ {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 ? '(TÃ¹y chá»‰nh tá»· lá»‡)' : 'âœ… Chuáº©n'}
+                    Tổng Điểm TC: {totalTestcaseWeight.toFixed(1)}đ {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 ? '(Tùy chỉnh tỷ lệ)' : '✅ Chuẩn'}
                   </span>
                 </div>
 
@@ -2086,9 +2086,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         fontWeight: 600,
                         cursor: 'pointer',
                       }}
-                      title="Tá»± Ä‘á»™ng chuáº©n hÃ³a chia láº¡i tá»· lá»‡ Ä‘á»ƒ tá»•ng Ä‘iá»ƒm cÃ¡c testcases Ä‘Ãºng báº±ng 10.0Ä‘"
+                      title="Tự động chuẩn hóa chia lại tỷ lệ để tổng điểm các testcases đúng bằng 10.0đ"
                     >
-                      âš¡ Quy Ä‘á»•i vá» 10.0Ä‘
+                      ⚡ Quy đổi về 10.0đ
                     </button>
                   )}
                   {totalTestcaseWeight !== 7 && (
@@ -2105,9 +2105,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         fontWeight: 600,
                         cursor: 'pointer',
                       }}
-                      title="Quy Ä‘á»•i vá» 7.0Ä‘ (theo Barem chuáº©n AITA: 7Ä‘ Testcase + 3Ä‘ Clean Code & SOLID)"
+                      title="Quy đổi về 7.0đ (theo Barem chuẩn AITA: 7đ Testcase + 3đ Clean Code & SOLID)"
                     >
-                      âš¡ Quy Ä‘á»•i vá» 7.0Ä‘ (Barem)
+                      ⚡ Quy đổi về 7.0đ (Barem)
                     </button>
                   )}
                   <button
@@ -2124,14 +2124,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       cursor: 'pointer',
                     }}
                   >
-                    + ThÃªm Test Case
+                    + Thêm Test Case
                   </button>
                 </div>
               </div>
 
               {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 && (
                 <div style={{ marginBottom: '10px', padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.2)', fontSize: '12px', color: '#fbbf24' }}>
-                  ðŸ’¡ <strong>Tá»•ng Ä‘iá»ƒm cÃ¡c testcase hiá»‡n lÃ  {totalTestcaseWeight.toFixed(1)}Ä‘ (khÃ¡c 10Ä‘):</strong> Khi cháº¥m bÃ i, há»‡ thá»‘ng tá»± Ä‘á»™ng chuáº©n hÃ³a theo tá»· lá»‡: <code>Äiá»ƒm Ä‘áº¡t = (Tá»•ng Ä‘iá»ƒm TC Pass / {totalTestcaseWeight.toFixed(1)}) Ã— Thang Äiá»ƒm Barem</code>. Hoáº·c Giáº£ng viÃªn cÃ³ thá»ƒ báº¥m nÃºt <em>"Quy Ä‘á»•i vá» 10.0Ä‘"</em> hoáº·c <em>"7.0Ä‘ (Barem)"</em> á»Ÿ trÃªn Ä‘á»ƒ chuáº©n hÃ³a tá»± Ä‘á»™ng.
+                  💡 <strong>Tổng điểm các testcase hiện là {totalTestcaseWeight.toFixed(1)}đ (khác 10đ):</strong> Khi chấm bài, hệ thống tự động chuẩn hóa theo tỷ lệ: <code>Điểm đạt = (Tổng điểm TC Pass / {totalTestcaseWeight.toFixed(1)}) × Thang Điểm Barem</code>. Hoặc Giảng viên có thể bấm nút <em>"Quy đổi về 10.0đ"</em> hoặc <em>"7.0đ (Barem)"</em> ở trên để chuẩn hóa tự động.
                 </div>
               )}
 
@@ -2148,13 +2148,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           updated[idx].input = e.target.value;
                           setTestCases(updated);
                         }}
-                        placeholder="Dá»¯ liá»‡u Ä‘áº§u vÃ o..."
+                        placeholder="Dữ liệu đầu vào..."
                         style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
                       />
                     </div>
 
                     <div>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Ká»³ Vá»ng (StdOut #{idx + 1}):</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Kỳ Vọng (StdOut #{idx + 1}):</span>
                       <input
                         type="text"
                         value={tc.output}
@@ -2163,13 +2163,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           updated[idx].output = e.target.value;
                           setTestCases(updated);
                         }}
-                        placeholder="Káº¿t quáº£ chuáº©n..."
+                        placeholder="Kết quả chuẩn..."
                         style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
                       />
                     </div>
 
                     <div>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Äiá»ƒm Sá»‘:</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Điểm Số:</span>
                       <input
                         type="number"
                         value={tc.weight}
@@ -2184,7 +2184,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Cháº¿ Äá»™:</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Chế Độ:</span>
                       <label style={{ fontSize: '12px', color: tc.isHidden ? 'var(--accent-amber)' : 'var(--accent-cyan)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
                         <input
                           type="checkbox"
@@ -2195,7 +2195,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             setTestCases(updated);
                           }}
                         />
-                        {tc.isHidden ? 'Test áº¨n' : 'CÃ´ng Khai'}
+                        {tc.isHidden ? 'Test Ẩn' : 'Công Khai'}
                       </label>
                     </div>
 
@@ -2203,24 +2203,24 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       type="button"
                       onClick={() => setTestCases(testCases.filter((_, i) => i !== idx))}
                       style={{ background: 'none', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', fontSize: '18px', fontWeight: 700 }}
-                      title="XÃ³a test case"
+                      title="Xóa test case"
                     >
-                      Ã—
+                      ×
                     </button>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Báº£ng Rubric Barem Cháº¥m Äiá»ƒm (Khi Ä‘Æ°á»£c AI sinh ra) */}
+            {/* Bảng Rubric Barem Chấm Điểm (Khi được AI sinh ra) */}
             {generatedRubrics.length > 0 && (
               <div style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Award size={18} color="var(--accent-primary)" /> Barem Cháº¥m Äiá»ƒm Há»c Thuáº­t Rubrics (Sinh Bá»Ÿi Google Gemini AI)
+                    <Award size={18} color="var(--accent-primary)" /> Barem Chấm Điểm Học Thuật Rubrics (Sinh Bởi Google Gemini AI)
                   </h4>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    Tá»•ng Äiá»ƒm: 10.0 Äiá»ƒm
+                    Tổng Điểm: 10.0 Điểm
                   </span>
                 </div>
 
@@ -2232,7 +2232,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           {rIdx + 1}. {rubric.criterion}
                         </span>
                         <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', fontWeight: 700 }}>
-                          Tá»‘i Ä‘a: {rubric.maxScore}Ä‘
+                          Tối đa: {rubric.maxScore}đ
                         </span>
                       </div>
                       <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '8px' }}>
@@ -2242,7 +2242,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           {rubric.levels.map((lvl, lIdx) => (
                             <span key={lIdx} style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.04)', color: '#d1d5db', border: '1px solid rgba(255,255,255,0.08)' }}>
-                              <strong>{lvl.scorePercent}% Ä‘iá»ƒm:</strong> {lvl.description}
+                              <strong>{lvl.scorePercent}% điểm:</strong> {lvl.description}
                             </span>
                           ))}
                         </div>
@@ -2268,7 +2268,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   gap: '8px',
                 }}
               >
-                <CheckCircle2 size={18} /> LÆ°u & Xuáº¥t Báº£n Äá» BÃ i Táº­p Cho Lá»›p
+                <CheckCircle2 size={18} /> Lưu & Xuất Bản Đề Bài Tập Cho Lớp
               </button>
             </div>
           </form>
@@ -2280,14 +2280,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         <div className="glass-panel" style={{ padding: '32px', borderRadius: '16px' }}>
           <div style={{ marginBottom: '24px' }}>
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>
-              Nháº­p Danh SÃ¡ch Sinh ViÃªn HÃ ng Loáº¡t & Kiá»ƒm Äá»‹nh Giao Dá»‹ch ACID (UC-02)
+              Nhập Danh Sách Sinh Viên Hàng Loạt & Kiểm Định Giao Dịch ACID (UC-02)
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-              TÃ­nh nÄƒng tuÃ¢n thá»§ cháº·t cháº½ rÃ ng buá»™c R06: Báº¯t buá»™c sá»­ dá»¥ng SQL Transaction khi náº¡p danh sÃ¡ch tá»« file Excel. Khi cÃ³ báº¥t ká»³ lá»—i nÃ o xáº£y ra á»Ÿ dÃ²ng thá»© N, 100% dá»¯ liá»‡u Ä‘Ã£ xá»­ lÃ½ trÆ°á»›c Ä‘Ã³ pháº£i Ä‘Æ°á»£c Rollback nguyÃªn váº¹n.
+              Tính năng tuân thủ chặt chẽ ràng buộc R06: Bắt buộc sử dụng SQL Transaction khi nạp danh sách từ file Excel. Khi có bất kỳ lỗi nào xảy ra ở dòng thứ N, 100% dữ liệu đã xử lý trước đó phải được Rollback nguyên vẹn.
             </p>
           </div>
 
-          {/* CHá»ŒN KHÃ“A Há»ŒC & Táº¢I FILE MáºªU */}
+          {/* CHỌN KHÓA HỌC & TẢI FILE MẪU */}
           <div
             style={{
               padding: '20px 24px',
@@ -2304,7 +2304,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
               <label style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>
-                1. Chá»n Lá»›p Há»c Pháº§n Cáº§n Ghi Danh:
+                1. Chọn Lớp Học Phần Cần Ghi Danh:
               </label>
               <select
                 value={targetCourseId}
@@ -2346,11 +2346,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 gap: '8px',
               }}
             >
-              <Download size={15} /> Táº£i File Máº«u Roster (.csv)
+              <Download size={15} /> Tải File Mẫu Roster (.csv)
             </button>
           </div>
 
-          {/* KHU Vá»°C CHá»ŒN FILE CSV THá»°C Táº¾ */}
+          {/* KHU VỰC CHỌN FILE CSV THỰC TẾ */}
           <div
             style={{
               padding: '24px',
@@ -2368,10 +2368,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               <div>
                 <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#ffffff', marginBottom: '4px' }}>
-                  2. Táº£i LÃªn &amp; Nháº­p File Roster Sinh ViÃªn (.csv)
+                  2. Tải Lên &amp; Nhập File Roster Sinh Viên (.csv)
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
-                  Há»— trá»£ Ä‘á»‹nh dáº¡ng file <code>.csv</code> chuáº©n UTF-8 (xuáº¥t tá»« Excel hoáº·c Google Sheets vá»›i cÃ¡c cá»™t: <strong>MÃ£ Sinh ViÃªn, Há» VÃ  TÃªn, Email</strong>)
+                  Hỗ trợ định dạng file <code>.csv</code> chuẩn UTF-8 (xuất từ Excel hoặc Google Sheets với các cột: <strong>Mã Sinh Viên, Họ Và Tên, Email</strong>)
                 </p>
               </div>
 
@@ -2402,7 +2402,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   }}
                 >
                   <Upload size={16} color="var(--accent-cyan)" />
-                  {uploadedCsvFile ? `Äá»•i File KhÃ¡c (${uploadedCsvFile.name})` : 'Chá»n File CSV Tá»« MÃ¡y TÃ­nh (.csv)'}
+                  {uploadedCsvFile ? `Đổi File Khác (${uploadedCsvFile.name})` : 'Chọn File CSV Từ Máy Tính (.csv)'}
                 </label>
 
                 {uploadedCsvFile && (
@@ -2423,26 +2423,26 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       cursor: 'pointer',
                     }}
                   >
-                    Há»§y file Ä‘Ã£ chá»n
+                    Hủy file đã chọn
                   </button>
                 )}
               </div>
 
               {csvParseError && (
                 <div style={{ color: '#f43f5e', fontSize: '13px', fontWeight: 600, marginTop: '8px' }}>
-                  âŒ {csvParseError}
+                  ❌ {csvParseError}
                 </div>
               )}
 
-              {/* Báº¢NG XEM TRÆ¯á»šC DANH SÃCH Tá»ª FILE CSV */}
+              {/* BẢNG XEM TRƯỚC DANH SÁCH TỪ FILE CSV */}
               {parsedCsvStudents.length > 0 && (
                 <div style={{ width: '100%', marginTop: '16px', textAlign: 'left' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                     <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)' }}>
-                      ðŸ“‹ ÄÃ£ nháº­n diá»‡n {parsedCsvStudents.length} sinh viÃªn tá»« file [{uploadedCsvFile?.name}]:
+                      📋 Đã nhận diện {parsedCsvStudents.length} sinh viên từ file [{uploadedCsvFile?.name}]:
                     </span>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                      Dung lÆ°á»£ng: {Math.round((uploadedCsvFile?.size || 0) / 1024 * 10) / 10} KB
+                      Dung lượng: {Math.round((uploadedCsvFile?.size || 0) / 1024 * 10) / 10} KB
                     </span>
                   </div>
 
@@ -2451,8 +2451,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       <thead>
                         <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.04)' }}>
                           <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>STT</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>MÃ£ Sinh ViÃªn</th>
-                          <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Há» VÃ  TÃªn</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Mã Sinh Viên</th>
+                          <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Họ Và Tên</th>
                           <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Email FPT</th>
                         </tr>
                       </thead>
@@ -2489,7 +2489,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
                       }}
                     >
-                      <Upload size={18} /> âš¡ Báº¯t Äáº§u Import {parsedCsvStudents.length} Sinh ViÃªn VÃ o PostgreSQL 15 (SQL ACID)
+                      <Upload size={18} /> ⚡ Bắt Đầu Import {parsedCsvStudents.length} Sinh Viên Vào PostgreSQL 15 (SQL ACID)
                     </button>
                   </div>
                 </div>
@@ -2501,10 +2501,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <div style={{ padding: '24px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <CheckCircle2 size={24} color="#10b981" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Ká»‹ch Báº£n 1: Nháº­p Live ThÃ nh CÃ´ng 100% (Commit)</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 1: Nhập Live Thành Công 100% (Commit)</h3>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
-                Náº¡p danh sÃ¡ch sinh viÃªn chuáº©n vÃ o PostgreSQL 15 báº£ng <code>class_members</code>. Táº¥t cáº£ tÃ i khoáº£n Ä‘Æ°á»£c cáº¥p quyá»n truy cáº­p mÃ´n há»c. Giao diá»‡n thá»±c hiá»‡n COMMIT toÃ n bá»™.
+                Nạp danh sách sinh viên chuẩn vào PostgreSQL 15 bảng <code>class_members</code>. Tất cả tài khoản được cấp quyền truy cập môn học. Giao diện thực hiện COMMIT toàn bộ.
               </p>
               <button
                 type="button"
@@ -2526,17 +2526,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   gap: '8px',
                 }}
               >
-                <Upload size={16} /> âš¡ Thá»±c Thi Giao Dá»‹ch Nháº­p Roster (Live PostgreSQL)
+                <Upload size={16} /> ⚡ Thực Thi Giao Dịch Nhập Roster (Live PostgreSQL)
               </button>
             </div>
 
             <div style={{ padding: '24px', borderRadius: '12px', backgroundColor: 'rgba(244, 63, 94, 0.08)', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <AlertTriangle size={24} color="#f43f5e" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Ká»‹ch Báº£n 2: Minh Chá»©ng Lá»—i DÃ²ng N & 100% Rollback (R06)</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 2: Minh Chứng Lỗi Dòng N & 100% Rollback (R06)</h3>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
-                Gá»­i file Excel cÃ³ dÃ²ng sá»‘ 3 chá»©a lá»—i trÃ¹ng láº·p MSSV [SE170123]. Backend má»Ÿ SQL Transaction, phÃ¡t hiá»‡n vi pháº¡m vÃ  thá»±c thi 100% ROLLBACK báº£o toÃ n dá»¯ liá»‡u.
+                Gửi file Excel có dòng số 3 chứa lỗi trùng lặp MSSV [SE170123]. Backend mở SQL Transaction, phát hiện vi phạm và thực thi 100% ROLLBACK bảo toàn dữ liệu.
               </p>
               <button
                 type="button"
@@ -2558,14 +2558,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   gap: '8px',
                 }}
               >
-                <AlertTriangle size={16} /> âš ï¸ KÃ­ch Hoáº¡t Thá»­ Nghiá»‡m Lá»—i DÃ²ng 3 &amp; Rollback
+                <AlertTriangle size={16} /> ⚠️ Kích Hoạt Thử Nghiệm Lỗi Dòng 3 &amp; Rollback
               </button>
             </div>
           </div>
 
           {excelLoading && (
             <div style={{ textAlign: 'center', padding: '20px', color: 'var(--accent-primary)', fontSize: '14px', fontWeight: 600 }}>
-              Äang phÃ¢n tÃ­ch cÃº phÃ¡p Excel vÃ  má»Ÿ SQL Transaction...
+              Đang phân tích cú pháp Excel và mở SQL Transaction...
             </div>
           )}
 
@@ -2587,16 +2587,16 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         </div>
       )}
 
-      {/* TAB 4: Sá»” ÄIá»‚M & DANH SÃCH BÃ€I Ná»˜P Vá»šI TÃNH NÄ‚NG Táº¢I FILE ZIP */}
+      {/* TAB 4: SỔ ĐIỂM & DANH SÁCH BÀI NỘP VỚI TÍNH NĂNG TẢI FILE ZIP */}
       {activeTab === 'SUBMISSIONS' && (
         <div className="glass-panel" style={{ padding: '28px', borderRadius: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>
-                Sá»• Theo DÃµi BÃ i Ná»™p Láº­p TrÃ¬nh &amp; GiÃ¡m SÃ¡t LiÃªm ChÃ­nh Há»c Thuáº­t
+                Sổ Theo Dõi Bài Nộp Lập Trình &amp; Giám Sát Liêm Chính Học Thuật
               </h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '2px' }}>
-                Danh sÃ¡ch bÃ i lÃ m sinh viÃªn dÆ°á»›i dáº¡ng file nÃ©n .zip, Ä‘iá»ƒm sá»‘ Ä‘a trá»¥c vÃ  cáº£nh bÃ¡o Ä‘áº¡o vÄƒn AST Winnowing
+                Danh sách bài làm sinh viên dưới dạng file nén .zip, điểm số đa trục và cảnh báo đạo văn AST Winnowing
               </p>
             </div>
             <button
@@ -2618,7 +2618,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               }}
             >
               <RefreshCw size={14} className={loadingSubmissions ? 'animate-spin' : ''} />
-              {loadingSubmissions ? 'Äang Ä‘á»“ng bá»™...' : 'LÃ m má»›i'}
+              {loadingSubmissions ? 'Đang đồng bộ...' : 'Làm mới'}
             </button>
           </div>
 
@@ -2626,17 +2626,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                  <th style={{ padding: '12px 16px' }}>MÃ£ Ná»™p</th>
-                  <th style={{ padding: '12px 16px' }}>Sinh ViÃªn</th>
-                  <th style={{ padding: '12px 16px' }}>File NÃ©n (.zip)</th>
-                  <th style={{ padding: '12px 16px' }}>Thá»i Gian</th>
+                  <th style={{ padding: '12px 16px' }}>Mã Nộp</th>
+                  <th style={{ padding: '12px 16px' }}>Sinh Viên</th>
+                  <th style={{ padding: '12px 16px' }}>File Nén (.zip)</th>
+                  <th style={{ padding: '12px 16px' }}>Thời Gian</th>
                   <th style={{ padding: '12px 16px' }}>Testcase</th>
                   <th style={{ padding: '12px 16px' }}>Clean Code</th>
                   <th style={{ padding: '12px 16px' }}>SOLID</th>
-                  <th style={{ padding: '12px 16px' }}>Tá»•ng Äiá»ƒm</th>
-                  <th style={{ padding: '12px 16px' }}>TrÃ¹ng Láº·p AST</th>
-                  <th style={{ padding: '12px 16px' }}>Tráº¡ng ThÃ¡i</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'center' }}>Táº£i BÃ i LÃ m (.zip)</th>
+                  <th style={{ padding: '12px 16px' }}>Tổng Điểm</th>
+                  <th style={{ padding: '12px 16px' }}>Trùng Lặp AST</th>
+                  <th style={{ padding: '12px 16px' }}>Trạng Thái</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center' }}>Tải Bài Làm (.zip)</th>
                 </tr>
               </thead>
               <tbody>
@@ -2645,7 +2645,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     key={sub.id}
                     style={{
                       borderBottom: '1px solid rgba(255,255,255,0.05)',
-                      backgroundColor: sub.plagiarismStatus === 'Äáº O VÄ‚N' ? 'rgba(244, 63, 94, 0.05)' : 'transparent',
+                      backgroundColor: sub.plagiarismStatus === 'ĐẠO VĂN' ? 'rgba(244, 63, 94, 0.05)' : 'transparent',
                     }}
                   >
                     <td style={{ padding: '14px 16px', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', fontWeight: 600 }}>
@@ -2656,7 +2656,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{sub.studentId}</div>
                     </td>
                     <td style={{ padding: '14px 16px', color: '#c7d2fe', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
-                      ðŸ“¦ {sub.fileName}
+                      📦 {sub.fileName}
                     </td>
                     <td style={{ padding: '14px 16px', color: 'var(--text-muted)' }}>{sub.submittedAt}</td>
                     <td style={{ padding: '14px 16px', fontWeight: 600, color: '#34d399' }}>{sub.testcaseScore}/7.0</td>
@@ -2674,15 +2674,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           borderRadius: '6px',
                           fontWeight: 700,
                           backgroundColor:
-                            sub.plagiarismStatus === 'Äáº O VÄ‚N'
+                            sub.plagiarismStatus === 'ĐẠO VĂN'
                               ? 'rgba(244, 63, 94, 0.2)'
-                              : sub.plagiarismStatus === 'NGHI Váº¤N'
+                              : sub.plagiarismStatus === 'NGHI VẤN'
                               ? 'rgba(245, 158, 11, 0.2)'
                               : 'rgba(16, 185, 129, 0.2)',
                           color:
-                            sub.plagiarismStatus === 'Äáº O VÄ‚N'
+                            sub.plagiarismStatus === 'ĐẠO VĂN'
                               ? '#f43f5e'
-                              : sub.plagiarismStatus === 'NGHI Váº¤N'
+                              : sub.plagiarismStatus === 'NGHI VẤN'
                               ? '#f59e0b'
                               : '#10b981',
                         }}
@@ -2713,13 +2713,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         }}
                       >
                         <Sparkles size={13} />
-                        Xem Chi Tiáº¿t
+                        Xem Chi Tiết
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDownloadZip(sub.id, sub.fileName)}
                         disabled={downloadingId === sub.id}
-                        title={`Táº£i xuá»‘ng bÃ i lÃ m ${sub.fileName} cá»§a sinh viÃªn`}
+                        title={`Tải xuống bài làm ${sub.fileName} của sinh viên`}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -2737,7 +2737,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         }}
                       >
                         <Download size={13} />
-                        {downloadingId === sub.id ? 'Äang táº£i...' : 'Táº£i .zip'}
+                        {downloadingId === sub.id ? 'Đang tải...' : 'Tải .zip'}
                       </button>
                     </td>
                   </tr>
@@ -2748,18 +2748,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         </div>
       )}
 
-      {/* TAB 5: PHÃ’NG THÃ NGHIá»†M AST LAB & BENCHMARK DATASET */}
+      {/* TAB 5: PHÒNG THÍ NGHIỆM AST LAB & BENCHMARK DATASET */}
       {activeTab === 'RBL_LAB' && (
         <RblBenchmarkView onOpenDiffViewer={onOpenDiffViewer} />
       )}
 
-      {/* TAB 6: PHÃšC KHáº¢O & KHIáº¾U Náº I ÄIá»‚M (UC-06 / BR-05) */}
+      {/* TAB 6: PHÚC KHẢO & KHIẾU NẠI ĐIỂM (UC-06 / BR-05) */}
       {activeTab === 'APPEALS' && (
         <LecturerAppealsManager apiBaseUrl="http://localhost:3000" lecturerId="GV001" />
       )}
 
 
-      {/* MODAL Cáº¤U HÃŒNH GOOGLE GEMINI AI KEY (DÃ™NG AI THáº¬T) */}
+      {/* MODAL CẤU HÌNH GOOGLE GEMINI AI KEY (DÙNG AI THẬT) */}
       {isConfigModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(5, 7, 13, 0.85)', backdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: '580px', padding: '32px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
@@ -2769,8 +2769,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   <Key size={22} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>Cáº¥u HÃ¬nh TrÃ­ Tuá»‡ NhÃ¢n Táº¡o Tháº­t (Google Gemini AI)</h3>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Káº¿t ná»‘i trá»±c tiáº¿p tá»›i Google Generative AI Ä‘á»ƒ sinh Ä‘á» vÃ  testcases</p>
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>Cấu Hình Trí Tuệ Nhân Tạo Thật (Google Gemini AI)</h3>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Kết nối trực tiếp tới Google Generative AI để sinh đề và testcases</p>
                 </div>
               </div>
               <button
@@ -2790,7 +2790,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 type="password"
                 value={tempApiKey}
                 onChange={(e) => setTempApiKey(e.target.value)}
-                placeholder="DÃ¡n API Key cá»§a báº¡n (báº¯t Ä‘áº§u báº±ng AIzaSy...)"
+                placeholder="Dán API Key của bạn (bắt đầu bằng AIzaSy...)"
                 style={{
                   width: '100%',
                   padding: '12px 14px',
@@ -2804,7 +2804,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 }}
               />
               <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>ChÆ°a cÃ³ khÃ³a? Láº¥y miá»…n phÃ­ 100% trong 30 giÃ¢y táº¡i:</span>
+                <span>Chưa có khóa? Lấy miễn phí 100% trong 30 giây tại:</span>
                 <a
                   href="https://aistudio.google.com/app/apikey"
                   target="_blank"
@@ -2818,7 +2818,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
-                Lá»±a Chá»n MÃ´ HÃ¬nh AI (Model)
+                Lựa Chọn Mô Hình AI (Model)
               </label>
               <select
                 value={selectedAiModel}
@@ -2833,24 +2833,24 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   fontSize: '13px',
                 }}
               >
-                <option value="auto">âœ¨ Tá»± Äá»™ng Chá»n MÃ´ HÃ¬nh Flash Nhanh Nháº¥t (KhuyÃªn DÃ¹ng - Auto Detect)</option>
+                <option value="auto">✨ Tự Động Chọn Mô Hình Flash Nhanh Nhất (Khuyên Dùng - Auto Detect)</option>
                 {availableModelList.length > 0 ? (
                   availableModelList.map((m) => (
                     <option key={m} value={m}>
-                      {m} {m.includes('flash') ? '(SiÃªu tá»‘c 1-2s)' : '(ChuyÃªn sÃ¢u)'}
+                      {m} {m.includes('flash') ? '(Siêu tốc 1-2s)' : '(Chuyên sâu)'}
                     </option>
                   ))
                 ) : (
                   <>
-                    <option value="gemini-2.0-flash">gemini-2.0-flash (Tháº¿ há»‡ Flash 2.0)</option>
-                    <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest (Báº£n Flash má»›i nháº¥t)</option>
-                    <option value="gemini-1.5-pro">gemini-1.5-pro (MÃ´ hÃ¬nh chuyÃªn sÃ¢u)</option>
+                    <option value="gemini-2.0-flash">gemini-2.0-flash (Thế hệ Flash 2.0)</option>
+                    <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest (Bản Flash mới nhất)</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro (Mô hình chuyên sâu)</option>
                   </>
                 )}
               </select>
             </div>
 
-            {/* Tráº¡ng thÃ¡i Ping */}
+            {/* Trạng thái Ping */}
             {pingStatus.message && (
               <div
                 style={{
@@ -2887,7 +2887,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 }}
               >
                 {pingStatus.loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                Kiá»ƒm Tra Káº¿t Ná»‘i AI (Ping Gemini)
+                Kiểm Tra Kết Nối AI (Ping Gemini)
               </button>
 
               <button
@@ -2902,20 +2902,20 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   cursor: 'pointer',
                 }}
               >
-                LÆ°u KhÃ³a & Ãp Dá»¥ng
+                Lưu Khóa & Áp Dụng
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL XEM MÃƒ NGUá»’N KHá»žI Táº O & Lá»œI GIáº¢I MáºªU DO AI Táº O RA */}
+      {/* MODAL XEM MÃ NGUỒN KHỞI TẠO & LỜI GIẢI MẪU DO AI TẠO RA */}
       {showSolutionModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(5, 7, 13, 0.85)', backdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div className="glass-panel" style={{ width: '100%', maxWidth: '800px', maxHeight: '85vh', overflowY: 'auto', padding: '28px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileCode size={20} color="var(--accent-cyan)" /> Lá»i Giáº£i Chuáº©n & Khung MÃ£ Nguá»“n (Tá»± Äá»™ng Sinh Bá»Ÿi Google Gemini AI)
+                <FileCode size={20} color="var(--accent-cyan)" /> Lời Giải Chuẩn & Khung Mã Nguồn (Tự Động Sinh Bởi Google Gemini AI)
               </h3>
               <button
                 type="button"
@@ -2929,7 +2929,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             {starterCode && (
               <div style={{ marginBottom: '20px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#a5b4fc', marginBottom: '6px' }}>
-                  1. Khung MÃ£ Khá»Ÿi Táº¡o Cho Sinh ViÃªn (Starter Code):
+                  1. Khung Mã Khởi Tạo Cho Sinh Viên (Starter Code):
                 </h4>
                 <pre style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.08)' }}>
                   {starterCode}
@@ -2940,7 +2940,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             {referenceSolution && (
               <div>
                 <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#6ee7b7', marginBottom: '6px' }}>
-                  2. Lá»i Giáº£i Tham Chiáº¿u Chuáº©n XÃ¡c (Reference Working Solution):
+                  2. Lời Giải Tham Chiếu Chuẩn Xác (Reference Working Solution):
                 </h4>
                 <pre style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.08)' }}>
                   {referenceSolution}
@@ -2954,14 +2954,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 onClick={() => setShowSolutionModal(false)}
                 style={{ padding: '8px 18px', borderRadius: '8px', backgroundColor: 'var(--accent-primary)', border: 'none', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
               >
-                ÄÃ³ng
+                Đóng
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL XEM CHI TIáº¾T Äá»€ BÃ€I & TEST CASES ÄÃƒ XUáº¤T Báº¢N Cá»¦A MÃ”N Há»ŒC */}
+      {/* MODAL XEM CHI TIẾT ĐỀ BÀI & TEST CASES ĐÃ XUẤT BẢN CỦA MÔN HỌC */}
       {previewAssignment && (
         <div
           style={{
@@ -3006,10 +3006,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       border: `1px solid ${previewAssignment.status === 'PUBLISHED' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
                     }}
                   >
-                    {previewAssignment.status === 'PUBLISHED' ? 'ðŸŸ¢ ÄANG Má»ž Ná»˜P BÃ€I' : 'ðŸ”´ ÄÃƒ ÄÃ“NG Ná»˜P'}
+                    {previewAssignment.status === 'PUBLISHED' ? '🟢 ĐANG MỞ NỘP BÀI' : '🔴 ĐÃ ĐÓNG NỘP'}
                   </span>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    MÃ£ Ä‘á»: <strong style={{ color: '#fff' }}>{previewAssignment.id}</strong> â€¢ Táº¡o ngÃ y: {previewAssignment.createdAt}
+                    Mã đề: <strong style={{ color: '#fff' }}>{previewAssignment.id}</strong> • Tạo ngày: {previewAssignment.createdAt}
                   </span>
                 </div>
                 <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>
@@ -3025,41 +3025,41 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               </button>
             </div>
 
-            {/* ThÃ´ng sá»‘ ká»¹ thuáº­t */}
+            {/* Thông số kỹ thuật */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
               <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Háº¡n chÃ³t ná»™p bÃ i:</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Hạn chót nộp bài:</span>
                 <strong style={{ fontSize: '13px', color: 'var(--accent-amber)' }}>{new Date(previewAssignment.deadline).toLocaleString('vi-VN')}</strong>
               </div>
               <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Thá»i gian thá»±c thi tá»‘i Ä‘a:</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Thời gian thực thi tối đa:</span>
                 <strong style={{ fontSize: '13px', color: 'var(--accent-cyan)' }}>{previewAssignment.timeLimitMs} ms</strong>
               </div>
               <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Bá»™ nhá»› RAM tá»‘i Ä‘a:</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Bộ nhớ RAM tối đa:</span>
                 <strong style={{ fontSize: '13px', color: '#ffffff' }}>{previewAssignment.memoryLimitMb} MB</strong>
               </div>
               <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>NgÃ´n ngá»¯ láº­p trÃ¬nh:</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Ngôn ngữ lập trình:</span>
                 <strong style={{ fontSize: '13px', color: 'var(--accent-primary)' }}>{previewAssignment.allowedLanguages.join(', ').toUpperCase()}</strong>
               </div>
             </div>
 
-            {/* MÃ´ táº£ Ä‘á» bÃ i */}
+            {/* Mô tả đề bài */}
             <div>
               <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#e5e7eb', marginBottom: '8px' }}>
-                ðŸ“– MÃ´ Táº£ YÃªu Cáº§u & RÃ ng Buá»™c:
+                📖 Mô Tả Yêu Cầu & Ràng Buộc:
               </h4>
               <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', whiteSpace: 'pre-wrap', backgroundColor: 'rgba(0,0,0,0.25)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', margin: 0 }}>
                 {previewAssignment.description}
               </p>
             </div>
 
-            {/* Danh sÃ¡ch Test Cases */}
+            {/* Danh sách Test Cases */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Cpu size={16} /> Danh SÃ¡ch Test Cases ({previewAssignment.testCases.length} Bá»™ Test, Tá»•ng Trá»ng Sá»‘: {previewAssignment.testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0).toFixed(1)}Ä‘):
+                  <Cpu size={16} /> Danh Sách Test Cases ({previewAssignment.testCases.length} Bộ Test, Tổng Trọng Số: {previewAssignment.testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0).toFixed(1)}đ):
                 </h4>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -3091,22 +3091,22 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             fontWeight: 600,
                           }}
                         >
-                          {tc.isHidden ? 'ðŸ”’ Test áº¨n' : 'ðŸŒ Test CÃ´ng Khai'}
+                          {tc.isHidden ? '🔒 Test Ẩn' : '🌐 Test Công Khai'}
                         </span>
                         <span style={{ fontSize: '12px', fontWeight: 700, color: '#34d399', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>
-                          Trá»ng sá»‘: {tc.weight}Ä‘
+                          Trọng số: {tc.weight}đ
                         </span>
                       </div>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Äáº§u vÃ o (Input / StdIn):</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Đầu vào (Input / StdIn):</span>
                         <pre style={{ margin: 0, padding: '8px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', border: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto' }}>
                           {tc.input}
                         </pre>
                       </div>
                       <div>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Äáº§u ra ká»³ vá»ng (Expected Output / StdOut):</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Đầu ra kỳ vọng (Expected Output / StdOut):</span>
                         <pre style={{ margin: 0, padding: '8px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', color: '#34d399', fontSize: '12px', fontFamily: 'var(--font-mono)', border: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto' }}>
                           {tc.output}
                         </pre>
@@ -3121,14 +3121,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             {previewAssignment.rubrics && previewAssignment.rubrics.length > 0 && (
               <div>
                 <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#a5b4fc', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Award size={16} /> Barem Cháº¥m Äiá»ƒm Há»c Thuáº­t (Rubrics):
+                  <Award size={16} /> Barem Chấm Điểm Học Thuật (Rubrics):
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {previewAssignment.rubrics.map((r, rIdx) => (
                     <div key={rIdx} style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                         <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>{rIdx + 1}. {r.criterion}</span>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#818cf8' }}>{r.maxScore}Ä‘</span>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#818cf8' }}>{r.maxScore}đ</span>
                       </div>
                       <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{r.description}</p>
                     </div>
@@ -3137,11 +3137,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               </div>
             )}
 
-            {/* Starter Code hoáº·c Reference Solution náº¿u cÃ³ */}
+            {/* Starter Code hoặc Reference Solution nếu có */}
             {previewAssignment.starterCode && (
               <div>
                 <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#a5b4fc', marginBottom: '6px' }}>
-                  Khung MÃ£ Nguá»“n Khá»Ÿi Táº¡o (Starter Code):
+                  Khung Mã Nguồn Khởi Tạo (Starter Code):
                 </h4>
                 <pre style={{ margin: 0, padding: '12px', borderRadius: '8px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.06)' }}>
                   {previewAssignment.starterCode}
@@ -3169,7 +3169,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     cursor: 'pointer',
                   }}
                 >
-                  {previewAssignment.status === 'PUBLISHED' ? 'ÄÃ³ng Ná»™p BÃ i' : 'Má»Ÿ Láº¡i Ná»™p BÃ i'}
+                  {previewAssignment.status === 'PUBLISHED' ? 'Đóng Nộp Bài' : 'Mở Lại Nộp Bài'}
                 </button>
 
                 <button
@@ -3192,7 +3192,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     gap: '6px',
                   }}
                 >
-                  <Award size={15} /> Xem Sá»• Äiá»ƒm Lá»›p
+                  <Award size={15} /> Xem Sổ Điểm Lớp
                 </button>
               </div>
 
@@ -3202,14 +3202,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 className="btn-primary"
                 style={{ padding: '8px 24px', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
               >
-                ÄÃ³ng
+                Đóng
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL Táº O KHÃ“A Há»ŒC Má»šI (LÆ¯U VÃ€O POSTGRESQL 15) */}
+      {/* MODAL TẠO KHÓA HỌC MỚI (LƯU VÀO POSTGRESQL 15) */}
       {isCreateCourseModalOpen && (
         <div
           style={{
@@ -3240,7 +3240,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <BookOpen size={24} color="var(--accent-primary)" />
                 <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>
-                  Táº¡o Lá»›p Há»c Pháº§n Má»›i (PostgreSQL 15)
+                  Tạo Lớp Học Phần Mới (PostgreSQL 15)
                 </h2>
               </div>
               <button
@@ -3255,13 +3255,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <form onSubmit={handleCreateNewCourse} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  MÃ£ Lá»›p Há»c Pháº§n / Subject Code:
+                  Mã Lớp Học Phần / Subject Code:
                 </label>
                 <input
                   type="text"
                   value={newCourseCode}
                   onChange={(e) => setNewCourseCode(e.target.value.toUpperCase())}
-                  placeholder="VÃ­ dá»¥: PRN211, PRO192, SWP391"
+                  placeholder="Ví dụ: PRN211, PRO192, SWP391"
                   required
                   style={{
                     width: '100%',
@@ -3278,13 +3278,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  TÃªn KhÃ³a Há»c / Course Name:
+                  Tên Khóa Học / Course Name:
                 </label>
                 <input
                   type="text"
                   value={newCourseName}
                   onChange={(e) => setNewCourseName(e.target.value)}
-                  placeholder="VÃ­ dá»¥: Láº­p trÃ¬nh Cross-Platform .NET Core"
+                  placeholder="Ví dụ: Lập trình Cross-Platform .NET Core"
                   required
                   style={{
                     width: '100%',
@@ -3300,13 +3300,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  Há»c Ká»³ (Semester):
+                  Học Kỳ (Semester):
                 </label>
                 <input
                   type="text"
                   value={newCourseSemester}
                   onChange={(e) => setNewCourseSemester(e.target.value)}
-                  placeholder="VÃ­ dá»¥: Há»c ká»³ Thu 2026 (Fall 2026)"
+                  placeholder="Ví dụ: Học kỳ Thu 2026 (Fall 2026)"
                   style={{
                     width: '100%',
                     padding: '10px 14px',
@@ -3321,7 +3321,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px' }}>
-                  MÃ´ Táº£ Má»¥c TiÃªu KhÃ³a Há»c:
+                  Mô Tả Mục Tiêu Khóa Học:
                 </label>
                 <textarea
                   value={newCourseDesc}
@@ -3354,7 +3354,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     cursor: 'pointer',
                   }}
                 >
-                  Há»§y Bá»
+                  Hủy Bỏ
                 </button>
 
                 <button
@@ -3372,7 +3372,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     gap: '8px',
                   }}
                 >
-                  <PlusCircle size={16} /> {createCourseLoading ? 'Äang LÆ°u...' : 'LÆ°u VÃ o PostgreSQL 15'}
+                  <PlusCircle size={16} /> {createCourseLoading ? 'Đang Lưu...' : 'Lưu Vào PostgreSQL 15'}
                 </button>
               </div>
             </form>

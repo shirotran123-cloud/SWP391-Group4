@@ -196,7 +196,7 @@ async function runTests(): Promise<boolean> {
   assert(generatedExam.referenceSolution.length > 0, "Generates complete reference solution");
 
   // ------------------------------------------------------------------
-  // SUITE 6: Submission Consumer Worker (PhÃ¢n há»‡ 2 & 5 Integration)
+  // SUITE 6: Submission Consumer Worker (Phân hệ 2 & 5 Integration)
   // ------------------------------------------------------------------
   console.log("\n\x1b[36m[SUITE 6]\x1b[0m Submission Consumer Worker Pipeline");
 
