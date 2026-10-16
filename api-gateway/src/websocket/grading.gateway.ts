@@ -92,6 +92,12 @@ export interface GradingCompletedPayload {
   confirmedPlagiarism?: boolean;
   /** Score the pipeline computed before the BR-03 plagiarism penalty was applied. */
   computedScoreBeforePenalty?: number;
+  /** True when compilation failed inside the container, so every testcase scored 0. */
+  compileError?: boolean;
+  /** Raw compiler diagnostics, surfaced so the student can fix the code. */
+  compileOutput?: string;
+  /** True when the submission was actually built and run in a Docker container. */
+  executedInContainer?: boolean;
   completedAt: string;
 }
 

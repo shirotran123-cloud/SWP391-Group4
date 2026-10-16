@@ -278,12 +278,18 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const sandboxExec = await this.sandboxService.executeCode(language, sourceCode, casesToRun);
 
     const usedRealContainer = Array.isArray(sandboxExec.testResults) && sandboxExec.testResults.length > 0;
+    // Lỗi biên dịch cũng là một kết quả THẬT từ container: chương trình không chạy được
+    // nên mọi testcase đều 0 điểm. Phải phân biệt với "chưa chạy được container".
+    const isRealCompileError = sandboxExec.isCompileError === true;
     const source = persistedCases.length > 0 ? 'test_cases (DB)' : 'bộ mặc định của đề';
 
     this.gradingGateway.emitGradingProgress({
       submissionId, stepId: '2', stepName: 'Khởi tạo Docker Sandbox',
-      status: 'passed',
-      detail: usedRealContainer
+      status: isRealCompileError ? 'failed' : 'passed',
+      detail: isRealCompileError
+        ? `Biên dịch THẤT BẠI trong container [${sandboxExec.mode}] — mọi testcase tính 0 điểm. ` +
+          `Lỗi: ${(sandboxExec.compileOutput || sandboxExec.stderr || '').split('\n')[0].slice(0, 160)}`
+        : usedRealContainer
         ? `Sandbox chạy THẬT trong container [${sandboxExec.mode}] với ${sandboxExec.testResults!.length} testcase từ ${source} ` +
           `(${sandboxExec.timeMs}ms, 512MB RAM, --network none, --pids-limit 64).`
         : `Sandbox dùng [${sandboxExec.mode}]: chưa chạy được container nên chấm bằng phân tích tĩnh (${sandboxExec.timeMs}ms).`,
@@ -315,12 +321,14 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const realTc2 = usedRealContainer && sandboxExec.testResults!.length > 1 ? sandboxExec.testResults![1] : undefined;
 
     if (sandboxExec.isCompileError) {
-      // BR-03: lỗi biên dịch -> Testcase = 0, AI chỉ giải thích lỗi.
+      // Lỗi biên dịch -> Testcase = 0, AI chỉ giải thích lỗi (không chấm Clean Code).
       analysis.tc1Status = 'FAILED';
       analysis.tc2Status = 'FAILED';
       analysis.tc1TimeMs = 0;
       analysis.tc2TimeMs = 0;
-      this.logger.warn(`[Pipeline] ${submissionId}: COMPILE_ERROR -> testcase = 0.`);
+      this.logger.warn(
+        `[Pipeline] ${submissionId}: COMPILE_ERROR -> testcase = 0. ${(sandboxExec.compileOutput || '').split('\n')[0]}`,
+      );
     } else {
       if (realTc1) {
         analysis.tc1Status = realTc1.verdict === 'PASSED' ? 'PASSED' : 'FAILED';
@@ -530,10 +538,17 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // testcase đã thực thi — không được cộng điểm cho một testcase chưa hề chạy.
     // Trước đây TC2 luôn được 3.0 điểm qua heuristic regex kể cả khi assignment chỉ
     // có 1 testcase, khiến `passedTestcases` mâu thuẫn với `scoreBreakdown`.
-    const totalTestcases = usedRealContainer ? sandboxExec.testResults!.length : 2;
+    // Số testcase đã ĐƯỢC YÊU CẦU chạy, không phải số kết quả thu về: khi biên dịch
+    // lỗi thì container không trả về kết quả nào, nhưng bài thi vẫn có N testcase và
+    // tất cả đều 0 điểm. Trước đây nhánh này rơi về mặc định 2, khiến đề 1 testcase báo
+    // "0/2" — sai lệch với `scoreBreakdown`.
+    const ranInContainer = usedRealContainer || isRealCompileError;
+    const totalTestcases = ranInContainer ? casesToRun.length : 2;
     const passedCount = usedRealContainer
       ? sandboxExec.testResults!.filter((r) => r.verdict === 'PASSED').length
-      : [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
+      : isRealCompileError
+        ? 0
+        : [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
     const totalExecMs = analysis.tc1TimeMs + analysis.tc2TimeMs;
     // TÍNH ĐIỂM ĐỘNG DỰA TRÊN ĐIỂM THẬT CỦA TESTCASES VÀ KẾT QUẢ ĐÁNH GIÁ THỰC TẾ TỪ AI REVIEW
     const liveSolidAvg = (
@@ -548,7 +563,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // Với assignment chỉ có 1 testcase, trọng số TC2 (3.0) phải được dồn vào TC1 để
     // tổng thang điểm vẫn là 10.0 thay vì mất 3.0 điểm oan cho sinh viên.
     const testcaseWeightTotal = SCORE_WEIGHTS.testcase1 + SCORE_WEIGHTS.testcase2;
-    const singleTestcaseMode = usedRealContainer && sandboxExec.testResults!.length === 1;
+    const singleTestcaseMode = ranInContainer && casesToRun.length === 1;
     const tc1Weight = singleTestcaseMode ? testcaseWeightTotal : SCORE_WEIGHTS.testcase1;
     const tc2Weight = singleTestcaseMode ? 0 : SCORE_WEIGHTS.testcase2;
 
@@ -620,6 +635,10 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       // BR-03: cờ cho client biết điểm đã bị đặt về 0 do đạo văn đã xác nhận.
       confirmedPlagiarism: isConfirmedPlagiarism,
       computedScoreBeforePenalty: computedScore,
+      // Lỗi biên dịch: hiển thị cho sinh viên biết vì sao bài bị 0 điểm testcase.
+      compileError: isRealCompileError,
+      compileOutput: isRealCompileError ? sandboxExec.compileOutput || sandboxExec.stderr : undefined,
+      executedInContainer: ranInContainer,
       completedAt: new Date().toISOString(),
     };
 
