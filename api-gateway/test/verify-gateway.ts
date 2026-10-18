@@ -435,20 +435,27 @@ public class Solution {
     // ========================================================================
     console.log('\n🔑 SUITE 7: Kiểm thử Auth JWT & Google SSO Whitelist (UC-01)...');
 
-    // 7a. Google SSO với domain hợp lệ @fpt.edu.vn
-    // Seed-cleanse safety: ensure the SSO test account exists first.
+    // 7a. Google SSO giờ BẮT BUỘC có ID token đã xác minh chữ ký — gửi email trần phải bị chặn.
+    // Seed-cleanse safety: ensure the test account exists first.
     await httpRequest(`${baseUrl}/api/v1/users`, 'POST', {
       userId: 'TEST_SV001',
       email: 'sinhvien.test@fpt.edu.vn',
       fullName: 'Sinh Viên FPT Test',
       role: 'STUDENT',
     });
-    const validSsoRes = await httpRequest(`${baseUrl}/api/v1/auth/google`, 'POST', {
+    const emailOnlySsoRes = await httpRequest(`${baseUrl}/api/v1/auth/google`, 'POST', {
       email: 'sinhvien.test@fpt.edu.vn',
       fullName: 'Sinh Viên FPT Test',
     });
-    console.log(`   - Google SSO @fpt.edu.vn hợp lệ: Status ${validSsoRes.statusCode} -> ${validSsoRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
-    const jwtToken = validSsoRes.data?.data?.token;
+    console.log(`   - Google SSO từ chối email trần (không có ID token): Status ${emailOnlySsoRes.statusCode} -> ${emailOnlySsoRes.statusCode === 401 ? '✅ PASS' : '❌ FAIL'}`);
+
+    // 7a-2. Lấy JWT thật qua luồng mật khẩu để kiểm thử Bearer token bên dưới.
+    const pwLoginRes = await httpRequest(`${baseUrl}/api/v1/auth/login`, 'POST', {
+      email: 'sinhvien.test@fpt.edu.vn',
+      password: 'Aita@2026',
+    });
+    console.log(`   - Đăng nhập bằng mật khẩu: Status ${pwLoginRes.statusCode} -> ${pwLoginRes.statusCode === 200 ? '✅ PASS' : '❌ FAIL'}`);
+    const jwtToken = pwLoginRes.data?.data?.token;
     console.log(`   - Nhận mã JWT Token ký HMAC-SHA256: ${jwtToken ? '✅ PASS' : '❌ FAIL'}`);
 
     // 7b. Xác thực Profile với Bearer Token
@@ -457,11 +464,11 @@ public class Solution {
     });
     console.log(`   - Xác thực Bearer JWT Token (/api/v1/auth/me): Status ${profileRes.statusCode} (${profileRes.data?.data?.email}) -> ${profileRes.statusCode === 200 && profileRes.data?.data?.email === 'sinhvien.test@fpt.edu.vn' ? '✅ PASS' : '❌ FAIL'}`);
 
-    // 7c. Chặn domain trái phép ngoài whitelist
+    // 7c. Không thể mạo danh tài khoản ngoài whitelist: cả email trần lẫn domain lạ đều bị chặn.
     const hackerSsoRes = await httpRequest(`${baseUrl}/api/v1/auth/google`, 'POST', {
       email: 'hacker@malicious-domain.xyz',
     });
-    console.log(`   - Chặn Google SSO từ domain lạ (@malicious-domain.xyz): Status ${hackerSsoRes.statusCode} (403 Forbidden) -> ${hackerSsoRes.statusCode === 403 ? '✅ PASS' : '❌ FAIL'}`);
+    console.log(`   - Chặn Google SSO từ domain lạ (@malicious-domain.xyz): Status ${hackerSsoRes.statusCode} (401 vì thiếu ID token) -> ${hackerSsoRes.statusCode === 401 ? '✅ PASS' : '❌ FAIL'}`);
 
     // ========================================================================
     // SUITE 8: Bulk Import Sinh viên với SQL Transaction & 100% Rollback (R06)

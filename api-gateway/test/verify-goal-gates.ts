@@ -132,13 +132,26 @@ async function main(): Promise<boolean> {
     });
     gate(invalid.statusCode === 401, 'auth guard: invalid JWT -> 401', `got ${invalid.statusCode}`);
 
-    const sso = await httpRequest(`${base}/api/v1/auth/google`, 'POST', {
+    // Google SSO now requires a signed ID token: an email in the body is NOT an identity.
+    // Assert the endpoint rejects it, then obtain a real token through the password flow
+    // so the /me check below still exercises a genuine JWT.
+    const ssoEmailOnly = await httpRequest(`${base}/api/v1/auth/google`, 'POST', {
       email: 'sinhvien.test@fpt.edu.vn',
       fullName: 'Sinh Vien FPT Test',
     });
-    gate(sso.statusCode === 200, 'auth google-sso @fpt.edu.vn -> 200', `got ${sso.statusCode}`);
-    const token: string | undefined = sso.data?.data?.token;
-    gate(typeof token === 'string' && token.length > 0, 'auth google-sso returns token');
+    gate(
+      ssoEmailOnly.statusCode === 401,
+      'auth google-sso rejects an email-only request -> 401',
+      `got ${ssoEmailOnly.statusCode}`,
+    );
+
+    const pwLogin = await httpRequest(`${base}/api/v1/auth/login`, 'POST', {
+      email: 'sinhvien.test@fpt.edu.vn',
+      password: 'Aita@2026',
+    });
+    gate(pwLogin.statusCode === 200, 'auth password login -> 200', `got ${pwLogin.statusCode}`);
+    const token: string | undefined = pwLogin.data?.data?.token;
+    gate(typeof token === 'string' && token.length > 0, 'auth password login returns token');
 
     const me = await httpRequest(`${base}/api/v1/auth/me`, 'GET', undefined, 'application/json', {
       authorization: `Bearer ${token}`,

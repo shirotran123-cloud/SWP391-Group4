@@ -150,14 +150,28 @@ export async function runGatewayCover80(port: number): Promise<boolean> {
     let bypassGone = false;
     try { await auth.requestLoginOtp('giangvien.edu@gmail.com', '123456'); } catch { bypassGone = true; }
     gate(bypassGone, 'former bypass credentials are rejected');
-    const cred = await auth.loginWithCredentials(`otp.${ts}@fpt.edu.vn`);
-    gate(!!cred.token, 'credentials login existing user');
+
+    // loginWithCredentials must REQUIRE a password. It previously ignored the argument and
+    // issued a JWT for any known email, which handed out ADMIN tokens for free.
+    let noPasswordBlocked = false;
+    try { await auth.loginWithCredentials(`otp.${ts}@fpt.edu.vn`); } catch { noPasswordBlocked = true; }
+    gate(noPasswordBlocked, 'credentials login without a password is rejected');
+
+    // Set a known password through the OTP flow, then the correct password must work and a
+    // wrong one must fail. `nopw.${ts}` was created above with a password already set to
+    // 'firstpw', so use that value here.
+    const pwEmail = `nopw.${ts}@fpt.edu.vn`;
+    const cred = await auth.loginWithCredentials(pwEmail, 'firstpw');
+    gate(!!cred.token, 'credentials login with the correct password succeeds');
     gate(!('passwordHash' in cred.user), 'credentials login does not leak passwordHash');
+    let wrongPwBlocked = false;
+    try { await auth.loginWithCredentials(pwEmail, 'definitely-wrong'); } catch { wrongPwBlocked = true; }
+    gate(wrongPwBlocked, 'credentials login with a wrong password is rejected');
     let credUnknown = false;
-    try { await auth.loginWithCredentials(`void.${ts}@fpt.edu.vn`); } catch { credUnknown = true; }
+    try { await auth.loginWithCredentials(`void.${ts}@fpt.edu.vn`, 'whatever'); } catch { credUnknown = true; }
     gate(credUnknown, 'credentials login unknown blocked');
     let credOff = false;
-    try { await auth.loginWithCredentials(`off.${ts}@fpt.edu.vn`); } catch { credOff = true; }
+    try { await auth.loginWithCredentials(`off.${ts}@fpt.edu.vn`, 'whatever'); } catch { credOff = true; }
     gate(credOff, 'credentials login inactive blocked');
     let ssoDomain = false;
     try { await auth.loginWithGoogle('hacker@malicious-domain.xyz'); } catch { ssoDomain = true; }
@@ -346,11 +360,15 @@ export async function runGatewayCover80(port: number): Promise<boolean> {
     // google SSO via credential JWT (real Google ID-token shape, known account)
     const credPayload = Buffer.from(JSON.stringify({ email: `nopw.${ts}@fpt.edu.vn`, name: 'NoPw' })).toString('base64url');
     const credJwt = `h.${credPayload}.s`;
+    // A hand-built JWT must be REJECTED: /auth/google now verifies the Google signature
+    // instead of trusting the payload the client sent.
     const ssoCred = await req('POST', '/api/v1/auth/google', { credential: credJwt });
-    gate(ssoCred.status === 200, 'http google credential-jwt branch', `got ${ssoCred.status}`);
-    // google SSO missing email -> 401
+    gate(ssoCred.status === 401, 'http google rejects an unverifiable credential jwt', `got ${ssoCred.status}`);
+    // google SSO with no credential at all -> 401 (a bare email is no longer accepted)
     const ssoEmpty = await req('POST', '/api/v1/auth/google', {});
-    gate(ssoEmpty.status === 401, 'http google missing email 401', `got ${ssoEmpty.status}`);
+    gate(ssoEmpty.status === 401, 'http google missing credential 401', `got ${ssoEmpty.status}`);
+    const ssoEmailOnly = await req('POST', '/api/v1/auth/google', { email: `nopw.${ts}@fpt.edu.vn`, fullName: 'NoPw' });
+    gate(ssoEmailOnly.status === 401, 'http google rejects an email-only sign-in', `got ${ssoEmailOnly.status}`);
     // credentials login missing email -> 401
     const credEmpty = await req('POST', '/api/v1/auth/login', {});
     gate(credEmpty.status === 401, 'http credentials missing email 401', `got ${credEmpty.status}`);
