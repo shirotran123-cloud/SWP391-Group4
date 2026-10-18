@@ -28,22 +28,9 @@ export class AuthController {
       throw new BadRequestException('Vui lòng cung cấp địa chỉ Email!');
     }
 
-    // Kiểm tra tài khoản GV đặc biệt — bypass OTP hoàn toàn
-    if (password) {
-      const bypass = await this.authService.loginSpecialInstructor(email, password);
-      if (bypass) {
-        return {
-          statusCode: HttpStatus.OK,
-          message: 'Đăng nhập trực tiếp (tài khoản đặc biệt) — không cần OTP.',
-          data: {
-            bypassOtp: true,
-            token: bypass.token,
-            user: bypass.user,
-          },
-        };
-      }
-    }
-
+    // The former "special instructor" shortcut (hard-coded address + password '123456',
+    // no OTP, auto-promoted to INSTRUCTOR) has been removed — it was an authentication
+    // backdoor. Every account now goes through the normal OTP flow below.
     const result = await this.authService.requestLoginOtp(email, password);
     return {
       statusCode: HttpStatus.OK,

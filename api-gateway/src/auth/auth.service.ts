@@ -8,10 +8,6 @@ import {
 import { UserRepository } from '../database/user.repository';
 import { UserRecord } from '../database/user.entity';
 import { MailService } from './mail.service';
-
-// Tài khoản giảng viên đặc biệt — bypass OTP (dùng cho demo/nghiệm thu)
-const SPECIAL_INSTRUCTOR_EMAIL = 'giangvien.edu@gmail.com';
-const SPECIAL_INSTRUCTOR_PASS  = '123456';
 import * as crypto from 'crypto';
 
 export interface JwtPayload {
@@ -122,51 +118,13 @@ export class AuthService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // BYPASS: Tài khoản giảng viên đặc biệt — đăng nhập trực tiếp không cần OTP
+  // REMOVED: "special instructor" OTP bypass
+  //
+  // This used to short-circuit authentication for a single hard-coded address with the
+  // password `123456`, skipping OTP entirely and silently promoting the account to
+  // INSTRUCTOR. That is a backdoor: anyone reading the repository could sign in as a
+  // lecturer. Privilege and authentication now follow the normal path for every account.
   // ─────────────────────────────────────────────────────────────────────────
-
-  public async loginSpecialInstructor(
-    email: string,
-    password: string,
-  ): Promise<{ token: string; user: UserRecord } | null> {
-    const lowerEmail = email.toLowerCase().trim();
-    if (lowerEmail !== SPECIAL_INSTRUCTOR_EMAIL || password !== SPECIAL_INSTRUCTOR_PASS) {
-      return null; // Không phải tài khoản đặc biệt
-    }
-
-    let user = await this.userRepo.findByEmail(lowerEmail);
-    if (!user) {
-      const gvUser = await this.userRepo.findById('GV001');
-      if (gvUser) {
-        user = await this.userRepo.update('GV001', {
-          email: lowerEmail,
-          fullName: 'ThS. Giảng Viên AITA',
-          role: 'INSTRUCTOR',
-          isActive: true,
-        });
-      } else {
-        user = await this.userRepo.create({
-          userId: 'GV001',
-          email: lowerEmail,
-          fullName: 'ThS. Giảng Viên AITA',
-          role: 'INSTRUCTOR',
-          isActive: true,
-        });
-      }
-      this.logger.log(`[AuthService] Đồng bộ tài khoản GV đặc biệt: ${lowerEmail}`);
-    } else if (user.role !== 'INSTRUCTOR') {
-      user = await this.userRepo.update(user.userId, { role: 'INSTRUCTOR', isActive: true });
-    }
-
-    const token = this.signJwt({
-      userId: user.userId,
-      email: user.email,
-      role: user.role,
-      fullName: user.fullName,
-    });
-
-    return { token, user };
-  }
 
   // ─────────────────────────────────────────────────────────────────────────
   // Bước 1: Xác thực mật khẩu → Gửi OTP
@@ -294,7 +252,7 @@ export class AuthService {
       fullName: user.fullName,
     });
 
-    return { token, user };
+    return { token, user: this.toPublicUser(user) };
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -350,12 +308,20 @@ export class AuthService {
       fullName: user.fullName,
     });
 
-    return { token, user };
+    return { token, user: this.toPublicUser(user) };
   }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Đăng nhập nhanh (Credentials) - Kiểm tra nghiêm ngặt tài khoản
-  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Strips credentials before a user record leaves the service.
+   *
+   * `loginWithGoogle`/`loginWithCredentials` previously returned the raw `UserRecord`,
+   * which includes `passwordHash`. That leaked the scrypt salt+digest of every account to
+   * any caller who could complete a login — enough to mount an offline brute force.
+   */
+  private toPublicUser(user: UserRecord): UserRecord {
+    const { passwordHash: _passwordHash, ...safe } = user;
+    return safe as UserRecord;
+  }
 
   public async loginWithCredentials(
     email: string,
@@ -383,6 +349,6 @@ export class AuthService {
       fullName: user.fullName,
     });
 
-    return { token, user };
+    return { token, user: this.toPublicUser(user) };
   }
 }
