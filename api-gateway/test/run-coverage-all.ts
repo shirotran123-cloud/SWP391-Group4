@@ -35,6 +35,15 @@ async function main(): Promise<void> {
   const snap = snapshotStores();
   let code = 0;
   try {
+    // Isolate this run from any long-running dev gateway that shares the same Redis.
+    // Without this, both processes consume from the same BullMQ queue and a job enqueued
+    // here can be graded by the other process, so the test never sees it complete.
+    // Must be set BEFORE any module imports the queue constants.
+    process.env.SUBMISSION_QUEUE_NAME =
+      process.env.SUBMISSION_QUEUE_NAME || `submission-grading-queue-cov-${process.pid}`;
+    process.env.DLQ_QUEUE_NAME =
+      process.env.DLQ_QUEUE_NAME || `submission-grading-dlq-cov-${process.pid}`;
+
     // In-process drivers first (no ports needed beyond their own).
     const { runCoverGates } = require("./cover-gates");
     if (!(await runCoverGates())) code = 1;

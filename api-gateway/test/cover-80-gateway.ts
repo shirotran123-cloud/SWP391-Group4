@@ -244,13 +244,22 @@ export async function runGatewayCover80(port: number): Promise<boolean> {
     const ev3 = await req('POST', '/api/v1/internal/events/grading-completed', { submissionId: subId, status: 'COMPLETED', overallResult: 'PASSED', score: 9.0, maxScore: 10, passedTestcases: 2, totalTestcases: 2, executionTimeMs: 100, aiRating: { cleanCodeScore: 8, solidScore: { s: 8, o: 8, l: 8, i: 8, d: 8 }, codeSmells: [], explanation: 'ok' }, completedAt: new Date().toISOString() });
     gate(ev3.status === 200, 'internal grading-completed ok');
 
-    // ── 7. Postgres unavailable branches ──
-    gate(postgres.isAvailable() === false, 'postgres unavailable here');
-    let pgThrew = false;
-    try { await postgres.query('SELECT 1'); } catch { pgThrew = true; }
-    gate(pgThrew, 'postgres query throws when down');
-    const safe = await postgres.safeQuery('SELECT 1');
-    gate(Array.isArray(safe) && safe.length === 0, 'postgres safeQuery [] when down');
+    // ── 7. Postgres contract, both connected and disconnected ──
+    // Previously this asserted the DB was DOWN, which fails the moment a real PostgreSQL
+    // is running (docker compose up). The contract that actually matters is: safeQuery
+    // never throws and always returns an array, and query throws only when unavailable.
+    const pgUp = postgres.isAvailable();
+    gate(typeof pgUp === 'boolean', 'postgres availability probe returns a boolean');
+    if (pgUp) {
+      const rows = await postgres.safeQuery('SELECT 1 AS ok');
+      gate(Array.isArray(rows) && rows.length === 1, 'postgres safeQuery returns rows when connected', `${rows.length}`);
+    } else {
+      let pgThrew = false;
+      try { await postgres.query('SELECT 1'); } catch { pgThrew = true; }
+      gate(pgThrew, 'postgres query throws when down');
+      const safe = await postgres.safeQuery('SELECT 1');
+      gate(Array.isArray(safe) && safe.length === 0, 'postgres safeQuery [] when down');
+    }
 
     // ── 8. Sandbox: container branch + TLE + sort branches ──
     // These assertions must hold with OR without a live Docker daemon, because CI has
@@ -279,9 +288,15 @@ export async function runGatewayCover80(port: number): Promise<boolean> {
     gate(slowSort.exitCode === 0, 'sandbox normal-sort branch', `exit=${slowSort.exitCode}`);
 
     // ── 9. Queue pop/mark + congestion ──
-    await queue.addSubmissionJob({ submissionId: `COV-POP-${ts}`, studentId: 'S', assignmentId: 'A', language: 'java', fileName: 'p.zip', fileSizeBytes: 1, sha256Hash: 'h', filePath: 'p', enqueuedAt: '' });
-    const popped = queue.popNextMemoryJob();
-    gate(!!popped, 'queue popNextMemoryJob returns job');
+    // With Redis live the job never enters the in-memory queue, so only assert the pop
+    // when the transport actually used the fallback.
+    const enq = await queue.addSubmissionJob({ submissionId: `COV-POP-${ts}`, studentId: 'S', assignmentId: 'A', language: 'java', fileName: 'p.zip', fileSizeBytes: 1, sha256Hash: 'h', filePath: 'p', enqueuedAt: '' });
+    if (enq.mode === 'IN_MEMORY') {
+      const popped = queue.popNextMemoryJob();
+      gate(!!popped, 'queue popNextMemoryJob returns job');
+    } else {
+      gate(true, 'queue popNextMemoryJob skipped for the Redis transport');
+    }
     queue.markJobCompleted();
     const stats2 = await queue.getQueueStats();
     gate(stats2.completedCount >= 1, 'queue completedCount increments');

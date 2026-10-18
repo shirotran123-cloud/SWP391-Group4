@@ -107,7 +107,11 @@ async function main(): Promise<boolean> {
       submissionId: `COV-Q-${ts}`, studentId: 'SE170000', assignmentId: 'A1', language: 'java',
       fileName: 'q.zip', fileSizeBytes: 10, sha256Hash: 'q', filePath: 'q.zip', enqueuedAt: new Date().toISOString(),
     });
-    gate(enq.mode === 'IN_MEMORY' && enq.durationMs < 200, 'queue in-memory enqueue <200ms', `${enq.mode} ${enq.durationMs}ms`);
+    // The enqueue path is transport-agnostic: it uses Redis when a daemon is present and
+    // falls back to the in-memory queue otherwise. Assert on the SLA, not on the mode,
+    // so the test is valid both offline (CI) and with live infrastructure.
+    gate(enq.durationMs < 200, 'queue enqueue under the 200ms SLA', `${enq.mode} ${enq.durationMs}ms`);
+    gate(enq.mode === 'IN_MEMORY' || enq.mode === 'REDIS', 'queue reports a known transport', enq.mode);
     const stats = await queue.getQueueStats().catch(() => null);
     gate(stats === null || typeof stats === 'object', 'queue stats endpoint reachable');
     const dlq = await queue.moveToDLQ({ submissionId: `COV-Q-${ts}`, studentId: 'S', assignmentId: 'A', language: 'java', fileName: 'q', fileSizeBytes: 1, sha256Hash: 'h', filePath: 'p', enqueuedAt: '' }, 'coverage probe', 3);
