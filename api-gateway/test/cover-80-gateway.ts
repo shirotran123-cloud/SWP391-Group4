@@ -139,13 +139,20 @@ export async function runGatewayCover80(port: number): Promise<boolean> {
     try { await auth.requestLoginOtp(`off.${ts}@fpt.edu.vn`, 'whatever'); } catch { offBlocked = true; }
     gate(offBlocked, 'otp request inactive account blocked');
 
-    // ── 2. Special instructor + credentials + Google negatives ──
-    const bypass = await auth.loginSpecialInstructor('giangvien.edu@gmail.com', '123456');
-    gate(!!bypass && !!bypass.token, 'special instructor bypass login');
-    const notSpecial = await auth.loginSpecialInstructor('nobody@x.edu', 'nope');
-    gate(notSpecial === null, 'special instructor wrong creds null');
+    // ── 2. Credentials + Google negatives ──
+    // The old "special instructor" OTP bypass (hard-coded address + password '123456')
+    // was removed as a security backdoor; assert it can never come back.
+    gate(
+      typeof (auth as any).loginSpecialInstructor !== 'function',
+      'removed special-instructor OTP bypass is absent',
+    );
+    // The credentials that used to trigger the bypass must NOT authenticate.
+    let bypassGone = false;
+    try { await auth.requestLoginOtp('giangvien.edu@gmail.com', '123456'); } catch { bypassGone = true; }
+    gate(bypassGone, 'former bypass credentials are rejected');
     const cred = await auth.loginWithCredentials(`otp.${ts}@fpt.edu.vn`);
     gate(!!cred.token, 'credentials login existing user');
+    gate(!('passwordHash' in cred.user), 'credentials login does not leak passwordHash');
     let credUnknown = false;
     try { await auth.loginWithCredentials(`void.${ts}@fpt.edu.vn`); } catch { credUnknown = true; }
     gate(credUnknown, 'credentials login unknown blocked');
@@ -322,9 +329,14 @@ export async function runGatewayCover80(port: number): Promise<boolean> {
     gate(Array.isArray(tmStudent), 'teamwork byStudent hit');
 
     // ── 11. HTTP controller edge branches ──
-    // request-otp bypass (special instructor, no OTP round-trip)
+    // The former request-otp bypass (special instructor, no OTP round-trip) is gone:
+    // those credentials must now be rejected and no bypassOtp field may be returned.
     const bypassHttp = await req('POST', '/api/v1/auth/request-otp', { email: 'giangvien.edu@gmail.com', password: '123456' });
-    gate(bypassHttp.status === 200 && bypassHttp.data?.data?.bypassOtp === true, 'http request-otp bypass branch');
+    gate(
+      bypassHttp.status !== 200 || bypassHttp.data?.data?.bypassOtp !== true,
+      'http request-otp no longer returns a bypass branch',
+      `got ${bypassHttp.status}`,
+    );
     // request-otp missing email -> 400
     const noEmail = await req('POST', '/api/v1/auth/request-otp', {});
     gate(noEmail.status === 400, 'http request-otp missing email 400', `got ${noEmail.status}`);

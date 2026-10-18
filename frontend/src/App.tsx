@@ -520,13 +520,12 @@ export function App() {
   };
 
   // NẾU CHƯA ĐĂNG NHẬP: BẮT BUỘC HIỂN THỊ MÀN HÌNH ĐĂNG NHẬP ĐẦU TIÊN
+  // Google SSO is the single sign-in entry point; the separate email/password + OTP modal
+  // was removed at the client's request.
   if (!currentUser) {
     return (
       <>
-        <LoginView
-          onLoginSuccess={handleLoginSuccess}
-          onOpenOtpLogin={() => setIsLoginModalOpen(true)}
-        />
+        <LoginView onLoginSuccess={handleLoginSuccess} />
         <LoginModal
           isOpen={isLoginModalOpen}
           onClose={() => setIsLoginModalOpen(false)}

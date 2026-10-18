@@ -9,14 +9,11 @@ import {
   Sparkles,
   UserX,
   UserCheck,
-  KeyRound,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
 interface LoginViewProps {
   onLoginSuccess: (user: UserProfile) => void;
-  /** Mở luồng đăng nhập bằng email + mật khẩu + OTP (dành cho tài khoản FPT/Gmail đã được cấp). */
-  onOpenOtpLogin?: () => void;
 }
 
 const API_BASE_URL = 'http://localhost:3000';
@@ -47,7 +44,7 @@ const GoogleIcon = () => (
   </svg>
 );
 
-export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenOtpLogin }) => {
+export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [blockedEmail, setBlockedEmail] = useState<string | null>(null);
@@ -62,13 +59,32 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenOtpL
   const [redirectUriConfig, setRedirectUriConfig] = useState<string>(() => {
     return localStorage.getItem('aita_google_redirect_uri') || window.location.origin;
   });
-  const [directEmailInput, setDirectEmailInput] = useState<string>('linhcampochia@gmail.com');
+  // Empty by default: pre-filling a specific address implied that particular account
+  // existed, and it hard-coded a personal Gmail into the source.
+  const [directEmailInput, setDirectEmailInput] = useState<string>('');
   const [showConfig, setShowConfig] = useState(false);
   const [showTester, setShowTester] = useState(false);
 
   // Xử lý xác thực khi Google chuyển hướng về (OAuth 2.0 Redirect Callback)
   useEffect(() => {
     const handleGoogleCallback = async () => {
+      // Google reports some failures (redirect_uri_mismatch, invalid_client) on its own
+      // error page, but when the flow is rejected the reason can also come back in the
+      // query string or hash. Surface it instead of failing silently.
+      const query = new URLSearchParams(window.location.search);
+      const queryError = query.get('error');
+      if (queryError) {
+        const desc = query.get('error_description') || '';
+        setErrorMsg(
+          `Google từ chối yêu cầu đăng nhập (${queryError}). ${desc}`.trim() +
+            (queryError === 'redirect_uri_mismatch'
+              ? ` Hãy thêm "${window.location.origin}" vào Authorized JavaScript origins và Authorized redirect URIs trong Google Cloud Console.`
+              : ''),
+        );
+        window.history.replaceState(null, '', window.location.pathname);
+        return;
+      }
+
       const hash = window.location.hash;
       if (!hash) return;
 
@@ -389,52 +405,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenOtpL
           </button>
         </div>
 
-        {/* ĐĂNG NHẬP BẰNG EMAIL FPT + MẬT KHẨU + OTP (tài khoản đã được cấp trên hệ thống) */}
-        {onOpenOtpLogin && (
-          <div style={{ marginBottom: '18px' }}>
-            <button
-              onClick={onOpenOtpLogin}
-              style={{
-                width: '100%',
-                padding: '15px 24px',
-                borderRadius: '14px',
-                border: '1px solid rgba(16, 185, 129, 0.45)',
-                background: 'rgba(16, 185, 129, 0.14)',
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '15px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.24)';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(16, 185, 129, 0.14)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              <KeyRound size={18} color="#34d399" />
-              <span>Đăng nhập Sinh viên / Giảng viên (Email + Mật khẩu + OTP)</span>
-            </button>
-            <div
-              style={{
-                fontSize: '11.5px',
-                color: 'var(--text-muted)',
-                marginTop: '8px',
-                lineHeight: 1.5,
-                textAlign: 'center',
-              }}
-            >
-              Dùng cho tài khoản FPT/Gmail đã được cấp quyền trên hệ thống AITA.
-            </div>
-          </div>
-        )}
+        {/* The email/password + OTP sign-in was removed at the client's request;
+            Google SSO below is now the single entry point. */}
 
         <p
           style={{
@@ -502,6 +474,44 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess, onOpenOtpL
           >
             <div style={{ fontSize: '11.5px', color: '#c7d2fe', marginBottom: '8px', fontWeight: 600 }}>
               Thử nghiệm luồng xác thực Google SSO & Kiểm tra CSDL:
+            </div>
+
+            {/* Danh sách tài khoản mẫu theo từng role, dùng chung mật khẩu Aita@2026.
+                Đây là dữ liệu THẬT trong CSDL (không phải mock) — bấm để điền nhanh email. */}
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '6px' }}>
+                Tài khoản mẫu (mật khẩu: <code style={{ color: '#fbbf24' }}>Aita@2026</code>):
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                {[
+                  { role: 'ADMIN', email: 'admin@aita.fpt.edu.vn', color: '#f59e0b' },
+                  { role: 'HOD', email: 'hod@fe.edu.vn', color: '#a855f7' },
+                  { role: 'LECTURER', email: 'trungdt@fe.edu.vn', color: '#3b82f6' },
+                  { role: 'STUDENT', email: 'trungse170000@fpt.edu.vn', color: '#10b981' },
+                ].map((acc) => (
+                  <button
+                    key={acc.email}
+                    type="button"
+                    onClick={() => setDirectEmailInput(acc.email)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '6px 8px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'rgba(255,255,255,0.03)',
+                      color: '#e2e8f0',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    <span style={{ color: acc.color, fontWeight: 700, minWidth: '58px' }}>{acc.role}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.email}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Ô nhập email bất kỳ để đăng nhập trực tiếp (Bypass redirect_uri_mismatch nếu Google Cloud chưa cập nhật) */}
