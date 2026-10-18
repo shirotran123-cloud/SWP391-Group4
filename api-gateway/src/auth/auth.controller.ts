@@ -10,10 +10,14 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { GoogleTokenVerifier } from './google-token.verifier';
 
 @Controller('api/v1/auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly googleVerifier: GoogleTokenVerifier,
+  ) {}
 
   /**
    * API Yêu cầu gửi mã OTP về Gmail người dùng
@@ -62,31 +66,24 @@ export class AuthController {
   @Post('google')
   @HttpCode(HttpStatus.OK)
   public async googleSsoLogin(
-    @Body('email') email?: string,
-    @Body('fullName') fullName?: string,
     @Body('credential') credential?: string,
   ) {
-    let resolvedEmail = email;
-    let resolvedName = fullName;
-
-    // Nếu gửi lên Google ID Token (credential từ Google Identity Services thật của trình duyệt)
-    if (credential) {
-      try {
-        const parts = credential.split('.');
-        if (parts.length >= 2) {
-          const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf-8'));
-          resolvedEmail = payload.email;
-          resolvedName = payload.name || payload.email.split('@')[0];
-        }
-      } catch (e) {
-        // Fallback nếu parse lỗi
-      }
+    // SECURITY: the email is taken ONLY from a cryptographically verified Google ID token.
+    //
+    // This endpoint used to accept a bare `email` in the request body and trust it, so a
+    // plain POST with {"email":"admin@aita.fpt.edu.vn"} returned an admin JWT without any
+    // Google account or password. Verified claims are now the single source of identity.
+    if (!credential || !credential.trim()) {
+      throw new UnauthorizedException(
+        'Thiếu Google ID token (credential). Hãy đăng nhập qua Google để nhận token hợp lệ.',
+      );
     }
 
-    if (!resolvedEmail) {
-      throw new UnauthorizedException('Thiếu địa chỉ email Google SSO!');
-    }
-    const result = await this.authService.loginWithGoogle(resolvedEmail, resolvedName);
+    const profile = await this.googleVerifier.verify(credential.trim());
+    const result = await this.authService.loginWithGoogle(
+      profile.email,
+      profile.name || profile.email.split('@')[0],
+    );
     return {
       statusCode: HttpStatus.OK,
       message: 'Xác thực Google SSO thành công.',

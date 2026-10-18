@@ -323,11 +323,23 @@ export class AuthService {
     return safe as UserRecord;
   }
 
+  /**
+   * Password sign-in.
+   *
+   * SECURITY: this used to ignore the password entirely (`_password`) and hand out a JWT
+   * to anyone who knew an email address — `POST /api/v1/auth/login {"email":"admin@..."}`
+   * returned an ADMIN token with no credential at all. The password is now REQUIRED and
+   * verified against the stored scrypt hash.
+   */
   public async loginWithCredentials(
     email: string,
-    _password?: string,
+    password?: string,
   ): Promise<{ token: string; user: UserRecord }> {
     const lowerEmail = email.toLowerCase().trim();
+    if (!password || !password.trim()) {
+      throw new UnauthorizedException('Vui lòng nhập mật khẩu để tiếp tục.');
+    }
+
     const user = await this.userRepo.findByEmail(lowerEmail);
     if (!user) {
       this.logger.warn(`[AuthService] Chặn credentials: Tài khoản '${lowerEmail}' chưa có trên hệ thống.`);
@@ -340,6 +352,19 @@ export class AuthService {
       throw new ForbiddenException(
         `Tài khoản '${lowerEmail}' đã bị khóa hoặc chưa được kích hoạt trong hệ thống.`,
       );
+    }
+
+    if (!user.passwordHash) {
+      // No local password yet: the account must set one through the OTP flow first.
+      throw new UnauthorizedException(
+        `Tài khoản '${lowerEmail}' chưa thiết lập mật khẩu. Vui lòng đăng nhập bằng Google hoặc dùng luồng OTP để đặt mật khẩu.`,
+      );
+    }
+
+    const isValid = await this.verifyPassword(password.trim(), user.passwordHash);
+    if (!isValid) {
+      this.logger.warn(`[AuthService] Sai mật khẩu cho tài khoản '${lowerEmail}'.`);
+      throw new UnauthorizedException('Mật khẩu không chính xác. Vui lòng thử lại!');
     }
 
     const token = this.signJwt({
