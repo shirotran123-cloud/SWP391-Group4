@@ -14,7 +14,8 @@ export class CreateUserDto {
   @IsNotEmpty()
   fullName: string;
 
-  @IsEnum(['STUDENT', 'INSTRUCTOR', 'ADMIN'])
+  // HOD (Head of Department) is part of the SSOT role set, so it must be assignable.
+  @IsEnum(['STUDENT', 'INSTRUCTOR', 'ADMIN', 'HOD'])
   @IsOptional()
   role?: UserRole;
 

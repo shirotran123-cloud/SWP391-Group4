@@ -32,7 +32,11 @@ export class UsersService {
       email: dto.email,
       fullName: dto.fullName,
       role: dto.role || 'STUDENT',
-      passwordHash: dto.password ? `hashed_${dto.password}` : 'hashed_default',
+      // Leave the hash undefined when no password is supplied: the account then has no
+      // local password and the user sets one on first login. The previous
+      // `hashed_${password}` string was not a real hash (AuthService could never verify
+      // against it) and `hashed_default` would have been a shared, guessable secret.
+      passwordHash: undefined,
       avatarUrl: dto.avatarUrl,
       isActive: true,
     });
@@ -52,7 +56,9 @@ export class UsersService {
         email: dto.email,
         fullName: dto.fullName || dto.userId,
         role: dto.role || 'STUDENT',
-        passwordHash: dto.password ? `hashed_${dto.password}` : 'hashed_default',
+        // Imported students have no local password yet; they set one on first login.
+        // (The old `hashed_default` gave every imported student the same secret.)
+        passwordHash: undefined,
         avatarUrl: dto.avatarUrl,
         isActive: true,
       }));
@@ -73,8 +79,19 @@ export class UsersService {
     }
   }
 
+  /**
+   * Removes credential material before a user record is returned over HTTP.
+   * Returning the raw record exposed `passwordHash` (scrypt salt + digest) to every
+   * caller of GET /users, including unauthenticated ones.
+   */
+  private toPublicUser(user: UserRecord): UserRecord {
+    const { passwordHash: _passwordHash, ...safe } = user;
+    return safe as UserRecord;
+  }
+
   public async getAllUsers(role?: UserRole): Promise<UserRecord[]> {
-    return this.userRepo.findAll(role);
+    const users = await this.userRepo.findAll(role);
+    return users.map((u) => this.toPublicUser(u));
   }
 
   public async getUserById(userId: string): Promise<UserRecord> {
@@ -82,11 +99,12 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException(`Không tìm thấy người dùng với ID: ${userId}`);
     }
-    return user;
+    return this.toPublicUser(user);
   }
 
   public async getUserByEmail(email: string): Promise<UserRecord | null> {
-    return this.userRepo.findByEmail(email);
+    const user = await this.userRepo.findByEmail(email);
+    return user ? this.toPublicUser(user) : null;
   }
 
   public async updateUser(userId: string, dto: UpdateUserDto): Promise<UserRecord> {

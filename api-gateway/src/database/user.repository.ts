@@ -180,21 +180,35 @@ export class UserRepository implements OnModuleInit {
       const onlyInJson: UserRecord[] = [];
       for (const r of rows) {
         const rawRole: string = r.role || this.mapRoleId(r.role_id);
+        const pgHash: string | undefined = r.password_hash || undefined;
+        const existing = this.records.get(r.user_id);
+
+        // PostgreSQL wins on every field EXCEPT password_hash when it only holds the
+        // seeded placeholder: real passwords are written by the OTP flow, and letting the
+        // placeholder win would silently invalidate them.
+        const pgHasRealHash = !!pgHash && pgHash !== UserRepository.PLACEHOLDER_PASSWORD_HASH;
+        const resolvedHash = pgHasRealHash ? pgHash : existing?.passwordHash || pgHash;
+
         this.records.set(r.user_id, {
           userId: r.user_id,
           email: r.email,
           fullName: r.full_name,
           role: (rawRole === 'LECTURER' ? 'INSTRUCTOR' : rawRole) as UserRole,
-          passwordHash: r.password_hash || undefined,
+          passwordHash: resolvedHash,
           avatarUrl: r.avatar_url || undefined,
           isActive: r.is_active === true,
           createdAt: new Date(r.created_at),
           updatedAt: new Date(r.updated_at),
         });
+
+        // Push a locally-set password back up so both stores stay consistent.
+        if (!pgHasRealHash && existing?.passwordHash) {
+          onlyInJson.push(this.records.get(r.user_id)!);
+        }
       }
 
       for (const record of this.records.values()) {
-        if (!rows.some((r) => r.user_id === record.userId)) {
+        if (!rows.some((x) => x.user_id === record.userId) && !onlyInJson.some((x) => x.userId === record.userId)) {
           onlyInJson.push(record);
         }
       }
@@ -253,6 +267,12 @@ export class UserRepository implements OnModuleInit {
            full_name = EXCLUDED.full_name,
            role_id = EXCLUDED.role_id,
            role = EXCLUDED.role,
+           -- password_hash MUST be refreshed here. Omitting it meant a real password set
+           -- through the OTP flow was written to PostgreSQL, then immediately overwritten
+           -- by the stale placeholder on the next hydrate — so the user could never log in
+           -- again with the password they had just chosen.
+           password_hash = EXCLUDED.password_hash,
+           avatar_url = EXCLUDED.avatar_url,
            is_active = EXCLUDED.is_active,
            updated_at = NOW()`,
         [

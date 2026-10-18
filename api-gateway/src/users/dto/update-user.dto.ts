@@ -10,7 +10,7 @@ export class UpdateUserDto {
   @IsOptional()
   fullName?: string;
 
-  @IsEnum(['STUDENT', 'INSTRUCTOR', 'ADMIN'])
+  @IsEnum(['STUDENT', 'INSTRUCTOR', 'ADMIN', 'HOD'])
   @IsOptional()
   role?: UserRole;
 
