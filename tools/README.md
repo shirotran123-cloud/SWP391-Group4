@@ -15,16 +15,22 @@ Run them from anywhere; each one resolves the repository root from its own locat
 
 ## Why these exist
 
-Two different text-corruption bugs bit this project, and they need different tools:
+Two different text-corruption bugs bit this project, and they need different tools. The
+corrupted forms are *described* rather than written out, so that no broken bytes live in the
+repository and automated scanners stay quiet:
 
-1. **Mojibake** — UTF-8 text decoded as cp1252 and re-encoded, so `Tuần` becomes `Tuáº§n`.
-   Caused by `Get-Content | Set-Content` in Windows PowerShell. Fix: rewrite the file with an
-   explicit UTF-8 encoder; never round-trip Vietnamese text through PowerShell's pipeline.
+1. **Mojibake** — UTF-8 text decoded as cp1252 and then re-encoded, so Vietnamese accented
+   characters turn into short sequences of Latin-1 punctuation letters. The tell-tale sign is
+   a stray uppercase A with a tilde or circumflex followed by an accented character. Caused by
+   `Get-Content | Set-Content` in Windows PowerShell. Fix: rewrite the file with an explicit
+   UTF-8 encoder; never round-trip Vietnamese text through PowerShell's pipeline.
 
-2. **Lost diacritics** — text encoded as Latin-1, so unmappable characters became `?` and
-   invalid bytes became `U+FFFD` (`Qu?n Tr? Vi�n AITA`). Caused by
-   `Invoke-RestMethod -Body <string>` in Windows PowerShell 5.1, which sends a Latin-1 body.
-   This is why `seed-accounts.py` exists: it sends every request with an explicit UTF-8 body.
+2. **Lost diacritics** — text encoded as Latin-1, so characters outside that charset became
+   `?` and invalid bytes became the U+FFFD replacement character. A name such as the admin
+   account's display name ends up with question marks and diamonds where the accents were.
+   Caused by `Invoke-RestMethod -Body <string>` in Windows PowerShell 5.1, which sends a
+   Latin-1 body. This is why `seed-accounts.py` exists: it sends every request with an
+   explicit UTF-8 body.
 
 A mojibake regex cannot detect the second bug, because the bytes are gone rather than
 mis-decoded. `verify-api-text.py` checks for both patterns.

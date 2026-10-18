@@ -1,9 +1,9 @@
 """Creates/repairs the demo accounts and sets one shared password.
 
 Why this replaces the PowerShell script: Windows PowerShell 5.1 encodes
-`Invoke-RestMethod -Body <string>` as Latin-1, so Vietnamese names arrived at the API as
-`Qu?n Tr? Vi�n AITA`. Every request here is sent with an explicit UTF-8 body, which is what
-the original script should have done.
+`Invoke-RestMethod -Body <string>` as Latin-1, so Vietnamese names arrived at the API with
+their accents replaced by '?' characters and U+FFFD. Every request here is sent with an
+explicit UTF-8 body, which is what the original script should have done.
 
 Run it whenever the demo accounts need to exist or their password needs resetting.
 """

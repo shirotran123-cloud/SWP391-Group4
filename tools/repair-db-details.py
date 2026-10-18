@@ -2,7 +2,8 @@
 
 `submissions.details` is a jsonb column that stores the whole grading payload, including
 `plagiarismMatch.matchedStudentName`. A previous test run wrote the name through an API call
-whose body was Latin-1 encoded, so PostgreSQL now holds 'Dinh Th?nh Trung (Sinh vi�n)'.
+whose body was Latin-1 encoded, so PostgreSQL holds a name whose accents were replaced by
+'?' characters and U+FFFD.
 
 The canonical names come from users.full_name, matched on the ASCII skeleton (the corruption
 only ever removed non-ASCII characters, so the surviving letters still identify the person).
