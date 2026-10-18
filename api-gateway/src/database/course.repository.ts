@@ -18,6 +18,7 @@ export class CourseRepository implements OnModuleInit {
   private readonly logger = new Logger(CourseRepository.name);
   private readonly records: Map<string, CourseRecord> = new Map();
   private readonly studentEnrollments: Map<string, Set<string>> = new Map(); // studentId -> Set<classId>
+  private readonly courseMembers: Map<string, Map<string, EnrolledStudentInfo>> = new Map(); // classId -> Map<studentCode, EnrolledStudentInfo>
   private readonly dataDir: string;
   private readonly dataFile: string;
 
@@ -391,7 +392,21 @@ export class CourseRepository implements OnModuleInit {
   }
 
     // 3. Cập nhật bộ nhớ đệm (Lưu theo cả Mã SV lẫn Email để hỗ trợ truy vấn)
+    if (!this.courseMembers.has(classId)) {
+      this.courseMembers.set(classId, new Map());
+    }
+    const classMap = this.courseMembers.get(classId)!;
+
     for (const s of students) {
+      classMap.set(s.studentCode, {
+        userId: s.studentCode,
+        studentCode: s.studentCode,
+        fullName: s.fullName || s.studentCode,
+        email: s.email,
+        enrolledAt: new Date(),
+        status: 'ACTIVE',
+      });
+
       const keys = [s.studentCode, s.email, s.email?.toLowerCase()].filter(Boolean) as string[];
       for (const k of keys) {
         if (!this.studentEnrollments.has(k)) {
@@ -399,6 +414,41 @@ export class CourseRepository implements OnModuleInit {
         }
         this.studentEnrollments.get(k)!.add(classId);
       }
+    }
+
+    // 4. Đồng bộ vào users_store.json để tài khoản sinh viên được cấp quyền đăng nhập ngay lập tức
+    try {
+      const usersFile = path.join(this.dataDir, 'users_store.json');
+      if (fs.existsSync(usersFile)) {
+        const rawUsers = fs.readFileSync(usersFile, 'utf-8');
+        const userList: any[] = JSON.parse(rawUsers);
+        const existingEmails = new Set(userList.map((u) => u.email?.toLowerCase()));
+        let hasNewUser = false;
+
+        for (const s of students) {
+          if (!existingEmails.has(s.email.toLowerCase())) {
+            userList.push({
+              userId: s.studentCode,
+              studentCode: s.studentCode,
+              email: s.email,
+              fullName: s.fullName || s.studentCode,
+              role: 'STUDENT',
+              isActive: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            });
+            existingEmails.add(s.email.toLowerCase());
+            hasNewUser = true;
+          }
+        }
+
+        if (hasNewUser) {
+          fs.writeFileSync(usersFile, JSON.stringify(userList, null, 2), 'utf-8');
+          this.logger.log(`[CourseRepository] Đã đồng bộ tài khoản sinh viên mới vào users_store.json.`);
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`[CourseRepository] Không thể đồng bộ users_store.json: ${err.message}`);
     }
 
     return {
@@ -410,23 +460,26 @@ export class CourseRepository implements OnModuleInit {
   /**
    * Lấy danh sách các lớp học phần mà sinh viên đang theo học
    */
-  public async findCoursesByStudent(studentId: string): Promise<CourseRecord[]> {
+  public async findCoursesByStudent(studentId: string, studentEmail?: string): Promise<CourseRecord[]> {
     if (this.postgres.isAvailable()) {
       try {
         const rows = await this.postgres.safeQuery<any>(
           `SELECT c.* FROM classes c
            JOIN class_members cm ON c.class_id = cm.class_id
-           WHERE (cm.user_id = $1 OR cm.user_id = (SELECT student_code FROM users WHERE user_id = $1))
+           WHERE (cm.user_id = $1 
+               OR ($2::text IS NOT NULL AND cm.user_id = $2)
+               OR cm.user_id = (SELECT student_code FROM users WHERE user_id = $1 OR email = $1 OR ($2::text IS NOT NULL AND email = $2) LIMIT 1)
+               OR cm.user_id = (SELECT user_id FROM users WHERE student_code = $1 OR email = $1 OR ($2::text IS NOT NULL AND email = $2) LIMIT 1))
              AND cm.status = 'ACTIVE' AND c.is_active = true
            ORDER BY c.created_at DESC`,
-          [studentId],
+          [studentId, studentEmail || null],
         );
         if (rows.length > 0) {
           const seen = new Set<string>();
           const result: CourseRecord[] = [];
           for (const r of rows) {
             const upper = (r.class_code || r.class_id || '').toUpperCase();
-            let norm = r.class_code;
+            let norm = r.class_code || r.class_id;
             if (upper.includes('SWP391')) norm = 'SWP391';
             else if (upper.includes('PRN211')) norm = 'PRN211';
             else if (upper.includes('CSD201') || upper.includes('CSD')) norm = 'CSD201';
@@ -446,26 +499,6 @@ export class CourseRepository implements OnModuleInit {
               });
             }
           }
-          // Luôn đảm bảo sinh viên có môn CSD201
-          if (!seen.has('CSD201')) {
-            const csdClass = await this.postgres.safeQuery<any>(
-              `SELECT * FROM classes WHERE class_code ILIKE '%CSD%' OR class_id ILIKE '%CSD%' LIMIT 1`
-            );
-            if (csdClass.length > 0) {
-              const c = csdClass[0];
-              result.push({
-                courseId: c.class_id,
-                courseCode: 'CSD201',
-                courseName: c.class_name,
-                description: c.description || '',
-                semester: c.semester,
-                instructorId: c.lecturer_id,
-                isActive: c.is_active,
-                createdAt: new Date(c.created_at),
-                updatedAt: new Date(c.updated_at),
-              });
-            }
-          }
           if (result.length > 0) return result;
         }
       } catch (err: any) {
@@ -474,7 +507,12 @@ export class CourseRepository implements OnModuleInit {
     }
 
     // Fallback: Tìm qua memory map theo cả studentId, email, lowercase
-    const keysToSearch = [studentId, studentId?.toLowerCase()].filter(Boolean) as string[];
+    const keysToSearch = [
+      studentId,
+      studentId?.toLowerCase(),
+      studentEmail,
+      studentEmail?.toLowerCase(),
+    ].filter(Boolean) as string[];
     const matchedClassIds = new Set<string>();
     for (const k of keysToSearch) {
       const ids = this.studentEnrollments.get(k);
@@ -490,18 +528,18 @@ export class CourseRepository implements OnModuleInit {
       coursesToReturn = Array.from(this.records.values());
     }
 
-    // Chuẩn hóa và gom nhóm theo 3 môn cốt lõi: SWP391, PRN211, CSD201
+    // Chuẩn hóa và gom nhóm
     const seenCodes = new Set<string>();
     const coreCourses: CourseRecord[] = [];
 
     for (const c of coursesToReturn) {
       const code = (c.courseCode || c.courseId || '').toUpperCase();
-      let norm = '';
+      let norm = c.courseCode || c.courseId;
       if (code.includes('SWP391')) norm = 'SWP391';
       else if (code.includes('PRN211')) norm = 'PRN211';
       else if (code.includes('CSD201') || code.includes('CSD')) norm = 'CSD201';
 
-      if (norm && !seenCodes.has(norm)) {
+      if (!seenCodes.has(norm)) {
         seenCodes.add(norm);
         coreCourses.push({
           ...c,
@@ -510,19 +548,21 @@ export class CourseRepository implements OnModuleInit {
       }
     }
 
-    // Bổ sung môn cốt lõi nếu chưa có (đặc biệt là CSD201 theo yêu cầu)
-    for (const targetNorm of ['SWP391', 'PRN211', 'CSD201']) {
-      if (!seenCodes.has(targetNorm)) {
-        const found = Array.from(this.records.values()).find((c) => {
-          const upper = (c.courseCode || c.courseId || '').toUpperCase();
-          return upper.includes(targetNorm);
-        });
-        if (found) {
-          seenCodes.add(targetNorm);
-          coreCourses.push({
-            ...found,
-            courseCode: targetNorm,
+    // Bổ sung môn cốt lõi nếu danh sách chưa có môn nào
+    if (coreCourses.length === 0) {
+      for (const targetNorm of ['SWP391', 'PRN211', 'CSD201']) {
+        if (!seenCodes.has(targetNorm)) {
+          const found = Array.from(this.records.values()).find((c) => {
+            const upper = (c.courseCode || c.courseId || '').toUpperCase();
+            return upper.includes(targetNorm);
           });
+          if (found) {
+            seenCodes.add(targetNorm);
+            coreCourses.push({
+              ...found,
+              courseCode: targetNorm,
+            });
+          }
         }
       }
     }
@@ -537,22 +577,36 @@ export class CourseRepository implements OnModuleInit {
         const rows = await this.postgres.safeQuery<any>(
           `SELECT u.user_id, u.student_code, u.full_name, u.email, cm.enrolled_at, cm.status
            FROM class_members cm
-           JOIN users u ON cm.user_id = u.user_id
+           JOIN users u ON cm.user_id = u.user_id OR cm.user_id = u.student_code
            WHERE cm.class_id = $1
            ORDER BY cm.enrolled_at DESC`,
           [classId],
         );
-        return rows.map((r) => ({
-          userId: r.user_id,
-          studentCode: r.student_code || r.user_id,
-          fullName: r.full_name,
-          email: r.email,
-          enrolledAt: new Date(r.enrolled_at),
-          status: r.status,
-        }));
+        if (rows.length > 0) {
+          return rows.map((r) => ({
+            userId: r.user_id,
+            studentCode: r.student_code || r.user_id,
+            fullName: r.full_name,
+            email: r.email,
+            enrolledAt: new Date(r.enrolled_at),
+            status: r.status,
+          }));
+        }
       } catch (err: any) {
         this.logger.warn(`[CourseRepository] getStudentsInCourse error: ${err.message}`);
       }
+    }
+
+    const memList = Array.from(this.courseMembers.get(classId)?.values() || []);
+    if (memList.length > 0) return memList;
+
+    // Default seed students if empty and SWP391
+    if (classId.includes('SWP391')) {
+      return [
+        { userId: 'SE170000', studentCode: 'SE170000', fullName: 'Đinh Thành Trung', email: 'trungdt.student@aita.fpt.edu.vn', enrolledAt: new Date(), status: 'ACTIVE' },
+        { userId: 'SE170123', studentCode: 'SE170123', fullName: 'Trần Thanh Nguyên', email: 'nguyentt@aita.fpt.edu.vn', enrolledAt: new Date(), status: 'ACTIVE' },
+        { userId: 'SE170456', studentCode: 'SE170456', fullName: 'Nguyễn Hoàng Vinh', email: 'vinhtt@aita.fpt.edu.vn', enrolledAt: new Date(), status: 'ACTIVE' },
+      ];
     }
     return [];
   }

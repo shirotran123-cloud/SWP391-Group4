@@ -1,5 +1,6 @@
 import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
 import React, { useState, useEffect } from 'react';
+import JSZip from 'jszip';
 import {
   BookOpen,
   PlusCircle,
@@ -748,27 +749,56 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
-  const handleDownloadSampleCsv = () => {
+  // 1. Tải file mẫu định dạng rỗng để Giảng viên soạn danh sách
+  const handleDownloadTemplateCsv = () => {
     const csvContent =
       'Mã Sinh Viên,Họ Và Tên,Email FPT\n' +
-      'SE170000,Đinh Thành Trung,trungdt.student@aita.fpt.edu.vn\n' +
-      'SE170123,Trần Thanh Nguyên,nguyentt@aita.fpt.edu.vn\n' +
-      'SE201817,Nguyễn Hoàng Vinh,user.student@gmail.com\n' +
-      'SE712137,Võ Thái Trung,vttrung2k6@gmail.com\n' +
-      'SE170456,Lê Hoàng Nam,namlh@aita.fpt.edu.vn\n';
+      'SE170001,Nguyễn Văn A,anguyen@fpt.edu.vn\n' +
+      'SE170002,Trần Thị B,btran@fpt.edu.vn\n';
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `roster_${targetCourseId || 'sample'}.csv`;
+    a.download = 'mau_danh_sach_sinh_vien.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  const handleCsvFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // 2. Xuất danh sách sinh viên thực tế đang học lớp được chọn từ CSDL
+  const handleExportCourseRoster = async () => {
+    const courseIdToFetch = targetCourseId || 'CRS-SWP391';
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToFetch}/students`);
+      if (res.ok) {
+        const json = await res.json();
+        const students = json.data || json || [];
+        if (Array.isArray(students) && students.length > 0) {
+          let csvContent = 'Mã Sinh Viên,Họ Và Tên,Email\n';
+          for (const s of students) {
+            csvContent += `${s.studentCode || s.userId},${s.fullName || s.studentCode},${s.email}\n`;
+          }
+          const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `danh_sach_sinh_vien_${courseIdToFetch}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          return;
+        }
+      }
+      alert(`Lớp học [${courseIdToFetch}] hiện chưa có sinh viên nào. Vui lòng tải file mẫu để nhập sinh viên vào lớp!`);
+    } catch (err: any) {
+      alert('Không thể xuất danh sách sinh viên: ' + err.message);
+    }
+  };
+
+  const handleCsvFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploadedCsvFile(file);
@@ -776,26 +806,101 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setExcelStatus(null);
     setSimulatedRollback(null);
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      try {
-        const text = event.target?.result as string;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    try {
+      if (ext === 'xlsx') {
+        const zip = await JSZip.loadAsync(file);
+        const sharedStringsFile = zip.file('xl/sharedStrings.xml');
+        const sharedStrings: string[] = [];
+        if (sharedStringsFile) {
+          const xmlText = await sharedStringsFile.async('text');
+          const matches = xmlText.match(/<t[^>]*>([^<]*)<\/t>/g) || [];
+          for (const m of matches) {
+            const val = m.replace(/<t[^>]*>/, '').replace(/<\/t>/, '');
+            sharedStrings.push(val);
+          }
+        }
+
+        const sheetFile = zip.file('xl/worksheets/sheet1.xml');
+        if (!sheetFile) throw new Error('Không tìm thấy sheet1.xml trong file Excel!');
+        const sheetXml = await sheetFile.async('text');
+        const rowMatches = sheetXml.match(/<row[^>]*>[\s\S]*?<\/row>/g) || [];
+        const students: Array<{ studentCode: string; fullName: string; email: string }> = [];
+
+        for (let i = 0; i < rowMatches.length; i++) {
+          const rowXml = rowMatches[i];
+          const cellMatches = rowXml.match(/<c[^>]*>[\s\S]*?<\/c>/g) || [];
+          const rowValues: string[] = [];
+          for (const cell of cellMatches) {
+            const isShared = cell.includes('t="s"');
+            const vMatch = cell.match(/<v>([^<]*)<\/v>/);
+            if (vMatch) {
+              const val = vMatch[1];
+              if (isShared) {
+                const idx = parseInt(val, 10);
+                rowValues.push(sharedStrings[idx] || '');
+              } else {
+                rowValues.push(val);
+              }
+            }
+          }
+
+          if (i === 0 && rowValues.some((v) => /mssv|mã|email|tên/i.test(v))) {
+            continue;
+          }
+
+          let mssv = '';
+          let name = '';
+          let email = '';
+          for (const val of rowValues) {
+            const trimmed = val.trim();
+            if (trimmed.includes('@')) {
+              email = trimmed;
+            } else if (/^[A-Za-z]{2}\d{4,8}$/i.test(trimmed)) {
+              mssv = trimmed.toUpperCase();
+            } else if (trimmed.length > 2 && !name) {
+              name = trimmed;
+            }
+          }
+
+          if (!mssv && rowValues[0]) mssv = rowValues[0].trim();
+          if (!name && rowValues[1]) name = rowValues[1].trim();
+          if (!email && rowValues[2]) email = rowValues[2].trim();
+
+          if (mssv) {
+            students.push({
+              studentCode: mssv,
+              fullName: name || mssv,
+              email: email || `${mssv.toLowerCase()}@fpt.edu.vn`,
+            });
+          }
+        }
+
+        if (students.length === 0) {
+          setCsvParseError('Không trích xuất được sinh viên nào từ file Excel (.xlsx)! Vui lòng kiểm tra các cột.');
+          setParsedCsvStudents([]);
+        } else {
+          setParsedCsvStudents(students);
+        }
+      } else {
+        const text = await file.text();
         if (!text || !text.trim()) {
-          setCsvParseError('File CSV được chọn rỗng hoặc không có dữ liệu!');
+          setCsvParseError('File được chọn rỗng hoặc không có dữ liệu!');
           setParsedCsvStudents([]);
           return;
         }
 
         const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l.length > 0);
         if (lines.length <= 1) {
-          setCsvParseError('File CSV chỉ có dòng tiêu đề hoặc không chứa bản ghi sinh viên nào!');
+          setCsvParseError('File chỉ có dòng tiêu đề hoặc không chứa bản ghi sinh viên nào!');
           setParsedCsvStudents([]);
           return;
         }
 
+        const delimiter = lines[0].includes('\t') ? '\t' : lines[0].includes(';') ? ';' : ',';
         const students: Array<{ studentCode: string; fullName: string; email: string }> = [];
         for (let i = 1; i < lines.length; i++) {
-          const parts = lines[i].split(',').map((p) => p.trim().replace(/^["']|["']$/g, ''));
+          const parts = lines[i].split(delimiter).map((p) => p.trim().replace(/^["']|["']$/g, ''));
           if (parts.length >= 3 && parts[0] && parts[2]) {
             students.push({
               studentCode: parts[0],
@@ -812,35 +917,29 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         }
 
         if (students.length === 0) {
-          setCsvParseError('Không trích xuất được sinh viên nào từ CSV! Kiểm tra các cột: Mã Sinh Viên, Họ Và Tên, Email.');
+          setCsvParseError('Không trích xuất được sinh viên nào từ file CSV! Kiểm tra các cột: Mã Sinh Viên, Họ Và Tên, Email.');
           setParsedCsvStudents([]);
         } else {
           setParsedCsvStudents(students);
         }
-      } catch (err: any) {
-        setCsvParseError('Lỗi đọc nội dung file CSV: ' + err.message);
-        setParsedCsvStudents([]);
       }
-    };
-    reader.readAsText(file, 'UTF-8');
+    } catch (err: any) {
+      setCsvParseError('Lỗi đọc nội dung file: ' + err.message);
+      setParsedCsvStudents([]);
+    }
   };
 
-  const handleExecuteLiveBulkImport = async (triggerError: boolean, customStudents?: any[]) => {
+  const handleExecuteLiveBulkImport = async (_triggerError = false, customStudents?: any[]) => {
     setExcelLoading(true);
     setExcelStatus(null);
     setSimulatedRollback(null);
 
-    const studentsToImport = customStudents || (parsedCsvStudents.length > 0 ? parsedCsvStudents : (triggerError ? [
-      { studentCode: 'SE170000', fullName: 'Đinh Thành Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
-      { studentCode: 'SE170123', fullName: 'Trần Thanh Nguyên', email: 'nguyentt@aita.fpt.edu.vn' },
-      { studentCode: 'SE170123_ERROR_ROLLBACK', fullName: 'Nguyễn Văn Lỗi (Trùng MSSV)', email: 'loi@aita.fpt.edu.vn' },
-    ] : [
-      { studentCode: 'SE170000', fullName: 'Đinh Thành Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
-      { studentCode: 'SE170123', fullName: 'Trần Thanh Nguyên', email: 'nguyentt@aita.fpt.edu.vn' },
-      { studentCode: 'SE201817', fullName: 'Nguyễn Hoàng Vinh', email: 'user.student@gmail.com' },
-      { studentCode: 'SE712137', fullName: 'Võ Thái Trung', email: 'vttrung2k6@gmail.com' },
-      { studentCode: 'SE170456', fullName: 'Lê Hoàng Nam', email: 'vinhtt@aita.fpt.edu.vn' },
-    ]));
+    const studentsToImport = customStudents || parsedCsvStudents;
+    if (!studentsToImport || studentsToImport.length === 0) {
+      setExcelLoading(false);
+      setExcelStatus('⚠️ Vui lòng chọn file Excel (.xlsx) hoặc CSV hợp lệ chứa danh sách sinh viên trước khi bấm Import!');
+      return;
+    }
 
     try {
       const courseIdToUse = targetCourseId || 'CRS-SWP391';
@@ -864,6 +963,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           c.courseId === courseIdToUse ? { ...c, studentCount: Math.max(c.studentCount, studentsToImport.length) } : c
         )
       );
+
+      try {
+        window.dispatchEvent(new Event('aita_courses_updated'));
+      } catch {
+        // ignore
+      }
     } catch (err: any) {
       setSimulatedRollback(true);
       setExcelStatus(
@@ -2249,13 +2354,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             <button
               type="button"
-              onClick={handleDownloadSampleCsv}
+              onClick={handleExportCourseRoster}
               style={{
                 padding: '9px 16px',
                 borderRadius: '8px',
-                backgroundColor: 'rgba(6, 182, 212, 0.15)',
-                border: '1px solid rgba(6, 182, 212, 0.35)',
-                color: 'var(--accent-cyan)',
+                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                color: '#34d399',
                 fontSize: '13px',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -2263,8 +2368,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 alignItems: 'center',
                 gap: '8px',
               }}
+              title="Tải về danh sách tất cả sinh viên hiện đang có trong lớp học phần này"
             >
-              <Download size={15} /> Tải File Mẫu Roster (.csv)
+              <Download size={15} /> 📥 Xuất Danh Sách Sinh Viên Đã Có (.csv)
             </button>
           </div>
 
@@ -2286,17 +2392,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               <div>
                 <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#ffffff', marginBottom: '4px' }}>
-                  2. Tải Lên &amp; Nhập File Roster Sinh Viên (.csv)
+                  2. Tải Lên &amp; Nhập File Roster Sinh Viên (.xlsx, .csv)
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
-                  Hỗ trợ định dạng file <code>.csv</code> chuẩn UTF-8 (xuất từ Excel hoặc Google Sheets với các cột: <strong>Mã Sinh Viên, Họ Và Tên, Email</strong>)
+                  Hỗ trợ định dạng file <code>.xlsx</code> (Microsoft Excel) hoặc <code>.csv</code> chuẩn UTF-8 (với các cột: <strong>Mã Sinh Viên, Họ Và Tên, Email</strong>)
                 </p>
               </div>
 
               <input
                 type="file"
                 id="roster-csv-input"
-                accept=".csv,text/csv"
+                accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                 onChange={handleCsvFileChange}
                 style={{ display: 'none' }}
               />
@@ -2320,8 +2426,29 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   }}
                 >
                   <Upload size={16} color="var(--accent-cyan)" />
-                  {uploadedCsvFile ? `Đổi File Khác (${uploadedCsvFile.name})` : 'Chọn File CSV Từ Máy Tính (.csv)'}
+                  {uploadedCsvFile ? `Đổi File Khác (${uploadedCsvFile.name})` : 'Chọn File Excel / CSV (.xlsx, .csv)'}
                 </label>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplateCsv}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '8px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: 'var(--text-muted)',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                  title="Tải file mẫu trắng chỉ có tiêu đề cột để bạn tự điền danh sách sinh viên mới"
+                >
+                  <Download size={15} /> 📄 Tải File Mẫu Rỗng (.csv)
+                </button>
 
                 {uploadedCsvFile && (
                   <button
@@ -2415,71 +2542,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '28px' }}>
-            <div style={{ padding: '24px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <CheckCircle2 size={24} color="#10b981" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 1: Nhập Live Thành Công 100% (Commit)</h3>
-              </div>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
-                Nạp danh sách sinh viên chuẩn vào PostgreSQL 15 bảng <code>class_members</code>. Tất cả tài khoản được cấp quyền truy cập môn học. Giao diện thực hiện COMMIT toàn bộ.
-              </p>
-              <button
-                type="button"
-                onClick={() => handleExecuteLiveBulkImport(false)}
-                disabled={excelLoading}
-                style={{
-                  width: '100%',
-                  padding: '11px 16px',
-                  borderRadius: '8px',
-                  backgroundColor: '#10b981',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  cursor: excelLoading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                }}
-              >
-                <Upload size={16} /> ⚡ Thực Thi Giao Dịch Nhập Roster (Live PostgreSQL)
-              </button>
-            </div>
 
-            <div style={{ padding: '24px', borderRadius: '12px', backgroundColor: 'rgba(244, 63, 94, 0.08)', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <AlertTriangle size={24} color="#f43f5e" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 2: Minh Chứng Lỗi Dòng N & 100% Rollback (R06)</h3>
-              </div>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
-                Gửi file Excel có dòng số 3 chứa lỗi trùng lặp MSSV [SE170123]. Backend mở SQL Transaction, phát hiện vi phạm và thực thi 100% ROLLBACK bảo toàn dữ liệu.
-              </p>
-              <button
-                type="button"
-                onClick={() => handleExecuteLiveBulkImport(true)}
-                disabled={excelLoading}
-                style={{
-                  width: '100%',
-                  padding: '11px 16px',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(244, 63, 94, 0.2)',
-                  border: '1px solid #f43f5e',
-                  color: '#f43f5e',
-                  fontWeight: 700,
-                  fontSize: '13px',
-                  cursor: excelLoading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                }}
-              >
-                <AlertTriangle size={16} /> ⚠️ Kích Hoạt Thử Nghiệm Lỗi Dòng 3 &amp; Rollback
-              </button>
-            </div>
-          </div>
 
           {excelLoading && (
             <div style={{ textAlign: 'center', padding: '20px', color: 'var(--accent-primary)', fontSize: '14px', fontWeight: 600 }}>

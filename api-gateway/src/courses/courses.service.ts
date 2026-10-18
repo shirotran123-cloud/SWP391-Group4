@@ -87,7 +87,10 @@ export class CoursesService {
   }
 
   public async getCoursesByStudent(studentId: string): Promise<CourseRecord[]> {
-    return this.courseRepo.findCoursesByStudent(studentId);
+    const user = (await this.userRepo.findById(studentId)) || (await this.userRepo.findByEmail(studentId));
+    const idToSearch = user?.userId || user?.studentCode || studentId;
+    const emailToSearch = user?.email || (studentId.includes('@') ? studentId : undefined);
+    return this.courseRepo.findCoursesByStudent(idToSearch, emailToSearch);
   }
 
   public async getStudentsInCourse(courseId: string) {

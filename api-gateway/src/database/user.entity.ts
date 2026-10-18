@@ -2,6 +2,7 @@ export type UserRole = 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
 
 export interface UserRecord {
   userId: string;
+  studentCode?: string;
   email: string;
   fullName: string;
   role: UserRole;

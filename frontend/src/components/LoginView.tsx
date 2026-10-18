@@ -562,6 +562,28 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
               <button
                 type="button"
+                onClick={() => verifyEmailWithBackend('linhcampochia@gmail.com', 'Linh Cam Po Chia (Giảng Viên)')}
+                style={{
+                  padding: '7px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(52, 211, 153, 0.5)',
+                  background: 'rgba(52, 211, 153, 0.15)',
+                  color: '#6ee7b7',
+                  fontSize: '11.5px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontWeight: 600,
+                }}
+              >
+                <UserCheck size={14} />
+                <span>✨ <strong>linhcampochia@gmail.com</strong> (Đã cấp quyền • Giảng Viên)</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => verifyEmailWithBackend('giangvien.edu@gmail.com', 'ThS. Giảng Viên AITA')}
                 style={{
                   padding: '7px 10px',

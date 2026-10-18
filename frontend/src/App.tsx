@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { SubmissionView } from './components/SubmissionView';
 import { LiveGradingModal } from './components/LiveGradingModal';
 import { LoginView } from './components/LoginView';
@@ -120,37 +120,45 @@ export function App() {
   const [selectedStudentCourseId, setSelectedStudentCourseId] = useState<string>('ALL');
 
   useEffect(() => {
-    if (currentUser?.role === 'STUDENT') {
-      const studentId = currentUser.userId || 'SE170000';
-      fetch(`${API_BASE_URL}/api/v1/courses/student/${studentId}`)
-        .then((res) => res.json())
-        .then((data) => {
-          const list = data.data || data || [];
-          if (Array.isArray(list) && list.length > 0) {
-            const seen = new Set<string>();
-            const deduped: any[] = [];
-            for (const c of list) {
-              const upper = (c.courseCode || c.courseId || '').toUpperCase();
-              let norm = c.courseCode;
-              if (upper.includes('SWP391')) norm = 'SWP391';
-              else if (upper.includes('PRN211')) norm = 'PRN211';
-              else if (upper.includes('CSD201') || upper.includes('CSD')) norm = 'CSD201';
+    const fetchStudentCourses = () => {
+      if (currentUser?.role === 'STUDENT') {
+        const studentId = currentUser.userId || currentUser.email || 'SE170000';
+        fetch(`${API_BASE_URL}/api/v1/courses/student/${studentId}`)
+          .then((res) => res.json())
+          .then((data) => {
+            const list = data.data || data || [];
+            if (Array.isArray(list) && list.length > 0) {
+              const seen = new Set<string>();
+              const deduped: any[] = [];
+              for (const c of list) {
+                const upper = (c.courseCode || c.courseId || '').toUpperCase();
+                let norm = c.courseCode || c.courseId;
+                if (upper.includes('SWP391')) norm = 'SWP391';
+                else if (upper.includes('PRN211')) norm = 'PRN211';
+                else if (upper.includes('CSD201') || upper.includes('CSD')) norm = 'CSD201';
 
-              if (!seen.has(norm)) {
-                seen.add(norm);
-                deduped.push({
-                  ...c,
-                  courseCode: norm,
-                });
+                if (!seen.has(norm)) {
+                  seen.add(norm);
+                  deduped.push({
+                    ...c,
+                    courseCode: norm,
+                  });
+                }
+              }
+              if (deduped.length > 0) {
+                setEnrolledCourses(deduped);
               }
             }
-            if (deduped.length > 0) {
-              setEnrolledCourses(deduped);
-            }
-          }
-        })
-        .catch(() => {});
-    }
+          })
+          .catch(() => {});
+      }
+    };
+
+    fetchStudentCourses();
+    window.addEventListener('aita_courses_updated', fetchStudentCourses);
+    return () => {
+      window.removeEventListener('aita_courses_updated', fetchStudentCourses);
+    };
   }, [currentUser]);
 
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
