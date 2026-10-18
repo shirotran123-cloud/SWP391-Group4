@@ -202,9 +202,30 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       });
       // Shows the account chooser; the callback above receives the credential.
       gsi.prompt((notification: any) => {
+        const reason =
+          (typeof notification?.getNotDisplayedReason === 'function' &&
+            notification.getNotDisplayedReason()) ||
+          (typeof notification?.getSkippedReason === 'function' &&
+            notification.getSkippedReason()) ||
+          '';
+
+        // `unregistered_origin` means this exact origin is missing from the OAuth client's
+        // "Authorized JavaScript origins" list. Say precisely what to add instead of a
+        // generic failure, because only the project owner can change that setting.
+        if (reason === 'unregistered_origin') {
+          setErrorMsg(
+            `Google chưa cho phép origin "${window.location.origin}". ` +
+              `Vào Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client ID ` +
+              `"${activeClientId.slice(0, 24)}…" và thêm "${window.location.origin}" vào cả ` +
+              `"Authorized JavaScript origins" lẫn "Authorized redirect URIs".`,
+          );
+          return;
+        }
+
         if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
           setErrorMsg(
-            'Trình duyệt chặn cửa sổ đăng nhập Google. Hãy cho phép popup rồi thử lại.',
+            `Google không hiển thị được hộp đăng nhập (lý do: ${reason || 'không xác định'}). ` +
+              `Hãy cho phép popup cho trang này, hoặc dùng nút "Đăng nhập bằng Google (chuyển trang)" bên dưới.`,
           );
         }
       });
@@ -433,21 +454,40 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         </div>
 
         {/* The email/password + OTP sign-in was removed at the client's request;
-            Google SSO below is now the single entry point. */}
+            Google SSO is now the single entry point. */}
 
         <p
           style={{
             fontSize: '12px',
             color: '#94a3b8',
             lineHeight: '1.6',
-            margin: '0 0 16px 0',
+            margin: '0 0 12px 0',
           }}
         >
-          Nhấp nút trên để điều hướng sang trang đăng nhập chính thức của Google (<code style={{ color: '#a8c7fa' }}>accounts.google.com</code>).<br />
+          Hộp thoại chọn tài khoản của Google (<code style={{ color: '#a8c7fa' }}>accounts.google.com</code>) sẽ mở ra để xác thực.<br />
           <span style={{ color: '#fbbf24', fontSize: '11.5px' }}>
             * Chỉ tài khoản Gmail đã có trong hệ thống CSDL mới được cấp quyền truy cập.
           </span>
         </p>
+
+        {/* Fallback for environments where popups are blocked. This path uses a redirect,
+            so the origin must also be listed under the client's Authorized redirect URIs. */}
+        <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+          <button
+            onClick={handleRedirectToGoogle}
+            disabled={loading}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'rgba(165, 180, 252, 0.75)',
+              fontSize: '11.5px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Popup bị chặn? Đăng nhập bằng Google (chuyển trang)
+          </button>
+        </div>
 
         {/* The "check account in DB" demo panel was removed: it signed the user in by
             POSTing a bare email to /api/v1/auth/google, so anyone could become any
