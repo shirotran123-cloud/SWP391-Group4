@@ -65,7 +65,8 @@ export interface User {
   userId: string;
   email: string;
   fullName: string;
-  role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
+  /** HOD (Head of Department) is part of the SSOT role set in GEMINI.md. */
+  role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN' | 'HOD';
   token?: string;
   avatarUrl?: string;
   department?: string;

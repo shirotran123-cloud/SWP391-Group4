@@ -5,6 +5,7 @@ import { LoginView } from './components/LoginView';
 import { LoginModal } from './components/LoginModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { LecturerDashboard } from './components/LecturerDashboard';
+import { HodDashboard } from './components/HodDashboard';
 import { RblBenchmarkView } from './components/RblBenchmarkView';
 import { StudentAppealsView } from './components/StudentAppealsView';
 import { StudentHistoryView } from './components/StudentHistoryView';
@@ -44,14 +45,15 @@ export function App() {
     }
   });
 
-  // Active view: 'student' | 'admin' | 'lecturer' (tự động phân định theo vai trò)
-  const [activeView, setActiveView] = useState<'student' | 'admin' | 'lecturer'>(() => {
+  // Active view: 'student' | 'admin' | 'lecturer' | 'hod' (tự động phân định theo vai trò)
+  const [activeView, setActiveView] = useState<'student' | 'admin' | 'lecturer' | 'hod'>(() => {
     try {
       const stored = localStorage.getItem('aita_user');
       if (stored) {
         const u = JSON.parse(stored);
         if (u.role === 'INSTRUCTOR') return 'lecturer';
         if (u.role === 'ADMIN') return 'admin';
+        if (u.role === 'HOD') return 'hod';
       }
     } catch {
       // ignore
@@ -238,6 +240,10 @@ export function App() {
       setActiveView('lecturer');
     } else if (user.role === 'ADMIN') {
       setActiveView('admin');
+    } else if (user.role === 'HOD') {
+      // Head of Department gets its own console instead of falling through to the
+      // student view, which is what previously made the role look useless.
+      setActiveView('hod');
     } else {
       setActiveView('student');
       setStudentActiveTab('submission');
@@ -540,6 +546,7 @@ export function App() {
     ? [
         { key: 'admin', label: 'Hệ thống Quản trị', icon: <LayoutDashboard size={14} /> },
         { key: 'lecturer', label: 'Cổng Giảng Viên', icon: <BookOpen size={14} /> },
+        { key: 'hod', label: 'Cổng Trưởng Bộ Môn', icon: <Shield size={14} /> },
       ]
     : [];
 
@@ -700,6 +707,11 @@ export function App() {
         {/* ADMIN VIEW */}
         {activeView === 'admin' && currentUser.role === 'ADMIN' && (
           <AdminDashboard token={localStorage.getItem('aita_token') || ''} />
+        )}
+
+        {/* HOD VIEW: Trưởng bộ môn — giám sát liêm chính học thuật & duyệt phúc khảo */}
+        {(currentUser.role === 'HOD' || (activeView === 'hod' && currentUser.role === 'ADMIN')) && (
+          <HodDashboard />
         )}
 
         {/* LECTURER VIEW: Dành riêng cho Giảng viên (INSTRUCTOR) */}
