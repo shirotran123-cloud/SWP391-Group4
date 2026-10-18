@@ -42,13 +42,6 @@ const GoogleIcon = () => (
   </svg>
 );
 
-const PRESET_ACCOUNTS = [
-  { email: 'trungse170000@fpt.edu.vn', name: 'Đinh Thành Trung', role: 'STUDENT' as const, label: 'Sinh viên FPT', color: '#10b981' },
-  { email: 'sinhvien.test@fpt.edu.vn', name: 'Sinh viên Kiểm Thử', role: 'STUDENT' as const, label: 'Sinh viên FPT', color: '#10b981' },
-  { email: 'admin@aita.fpt.edu.vn', name: 'Quản trị viên Hệ thống', role: 'ADMIN' as const, label: 'Admin', color: '#f59e0b' },
-  { email: 'admin.aita@gmail.com', name: 'Quản Trị Viên AITA (Gmail)', role: 'ADMIN' as const, label: 'Admin', color: '#f59e0b' },
-];
-
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {
   const [step, setStep] = useState<'EMAIL' | 'OTP'>('EMAIL');
   const [emailInput, setEmailInput] = useState('');
@@ -470,51 +463,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
               )}
             </button>
 
-            <div
-              style={{
-                textAlign: 'center',
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-                margin: '18px 0 12px 0',
-                textTransform: 'uppercase',
-                fontWeight: 600,
-              }}
-            >
-              Tài Khoản Mẫu Nhanh
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              {PRESET_ACCOUNTS.map((acc) => (
-                <button
-                  key={acc.email}
-                  onClick={() => {
-                    setEmailInput(acc.email);
-                    // Tài khoản demo dùng mật khẩu mặc định để đăng nhập một chạm.
-                    if (!passwordInput.trim()) setPasswordInput('123456');
-                    void handleRequestOtp(acc.email, passwordInput.trim() || '123456');
-                  }}
-                  disabled={loading}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '8px 12px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
-                    background: 'rgba(255, 255, 255, 0.03)',
-                    cursor: 'pointer',
-                    color: '#ffffff',
-                    textAlign: 'left',
-                  }}
-                >
-                  <div>
-                    <div style={{ fontSize: '12.5px', fontWeight: 600 }}>{acc.name}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{acc.email}</div>
-                  </div>
-                  <ChevronRight size={14} color="#64748b" />
-                </button>
-              ))}
-            </div>
+            {/* The hard-coded "quick sample accounts" list was removed: it advertised
+                accounts that may not exist in the database and let anyone log in with a
+                shared default password. Users now type their own credentials. */}
           </div>
         ) : (
           <div>

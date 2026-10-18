@@ -1,4 +1,4 @@
-﻿import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
+import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
 ﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   UploadCloud, FileArchive, X, Send, ShieldCheck, Clock,
@@ -90,308 +90,10 @@ interface SubmissionViewProps {
   onSubmit: (file: File, task?: Task) => void;
 }
 
-const defaultAssignmentPool: StudentTaskItem[] = [
-  {
-    id: 'ASM-SWP-01',
-    courseId: 'COURSE-SWP391',
-    courseCode: 'SWP391',
-    course: 'SWP391 - Đồ Án Phát Triển Phần Mềm (Agile Scrum)',
-    title: 'Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị',
-    description: 'Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian O(log N) và tuân thủ các nguyên lý SOLID (SRP, DIP).',
-    deadline: new Date(Date.now() + 5 * 24 * 3600 * 1000 + 4 * 3600 * 1000).toISOString(),
-    timeLimitMs: 2000,
-    memoryLimitMb: 512,
-    allowedLanguages: ['java', 'python', 'cpp'],
-    allowedExtensions: ['.zip'],
-    maxSizeMb: 10,
-    testCasesCount: 7,
-    status: 'PUBLISHED',
-    rubrics: [
-      { criterion: 'Tính đúng đắn thuật toán & Vượt qua Testcases', maxScore: 5.0, description: 'Pass 100% testcases chuẩn và biên' },
-      { criterion: 'Clean Code & Tối ưu O(N log N)', maxScore: 2.5, description: 'Mã nguồn rõ ràng, đặt tên biến chuẩn, tối ưu thời gian' },
-      { criterion: 'Thiết kế Hướng đối tượng & SOLID', maxScore: 2.5, description: 'Tuân thủ Single Responsibility và Dependency Inversion' },
-    ],
-    technicalRequirements: {
-      problemContext: 'Xây dựng cấu trúc cây tìm kiếm nhị phân Generic BST<T extends Comparable<T>> quản lý danh mục sản phẩm. Hỗ trợ các thao tác chèn (Insert), xóa (Delete), tìm kiếm (Search) và duyệt cây In-Order / Pre-Order.',
-      inputFormat: [
-        'Dòng 1: Số lượng thao tác Q (1 ≤ Q ≤ 50,000).',
-        'Q dòng tiếp theo: Mỗi dòng chứa lệnh INSERT x, DELETE x hoặc SEARCH x.',
-      ],
-      outputFormat: [
-        'Với thao tác SEARCH x: In ra FOUND hoặc NOT_FOUND trên một dòng.',
-        'Kết thúc toàn bộ thao tác: In ra chuỗi duyệt In-Order của cây.',
-      ],
-      constraints: [
-        '1 ≤ Q ≤ 50,000 thao tác.',
-        'Giá trị phần tử: -10^6 ≤ x ≤ 10^6.',
-        'Thời gian chạy tối đa: 2000 ms, RAM 512MB.',
-      ],
-      complexityRequirements: [
-        'Tìm kiếm, chèn, xóa trung bình: O(log N).',
-        'Duyệt cây: O(N).',
-      ],
-      solidGuidelines: [
-        'Tách Node class thành Generic class riêng biệt.',
-        'Sử dụng Interface IBstTree<T> để đóng gói các hành vi của cây.',
-      ],
-    },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Thao Tác Chèn & Duyệt In-Order)',
-        input: '5\\nINSERT 20\\nINSERT 10\\nINSERT 30\\nINSERT 25\\nSEARCH 30',
-        expectedOutput: 'FOUND\\n10 20 25 30',
-        explanation: 'Chèn các nút vào cây BST, tìm thấy 30 in FOUND, sau đó duyệt In-Order thu được dãy tăng dần 10 20 25 30.',
-      },
-    ],
-  },
-  {
-    id: 'ASM-SWP-02',
-    courseId: 'COURSE-SWP391',
-    courseCode: 'SWP391',
-    course: 'SWP391 - Đồ Án Phát Triển Phần Mềm (Agile Scrum)',
-    title: 'Thuật toán Sắp xếp & Tối ưu O(N log N) 3-Way Partitioning',
-    description: 'Cài đặt giải thuật QuickSort tối ưu hóa phân hoạch 3 phần (3-Way Partitioning) nhằm triệt tiêu hoàn toàn trường hợp suy biến trên tập dữ liệu trùng lặp.',
-    deadline: new Date(Date.now() + 18 * 3600 * 1000 + 30 * 60 * 1000).toISOString(),
-    timeLimitMs: 1500,
-    memoryLimitMb: 256,
-    allowedLanguages: ['java', 'python', 'cpp'],
-    allowedExtensions: ['.zip'],
-    maxSizeMb: 10,
-    testCasesCount: 5,
-    status: 'PUBLISHED',
-    rubrics: [
-      { criterion: 'Đúng đắn Testcases & O(N log N)', maxScore: 7.0, description: 'Vượt qua bộ testcases biên và bão hòa' },
-      { criterion: 'Clean Code & SOLID SRP', maxScore: 3.0, description: 'Tách biệt thuật toán và hàm tiện ích' },
-    ],
-    technicalRequirements: {
-      problemContext: 'Khi mảng có nhiều phần tử trùng lặp (ví dụ: mảng toàn số 1 và 0), thuật toán QuickSort truyền thống sẽ suy biến thành O(N^2). Sinh viên cần triển khai giải thuật phân hoạch 3 đoạn (Dutch National Flag Algorithm) chia mảng thành: nhỏ hơn pivot, bằng pivot và lớn hơn pivot, đảm bảo O(N log N) ngay cả khi tất cả phần tử đều bằng nhau.',
-      inputFormat: [
-        'Dòng 1: Số nguyên dương N (1 ≤ N ≤ 200,000).',
-        'Dòng 2: N số nguyên cách nhau bởi khoảng trắng.',
-      ],
-      outputFormat: [
-        'In ra mảng sau khi sắp xếp tăng dần trên một dòng.',
-      ],
-      constraints: [
-        '1 ≤ N ≤ 200,000.',
-        'Thời gian thực thi tối đa: 1500 ms.',
-      ],
-      complexityRequirements: [
-        'Độ phức tạp thời gian: O(N log N) trong mọi trường hợp trùng lặp.',
-      ],
-      solidGuidelines: [
-        'Tách logic phân hoạch (PartitionEngine) độc lập với hàm sắp xếp đệ quy.',
-      ],
-    },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Trùng Lặp Cao)',
-        input: '7\\n2 1 2 0 1 2 0',
-        expectedOutput: '0 0 1 1 2 2 2',
-        explanation: 'Phân hoạch 3 phần sắp xếp chính xác trong O(N) khi số lượng giá trị phân biệt nhỏ.',
-      },
-    ],
-  },
-  {
-    id: 'ASM-CSD-01',
-    courseId: 'COURSE-CSD201',
-    courseCode: 'CSD201',
-    course: 'CSD201 - Cấu Trúc Dữ Liệu & Giải Thuật Nâng Cao',
-    title: 'Cài Đặt Cây AVL Tự Cân Bằng (Self-Balancing Tree)',
-    description: 'Triển khai cây AVL với các phép xoay đơn (Left/Right) và xoay kép (Left-Right/Right-Left). Kiểm tra tính cân bằng với 1,000 thao tác chèn/xóa.',
-    deadline: new Date(Date.now() + 8 * 24 * 3600 * 1000).toISOString(),
-    timeLimitMs: 2000,
-    memoryLimitMb: 512,
-    allowedLanguages: ['java', 'cpp'],
-    allowedExtensions: ['.zip'],
-    maxSizeMb: 10,
-    testCasesCount: 6,
-    status: 'PUBLISHED',
-    rubrics: [
-      { criterion: 'Cân bằng cây AVL & Phép xoay chuẩn', maxScore: 6.0, description: 'Thực hiện chính xác hệ số cân bằng Balance Factor' },
-      { criterion: 'Độ phức tạp O(log N)', maxScore: 4.0, description: 'Đảm bảo chiều cao cây không vượt quá 1.44 log2(N)' },
-    ],
-    technicalRequirements: {
-      problemContext: 'Cài đặt cây nhị phân tìm kiếm tự cân bằng AVL Tree. Mỗi nút lưu trữ giá trị và chiều cao (height). Sau mỗi thao tác chèn hoặc xóa, tính toán hệ số cân bằng Balance Factor = height(left) - height(right). Nếu Balance Factor không thuộc {-1, 0, 1}, phải kích hoạt phép xoay tương ứng (Left Rotation, Right Rotation, Left-Right Rotation, Right-Left Rotation).',
-      inputFormat: [
-        'Dòng 1: Số nguyên dương N là số lượng thao tác (1 ≤ N ≤ 50,000).',
-        'N dòng tiếp theo: Mỗi dòng là lệnh INSERT x hoặc DELETE x.',
-      ],
-      outputFormat: [
-        'Dòng 1: Duyệt cây theo thứ tự In-Order sau khi hoàn tất chuỗi thao tác.',
-        'Dòng 2: In ra thông tin gốc và chiều cao dạng "Root: X | Height: Y".',
-      ],
-      constraints: [
-        '1 ≤ N ≤ 50,000.',
-        'Giá trị nút: -10^6 ≤ x ≤ 10^6.',
-        'Thời gian chạy tối đa: 2000 ms, RAM 512MB.',
-        'Không được dùng thư viện có sẵn như std::map hay java.util.TreeMap.',
-      ],
-      complexityRequirements: [
-        'Thời gian chèn/xóa/tìm kiếm: O(log N) nghiêm ngặt.',
-        'Không gian bộ nhớ: O(N).',
-      ],
-      solidGuidelines: [
-        'Node class lưu trữ height và các con trỏ.',
-        'Tách logic xoay (rotateLeft, rotateRight) thành các hàm helper sạch sẽ.',
-      ],
-    },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Xoay Kép Left-Right)',
-        input: '3\\nINSERT 30\\nINSERT 10\\nINSERT 20',
-        expectedOutput: '10 20 30\\nRoot: 20 | Height: 2',
-        explanation: 'Chèn 30 -> 10 -> 20 tạo thành thế mất cân bằng LR tại nút 30. Thực hiện xoay kép đưa 20 lên làm gốc, chiều cao đạt 2.',
-      },
-    ],
-  },
-  {
-    id: 'ASM-CSD-02',
-    courseId: 'COURSE-CSD201',
-    courseCode: 'CSD201',
-    course: 'CSD201 - Cấu Trúc Dữ Liệu & Giải Thuật Nâng Cao',
-    title: 'Tìm Đường Đi Ngắn Nhất Đồ Thị Dijkstra & Min-Heap',
-    description: 'Cài đặt thuật toán Dijkstra tìm đường đi ngắn nhất đồ thị có trọng số dương sử dụng Min-Heap Priority Queue. Tuân thủ nguyên lý Đơn trách nhiệm (SRP).',
-    deadline: new Date(Date.now() + 12 * 24 * 3600 * 1000).toISOString(),
-    timeLimitMs: 2500,
-    memoryLimitMb: 512,
-    allowedLanguages: ['java', 'python', 'cpp'],
-    allowedExtensions: ['.zip'],
-    maxSizeMb: 10,
-    testCasesCount: 8,
-    status: 'PUBLISHED',
-    rubrics: [
-      { criterion: 'Đúng đắn Dijkstra O((V+E)log V)', maxScore: 7.0, description: 'Vượt qua 100% testcases đồ thị lớn' },
-      { criterion: 'Thiết kế Hướng đối tượng', maxScore: 3.0, description: 'Đóng gói Graph, Vertex, Edge tách bạch' },
-    ],
-    technicalRequirements: {
-      problemContext: 'Cho đồ thị có hướng G = (V, E) với trọng số các cạnh w ≥ 0 đại diện cho mạng lưới các trung tâm định tuyến dữ liệu. Tìm độ dài đường đi ngắn nhất từ đỉnh xuất phát S đến tất cả các đỉnh còn lại trong đồ thị. Bắt buộc sử dụng hàng đợi ưu tiên Min-Heap để tối ưu độ phức tạp thời gian đạt O((V + E) log V).',
-      inputFormat: [
-        'Dòng 1: Ba số nguyên V (số đỉnh), E (số cạnh), S (đỉnh nguồn) (1 ≤ V ≤ 10,000; 1 ≤ E ≤ 100,000; 1 ≤ S ≤ V).',
-        'E dòng tiếp theo: Mỗi dòng gồm 3 số nguyên u, v, w biểu diễn cạnh có hướng từ u đến v với trọng số w (1 ≤ w ≤ 10^6).',
-      ],
-      outputFormat: [
-        'In ra trên một dòng khoảng cách ngắn nhất từ S đến lần lượt các đỉnh 1, 2, ..., V, cách nhau bởi khoảng trắng. Nếu không có đường đi đến đỉnh i, in ra -1.',
-      ],
-      constraints: [
-        '1 ≤ V ≤ 10,000 đỉnh.',
-        '1 ≤ E ≤ 100,000 cạnh.',
-        'Trọng số w không âm: 0 ≤ w ≤ 1,000,000.',
-        'Thời gian thực thi tối đa: 2500 ms.',
-      ],
-      complexityRequirements: [
-        'Thời gian: O((V + E) log V) sử dụng Min-Heap.',
-        'Bộ nhớ: O(V + E) danh sách kề.',
-      ],
-      solidGuidelines: [
-        'Đóng gói riêng các class: Edge, NodeDistance, Graph, DijkstraSolver.',
-      ],
-    },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Đồ Thị 4 Đỉnh Có Hướng)',
-        input: '4 4 1\\n1 2 2\\n1 3 5\\n2 3 1\\n3 4 3',
-        expectedOutput: '0 2 3 6',
-        explanation: 'Đường đi từ 1: Đến 1 là 0, đến 2 là 2, đến 3 là 1->2->3 = 3, đến 4 là 1->2->3->4 = 6.',
-      },
-    ],
-  },
-  {
-    id: 'ASM-49243',
-    courseId: 'COURSE-CSD201',
-    courseCode: 'CSD201',
-    course: 'CSD201 - Cấu Trúc Dữ Liệu & Giải Thuật Nâng Cao',
-    title: 'Hệ thống Quản lý Edge CDN - Định tuyến Lát cắt Video thông minh với Cây AVL',
-    description: 'Trong hạ tầng Cloud & CDN Streaming toàn cầu, việc duy trì độ trễ thấp cho hàng triệu người xem đồng thời yêu cầu phân phối các lát cắt video đến các Edge Node tối ưu. Triển khai cây AVL tự cân bằng lưu trữ tải trọng băng thông máy chủ theo thời gian thực.',
-    deadline: new Date(Date.now() + 12 * 24 * 3600 * 1000 + 16 * 3600 * 1000).toISOString(),
-    timeLimitMs: 2000,
-    memoryLimitMb: 512,
-    allowedLanguages: ['java', 'cpp', 'python'],
-    allowedExtensions: ['.zip'],
-    maxSizeMb: 10,
-    testCasesCount: 6,
-    status: 'PUBLISHED',
-    rubrics: [
-      { criterion: 'Cân bằng AVL & Định tuyến O(log N)', maxScore: 6.0, description: 'Phân phối lát cắt video đúng Edge Server tối ưu' },
-      { criterion: 'Cập nhật tải trọng động & Clean Architecture', maxScore: 4.0, description: 'Cập nhật tải server và tái cân bằng cây tức thời' },
-    ],
-    technicalRequirements: {
-      problemContext: 'Xây dựng mô đun định tuyến Edge CDN Server cho hệ thống live-streaming. Mỗi Edge Server có ServerID và Capacity khả dụng. Yêu cầu sinh viên duy trì một cây AVL có khóa là Capacity để khi có yêu cầu truyền lát cắt video dung lượng S (MB), hệ thống sẽ tìm kiếm Edge Server có Capacity nhỏ nhất thỏa mãn Capacity ≥ S trong thời gian O(log N). Sau đó trừ dung lượng đã cấp và tái cân bằng cây.',
-      inputFormat: [
-        'Dòng 1: Số nguyên dương N là số lượng thao tác (1 ≤ N ≤ 50,000).',
-        'N dòng tiếp theo: Chứa câu lệnh ADD_SERVER id capacity, ALLOCATE size hoặc RELEASE id size.',
-      ],
-      outputFormat: [
-        'Với mỗi lệnh ALLOCATE: In ra ServerID được chọn. Nếu không có server nào đủ dung lượng, in ra REJECT.',
-      ],
-      constraints: [
-        '1 ≤ N ≤ 50,000.',
-        'Thời gian thực thi tối đa: 2000 ms, RAM 512MB.',
-      ],
-      complexityRequirements: [
-        'Truy vấn định tuyến & cập nhật tải: O(log N).',
-      ],
-      solidGuidelines: [
-        'Áp dụng Factory Pattern hoặc Strategy Pattern trong việc lựa chọn thuật toán định tuyến.',
-      ],
-    },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Định Tuyến Cắt Video)',
-        input: '4\\nADD_SERVER S1 100\\nADD_SERVER S2 200\\nALLOCATE 150\\nALLOCATE 200',
-        expectedOutput: 'S2\\nREJECT',
-        explanation: 'S1 có 100, S2 có 200. Yêu cầu 150 chọn S2 (còn lại 50). Yêu cầu tiếp theo 200 bị REJECT vì không server nào đủ dung lượng.',
-      },
-    ],
-  },
-  {
-    id: 'ASM-PRN-01',
-    courseId: 'COURSE-PRN211',
-    courseCode: 'PRN211',
-    course: 'PRN211 - Lập Trình Ứng Dụng Đa Nền Tảng .NET',
-    title: 'Xử lý Luồng Dữ liệu Bất Đồng Bộ (.NET C# Async/Await & Task Parallel)',
-    description: 'Xây dựng ứng dụng .NET C# xử lý hàng loạt tác vụ phân tích dữ liệu đa luồng bất đồng bộ (async/await, Task.WhenAll) và truy vấn LINQ tối ưu bộ nhớ.',
-    deadline: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
-    timeLimitMs: 2000,
-    memoryLimitMb: 512,
-    allowedLanguages: ['dotnet', 'csharp', 'java'],
-    allowedExtensions: ['.zip'],
-    maxSizeMb: 10,
-    testCasesCount: 5,
-    status: 'PUBLISHED',
-    rubrics: [
-      { criterion: 'Tính đúng đắn đa luồng & Không Deadlock', maxScore: 6.0, description: 'Sử dụng Task.WhenAll và CancellationToken hợp lệ' },
-      { criterion: 'Tối ưu LINQ & Garbage Collection', maxScore: 4.0, description: 'Sử dụng IAsyncEnumerable và hạn chế cấp phát bộ nhớ rác' },
-    ],
-    technicalRequirements: {
-      problemContext: 'Xây dựng dịch vụ phân tích dữ liệu tổng hợp từ nhiều nguồn API song song trong ứng dụng .NET Core. Yêu cầu triển khai xử lý bất đồng bộ không gây nghẽn ThreadPool (Non-blocking I/O), xử lý ngoại lệ AggregateException chuẩn mực.',
-      inputFormat: [
-        'Dòng 1: Số nguyên N tác vụ cần xử lý.',
-        'N dòng tiếp theo: Tên tác vụ và thời gian trễ mô phỏng.',
-      ],
-      outputFormat: [
-        'In ra danh sách tác vụ hoàn thành theo thứ tự thời gian và tổng thời gian xử lý.',
-      ],
-      constraints: [
-        'Thời gian chạy tối đa: 2000 ms, RAM 512MB.',
-      ],
-      complexityRequirements: [
-        'Xử lý song song N tác vụ với Task.WhenAll.',
-      ],
-      solidGuidelines: [
-        'Dependency Injection với IDataProcessor service.',
-      ],
-    },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Xử Lý Song Song)',
-        input: '3\\nTaskA 100\\nTaskB 50\\nTaskC 80',
-        expectedOutput: 'COMPLETED: TaskB, TaskC, TaskA\\nTOTAL_ELAPSED: ~100ms',
-        explanation: '3 tác vụ chạy đồng thời, TaskB hoàn thành nhanh nhất (50ms), tiếp theo là TaskC (80ms) và TaskA (100ms).',
-      },
-    ],
-  },
-];
+// NOTE: the hard-coded defaultAssignmentPool fixtures (three invented assignments with
+// full problem statements, rubrics and sample test cases) were removed. Assignments now
+// come exclusively from what the lecturer actually published, so the student list shows
+// an empty state instead of content that does not exist in the database.
 
 // Helper nạp yêu cầu kỹ thuật đầy đủ cho bất kỳ bài tập nào
 const getEffectiveRequirements = (task: StudentTaskItem): TechnicalRequirement => {
@@ -641,21 +343,12 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         }
       }
 
-      // Nếu chưa có trong localStorage, sử dụng defaultAssignmentPool làm nguồn chuẩn ban đầu
-      if (!Array.isArray(publishedList) || publishedList.length === 0) {
-        publishedList = defaultAssignmentPool;
-        try {
-          localStorage.setItem('aita_published_assignments', JSON.stringify(defaultAssignmentPool));
-        } catch {
-          // ignore
-        }
-      }
+      // Không còn bài tập mẫu dựng sẵn: nếu giảng viên chưa giao bài nào thì danh sách
+      // để trống và giao diện hiển thị trạng thái rỗng. Trước đây khối này tự chèn
+      // `defaultAssignmentPool` vào localStorage khiến sinh viên thấy bài tập không có thật.
 
       // Đồng bộ trực tiếp từ danh sách bài tập Giảng viên đã giao - KHÔNG tự động chèn thêm bài tập ảo
       listToDisplay = publishedList.map((item) => {
-        const matchedTemplate = defaultAssignmentPool.find(
-          (t) => t.id === item.id || t.title.toLowerCase().trim() === (item.title || '').toLowerCase().trim()
-        );
         const courseId = item.courseId || 'COURSE-SWP391';
         const courseCode = item.courseCode || courseId.replace('COURSE-', '').replace('CRS-', '');
 
@@ -667,21 +360,21 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           title: item.title,
           description: item.description,
           deadline: item.deadline ? (item.deadline.includes('T') ? item.deadline : `${item.deadline}T23:59:00`) : new Date(Date.now() + 7 * 86400000).toISOString(),
-          timeLimitMs: item.timeLimitMs || matchedTemplate?.timeLimitMs || 2000,
-          memoryLimitMb: item.memoryLimitMb || matchedTemplate?.memoryLimitMb || 512,
-          allowedLanguages: item.allowedLanguages || matchedTemplate?.allowedLanguages || ['java', 'python', 'cpp'],
+          timeLimitMs: item.timeLimitMs || 2000,
+          memoryLimitMb: item.memoryLimitMb || 512,
+          allowedLanguages: item.allowedLanguages || ['java', 'python', 'cpp'],
           allowedExtensions: item.allowedExtensions || ['.zip'],
           maxSizeMb: item.maxSizeMb || 10,
-          testCasesCount: item.testCases ? item.testCases.length : (matchedTemplate?.testCasesCount || 5),
-          rubrics: item.rubrics && item.rubrics.length > 0 ? item.rubrics : matchedTemplate?.rubrics,
-          technicalRequirements: matchedTemplate?.technicalRequirements,
-          sampleTestCases: matchedTemplate?.sampleTestCases,
+          testCasesCount: item.testCases ? item.testCases.length : 5,
+          rubrics: item.rubrics && item.rubrics.length > 0 ? item.rubrics : undefined,
+          technicalRequirements: undefined,
+          sampleTestCases: undefined,
           status: item.status || 'PUBLISHED',
         };
       });
     } catch (e) {
       console.warn('Không thể đọc aita_published_assignments:', e);
-      listToDisplay = [...defaultAssignmentPool];
+      listToDisplay = [];
     }
 
     setAssignmentList(listToDisplay);

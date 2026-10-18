@@ -21,40 +21,9 @@ function generateFallbackSubId(): string {
   return 'SUB-' + Date.now().toString(36).toUpperCase();
 }
 
-const mockTask: Task = {
-  id: 'ASM-SWP-01',
-  title: 'Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị',
-  course: 'SWP391 - Đồ Án Phát Triển Phần Mềm (Agile Scrum)',
-  deadline: new Date(Date.now() + 5 * 24 * 3600 * 1000 + 4 * 3600 * 1000).toISOString(),
-  maxSizeMb: 10,
-  allowedExtensions: ['.zip'],
-  description: 'Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian O(log N) và tuân thủ các nguyên lý SOLID (SRP, DIP).',
-};
-
-const mockSourceCodeStudent = `package com.aita.autograder;
-
-import java.util.*;
-
-public class Solution {
-    public static void main(String[] args) {
-        Scanner sc = new Scanner(System.in);
-        int n = sc.nextInt();
-        int[] arr = new int[n];
-        for (int i = 0; i < n; i++) {
-            arr[i] = sc.nextInt();
-        }
-        
-        sortAndPrintAndSaveToDatabase(arr);
-    }
-    
-    private static void sortAndPrintAndSaveToDatabase(int[] arr) {
-        Arrays.sort(arr);
-        for (int val : arr) {
-            System.out.print(val + " ");
-        }
-        System.out.println();
-    }
-}`;
+// NOTE: the hard-coded `mockTask` and `mockSourceCodeStudent` fixtures were removed.
+// The submission flow now requires a real assignment selected from the lecturer's
+// published list, and the source code always comes from the file the student uploads.
 
 const initialSteps: GradingStep[] = [
   { id: '1', label: 'Hàng đợi Redis BullMQ', status: 'pending', detail: 'Đang xếp hàng chờ Worker xử lý' },
@@ -160,7 +129,7 @@ export function App() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [submissionId, setSubmissionId] = useState('');
   const [currentAssignmentId, setCurrentAssignmentId] = useState('');
-  const [currentSourceCode, setCurrentSourceCode] = useState<string>(mockSourceCodeStudent);
+  const [currentSourceCode, setCurrentSourceCode] = useState<string>('');
   const [aiRating, setAiRating] = useState<AIRating | undefined>(undefined);
   const [plagiarismMatch, setPlagiarismMatch] = useState<PlagiarismMatch | undefined>(undefined);
   const [score, setScore] = useState<number | undefined>(undefined);
@@ -328,8 +297,14 @@ export function App() {
   };
 
   const handleSubmission = async (file?: File, benchmarkPairId?: number, submittedTask?: Task) => {
-    const activeTask = submittedTask || mockTask;
     if (!currentUser) return;
+    // A real assignment must be chosen; the removed mock default silently graded a
+    // fixture that had nothing to do with the lecturer's published task.
+    const activeTask = submittedTask;
+    if (!activeTask) {
+      console.warn('[Submission] Bỏ qua: chưa chọn bài tập thật để nộp.');
+      return;
+    }
 
     setSteps(initialSteps.map((s) => ({ ...s, status: 'pending' })));
     setIsCompleted(false);
@@ -342,7 +317,9 @@ export function App() {
     currentAssignmentIdRef.current = activeTask.id;
     setIsModalOpen(true);
 
-    let codeToGrade = mockSourceCodeStudent;
+    // Source code starts empty; it is filled from the uploaded file (or the RBL
+    // benchmark pair when the benchmark view drives the flow).
+    let codeToGrade = '';
     let computedPlagiarism: PlagiarismMatch | undefined = undefined;
 
     if (benchmarkPairId !== undefined) {

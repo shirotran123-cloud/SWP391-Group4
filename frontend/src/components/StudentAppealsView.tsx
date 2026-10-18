@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Scale, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, RefreshCw, Award } from 'lucide-react';
 import type { Appeal } from '../types';
 import { AppealModal } from './AppealModal';
@@ -28,21 +28,10 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
         setAppeals(json.data || []);
       }
     } catch {
-      // Sample fallback
-      setAppeals([
-        {
-          appealId: 'APL-001-DEMO',
-          submissionId: 'SUB-SWP391-DEMO',
-          studentId: studentId || 'SE170000',
-          reason: 'Kính gửi Giảng viên, bài của em đã tối ưu O(N log N) bằng QuickSort, mong Thầy xem xét lại điểm Testcase 2.',
-          status: 'ACCEPTED',
-          reviewerId: 'GV001 (ThS. Đinh Thành Trung)',
-          resolutionNote: 'Đã phúc tra: giải thuật đúng chuẩn O(N log N), chấp thuận cộng 1.5 điểm.',
-          adjustedScore: 9.5,
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          updatedAt: new Date(Date.now() - 80000000).toISOString(),
-        },
-      ]);
+      // Không có dữ liệu thật -> hiển thị trạng thái rỗng.
+      // Trước đây khối này dựng một đơn phúc khảo giả (APL-001-DEMO) khiến sinh viên
+      // tưởng mình đã từng khiếu nại. Không còn dữ liệu bịa.
+      setAppeals([]);
     } finally {
       setLoading(false);
     }

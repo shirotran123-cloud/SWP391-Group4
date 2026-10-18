@@ -61,39 +61,10 @@ export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
         throw new Error('API offline');
       }
     } catch {
-      // Mock data đầy đủ nếu API gateway offline
-      setAppeals([
-        {
-          appealId: 'APL-516461-XLGA',
-          submissionId: 'SUB-568109-BVD74X',
-          studentId: 'phaithayj@gmail.com',
-          reason: 'Kính gửi Thầy, bài của em đã giải thuật toán O(N log N) bằng QuickSort phân vùng Hoare và testcase chạy rất nhanh (131ms), nhưng Testcase 2 em bị chấm trượt do timeout 2.0s trên hệ thống cũ. Mong Thầy xem lại mã nguồn và phúc khảo giúp em ạ.',
-          status: 'PENDING',
-          createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-          updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-        },
-        {
-          appealId: 'APL-101-DEMO',
-          submissionId: 'SUB-SE170000-01',
-          studentId: 'SE170000',
-          reason: 'Kính gửi Thầy, bài của em đã tối ưu O(N log N) bằng thuật toán MergeSort nhưng AI chấm điểm SOLID bị trừ 1.5đ ở hàm hiển thị, mong Thầy chấm lại.',
-          status: 'PENDING',
-          createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-          updatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-        },
-        {
-          appealId: 'APL-102-DEMO',
-          submissionId: 'SUB-SE170456-02',
-          studentId: 'SE170456',
-          reason: 'Em xin phúc khảo Testcase 2, em chạy trên Ubuntu local thì PASS nhưng server báo timeout 2.0s.',
-          status: 'ACCEPTED',
-          reviewerId: 'GV001',
-          resolutionNote: 'Đã phúc tra trong Docker sandbox: bộ nhớ đạt 512MB, thuật toán tối ưu chuẩn, chấp thuận cộng thêm 1.0 điểm.',
-          adjustedScore: 8.5,
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          updatedAt: new Date(Date.now() - 80000000).toISOString(),
-        },
-      ]);
+      // Không có dữ liệu thật -> trạng thái rỗng.
+      // Khối này trước đây dựng 3 đơn phúc khảo giả (kèm điểm và phản hồi của giảng viên)
+      // khi Gateway offline, khiến danh sách trông như có dữ liệu thật.
+      setAppeals([]);
     } finally {
       setLoading(false);
     }

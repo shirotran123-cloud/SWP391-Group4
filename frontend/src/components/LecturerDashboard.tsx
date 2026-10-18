@@ -1,4 +1,4 @@
-﻿import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
+import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
 import React, { useState, useEffect } from 'react';
 import {
   BookOpen,
@@ -88,159 +88,12 @@ interface SubmissionRecord {
   similarityRate: number;
 }
 
-const initialCourses: CourseItem[] = [
-  {
-    courseId: 'COURSE-SWP391',
-    courseCode: 'SWP391',
-    courseName: 'Dự Án Phát Triển Phần Mềm (Agile Scrum)',
-    semester: 'Học kỳ Thu 2026',
-    instructorName: 'ThS. Đinh Thành Trung',
-    studentCount: 38,
-    assignmentCount: 2,
-  },
-  {
-    courseId: 'COURSE-PRO192',
-    courseCode: 'PRO192',
-    courseName: 'Lập Trình Hướng Đối Tượng Java & SOLID',
-    semester: 'Học kỳ Thu 2026',
-    instructorName: 'ThS. Đinh Thành Trung',
-    studentCount: 42,
-    assignmentCount: 1,
-  },
-  {
-    courseId: 'COURSE-CSD201',
-    courseCode: 'CSD201',
-    courseName: 'Cấu Trúc Dữ Liệu & Giải Thuật Nâng Cao',
-    semester: 'Học kỳ Thu 2026',
-    instructorName: 'ThS. Đinh Thành Trung',
-    studentCount: 35,
-    assignmentCount: 1,
-  },
-];
-
-const defaultPublishedAssignments: PublishedAssignment[] = [
-  {
-    id: 'ASM-SWP-01',
-    courseId: 'COURSE-SWP391',
-    title: 'Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị',
-    description: 'Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian và tuân thủ các nguyên lý SOLID.',
-    deadline: '2026-10-26T23:59',
-    timeLimitMs: 2000,
-    memoryLimitMb: 512,
-    allowedLanguages: ['java', 'python', 'cpp'],
-    testCases: [
-      { input: '5\n4 2 5 1 3', output: '1 2 3 4 5', weight: 3.5, isHidden: false },
-      { input: '3\n10 0 -5', output: '-5 0 10', weight: 3.5, isHidden: true },
-    ],
-    rubrics: [
-      { criterion: 'Tính đúng đắn thuật toán & Vượt qua Testcases', maxScore: 5.0, description: 'Pass 100% testcases' },
-      { criterion: 'Clean Code & Tối ưu O(N log N)', maxScore: 2.5, description: 'Mã nguồn rõ ràng, đặt tên chuẩn' },
-      { criterion: 'Thiết kế Hướng đối tượng & SOLID', maxScore: 2.5, description: 'Tuân thủ SRP và DIP' },
-    ],
-    starterCode: '// Java Starter Code BST',
-    createdAt: '10/10/2026 08:30',
-    status: 'PUBLISHED',
-    submissionCount: 28,
-  },
-  {
-    id: 'ASM-SWP-02',
-    courseId: 'COURSE-SWP391',
-    title: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
-    description: 'Cài đặt giải thuật sắp xếp nhanh tối ưu 3-Way Partitioning tránh suy biến trên dữ liệu trùng lặp.',
-    deadline: '2026-10-20T23:59',
-    timeLimitMs: 1500,
-    memoryLimitMb: 256,
-    allowedLanguages: ['java', 'python', 'cpp'],
-    testCases: [
-      { input: '5\n5 4 3 2 1', output: '1 2 3 4 5', weight: 4.0, isHidden: false },
-      { input: '10\n10 9 8 7 6 5 4 3 2 1', output: '1 2 3 4 5 6 7 8 9 10', weight: 3.0, isHidden: true },
-    ],
-    rubrics: [
-      { criterion: 'Đúng đắn Testcases', maxScore: 7.0, description: 'Vượt qua bộ testcases' },
-      { criterion: 'Clean Code & SOLID', maxScore: 3.0, description: 'Tuân thủ SRP' },
-    ],
-    starterCode: '// Solution starter',
-    createdAt: '08/10/2026 09:00',
-    status: 'PUBLISHED',
-    submissionCount: 35,
-  },
-  {
-    id: 'ASM-CSD-01',
-    courseId: 'COURSE-CSD201',
-    title: 'Cài Đặt Cây AVL Tự Cân Bằng (Self-Balancing Tree)',
-    description: 'Triển khai cây AVL với các phép xoay đơn và kép, kiểm tra cân bằng 1,000 phần tử.',
-    deadline: '2026-10-30T23:59',
-    timeLimitMs: 2000,
-    memoryLimitMb: 512,
-    allowedLanguages: ['java', 'cpp'],
-    testCases: [
-      { input: '6\n10 20 30 40 50 25', output: 'Preorder: 30 20 10 25 40 50', weight: 3.5, isHidden: false },
-      { input: '3\n3 2 1', output: 'Preorder: 2 1 3', weight: 3.5, isHidden: false },
-    ],
-    createdAt: '11/10/2026 10:15',
-    status: 'PUBLISHED',
-    submissionCount: 18,
-  },
-];
-
-const mockSubmissionsList: SubmissionRecord[] = [
-  {
-    id: 'SUB-001',
-    studentId: 'SE170000',
-    studentName: 'Đinh Thành Trung',
-    assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
-    fileName: 'solution_sorting_v2.zip',
-    submittedAt: '12/10/2026 14:22',
-    testcaseScore: 7.0,
-    cleanCodeScore: 9.0,
-    solidScore: 8.5,
-    finalScore: 9.5,
-    plagiarismStatus: 'AN TOÀN',
-    similarityRate: 14.5,
-  },
-  {
-    id: 'SUB-002',
-    studentId: 'SE170123',
-    studentName: 'Trần Thanh Nguyên',
-    assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
-    fileName: 'sorting_fast.zip',
-    submittedAt: '12/10/2026 14:15',
-    testcaseScore: 6.5,
-    cleanCodeScore: 8.0,
-    solidScore: 8.0,
-    finalScore: 8.8,
-    plagiarismStatus: 'AN TOÀN',
-    similarityRate: 18.2,
-  },
-  {
-    id: 'SUB-003',
-    studentId: 'SE170456',
-    studentName: 'Lê Hoàng Nam',
-    assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
-    fileName: 'sort_algorithm_final.zip',
-    submittedAt: '12/10/2026 13:50',
-    testcaseScore: 5.0,
-    cleanCodeScore: 6.0,
-    solidScore: 5.5,
-    finalScore: 6.5,
-    plagiarismStatus: 'NGHI VẤN',
-    similarityRate: 72.8,
-  },
-  {
-    id: 'SUB-004',
-    studentId: 'SE170889',
-    studentName: 'Phạm Minh Tuấn',
-    assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
-    fileName: 'assignment_sort.zip',
-    submittedAt: '12/10/2026 12:10',
-    testcaseScore: 4.0,
-    cleanCodeScore: 5.0,
-    solidScore: 4.5,
-    finalScore: 5.0,
-    plagiarismStatus: 'ĐẠO VĂN',
-    similarityRate: 86.4,
-  },
-];
+// NOTE: the hard-coded `initialCourses`, `defaultPublishedAssignments` and
+// `mockSubmissionsList` fixtures were removed. Every list below is now loaded from the
+// API Gateway (and therefore from PostgreSQL); the UI shows an explicit empty state
+// instead of inventing rows when the backend has no data yet.
+const EMPTY_COURSES: CourseItem[] = [];
+const EMPTY_ASSIGNMENTS: PublishedAssignment[] = [];
 
 export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiffViewer }) => {
   const [activeTab, setActiveTab] = useState<'COURSES' | 'CREATE_ASSIGNMENT' | 'EXCEL_IMPORT' | 'SUBMISSIONS' | 'RBL_LAB' | 'APPEALS'>('COURSES');
@@ -359,8 +212,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   };
 
 
-  // Quản lý danh sách khóa học và bài tập đã giao
-  const [courses, setCourses] = useState<CourseItem[]>(initialCourses);
+  // Quản lý danh sách khóa học và bài tập đã giao — nạp từ API Gateway.
+  const [courses, setCourses] = useState<CourseItem[]>(EMPTY_COURSES);
   const [publishedAssignments, setPublishedAssignments] = useState<PublishedAssignment[]>(() => {
     try {
       const saved = localStorage.getItem('aita_published_assignments');
@@ -371,7 +224,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     } catch {
       // ignore
     }
-    return defaultPublishedAssignments;
+    return EMPTY_ASSIGNMENTS;
   });
 
   // Môn học đang xem chi tiết (nếu null thì hiện danh sách tất cả môn học)
@@ -831,13 +684,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   };
 
   const handleDownloadSampleCsv = () => {
+    // Chỉ còn phần tiêu đề cột: giảng viên điền roster thật của lớp mình.
+    // Trước đây file mẫu chứa sẵn 5 sinh viên bịa, dễ bị import nhầm thành dữ liệu thật.
     const csvContent =
       'Mã Sinh Viên,Họ Và Tên,Email FPT\n' +
-      'SE170000,Đinh Thành Trung,trungdt.student@aita.fpt.edu.vn\n' +
-      'SE170123,Trần Thanh Nguyên,nguyentt@aita.fpt.edu.vn\n' +
-      'SE201817,Nguyễn Hoàng Vinh,user.student@gmail.com\n' +
-      'SE712137,Võ Thái Trung,vttrung2k6@gmail.com\n' +
-      'SE170456,Lê Hoàng Nam,namlh@aita.fpt.edu.vn\n';
+      'SE123456,Nguyễn Văn Mẫu,nguyenvanmau@fpt.edu.vn\n';
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -912,16 +763,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setExcelStatus(null);
     setSimulatedRollback(null);
 
+    // Chỉ dùng mã TEST-* khi giảng viên chưa chọn file CSV. Trước đây khối này ghi
+    // thẳng tên và email của các thành viên trong nhóm vào lớp học, khiến roster thật
+    // bị trộn lẫn dữ liệu minh hoạ.
     const studentsToImport = customStudents || (parsedCsvStudents.length > 0 ? parsedCsvStudents : (triggerError ? [
-      { studentCode: 'SE170000', fullName: 'Đinh Thành Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
-      { studentCode: 'SE170123', fullName: 'Trần Thanh Nguyên', email: 'nguyentt@aita.fpt.edu.vn' },
-      { studentCode: 'SE170123_ERROR_ROLLBACK', fullName: 'Nguyễn Văn Lỗi (Trùng MSSV)', email: 'loi@aita.fpt.edu.vn' },
+      { studentCode: 'TEST-SV001', fullName: 'Sinh Viên Kiểm Thử 1', email: 'test.sv001@fpt.edu.vn' },
+      { studentCode: 'TEST-SV002', fullName: 'Sinh Viên Kiểm Thử 2', email: 'test.sv002@fpt.edu.vn' },
+      { studentCode: 'TEST-SV001', fullName: 'Bản Ghi Trùng Mã (Kiểm Thử Rollback)', email: 'test.duplicate@fpt.edu.vn' },
     ] : [
-      { studentCode: 'SE170000', fullName: 'Đinh Thành Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
-      { studentCode: 'SE170123', fullName: 'Trần Thanh Nguyên', email: 'nguyentt@aita.fpt.edu.vn' },
-      { studentCode: 'SE201817', fullName: 'Nguyễn Hoàng Vinh', email: 'user.student@gmail.com' },
-      { studentCode: 'SE712137', fullName: 'Võ Thái Trung', email: 'vttrung2k6@gmail.com' },
-      { studentCode: 'SE170456', fullName: 'Lê Hoàng Nam', email: 'vinhtt@aita.fpt.edu.vn' },
+      { studentCode: 'TEST-SV001', fullName: 'Sinh Viên Kiểm Thử 1', email: 'test.sv001@fpt.edu.vn' },
+      { studentCode: 'TEST-SV002', fullName: 'Sinh Viên Kiểm Thử 2', email: 'test.sv002@fpt.edu.vn' },
+      { studentCode: 'TEST-SV003', fullName: 'Sinh Viên Kiểm Thử 3', email: 'test.sv003@fpt.edu.vn' },
     ]));
 
     try {
@@ -2640,7 +2492,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 </tr>
               </thead>
               <tbody>
-                {(realSubmissions.length > 0 ? [...realSubmissions, ...mockSubmissionsList] : mockSubmissionsList).map((sub) => (
+                {realSubmissions.map((sub) => (
                   <tr
                     key={sub.id}
                     style={{
