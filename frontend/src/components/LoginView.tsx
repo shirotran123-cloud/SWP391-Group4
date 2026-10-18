@@ -2,13 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
   ShieldCheck,
   AlertCircle,
-  ExternalLink,
   RotateCw,
   CheckCircle,
   Settings,
-  Sparkles,
-  UserX,
-  UserCheck,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
@@ -59,11 +55,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [redirectUriConfig, setRedirectUriConfig] = useState<string>(() => {
     return localStorage.getItem('aita_google_redirect_uri') || window.location.origin;
   });
-  // Empty by default: pre-filling a specific address implied that particular account
-  // existed, and it hard-coded a personal Gmail into the source.
-  const [directEmailInput, setDirectEmailInput] = useState<string>('');
   const [showConfig, setShowConfig] = useState(false);
-  const [showTester, setShowTester] = useState(false);
 
   // Xử lý xác thực khi Google chuyển hướng về (OAuth 2.0 Redirect Callback)
   useEffect(() => {
@@ -99,53 +91,39 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         return;
       }
 
-      if (idToken || accessToken) {
+      if (idToken) {
+        // Redirect-flow fallback: hand the raw ID token to the backend, which verifies
+        // the signature. The client never decides who the user is.
         setLoading(true);
-        setSuccessMsg('Đang nhận diện tài khoản Google và xác thực phân quyền với AITA...');
+        setSuccessMsg('Đang xác thực tài khoản Google với AITA...');
         setErrorMsg(null);
         setBlockedEmail(null);
-
         try {
-          let email = '';
-          let fullName = '';
-
-          if (idToken) {
-            const base64Url = idToken.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(
-              atob(base64)
-                .split('')
-                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-                .join('')
-            );
-            const parsed = JSON.parse(jsonPayload);
-            email = parsed.email;
-            fullName = parsed.name || email.split('@')[0];
-          } else if (accessToken) {
-            const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            });
-            const profile = await userInfoRes.json();
-            email = profile.email;
-            fullName = profile.name || email.split('@')[0];
-          }
-
-          if (email) {
-            window.history.replaceState(null, '', window.location.pathname);
-            await verifyEmailWithBackend(email, fullName, idToken || undefined);
-          }
+          window.history.replaceState(null, '', window.location.pathname);
+          await verifyEmailWithBackend(idToken);
         } catch (err: any) {
           setErrorMsg('Lỗi khi xử lý phản hồi từ Google OAuth: ' + err.message);
           setLoading(false);
         }
+      } else if (accessToken) {
+        // Access-token-only responses cannot be verified as an identity proof server-side,
+        // so ask the user to use the popup button instead of silently trusting userinfo.
+        setErrorMsg(
+          'Google chỉ trả về access token. Vui lòng dùng nút "Đăng nhập bằng Google" để nhận ID token đã được xác minh.',
+        );
+        window.history.replaceState(null, '', window.location.pathname);
       }
     };
 
     void handleGoogleCallback();
   }, [onLoginSuccess]);
 
-  // Gửi thông tin tài khoản Google về backend để kiểm tra trong CSDL và cấp quyền
-  const verifyEmailWithBackend = async (email: string, fullName?: string, credential?: string) => {
+  // Gửi Google ID token (credential) về backend để xác minh chữ ký và cấp quyền.
+  //
+  // `credential` is REQUIRED: the backend verifies the signature, audience and expiry and
+  // derives the email from the verified claims. It no longer accepts a bare email, because
+  // that let anyone sign in as any account by typing an address.
+  const verifyEmailWithBackend = async (credential: string) => {
     setLoading(true);
     setErrorMsg(null);
     setBlockedEmail(null);
@@ -154,17 +132,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, fullName, credential }),
+        body: JSON.stringify({ credential }),
       });
 
       const json = await res.json();
 
-      // NẾU TÀI KHOẢN CHƯA CÓ TRÊN HỆ THỐNG -> CHẶN LẠI VÀ BÁO LỖI RÕ RÀNG
+      // TÀI KHOẢN CHƯA CÓ TRÊN HỆ THỐNG -> CHẶN LẠI VÀ BÁO LỖI RÕ RÀNG
+      // The email is no longer known client-side (the server reads it from the verified
+      // token), so the message comes from the API.
       if (!res.ok) {
-        setBlockedEmail(email);
         setErrorMsg(
           json.message ||
-            `Tài khoản Gmail '${email}' chưa có trên hệ thống AITA! Hệ thống từ chối cấp quyền truy cập.`
+            'Không thể xác thực tài khoản Google với hệ thống AITA. Vui lòng liên hệ Quản trị viên.'
         );
         setSuccessMsg(null);
         setLoading(false);
@@ -185,7 +164,57 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  // Điều hướng thẳng sang trang đăng nhập thật của Google (Google OAuth 2.0 Endpoint)
+  /**
+   * Starts sign-in with Google Identity Services (GIS).
+   *
+   * GIS renders Google's own account chooser and returns a signed ID token to a callback
+   * in this page. Because nothing redirects, no `redirect_uri` is involved and
+   * `redirect_uri_mismatch` cannot occur — which is what previously forced the app onto
+   * one specific port. The ID token is still verified server-side.
+   */
+  const handleGoogleIdentitySignIn = () => {
+    setErrorMsg(null);
+    setBlockedEmail(null);
+    setSuccessMsg(null);
+
+    const activeClientId = clientId.trim() || DEFAULT_CLIENT_ID;
+    const gsi = (window as any).google?.accounts?.id;
+
+    if (!gsi) {
+      setErrorMsg(
+        'Chưa tải được thư viện Google Identity Services. Kiểm tra kết nối mạng rồi tải lại trang.',
+      );
+      return;
+    }
+
+    try {
+      gsi.initialize({
+        client_id: activeClientId,
+        callback: (response: { credential?: string }) => {
+          if (response?.credential) {
+            void verifyEmailWithBackend(response.credential);
+          } else {
+            setErrorMsg('Google không trả về ID token. Vui lòng thử lại.');
+          }
+        },
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+      // Shows the account chooser; the callback above receives the credential.
+      gsi.prompt((notification: any) => {
+        if (notification?.isNotDisplayed?.() || notification?.isSkippedMoment?.()) {
+          setErrorMsg(
+            'Trình duyệt chặn cửa sổ đăng nhập Google. Hãy cho phép popup rồi thử lại.',
+          );
+        }
+      });
+    } catch (err: any) {
+      setErrorMsg('Không khởi tạo được Google Sign-In: ' + err.message);
+    }
+  };
+
+  // Fallback cho môi trường không chạy được popup: dùng luồng redirect cổ điển.
+  // Luồng này CẦN `redirect_uri` được đăng ký trong Google Cloud Console.
   const handleRedirectToGoogle = () => {
     setErrorMsg(null);
     setBlockedEmail(null);
@@ -195,17 +224,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     const redirectUri = redirectUriConfig.trim() || window.location.origin;
     const activeClientId = clientId.trim() || DEFAULT_CLIENT_ID;
 
-    // URL OAuth 2.0 chuẩn của Google - chuyển hướng sang trang Google chính thức
     const googleOAuthUrl =
       `https://accounts.google.com/o/oauth2/v2/auth?` +
       `client_id=${encodeURIComponent(activeClientId)}&` +
       `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `response_type=token%20id_token&` +
+      `response_type=id_token&` +
       `scope=openid%20email%20profile&` +
       `prompt=select_account&` +
       `nonce=${Date.now()}`;
 
-    console.log('[Google OAuth] Điều hướng tới URL chính thức của Google:', googleOAuthUrl);
+    console.log('[Google OAuth] Redirect flow (cần redirect_uri đã đăng ký):', googleOAuthUrl);
     window.location.href = googleOAuthUrl;
   };
 
@@ -356,10 +384,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
         )}
 
-        {/* NÚT DUY NHẤT: ĐIỀU HƯỚNG SANG TRANG ĐĂNG NHẬP GOOGLE CHÍNH THỨC */}
+        {/* NÚT CHÍNH: ĐĂNG NHẬP BẰNG GOOGLE (Google Identity Services — popup, không cần redirect_uri) */}
         <div style={{ marginBottom: '18px' }}>
           <button
-            onClick={handleRedirectToGoogle}
+            onClick={handleGoogleIdentitySignIn}
             disabled={loading}
             style={{
               width: '100%',
@@ -393,13 +421,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             {loading ? (
               <>
                 <RotateCw size={20} className="animate-spin" />
-                Đang Chuyển Hướng Tới Google...
+                Đang xác thực với Google...
               </>
             ) : (
               <>
                 <GoogleIcon />
                 <span>Đăng nhập bằng Google</span>
-                <ExternalLink size={16} color="#94a3b8" style={{ marginLeft: '4px' }} />
               </>
             )}
           </button>
@@ -422,26 +449,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </span>
         </p>
 
-        {/* CÔNG CỤ TRÌNH DIỄN BẢO MẬT: KIỂM TRA TÀI KHOẢN TRONG CSDL */}
-        <div style={{ textAlign: 'center', marginBottom: '14px', display: 'flex', justifyContent: 'center', gap: '16px' }}>
-          <button
-            onClick={() => setShowTester(!showTester)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#a5b4fc',
-              fontSize: '12px',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              textDecoration: 'underline',
-              fontWeight: 500,
-            }}
-          >
-            <Sparkles size={13} /> {showTester ? 'Ẩn mục kiểm tra CSDL' : 'Kiểm tra tài khoản trong CSDL (Demo)'}
-          </button>
-
+        {/* The "check account in DB" demo panel was removed: it signed the user in by
+            POSTing a bare email to /api/v1/auth/google, so anyone could become any
+            account (including ADMIN) without a Google account and without a password.
+            The API now requires a signature-verified Google ID token, so that panel
+            could no longer work anyway. */}
+        <div style={{ textAlign: 'center', marginBottom: '14px' }}>
           <button
             onClick={() => setShowConfig(!showConfig)}
             style={{
@@ -459,255 +472,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             <Settings size={12} /> Cấu hình Client ID
           </button>
         </div>
-
-        {/* Khung demo kiểm tra phản hồi từ Google và CSDL AITA */}
-        {showTester && (
-          <div
-            style={{
-              background: 'rgba(15, 23, 42, 0.85)',
-              padding: '14px',
-              borderRadius: '12px',
-              border: '1px solid rgba(129, 140, 248, 0.3)',
-              marginBottom: '18px',
-              textAlign: 'left',
-            }}
-          >
-            <div style={{ fontSize: '11.5px', color: '#c7d2fe', marginBottom: '8px', fontWeight: 600 }}>
-              Thử nghiệm luồng xác thực Google SSO & Kiểm tra CSDL:
-            </div>
-
-            {/* Danh sách tài khoản mẫu theo từng role, dùng chung mật khẩu Aita@2026.
-                Đây là dữ liệu THẬT trong CSDL (không phải mock) — bấm để điền nhanh email. */}
-            <div style={{ marginBottom: '12px' }}>
-              <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '6px' }}>
-                Tài khoản mẫu (mật khẩu: <code style={{ color: '#fbbf24' }}>Aita@2026</code>):
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                {[
-                  { role: 'ADMIN', email: 'admin@aita.fpt.edu.vn', color: '#f59e0b' },
-                  { role: 'HOD', email: 'hod@fe.edu.vn', color: '#a855f7' },
-                  { role: 'LECTURER', email: 'trungdt@fe.edu.vn', color: '#3b82f6' },
-                  { role: 'STUDENT', email: 'trungse170000@fpt.edu.vn', color: '#10b981' },
-                ].map((acc) => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => setDirectEmailInput(acc.email)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '6px 8px',
-                      borderRadius: '6px',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      background: 'rgba(255,255,255,0.03)',
-                      color: '#e2e8f0',
-                      fontSize: '11px',
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                    }}
-                  >
-                    <span style={{ color: acc.color, fontWeight: 700, minWidth: '58px' }}>{acc.role}</span>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acc.email}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Ô nhập email bất kỳ để đăng nhập trực tiếp (Bypass redirect_uri_mismatch nếu Google Cloud chưa cập nhật) */}
-            <div style={{ marginBottom: '12px', display: 'flex', gap: '8px' }}>
-              <input
-                type="email"
-                value={directEmailInput}
-                onChange={(e) => setDirectEmailInput(e.target.value)}
-                placeholder="Nhập email Google SSO..."
-                style={{
-                  flex: 1,
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
-                  fontSize: '12px',
-                  outline: 'none',
-                }}
-              />
-              <button
-                type="button"
-                onClick={() => {
-                  if (directEmailInput.trim()) {
-                    verifyEmailWithBackend(directEmailInput.trim(), directEmailInput.split('@')[0]);
-                  }
-                }}
-                style={{
-                  padding: '7px 12px',
-                  borderRadius: '6px',
-                  backgroundColor: '#4f46e5',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '11.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Đăng nhập ngay
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('linhcampochia@gmail.com', 'Linh Campochia')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(52, 211, 153, 0.5)',
-                  background: 'rgba(52, 211, 153, 0.15)',
-                  color: '#6ee7b7',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 600,
-                }}
-              >
-                <UserCheck size={14} />
-                <span>⭐ <strong>linhcampochia@gmail.com</strong> (Tài khoản của bạn • Student)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('phaithayj@gmail.com', 'Vinh Nguyễn Hoàng')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(52, 211, 153, 0.4)',
-                  background: 'rgba(52, 211, 153, 0.1)',
-                  color: '#6ee7b7',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <UserCheck size={14} />
-                <span><strong>phaithayj@gmail.com</strong> (Hợp lệ • Student)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('mochibunnyyy123@gmail.com', 'Viktor Wilson')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(52, 211, 153, 0.4)',
-                  background: 'rgba(52, 211, 153, 0.1)',
-                  color: '#6ee7b7',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <UserCheck size={14} />
-                <span><strong>mochibunnyyy123@gmail.com</strong> (Hợp lệ • Student)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('giangvien.edu@gmail.com', 'ThS. Giảng Viên AITA')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(129, 140, 248, 0.4)',
-                  background: 'rgba(129, 140, 248, 0.1)',
-                  color: '#c7d2fe',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <UserCheck size={14} />
-                <span><strong>giangvien.edu@gmail.com</strong> (Hợp lệ • Lecturer)</span>
-              </button>
-
-                            <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('admin@aita.fpt.edu.vn', 'Quản Trị Viên AITA')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(245, 158, 11, 0.5)',
-                  background: 'rgba(245, 158, 11, 0.12)',
-                  color: '#fcd34d',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 600,
-                }}
-              >
-                <UserCheck size={14} />
-                <span>👑 <strong>admin@aita.fpt.edu.vn</strong> (Hợp lệ • Admin Quản Trị)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('admin.aita@gmail.com', 'Quản Trị Viên AITA (Gmail)')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(245, 158, 11, 0.5)',
-                  background: 'rgba(245, 158, 11, 0.12)',
-                  color: '#fcd34d',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 600,
-                }}
-              >
-                <UserCheck size={14} />
-                <span>👑 <strong>admin.aita@gmail.com</strong> (Hợp lệ • Admin Gmail)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('chua_dang_ky@gmail.com', 'Người Lạ')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(248, 113, 113, 0.4)',
-                  background: 'rgba(248, 113, 113, 0.1)',
-                  color: '#fca5a5',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <UserX size={14} />
-                <span><strong>chua_dang_ky@gmail.com</strong> (Chưa có trong hệ thống • Bị chặn)</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Khung cấu hình Client ID & Redirect URI */}
         {showConfig && (

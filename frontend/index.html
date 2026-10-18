@@ -7,6 +7,14 @@
   <meta name="description" content="AITA-Intelligent - AI-Powered Teaching Assistant & AST Code Analytics Platform (SWP391 Group 4)" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AITA-Intelligent — Autograding &amp; AST Code Analytics Platform</title>
+
+  <!--
+    Google Identity Services. This is what makes sign-in work on any port: it renders the
+    account chooser in a popup and hands the page a signed ID token, so no `redirect_uri`
+    has to be registered and `redirect_uri_mismatch` cannot happen. The legacy
+    `response_type=token id_token` redirect flow below is kept only as a fallback.
+  -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
