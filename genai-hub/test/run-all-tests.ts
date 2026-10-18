@@ -24,7 +24,7 @@ function assert(condition: boolean, testName: string, details?: string) {
 
 async function runTests(): Promise<boolean> {
   console.log("\n=======================================================");
-  console.log("   AITA GenAI Core & Review Hub - Test Suite (Tuáº§n 3 & 4)");
+  console.log("   AITA GenAI Core & Review Hub - Test Suite (Tuần 3 & 4)");
   console.log("=======================================================\n");
 
   // ------------------------------------------------------------------
