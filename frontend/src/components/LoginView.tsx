@@ -5,6 +5,8 @@ import {
   RotateCw,
   CheckCircle,
   Settings,
+  KeyRound,
+  LogIn,
 } from 'lucide-react';
 import type { UserProfile } from '../types';
 
@@ -18,6 +20,41 @@ const API_BASE_URL = 'http://localhost:3000';
 const DEFAULT_CLIENT_ID =
   (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
   '788798423051-4c6pqis6sjcrnit4c74omft9kqrvp623.apps.googleusercontent.com';
+
+/**
+ * Seeded accounts for quick sign-in during demos.
+ *
+ * These are NOT a bypass: clicking one performs a real `POST /api/v1/auth/login` with the
+ * shared demo password below, and the server verifies the scrypt hash exactly as it does
+ * for a typed password. Every account must be active in the database or the login fails.
+ *
+ * An earlier version of this screen posted a bare email to `/auth/google` and was granted a
+ * token without any credential — that is why the server now refuses email-only sign-in.
+ */
+const DEMO_PASSWORD = 'Aita@2026';
+
+interface DemoAccount {
+  role: 'ADMIN' | 'HOD' | 'LECTURER' | 'STUDENT';
+  email: string;
+  name: string;
+  color: string;
+}
+
+const DEMO_ACCOUNTS: DemoAccount[] = [
+  { role: 'ADMIN', email: 'admin@aita.fpt.edu.vn', name: 'Quản Trị Viên AITA', color: '#f59e0b' },
+  { role: 'ADMIN', email: 'admin.aita@gmail.com', name: 'Quản Trị Viên (Gmail)', color: '#f59e0b' },
+  { role: 'HOD', email: 'hod@fe.edu.vn', name: 'Trưởng Bộ Môn CNPM', color: '#a855f7' },
+  { role: 'HOD', email: 'hod.se@gmail.com', name: 'Trưởng Bộ Môn (Gmail)', color: '#a855f7' },
+  { role: 'LECTURER', email: 'trungdt@fe.edu.vn', name: 'ThS. Đinh Thành Trung', color: '#3b82f6' },
+  { role: 'LECTURER', email: 'giangvien.edu@gmail.com', name: 'ThS. Giảng Viên AITA', color: '#3b82f6' },
+  { role: 'LECTURER', email: 'vinhnh@fe.edu.vn', name: 'ThS. Nguyễn Hoàng Vinh', color: '#3b82f6' },
+  { role: 'STUDENT', email: 'trungse170000@fpt.edu.vn', name: 'Đinh Thành Trung', color: '#10b981' },
+  { role: 'STUDENT', email: 'nguyentt@fpt.edu.vn', name: 'Trần Thanh Nguyên', color: '#10b981' },
+  { role: 'STUDENT', email: 'vinhtt@fpt.edu.vn', name: 'Nguyễn Hoàng Vinh', color: '#10b981' },
+  { role: 'STUDENT', email: 'trungvt@fpt.edu.vn', name: 'Văn Thái Trung', color: '#10b981' },
+  { role: 'STUDENT', email: 'tientc@fpt.edu.vn', name: 'Trần Công Tiến', color: '#10b981' },
+  { role: 'STUDENT', email: 'sinhvien.test@fpt.edu.vn', name: 'Sinh viên Kiểm Thử', color: '#10b981' },
+];
 
 const GoogleIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
@@ -159,6 +196,52 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         }, 400);
       }
     } catch (err: any) {
+      setErrorMsg('Không thể kết nối đến máy chủ AITA API Gateway: ' + err.message);
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Quick sign-in for a seeded demo account.
+   *
+   * This is a real authentication request: the shared demo password is submitted to
+   * `POST /api/v1/auth/login` and verified server-side against the stored scrypt hash.
+   * Unlike the removed panel, holding this list grants nothing on its own — a deactivated
+   * or missing account still fails.
+   */
+  const handleQuickLogin = async (account: DemoAccount) => {
+    setLoading(true);
+    setErrorMsg(null);
+    setBlockedEmail(null);
+    setSuccessMsg(`Đang đăng nhập với quyền ${account.role}...`);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: account.email, password: DEMO_PASSWORD }),
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        let detail = json.message || `HTTP ${res.status}`;
+        if (Array.isArray(detail)) detail = detail.join('; ');
+        setSuccessMsg(null);
+        setErrorMsg(`Không đăng nhập được ${account.email}: ${detail}`);
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem('aita_token', json.data.token);
+      localStorage.setItem('aita_user', JSON.stringify(json.data.user));
+      setSuccessMsg(
+        `Đăng nhập thành công với quyền ${json.data.user.role}! Xin chào ${json.data.user.fullName}.`,
+      );
+      setTimeout(() => {
+        onLoginSuccess(json.data.user);
+      }, 300);
+    } catch (err: any) {
+      setSuccessMsg(null);
       setErrorMsg('Không thể kết nối đến máy chủ AITA API Gateway: ' + err.message);
       setLoading(false);
     }
@@ -454,7 +537,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         </div>
 
         {/* The email/password + OTP sign-in was removed at the client's request;
-            Google SSO is now the single entry point. */}
+            Google SSO is the primary entry point, with the quick accounts below as an
+            alternative for demos. */}
 
         <p
           style={{
@@ -469,6 +553,100 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             * Chỉ tài khoản Gmail đã có trong hệ thống CSDL mới được cấp quyền truy cập.
           </span>
         </p>
+
+        {/* ĐĂNG NHẬP NHANH BẰNG TÀI KHOẢN MẪU (xác thực thật bằng mật khẩu ở server) */}
+        <div
+          style={{
+            marginBottom: '16px',
+            padding: '14px',
+            borderRadius: '12px',
+            background: 'rgba(15, 23, 42, 0.6)',
+            border: '1px solid rgba(148, 163, 184, 0.22)',
+            textAlign: 'left',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '11.5px',
+              color: '#cbd5e1',
+              fontWeight: 600,
+              marginBottom: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <KeyRound size={13} color="#38bdf8" />
+            Đăng nhập nhanh bằng tài khoản mẫu
+          </div>
+          <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '10px' }}>
+            Mật khẩu dùng chung:{' '}
+            <code style={{ color: '#fbbf24' }}>{DEMO_PASSWORD}</code> · bấm để đăng nhập ngay
+          </div>
+
+          {(['ADMIN', 'HOD', 'LECTURER', 'STUDENT'] as const).map((role) => (
+            <div key={role} style={{ marginBottom: '10px' }}>
+              <div
+                style={{
+                  fontSize: '10.5px',
+                  color: DEMO_ACCOUNTS.find((a) => a.role === role)?.color,
+                  fontWeight: 700,
+                  letterSpacing: '0.4px',
+                  marginBottom: '5px',
+                }}
+              >
+                {role}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                {DEMO_ACCOUNTS.filter((a) => a.role === role).map((acc) => (
+                  <button
+                    key={acc.email}
+                    onClick={() => handleQuickLogin(acc)}
+                    disabled={loading}
+                    title={`Đăng nhập với ${acc.email}`}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '7px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      color: '#e2e8f0',
+                      fontSize: '11.5px',
+                      cursor: loading ? 'not-allowed' : 'pointer',
+                      opacity: loading ? 0.6 : 1,
+                      textAlign: 'left',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!loading) e.currentTarget.style.background = 'rgba(56, 189, 248, 0.12)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                    }}
+                  >
+                    <LogIn size={12} color={acc.color} style={{ flexShrink: 0 }} />
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono, monospace)',
+                        color: '#7dd3fc',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flex: 1,
+                      }}
+                    >
+                      {acc.email}
+                    </span>
+                    <span style={{ fontSize: '10.5px', color: '#94a3b8', flexShrink: 0 }}>
+                      {acc.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
 
         {/* Fallback for environments where popups are blocked. This path uses a redirect,
             so the origin must also be listed under the client's Authorized redirect URIs. */}
