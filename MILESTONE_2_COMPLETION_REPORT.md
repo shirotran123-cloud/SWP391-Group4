@@ -8,9 +8,9 @@
 
 > **📌 Bằng chứng nghiệm thu đối chiếu từng dòng rubric:** xem
 > [`docs/MILESTONE_2_RUBRIC_EVIDENCE.md`](docs/MILESTONE_2_RUBRIC_EVIDENCE.md) — tài liệu này liệt kê
-> **chính xác câu lệnh đã chạy** cho mọi tiêu chí, kết quả quan sát được, **18 lỗi thật** đã phát hiện và sửa,
-> cùng danh sách trung thực những hạng mục **chưa** kiểm chứng được (Redis/PostgreSQL/API key LLM
-> chưa có trên máy nghiệm thu; Docker đã chạy thật và đã kiểm chứng).
+> **chính xác câu lệnh đã chạy** cho mọi tiêu chí, kết quả quan sát được, **20 lỗi thật** đã phát hiện và sửa,
+> cùng danh sách trung thực những hạng mục **chưa** kiểm chứng được (chỉ còn API key LLM thật;
+> Docker, Redis và PostgreSQL đều đã chạy thật và đã kiểm chứng end-to-end).
 
 ---
 
@@ -338,14 +338,14 @@ bằng chứng chạy lại được ghi tại [`docs/MILESTONE_2_RUBRIC_EVIDENC
 **Đã đạt (có bằng chứng lệnh chạy thật):**
 - **Workflow Implementation (50%):** Workflow 0 (nền CRUD) + Workflow 1 (sinh đề & barem, **lưu thật vào CSDL**) + Workflow 2 (pipeline 7 bước, **chạy code thật trong Docker container** + **quét đạo văn AST/Winnowing thật**) + **6 đường ngoại lệ** (yêu cầu $\ge 2$).
 - **Codebase & Database (30%):** Kiến trúc 6 tầng; 12 controller / 59 route; 9 repository; **15 bảng**, **15/15 PRIMARY KEY**, **21 FOREIGN KEY**, **0 tham chiếu mồ côi**, **13/13** thực thể SSOT.
-- **Process (20%):** **79 commits** — phân bổ 23 / 16 / 14 / 13 / 13 (tất cả $\ge 8$), **0 commit rỗng**, **100%** tuân thủ Conventional Commits; **5 tài liệu $\times$ 6 phiên = 30 AI debugging logs**.
+- **Process (20%):** **82 commits** — phân bổ 25 / 16 / 15 / 13 / 13 (tất cả $\ge 8$), **0 commit rỗng**, **100%** tuân thủ Conventional Commits; **5 tài liệu $\times$ 6 phiên = 30 AI debugging logs**.
 - **Sandbox thật:** Docker Desktop 29.8.2, container cô lập `--network none` + 512MB + 1 CPU + `pids-limit=64` + read-only rootfs + drop ALL caps + seccomp. Kiểm chứng live 3 ngôn ngữ: Python/Java/C++ **PASSED đúng output**, TLE bị watchdog kill, SIGSEGV exit 139, lỗi biên dịch → 0 điểm và có `compileError`. **0 container rác**.
+- **Hạ tầng thật đầy đủ:** **PostgreSQL 15** (15 bảng, ghi xuyên thật) + **Redis 7** (BullMQ có consumer thật) + **Docker**. Chuỗi hoàn chỉnh đã kiểm chứng: `POST /submissions` → Redis queue → BullMQ worker → Docker container → `score=9.6`, `1/1` testcase, `executedInContainer=true` → ghi vào bảng `submissions` trong PostgreSQL.
 - **RBL:** Accuracy **90%** trên tập 10 cặp kiểm chuẩn, Precision **100%**, xử lý 947 dòng trong **~10ms** ($< 200$ms DoD).
 
-**18 lỗi thật đã phát hiện và sửa trong đợt nghiệm thu này** (chi tiết đầy đủ tại mục 6 của tài liệu bằng chứng), trong đó nghiêm trọng nhất:
+**20 lỗi thật đã phát hiện và sửa trong đợt nghiệm thu này** (chi tiết đầy đủ tại mục 6 của tài liệu bằng chứng), trong đó nghiêm trọng nhất:
 1. **Bước quét đạo văn AST trong Workflow 2 là stub `plagiarismMatch = null`** — lõi nghiên cứu RBL chưa từng chạy khi chấm bài.
-2. **`executeInDocker()` chưa bao giờ khởi tạo container** — trả về stdout giả `'1 2 3 4 5\n'`, nên bài nộp được chấm bằng **regex trên mã nguồn** thay vì chạy thật. Bài sai logic vẫn đạt điểm cao.
-3. **Thư mục bàn giao không có `.git`** — 0 commit, tiêu chí Process bị 0 điểm.
+2. **`executeInDocker()` chưa bao giờ khởi tạo container** — trả về stdout giả `'1 2 3 4 5\n'`, nên bài nộp được chấm bằng **regex trên mã nguồn** thay vì chạy thật. Bài sai logic vẫn đạt điểm cao.3. **Thư mục bàn giao không có `.git`** — 0 commit, tiêu chí Process bị 0 điểm.
 4. **Gateway dò Docker qua TCP 2375** trong khi Docker Desktop trên Windows chỉ mở named pipe → cài Docker xong hệ thống **vẫn báo OFFLINE** và âm thầm rơi về chấm tĩnh.
 5. **Java và C++ biên dịch được nhưng không chạy được**: build output ghi vào `/tmp` (tmpfs dùng riêng cho mỗi container) nên container chạy test không thấy binary.
 6. **Provider GenAI offline bỏ qua chủ đề/môn/ngôn ngữ giảng viên yêu cầu** và luôn trả về một đề ma trận PRG211 cố định.
@@ -361,6 +361,25 @@ bằng chứng chạy lại được ghi tại [`docs/MILESTONE_2_RUBRIC_EVIDENC
 16. `QueueModule` thiếu import module cung cấp `SandboxService`/`PlagiarismService`, khiến Gateway **không khởi động được**.
 17. Mount thư mục ghi được vào bên trong bind read-only làm Docker Desktop trên Windows lỗi `OCI runtime create failed` (HTTP 500).
 18. Bảng điểm Radar SOLID bị **cắt mất nhãn trục I và D** do nhãn quá dài trong khi bán kính radar và container quá nhỏ.
+19. **Redis chỉ có producer, KHÔNG có consumer** — `QueueService` tạo `Queue` nhưng không tạo `Worker`, nên mọi bài nộp đẩy vào Redis **treo vĩnh viễn ở `QUEUED`**. Đây là lỗi chỉ lộ ra khi Redis thật được bật; trước đó hệ thống luôn chạy in-memory nên che mất.
+20. **`hydrateFromPostgres` ghi đè tài khoản JSON bằng dữ liệu seed cũ** — Postgres có sẵn user seed với email cũ (`nguyentt@aita.fpt.edu.vn`), nên tài khoản tạo qua API bị thay bằng email cũ và **không đăng nhập được** ("chưa có trên hệ thống"). Nay hydrate **merge hai chiều** và đẩy ngược user chỉ-có-trong-JSON lên PostgreSQL.
+
+**Tài khoản đăng nhập được ngay (đã kiểm chứng 10/10):**
+
+| Email | Vai trò |
+|:--|:--|
+| `trungse170000@fpt.edu.vn` | Sinh viên |
+| `nguyentt@fpt.edu.vn` | Sinh viên |
+| `vinhtt@fpt.edu.vn` | Sinh viên |
+| `trungvt@fpt.edu.vn` | Sinh viên |
+| `tientc@fpt.edu.vn` | Sinh viên |
+| `trungdt@fe.edu.vn` | Giảng viên |
+| `giangvien.edu@gmail.com` | Giảng viên |
+| `admin@aita.fpt.edu.vn` | Admin |
+| `admin.aita@gmail.com` | Admin |
+| `sinhvien.test@fpt.edu.vn` | Sinh viên |
+
+Mật khẩu: **lần đăng nhập đầu tiên nhập mật khẩu bất kỳ** — hệ thống đặt làm mật khẩu của tài khoản đó; các lần sau phải nhập đúng.
 
 **Giới hạn chưa kiểm chứng được (công bố trung thực, xem mục 7):**
 - **Docker nay ĐÃ chạy thật và đã kiểm chứng**: Docker Desktop 29.8.2, 3 image (`python:3.11-slim`, `gcc:13`, `eclipse-temurin:17-jdk`), container cô lập `--network none` + 512MB + `pids-limit=64` + read-only rootfs + seccomp. Kiểm chứng live: bài đúng **9.2/10**, bài sai **2.2/10**, lỗi biên dịch C++ **0 điểm / `compileError=true`**.
