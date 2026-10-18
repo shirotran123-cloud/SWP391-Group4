@@ -1,4 +1,22 @@
-﻿export interface GeneratedTestCase {
+/**
+ * Wall-clock budget for one Gemini request.
+ *
+ * The UI used to advertise "tối đa 10s" while nothing enforced it, so a stalled request ran
+ * for minutes. 45s is generous enough for a full assignment + rubric from `gemini-2.5-pro`
+ * (measured: 10-40s) yet still bounded.
+ */
+const PER_MODEL_TIMEOUT_MS = 45_000;
+
+/**
+ * How many models to try before giving up.
+ *
+ * The fallback list can hold nine entries; trying all of them sequentially is what turned a
+ * bad API key into a multi-minute wait. Three attempts cover key rotation and quota spillover
+ * without letting the total run away.
+ */
+const MAX_MODEL_ATTEMPTS = 3;
+
+export interface GeneratedTestCase {
   input: string;
   output: string;
   weight: number;
@@ -372,18 +390,34 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
     let lastError: Error | null = null;
     let successfulModel = '';
     let parsedData: any = null;
+    let attemptsMade = 0;
 
     // 2. GỌI TRỰC TIẾP LÊN MÁY CHỦ GOOGLE GEMINI AI
     for (const modelToTry of modelsToTry) {
       if (!isPureTextModel(modelToTry)) continue;
+      // Bound the total wait: each attempt costs up to PER_MODEL_TIMEOUT_MS.
+      if (attemptsMade >= MAX_MODEL_ATTEMPTS) {
+        console.warn(
+          `[Gemini] Đã thử ${attemptsMade} model, dừng lại để không kéo dài thời gian chờ.`,
+        );
+        break;
+      }
+      attemptsMade++;
 
       const endpoint = modelToTry.startsWith('models/') ? modelToTry : `models/${modelToTry}`;
       const url = `https://generativelanguage.googleapis.com/v1beta/${endpoint}:generateContent?key=${cleanKey}`;
+
+      // Without a timeout a stalled request hangs until the browser gives up, which is why
+      // generation could run for minutes with no feedback. Abort per model so the fallback
+      // list still gets its turn within a predictable budget.
+      const controller = new AbortController();
+      const abortTimer = setTimeout(() => controller.abort(), PER_MODEL_TIMEOUT_MS);
 
       try {
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             contents: [
               {
@@ -398,6 +432,7 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
             },
           }),
         });
+        clearTimeout(abortTimer);
 
         if (!response.ok) {
           const errText = await response.text();
@@ -434,18 +469,26 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
         successfulModel = modelToTry.replace('models/', '');
         break; // Gọi AI thành công 100%!
       } catch (err: any) {
-        lastError = err;
-        console.warn(`Lỗi khi gọi model ${modelToTry}:`, err.message);
+        // A timeout surfaces as an AbortError; give it a message a lecturer can act on.
+        const isTimeout = err?.name === 'AbortError';
+        const failure = isTimeout
+          ? new Error(
+              `Model ${modelToTry.replace('models/', '')} không phản hồi sau ${PER_MODEL_TIMEOUT_MS / 1000}s. ` +
+                `Đã hủy yêu cầu để không phải chờ vô hạn.`,
+            )
+          : err;
+        lastError = failure;
+        console.warn(`Lỗi khi gọi model ${modelToTry}:`, failure.message);
 
         // CHỈ dừng ngay lập tức nếu API Key không hợp lệ hoặc bị cấm
-        const errMsg = (err.message || '').toLowerCase();
+        const errMsg = (failure.message || '').toLowerCase();
         if (
           errMsg.includes('api_key_invalid') ||
           errMsg.includes('api key not valid') ||
           errMsg.includes('api key expired') ||
           errMsg.includes('forbidden')
         ) {
-          throw err;
+          throw failure;
         }
 
         // Với các lỗi model khác (như 400 modality, 404 model not found, 429 quota per model, 503...):
@@ -455,9 +498,10 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
 
     // NẾU TẤT CẢ MODEL ĐỀU LỖI: QUĂNG LỖI THẬT TỪ GOOGLE, TUYỆT ĐỐI KHÔNG DÙNG ĐỀ MẪU HARDCODE
     if (!parsedData) {
+      const detail = lastError?.message
+        || 'Không thể kết nối tới máy chủ Google Gemini AI. Vui lòng kiểm tra lại API Key hoặc hạn mức Quota của tài khoản.';
       throw new Error(
-        lastError?.message ||
-        'Không thể kết nối tới máy chủ Google Gemini AI. Vui lòng kiểm tra lại API Key hoặc hạn mức Quota của tài khoản.'
+        `Đã thử ${attemptsMade} model nhưng không thành công. Chi tiết cuối cùng: ${detail}`,
       );
     }
 
