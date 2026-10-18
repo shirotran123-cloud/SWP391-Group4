@@ -172,6 +172,12 @@ export class UserRepository implements OnModuleInit {
       const rows = await this.postgres.safeQuery<any>(
         `SELECT * FROM users ORDER BY created_at DESC`,
       );
+
+      // Merge, don't replace. Records that exist ONLY in the JSON store (created while
+      // PostgreSQL was offline, or by the demo-seeding script) must survive hydration
+      // and be pushed up to PostgreSQL — otherwise logging in says
+      // "Tài khoản ... chưa có trên hệ thống AITA" even though the account was created.
+      const onlyInJson: UserRecord[] = [];
       for (const r of rows) {
         const rawRole: string = r.role || this.mapRoleId(r.role_id);
         this.records.set(r.user_id, {
@@ -186,9 +192,29 @@ export class UserRepository implements OnModuleInit {
           updatedAt: new Date(r.updated_at),
         });
       }
+
+      for (const record of this.records.values()) {
+        if (!rows.some((r) => r.user_id === record.userId)) {
+          onlyInJson.push(record);
+        }
+      }
+
       this.hydrated = true;
-      if (rows.length > 0) {
-        this.logger.log(`✅ [UserRepository] Đã nạp ${rows.length} người dùng từ PostgreSQL 15.`);
+
+      // Backfill JSON-only users into PostgreSQL so both stores converge.
+      if (onlyInJson.length > 0) {
+        for (const record of onlyInJson) {
+          await this.saveToPostgres(record);
+        }
+        this.logger.log(
+          `✅ [UserRepository] Đã đồng bộ ${onlyInJson.length} người dùng (chỉ có trong JSON) lên PostgreSQL.`,
+        );
+      }
+
+      if (rows.length > 0 || onlyInJson.length > 0) {
+        this.logger.log(
+          `✅ [UserRepository] Đã nạp ${rows.length} người dùng từ PostgreSQL 15 (tổng ${this.records.size}).`,
+        );
         this.persist();
       }
     } catch (err: any) {

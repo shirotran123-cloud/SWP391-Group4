@@ -114,6 +114,10 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
   }
 
   onModuleInit() {
+    // Register the real grading function with the queue so BullMQ can consume it.
+    // Without this the Redis consumer had nothing to call and submissions pushed to
+    // Redis sat in QUEUED forever.
+    this.queueService.registerProcessor((data) => this.processJobWithRetry(data));
     this.startWorkerLoop();
   }
 

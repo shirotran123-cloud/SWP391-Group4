@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import { Queue, Job } from 'bullmq';
+import { Queue, Worker, Job } from 'bullmq';
 import {
   SUBMISSION_QUEUE_NAME,
   DLQ_QUEUE_NAME,
@@ -45,14 +45,35 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
   private memoryQueue: Array<{ id: string; name: string; data: SubmissionJobData }> = [];
   private completedCount = 0;
   private failedCount = 0;
+  /**
+   * BullMQ consumer. Previously only a `Queue` (producer) was created, so whichever
+   * jobs landed in Redis were never consumed and submissions stayed QUEUED forever.
+   * The worker is registered here and delegates to the handler set by the grading
+   * consumer via `registerProcessor()`.
+   */
+  private bullWorker: Worker<SubmissionJobData> | null = null;
+  private processor: ((data: SubmissionJobData) => Promise<void>) | null = null;
 
   constructor(private readonly dlqRepo: DLQRepository) {}
+
+  /**
+   * Registers the function that actually grades a submission. Called by
+   * GradingWorkerConsumer.onModuleInit(). Until this is set, Redis jobs are not pulled.
+   */
+  public registerProcessor(fn: (data: SubmissionJobData) => Promise<void>): void {
+    this.processor = fn;
+    this.startBullWorker();
+  }
 
   async onModuleInit() {
     await this.initBullQueue();
   }
 
   async onModuleDestroy() {
+    if (this.bullWorker) {
+      await this.bullWorker.close();
+      this.bullWorker = null;
+    }
     if (this.bullQueue) {
       await this.bullQueue.close();
     }
@@ -60,6 +81,44 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
       await this.dlqQueue.close();
     }
     this.logger.log('[BullMQ] Queue connections closed gracefully.');
+  }
+
+  /**
+   * Starts the BullMQ worker so jobs pushed into Redis are actually graded.
+   * Concurrency comes from QUEUE_CONFIG so it matches the in-memory loop.
+   */
+  private startBullWorker(): void {
+    if (!this.isRedisAvailable || !this.processor || this.bullWorker) return;
+    try {
+      const host = process.env.REDIS_HOST || '127.0.0.1';
+      const port = parseInt(process.env.REDIS_PORT || '6379', 10);
+      const password = process.env.REDIS_PASSWORD || undefined;
+
+      this.bullWorker = new Worker<SubmissionJobData>(
+        SUBMISSION_QUEUE_NAME,
+        async (job: Job<SubmissionJobData>) => {
+          this.logger.log(`[BullMQ:Worker] Picked up job ${job.id} for submission ${job.data.submissionId}`);
+          await this.processor!(job.data);
+          this.completedCount++;
+        },
+        {
+          connection: { host, port, password, maxRetriesPerRequest: null },
+          concurrency: QUEUE_CONFIG.CONCURRENCY_LIMIT,
+        },
+      );
+
+      this.bullWorker.on('failed', (job, err) => {
+        this.failedCount++;
+        this.logger.warn(`[BullMQ:Worker] Job ${job?.id} failed (${err?.message}). BullMQ will retry per job options.`);
+      });
+      this.bullWorker.on('error', (err) => {
+        this.logger.warn(`[BullMQ:Worker] Worker error: ${err.message}`);
+      });
+      this.logger.log(`[BullMQ:Worker] Consumer started (concurrency=${QUEUE_CONFIG.CONCURRENCY_LIMIT})`);
+    } catch (err: any) {
+      this.logger.warn(`[BullMQ:Worker] Could not start Redis consumer (${err.message}); in-memory loop remains active.`);
+      this.bullWorker = null;
+    }
   }
 
   private initBullQueue(): void {
@@ -109,6 +168,8 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
         .then(() => {
           this.isRedisAvailable = true;
           this.logger.log(`[BullMQ] Connected to Redis at ${host}:${port} (Main & DLQ queues active)`);
+          // Redis became reachable: start the consumer now so queued jobs get graded.
+          this.startBullWorker();
         })
         .catch((err) => {
           this.isRedisAvailable = false;

@@ -1,5 +1,11 @@
-export const SUBMISSION_QUEUE_NAME = 'submission-grading-queue';
-export const DLQ_QUEUE_NAME = 'submission-grading-dlq';
+/**
+ * Queue names may be overridden so that a second gateway instance (e.g. one booted by a
+ * test suite on another port) does not compete for the same Redis jobs. Two consumers on
+ * one queue would each grab half the jobs, so a submission enqueued by the test process
+ * could be graded by the long-running dev gateway and never observed by the test.
+ */
+export const SUBMISSION_QUEUE_NAME = process.env.SUBMISSION_QUEUE_NAME || 'submission-grading-queue';
+export const DLQ_QUEUE_NAME = process.env.DLQ_QUEUE_NAME || 'submission-grading-dlq';
 
 export const QUEUE_EVENTS = {
   SUBMISSION_QUEUED: 'submission:queued',
