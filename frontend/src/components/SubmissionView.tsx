@@ -312,10 +312,10 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
   // 1. Tải danh sách bài tập đã xuất bản (Đồng bộ thời gian thực 100% với Giảng viên)
   useEffect(() => {
-    loadAssignmentsAndSubmissions();
+    void loadAssignmentsAndSubmissions();
 
     const handleSync = () => {
-      loadAssignmentsAndSubmissions();
+      void loadAssignmentsAndSubmissions();
     };
 
     window.addEventListener('storage', handleSync);
@@ -329,51 +329,66 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     };
   }, [studentId]);
 
-  const loadAssignmentsAndSubmissions = () => {
+  const loadAssignmentsAndSubmissions = async () => {
     let listToDisplay: StudentTaskItem[] = [];
 
+    // Assignments come from the API Gateway (and therefore PostgreSQL). Reading them from
+    // localStorage meant a student only ever saw what their own browser had cached: a task
+    // the lecturer published on another machine — or after the student cleared site data —
+    // simply never appeared.
     try {
-      const savedPublished = localStorage.getItem('aita_published_assignments');
-      let publishedList: any[] = [];
-      if (savedPublished) {
-        try {
-          publishedList = JSON.parse(savedPublished);
-        } catch {
-          publishedList = [];
+      const res = await fetch(`${apiBaseUrl}/api/v1/assignments`);
+      if (res.ok) {
+        const json = await res.json();
+        const serverList = json.data || json || [];
+        if (Array.isArray(serverList)) {
+          listToDisplay = serverList.map((item: any) => {
+            const courseId = item.courseId || 'COURSE-SWP391';
+            const courseCode = item.courseCode || courseId.replace('COURSE-', '').replace('CRS-', '');
+            const deadlineRaw = item.deadline ? String(item.deadline) : '';
+
+            return {
+              id: item.assignmentId || item.id,
+              courseId,
+              courseCode,
+              course: item.course || `${courseCode} - Bài tập giảng viên đã giao`,
+              title: item.title || item.assignmentId,
+              description: item.description || '',
+              deadline: deadlineRaw
+                ? (deadlineRaw.includes('T') ? deadlineRaw : `${deadlineRaw}T23:59:00`)
+                : new Date(Date.now() + 7 * 86400000).toISOString(),
+              timeLimitMs: item.timeLimitMs || 2000,
+              memoryLimitMb: item.memoryLimitMb || 512,
+              allowedLanguages: item.allowedLanguages && item.allowedLanguages.length > 0
+                ? item.allowedLanguages
+                : ['java', 'python', 'cpp'],
+              allowedExtensions: ['.zip'],
+              maxSizeMb: 10,
+              // The backend tracks how many test cases exist for the assignment.
+              testCasesCount: item.testcasesCount ?? 0,
+              rubrics: item.rubrics && item.rubrics.length > 0 ? item.rubrics : undefined,
+              technicalRequirements: undefined,
+              sampleTestCases: undefined,
+              status: item.isActive === false ? 'CLOSED' : 'PUBLISHED',
+            };
+          });
+
+          // A task with no test case cannot be graded, so it is not offered as submittable.
+          // Previously every assignment appeared, including ones the grader would score 0.
+          const withoutCases = listToDisplay.filter((t) => !(t.testCasesCount ?? 0));
+          const gradable = listToDisplay.filter((t) => (t.testCasesCount ?? 0) > 0);
+          if (withoutCases.length > 0) {
+            console.warn(
+              `[SubmissionView] Ẩn ${withoutCases.length} bài tập không có testcase (không chấm được điểm).`,
+            );
+          }
+          listToDisplay = gradable;
         }
+      } else {
+        console.warn('[SubmissionView] Không tải được danh sách bài tập:', res.status);
       }
-
-      // Không còn bài tập mẫu dựng sẵn: nếu giảng viên chưa giao bài nào thì danh sách
-      // để trống và giao diện hiển thị trạng thái rỗng. Trước đây khối này tự chèn
-      // `defaultAssignmentPool` vào localStorage khiến sinh viên thấy bài tập không có thật.
-
-      // Đồng bộ trực tiếp từ danh sách bài tập Giảng viên đã giao - KHÔNG tự động chèn thêm bài tập ảo
-      listToDisplay = publishedList.map((item) => {
-        const courseId = item.courseId || 'COURSE-SWP391';
-        const courseCode = item.courseCode || courseId.replace('COURSE-', '').replace('CRS-', '');
-
-        return {
-          id: item.id || `ASM-${Date.now()}`,
-          courseId: courseId,
-          courseCode: courseCode,
-          course: item.course || `${courseCode} - Bài Tập Giảng Viên Đã Giao`,
-          title: item.title,
-          description: item.description,
-          deadline: item.deadline ? (item.deadline.includes('T') ? item.deadline : `${item.deadline}T23:59:00`) : new Date(Date.now() + 7 * 86400000).toISOString(),
-          timeLimitMs: item.timeLimitMs || 2000,
-          memoryLimitMb: item.memoryLimitMb || 512,
-          allowedLanguages: item.allowedLanguages || ['java', 'python', 'cpp'],
-          allowedExtensions: item.allowedExtensions || ['.zip'],
-          maxSizeMb: item.maxSizeMb || 10,
-          testCasesCount: item.testCases ? item.testCases.length : 5,
-          rubrics: item.rubrics && item.rubrics.length > 0 ? item.rubrics : undefined,
-          technicalRequirements: undefined,
-          sampleTestCases: undefined,
-          status: item.status || 'PUBLISHED',
-        };
-      });
-    } catch (e) {
-      console.warn('Không thể đọc aita_published_assignments:', e);
+    } catch (err) {
+      console.warn('[SubmissionView] Lỗi khi tải danh sách bài tập từ API:', err);
       listToDisplay = [];
     }
 
@@ -1753,7 +1768,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
           <button
             type="button"
-            onClick={loadAssignmentsAndSubmissions}
+            onClick={() => void loadAssignmentsAndSubmissions()}
             title="Làm mới danh sách từ giảng viên"
             style={{
               padding: '8px 14px',

@@ -30,6 +30,26 @@ export class TestCasesService {
     }
   }
 
+  /**
+   * Keeps `assignments.testcasesCount` in step with the rows in `test_cases`.
+   *
+   * The column is what the student UI reads to decide whether an assignment is gradable, but
+   * nothing ever wrote to it: every assignment reported its seeded value (0 or a stale
+   * number) no matter how many test cases actually existed. Students therefore either saw no
+   * tasks or were offered tasks that would score 0.
+   */
+  private async syncTestcaseCount(assignmentId: string): Promise<void> {
+    try {
+      const count = (await this.testCaseRepo.listByAssignment(assignmentId)).length;
+      await this.assignmentRepo.update(assignmentId, { testcasesCount: count });
+    } catch (err: any) {
+      // Never fail the test-case write because the counter could not be refreshed.
+      this.logger.warn(
+        `[TestCasesService] Không đồng bộ được testcasesCount cho ${assignmentId}: ${err.message}`,
+      );
+    }
+  }
+
   public async create(dto: CreateTestCaseDto): Promise<TestCaseRecord> {
     const assignment = await this.assignmentRepo.findById(dto.assignmentId);
     if (!assignment) {
@@ -49,6 +69,7 @@ export class TestCasesService {
       weight: dto.weight ?? 1.0,
       timeLimitMs: dto.timeLimitMs ?? 2000,
     });
+    await this.syncTestcaseCount(dto.assignmentId);
     this.logger.log(`[TestCasesService] Created test case ${record.testCaseId} for ${record.assignmentId}`);
     return record;
   }
@@ -84,8 +105,10 @@ export class TestCasesService {
   }
 
   public async delete(id: string): Promise<{ success: boolean }> {
-    await this.getById(id);
+    const existing = await this.getById(id);
     await this.testCaseRepo.delete(id);
+    // Removing the last test case makes the assignment ungradable, so the counter must drop.
+    await this.syncTestcaseCount(existing.assignmentId);
     this.logger.log(`[TestCasesService] Deleted test case ${id}`);
     return { success: true };
   }
