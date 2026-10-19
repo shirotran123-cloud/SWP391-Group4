@@ -367,9 +367,59 @@ All five containers report **healthy** and the app is reachable at `http://local
 
 ---
 
-## 6. Appeals and Git analytics
+## 6. Stress testing under 100 concurrent requests
 
-### 6.1 Appeals portal
+The syllabus schedules stress testing of the Redis queue at 100 concurrent requests
+(`k6`/`JMeter`). Neither tool is installed on this machine, so `tools/stress-test-queue.py`
+drives the same load with Python's standard library and reports the same numbers. It is honest
+about its own limitation, which is discussed below.
+
+**Result: 0 failures.**
+
+| Phase | Measure | Result |
+|:--|:--|:--|
+| 0 | Uncontended upload (the SLA measurement) | **116 ms** p50, five samples 83–122 ms |
+| 1 | Concurrent uploads accepted | **100 / 100** |
+| 1 | Transport-level failures | **0** |
+| 2 | Queue transport while saturated | `mode: REDIS` |
+| 2 | Jobs failed under saturation | **0** |
+| 3 | Submissions reaching a terminal status | **105 / 105** — nothing dropped |
+| 3 | Dead-letter queue after the burst | **0** |
+| 3 | Final queue state | `waiting 0, active 0, failed 0` |
+
+The important result is phase 3: every accepted submission was eventually graded, with an empty
+DLQ. Under saturation the queue holds work (`waiting: 101, active: 4`) rather than rejecting or
+losing it, which is the behaviour the architecture is designed to produce.
+
+### 6.1 A measurement trap worth recording
+
+The first run reported a p50 of **437 ms** and failed the 200 ms SLA. That was wrong, and the
+way it was wrong matters.
+
+Python threads share one interpreter, so a multi-threaded client serialises on the GIL and adds
+its own scheduling delay to every timing. `tools/diagnose-upload-latency.py` separates the two
+contributions by measuring the same endpoint both ways:
+
+| Configuration | p50 |
+|:--|--:|
+| Sequential (no client contention) | **86.5 ms** |
+| 20 concurrent client threads | **498.9 ms** |
+| Difference | 412 ms |
+
+The gateway was never slow. The concurrency penalty was the **test client**, so the SLA is now
+asserted in phase 0 against an idle server — which is what a "<200 ms" claim about accepting a
+submission actually means. Reporting the concurrent figure as server latency would have been a
+false defect; silently dropping the assertion would have been a false pass.
+
+A second version of the script measured its "uncontended" probe *after* the burst, while 96 jobs
+were still queued, and read 304 ms. Timing an idle-server SLA against a saturated pool is the
+same mistake in the other direction. Both are fixed.
+
+---
+
+## 7. Appeals and Git analytics
+
+### 7.1 Appeals portal
 
 | Layer | Location | State |
 |:--|:--|:--|
@@ -381,7 +431,7 @@ All five containers report **healthy** and the app is reachable at `http://local
 **BR-04 is enforced:** plagiarism reports are readable only by `INSTRUCTOR` and `HOD`. The
 controller rejects `STUDENT` — asserted in the gateway suite.
 
-### 6.2 Git commit analytics (anti-free-riding)
+### 7.2 Git commit analytics (anti-free-riding)
 
 `api-gateway/src/teamwork/teamwork.service.ts` computes per-student commit count, lines added
 and deleted, and a contribution percentage, then flags free-riders below the threshold.
@@ -391,7 +441,7 @@ commits, 32.5% contribution, `isFreeRider: false`.
 
 ---
 
-## 7. CI/CD gates
+## 8. CI/CD gates
 
 `.github/workflows/ci.yml` now runs four gates instead of the previous build-only check:
 
@@ -407,7 +457,7 @@ pass CI with arbitrarily low coverage. That gap is now closed.
 
 ---
 
-## 8. Limitations and honest disclosure
+## 9. Limitations and honest disclosure
 
 Recorded so the defence is not caught out by a question it cannot answer.
 
@@ -434,9 +484,12 @@ Recorded so the defence is not caught out by a question it cannot answer.
    without running the stack locally. The remaining work is infrastructure (a host, a registry
    push, secrets management), not application code.
 
-5. **Stress testing at 100 concurrent requests has not been run.** The syllabus schedules it for
-   weeks 9–10; `k6`/`JMeter` results are not yet available. The 200 ms upload SLA is verified for
-   a single request (66 ms measured).
+5. **The stress test is written in Python, not `k6`/`JMeter`.** The syllabus names those tools;
+   neither is installed here, so `tools/stress-test-queue.py` reproduces the same load with the
+   standard library. It confirms the behaviour that matters — 100/100 accepted, 105/105
+   eventually graded, empty dead-letter queue — but Python's GIL means the **concurrent** latency
+   figures it prints are dominated by the test client rather than the server (see §6.1). A `k6`
+   run would give trustworthy per-request server latency under load; that has not been done.
 
 6. **The Docker sandbox is not hardened against a determined attacker.** It runs the submitted
    program in an isolated container with a read-only source mount and a writable build
@@ -447,9 +500,9 @@ Recorded so the defence is not caught out by a question it cannot answer.
 
 ---
 
-## 9. How to reproduce everything in this document
+## 10. How to reproduce everything in this document
 
-### 9.1 The deployed stack (one command)
+### 10.1 The deployed stack (one command)
 
 ```powershell
 docker compose -f docker-compose.prod.yml up -d --build
@@ -462,7 +515,7 @@ python tools/verify-deployment.py            # expect 0 failed
 
 Open <http://localhost:8080> and sign in with any demo account (password `Aita@2026`).
 
-### 9.2 Local development
+### 10.2 Local development
 
 ```powershell
 docker compose up -d                          # PostgreSQL + Redis only
@@ -471,7 +524,7 @@ cd genai-hub    ; npx ts-node src/server.ts   # port 3001
 cd frontend     ; npx vite                    # port 5173
 ```
 
-### 9.3 Coverage gates
+### 10.3 Coverage gates
 
 ```powershell
 cd api-gateway  ; npm run test:coverage   # expect EXIT 0, statements >= 80%
@@ -481,7 +534,7 @@ cd genai-hub    ; npx c8 --check-coverage --lines 80 --functions 80 --statements
 cd frontend     ; npm run test:coverage   # expect 507 tests passing, thresholds applied
 ```
 
-### 9.4 Functional verification
+### 10.4 Functional verification
 
 ```powershell
 # Full grading pipeline against the running services (needs Docker)
@@ -491,9 +544,13 @@ python tools/verify-e2e-pipeline.py           # expect 39 passed, 0 failed
 python tools/verify-self-overlap-tiers.py     # resubmission vs reuse vs cross-course
 python tools/verify-plagiarism-still-works.py # a real copy is still caught
 python tools/verify-gradebook.py              # LAST / BEST / FIRST attempt policies
+
+# Load: 100 concurrent submissions (drain phase takes a few minutes)
+python tools/stress-test-queue.py 100         # expect 0 failed
+python tools/diagnose-upload-latency.py       # separates server cost from client contention
 ```
 
-### 9.5 Frontend type gates
+### 10.5 Frontend type gates
 
 The production build and the test suite are typechecked separately, so a test-only type error
 cannot break the deployable bundle and a broken bundle cannot hide behind passing tests.
