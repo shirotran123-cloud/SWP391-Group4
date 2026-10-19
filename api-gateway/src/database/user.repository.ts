@@ -12,7 +12,12 @@ export class UserRepository {
   private lastMtime: number = 0;
 
   constructor() {
-    this.dataDir = path.resolve(process.cwd(), 'data');
+    const candidateDirs = [
+      path.resolve(process.cwd(), 'data'),
+      path.resolve(process.cwd(), 'api-gateway', 'data'),
+      path.resolve(__dirname, '..', '..', 'data'),
+    ];
+    this.dataDir = candidateDirs.find((d) => fs.existsSync(d)) || candidateDirs[0];
     this.dataFile = path.join(this.dataDir, 'users_store.json');
     this.initStore();
   }

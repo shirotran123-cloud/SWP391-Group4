@@ -358,7 +358,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
 
   // Quản lý danh sách khóa học và bài tập đã giao
-  const [courses, setCourses] = useState<CourseItem[]>(initialCourses);
+  const [courses, setCourses] = useState<CourseItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('aita_cached_courses');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return initialCourses;
+  });
   const [publishedAssignments, setPublishedAssignments] = useState<PublishedAssignment[]>(() => {
     try {
       const saved = localStorage.getItem('aita_published_assignments');
@@ -687,10 +698,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             courseName: c.courseName,
             semester: c.semester,
             instructorName: 'ThS. Giảng Viên AITA',
-            studentCount: c.studentCount || 38,
+            studentCount: c.studentCount || 0,
             assignmentCount: 2,
           }));
           setCourses(mapped);
+          try {
+            localStorage.setItem('aita_cached_courses', JSON.stringify(mapped));
+          } catch {}
           if (mapped.length > 0 && !targetCourseId) {
             setTargetCourseId(mapped[0].courseId);
           }
@@ -715,7 +729,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setCreateCourseLoading(true);
     const generatedId = 'CRS-' + newCourseCode.trim().toUpperCase();
     try {
-      await fetch('http://localhost:3000/api/v1/courses', {
+      const res = await fetch('http://localhost:3000/api/v1/courses', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -728,6 +742,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         }),
       });
 
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => ({}));
+        throw new Error(errJson.message || `Lỗi máy chủ (${res.status})`);
+      }
+
       const newCourseObj: CourseItem = {
         courseId: generatedId,
         courseCode: newCourseCode.trim().toUpperCase(),
@@ -738,10 +757,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         assignmentCount: 0,
       };
 
-      setCourses((prev) => [newCourseObj, ...prev.filter((c) => c.courseId !== generatedId)]);
+      setCourses((prev) => {
+        const updated = [newCourseObj, ...prev.filter((c) => c.courseId !== generatedId)];
+        try {
+          localStorage.setItem('aita_cached_courses', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      });
       setTargetCourseId(generatedId);
       setIsCreateCourseModalOpen(false);
-      setPublishSuccessToast(`🎉 Đã tạo thành công khóa học mới [${newCourseCode}] và lưu vào PostgreSQL 15!`);
+      setPublishSuccessToast(`🎉 Đã tạo thành công khóa học mới [${newCourseCode}] và lưu bền vững vào PostgreSQL 15!`);
+      window.dispatchEvent(new Event('aita_courses_updated'));
     } catch (err: any) {
       alert(`Lỗi tạo khóa học: ${err.message}`);
     } finally {

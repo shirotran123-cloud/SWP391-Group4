@@ -21,33 +21,69 @@ export class CourseRepository implements OnModuleInit {
   private readonly courseMembers: Map<string, Map<string, EnrolledStudentInfo>> = new Map(); // classId -> Map<studentCode, EnrolledStudentInfo>
   private readonly dataDir: string;
   private readonly dataFile: string;
+  private lastMtime: number = 0;
 
   constructor(private readonly postgres: PostgresService) {
-    this.dataDir = path.resolve(process.cwd(), 'data');
+    const candidateDirs = [
+      path.resolve(process.cwd(), 'data'),
+      path.resolve(process.cwd(), 'api-gateway', 'data'),
+      path.resolve(__dirname, '..', '..', 'data'),
+    ];
+    this.dataDir = candidateDirs.find((d) => fs.existsSync(d)) || candidateDirs[0];
     this.dataFile = path.join(this.dataDir, 'courses_store.json');
     this.initStore();
   }
 
   public async onModuleInit(): Promise<void> {
+    // Chạy đồng bộ ngay lập tức và đồng bộ lại sau 1s để bắt kịp kết nối PostgreSQL
+    await this.syncWithPostgres();
     setTimeout(async () => {
       await this.syncWithPostgres();
     }, 1000);
+  }
+
+  /**
+   * Tự động đồng bộ lại bộ nhớ nếu file courses_store.json được chỉnh sửa từ bên ngoài hoặc sau khi khởi động
+   */
+  public reloadIfModified(): void {
+    try {
+      if (fs.existsSync(this.dataFile)) {
+        const stat = fs.statSync(this.dataFile);
+        if (stat.mtimeMs !== this.lastMtime) {
+          const raw = fs.readFileSync(this.dataFile, 'utf-8');
+          const parsed: CourseRecord[] = JSON.parse(raw);
+          for (const record of parsed) {
+            this.records.set(record.courseId, {
+              ...record,
+              createdAt: new Date(record.createdAt),
+              updatedAt: new Date(record.updatedAt),
+            });
+          }
+          this.lastMtime = stat.mtimeMs;
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(`[CourseRepository] Không thể đọc courses_store.json: ${err.message}`);
+    }
   }
 
   private async syncWithPostgres(): Promise<void> {
     if (!this.postgres.isAvailable()) return;
 
     try {
-      // 1. Nạp tất cả các lớp học từ bảng classes
+      this.reloadIfModified();
+
+      // 1. Nạp tất cả các lớp học từ bảng classes trong PostgreSQL
       const dbClasses = await this.postgres.safeQuery<any>(
         `SELECT * FROM classes WHERE is_active = true ORDER BY created_at DESC`,
       );
 
+      const dbClassIds = new Set<string>();
       if (dbClasses.length > 0) {
         for (const row of dbClasses) {
-          const courseId = row.class_id;
+          dbClassIds.add(row.class_id);
           const rec: CourseRecord = {
-            courseId,
+            courseId: row.class_id,
             courseCode: row.class_code,
             courseName: row.class_name,
             description: row.description || '',
@@ -57,17 +93,25 @@ export class CourseRepository implements OnModuleInit {
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at),
           };
-          this.records.set(courseId, rec);
+          this.records.set(row.class_id, rec);
         }
-        this.logger.log(`✅ [CourseRepository] Đã đồng bộ ${dbClasses.length} lớp học phần từ PostgreSQL 15.`);
-      } else if (this.records.size > 0) {
-        // Đồng bộ các lớp ban đầu sang PostgreSQL
-        for (const c of this.records.values()) {
-          await this.saveToPostgres(c);
-        }
+        this.logger.log(`✅ [CourseRepository] Đã nạp ${dbClasses.length} lớp học phần từ PostgreSQL 15.`);
       }
 
-      // 2. Nạp quan hệ ghi danh từ class_members
+      // 2. ĐỒNG BỘ 2 CHIỀU (Bi-directional Sync): Đẩy tất cả các khóa học có trong JSON store nhưng chưa có trong PostgreSQL vào DB
+      let newlySynced = 0;
+      for (const c of this.records.values()) {
+        if (!dbClassIds.has(c.courseId)) {
+          await this.saveToPostgres(c);
+          dbClassIds.add(c.courseId);
+          newlySynced++;
+        }
+      }
+      if (newlySynced > 0) {
+        this.logger.log(`✅ [CourseRepository] Đã bảo toàn và đồng bộ ngược ${newlySynced} lớp học phần từ JSON store vào PostgreSQL 15.`);
+      }
+
+      // 3. Nạp quan hệ ghi danh từ class_members
       const dbMembers = await this.postgres.safeQuery<any>(
         `SELECT class_id, user_id FROM class_members WHERE status = 'ACTIVE'`,
       );
@@ -77,7 +121,9 @@ export class CourseRepository implements OnModuleInit {
         }
         this.studentEnrollments.get(m.user_id)!.add(m.class_id);
       }
-      this.logger.log(`✅ [CourseRepository] Đã nạp ${dbMembers.length} lượt ghi danh từ class_members.`);
+      if (dbMembers.length > 0) {
+        this.logger.log(`✅ [CourseRepository] Đã nạp ${dbMembers.length} lượt ghi danh từ class_members.`);
+      }
 
       this.persist();
     } catch (err: any) {
@@ -89,14 +135,20 @@ export class CourseRepository implements OnModuleInit {
     if (!this.postgres.isAvailable()) return;
     try {
       // Đảm bảo giảng viên tồn tại trong users table
-      await this.postgres.safeQuery(
-        `INSERT INTO users (user_id, student_code, full_name, email, role_id, role, password_hash)
-         VALUES ($1, $1, 'Giảng Viên Phụ Trách', $2, 'LECTURER', 'INSTRUCTOR', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW')
-         ON CONFLICT (user_id) DO NOTHING`,
-        [c.instructorId, `${c.instructorId.toLowerCase()}@fpt.edu.vn`],
+      const lecturerCheck = await this.postgres.safeQuery<any>(
+        `SELECT user_id FROM users WHERE user_id = $1 LIMIT 1`,
+        [c.instructorId],
       );
+      if (lecturerCheck.length === 0) {
+        await this.postgres.safeQuery(
+          `INSERT INTO users (user_id, student_code, full_name, email, role_id, role, password_hash)
+           VALUES ($1, $1, 'Giảng Viên Phụ Trách', $2, 'LECTURER', 'INSTRUCTOR', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW')
+           ON CONFLICT DO NOTHING`,
+          [c.instructorId, `${c.instructorId.toLowerCase()}@fpt.edu.vn`],
+        );
+      }
 
-      await this.postgres.query(
+      await this.postgres.safeQuery(
         `INSERT INTO classes (class_id, lecturer_id, class_code, class_name, semester, description, is_active, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
          ON CONFLICT (class_id) DO UPDATE SET
@@ -197,6 +249,9 @@ export class CourseRepository implements OnModuleInit {
     try {
       const recordsArray = Array.from(this.records.values());
       fs.writeFileSync(this.dataFile, JSON.stringify(recordsArray, null, 2), 'utf-8');
+      if (fs.existsSync(this.dataFile)) {
+        this.lastMtime = fs.statSync(this.dataFile).mtimeMs;
+      }
     } catch (err: any) {
       this.logger.error(`[CourseRepository] Failed to persist store: ${err.message}`);
     }
@@ -216,6 +271,7 @@ export class CourseRepository implements OnModuleInit {
   }
 
   public async findById(courseId: string): Promise<CourseRecord | null> {
+    this.reloadIfModified();
     if (this.postgres.isAvailable()) {
       try {
         const rows = await this.postgres.safeQuery<any>(
@@ -224,7 +280,7 @@ export class CourseRepository implements OnModuleInit {
         );
         if (rows.length > 0) {
           const r = rows[0];
-          return {
+          const rec: CourseRecord = {
             courseId: r.class_id,
             courseCode: r.class_code,
             courseName: r.class_name,
@@ -235,31 +291,31 @@ export class CourseRepository implements OnModuleInit {
             createdAt: new Date(r.created_at),
             updatedAt: new Date(r.updated_at),
           };
+          this.records.set(r.class_id, rec);
+          return rec;
         }
       } catch (e) {
         // fallback to memory
       }
     }
-    return this.records.get(courseId) || null;
+    const mem = this.records.get(courseId);
+    if (mem && this.postgres.isAvailable()) {
+      void this.saveToPostgres(mem);
+    }
+    return mem || null;
   }
 
   public async findByCode(courseCode: string): Promise<CourseRecord | null> {
-    for (const course of this.records.values()) {
-      if (course.courseCode.toUpperCase() === courseCode.toUpperCase()) {
-        return course;
-      }
-    }
-    return null;
-  }
-
-  public async findAll(): Promise<CourseRecord[]> {
+    this.reloadIfModified();
     if (this.postgres.isAvailable()) {
       try {
         const rows = await this.postgres.safeQuery<any>(
-          `SELECT * FROM classes WHERE is_active = true ORDER BY created_at DESC`,
+          `SELECT * FROM classes WHERE UPPER(class_code) = UPPER($1) LIMIT 1`,
+          [courseCode.trim()],
         );
         if (rows.length > 0) {
-          return rows.map((r) => ({
+          const r = rows[0];
+          const rec: CourseRecord = {
             courseId: r.class_id,
             courseCode: r.class_code,
             courseName: r.class_name,
@@ -269,13 +325,69 @@ export class CourseRepository implements OnModuleInit {
             isActive: r.is_active,
             createdAt: new Date(r.created_at),
             updatedAt: new Date(r.updated_at),
-          }));
+          };
+          this.records.set(r.class_id, rec);
+          return rec;
         }
       } catch (e) {
         // fallback
       }
     }
-    return Array.from(this.records.values()).sort(
+    for (const course of this.records.values()) {
+      if (course.courseCode.toUpperCase() === courseCode.toUpperCase()) {
+        return course;
+      }
+    }
+    return null;
+  }
+
+  public async findAll(): Promise<CourseRecord[]> {
+    this.reloadIfModified();
+
+    const merged = new Map<string, CourseRecord>();
+
+    // 1. Nạp từ memory map / courses_store.json trước
+    for (const [id, c] of this.records.entries()) {
+      merged.set(id, c);
+    }
+
+    // 2. Nếu PostgreSQL sẵn sàng, truy vấn classes và hợp nhất 2 chiều
+    if (this.postgres.isAvailable()) {
+      try {
+        const rows = await this.postgres.safeQuery<any>(
+          `SELECT * FROM classes WHERE is_active = true ORDER BY created_at DESC`,
+        );
+        for (const r of rows) {
+          const rec: CourseRecord = {
+            courseId: r.class_id,
+            courseCode: r.class_code,
+            courseName: r.class_name,
+            description: r.description || '',
+            semester: r.semester,
+            instructorId: r.lecturer_id,
+            isActive: r.is_active,
+            createdAt: new Date(r.created_at),
+            updatedAt: new Date(r.updated_at),
+          };
+          merged.set(r.class_id, rec);
+          if (!this.records.has(r.class_id)) {
+            this.records.set(r.class_id, rec);
+          }
+        }
+
+        // Đảm bảo các khóa học trong memory store cũng được bảo toàn và lưu vào PostgreSQL
+        for (const c of merged.values()) {
+          const existsInDb = rows.some((r: any) => r.class_id === c.courseId);
+          if (!existsInDb) {
+            void this.saveToPostgres(c);
+          }
+        }
+      } catch (e: any) {
+        this.logger.warn(`[CourseRepository] findAll PostgreSQL query fallback: ${e.message}`);
+      }
+    }
+
+    return Array.from(merged.values()).sort(
       (a, b) => b.createdAt.getTime() - a.createdAt.getTime(),
     );
   }
