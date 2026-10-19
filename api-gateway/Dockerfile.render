@@ -1,0 +1,99 @@
+# All-in-one deployment image: the gateway serves the API, the WebSocket stream AND the built
+# frontend from a single container.
+#
+# This exists because free hosting tiers (Render, Railway, Fly) typically allow one web service
+# per project. Running everything on one origin also removes CORS and the mixed-content problem:
+# the browser only ever calls the host that served the page, so no `VITE_API_BASE_URL` has to be
+# baked in and no cross-origin pre-flight is needed.
+#
+# Build context is the REPOSITORY ROOT, not ./api-gateway:
+#   docker build -f api-gateway/Dockerfile.render -t aita .
+
+# ── Stage 1: build the frontend ─────────────────────────────────────────────
+FROM node:22-alpine AS frontend-builder
+
+WORKDIR /web
+
+# The host's node_modules and lockfile are excluded by .dockerignore for the same reason as the
+# production frontend image: a lockfile generated on Windows records win32-only native binaries
+# that npm refuses to install on Linux (EBADPLATFORM).
+COPY frontend/package*.json ./
+RUN npm install --no-audit --no-fund --legacy-peer-deps
+
+COPY frontend/ ./
+# Same-origin is the default, so no API URL is baked in. Vite is still given an empty value so
+# `resolveBackendUrl` takes the "configured as same origin" branch rather than guessing.
+ENV VITE_API_BASE_URL=""
+RUN npm run build
+
+# ── Stage 2: build the gateway ──────────────────────────────────────────────
+FROM node:22-alpine AS gateway-builder
+
+WORKDIR /app
+
+COPY api-gateway/package*.json ./
+RUN npm install --no-audit --no-fund
+
+COPY api-gateway/tsconfig*.json ./
+COPY api-gateway/src ./src
+RUN npm run build
+
+# ── Stage 2b: build the GenAI Hub ───────────────────────────────────────────
+FROM node:22-alpine AS hub-builder
+
+WORKDIR /hub
+
+COPY genai-hub/package*.json ./
+RUN npm install --no-audit --no-fund
+
+COPY genai-hub/tsconfig*.json ./
+COPY genai-hub/src ./src
+COPY genai-hub/demo.ts ./
+RUN npm run build
+
+# ── Stage 3: runtime ────────────────────────────────────────────────────────
+FROM node:22-alpine AS runtime
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+# Python provides the real `ast` module the Milestone 2 plagiarism parser requires. Without it
+# the engine silently degrades to the regex tokeniser, which is weaker against disguised code —
+# so it is installed here rather than left as an optional extra.
+RUN apk add --no-cache python3
+
+# ── The GenAI Hub runs as a second process in this same container ───────────
+# A free hosting tier allows one web service, but an image may run more than one process. The
+# hub is started in the background by start.sh and reached over loopback, so the real AST parser
+# and the exam generator both work without a second paid service.
+COPY genai-hub/package*.json ./hub/
+RUN cd hub && npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+
+COPY --from=hub-builder /hub/dist ./hub/dist
+# The Python parser is a runtime asset rather than compiled output, so it is copied explicitly.
+#
+# The destination path must match where `tsc` puts real-ast-parser.js. The hub's tsconfig uses
+# `rootDir: ./` and includes demo.ts and the tests, so compiled files land under `dist/src/...`
+# and `real-ast-parser.js` resolves its helper as a SIBLING. Copying to `dist/ast-engine/`
+# instead left the parser unreachable: the hub then quietly reported REGEX_FALLBACK and grading
+# silently used the weaker tokeniser.
+COPY genai-hub/src/ast-engine/ast_parser.py ./hub/dist/src/ast-engine/ast_parser.py
+
+# ── The gateway ─────────────────────────────────────────────────────────────
+COPY api-gateway/package*.json ./
+RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
+
+COPY --from=gateway-builder /app/dist ./dist
+# The gateway serves the SPA from ./public; see serveFrontendIfPresent in src/main.ts.
+COPY --from=frontend-builder /web/dist ./public
+COPY api-gateway/start.sh ./start.sh
+RUN chmod +x ./start.sh && mkdir -p /app/uploads/submissions /app/data
+
+# Render injects PORT for the public service; the hub listens on an internal port only.
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+  CMD node -e "require('http').get('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/v1/submissions/stats',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+
+CMD ["./start.sh"]

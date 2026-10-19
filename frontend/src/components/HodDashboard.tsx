@@ -10,7 +10,9 @@ import {
   Info,
 } from 'lucide-react';
 
-const API_BASE_URL = 'http://localhost:3000';
+// Backend URL comes from src/config/api.ts so a deployed build talks to its own
+// origin instead of the visitor's localhost.
+import { API_BASE_URL, apiUrl } from '../config/api';
 
 type HodTab = 'INTEGRITY' | 'APPEALS';
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Scale, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, RefreshCw, Award } from 'lucide-react';
 import type { Appeal } from '../types';
 import { AppealModal } from './AppealModal';
+import { API_BASE_URL } from '../config/api';
 
 interface StudentAppealsViewProps {
   studentId: string;
@@ -12,7 +13,7 @@ interface StudentAppealsViewProps {
 export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
   studentId,
   studentName,
-  apiBaseUrl = 'http://localhost:3000',
+  apiBaseUrl = API_BASE_URL,
 }) => {
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [loading, setLoading] = useState(false);

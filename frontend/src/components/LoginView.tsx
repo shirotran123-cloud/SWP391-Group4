@@ -14,7 +14,9 @@ interface LoginViewProps {
   onLoginSuccess: (user: UserProfile) => void;
 }
 
-const API_BASE_URL = 'http://localhost:3000';
+// Backend URL comes from src/config/api.ts so a deployed build talks to its own
+// origin instead of the visitor's localhost.
+import { API_BASE_URL, apiUrl } from '../config/api';
 
 // Client ID mặc định từ hệ thống hoặc cấu hình
 const DEFAULT_CLIENT_ID =

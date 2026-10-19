@@ -6,7 +6,8 @@ import {
   CheckCircle, XCircle, Clock, Cpu, BarChart2, Settings, Sparkles
 } from 'lucide-react';
 
-const API = 'http://localhost:3000';
+// Shared backend URL: a deployed bundle must call its own origin, not localhost.
+import { API_BASE_URL as API } from '../config/api';
 
 interface QueueStats {
   queueName: string;

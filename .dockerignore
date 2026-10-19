@@ -1,0 +1,43 @@
+# Build context for the all-in-one Render image (api-gateway/Dockerfile.render).
+#
+# The context is the repository root because the image needs both the frontend and the gateway.
+# Excluding the host's build outputs keeps the context small and, more importantly, stops a
+# Windows-generated lockfile from breaking the Linux build: such a lockfile records win32-only
+# native binaries (for example `@rolldown/binding-win32-x64-msvc`) and npm aborts with
+# EBADPLATFORM when asked to install them on Linux.
+
+**/node_modules
+
+**/package-lock.json
+npm-debug.log*
+
+**/dist
+**/build
+**/coverage
+.nyc_output
+
+# Local secrets must never be baked into an image layer.
+.env
+.env.*
+!**/.env.example
+
+.git
+.gitignore
+.github
+**/*.md
+
+**/data/*.json
+**/uploads
+
+# Tests, tooling and documentation are not needed to build or run the service.
+api-gateway/test
+sandbox
+tools
+docs
+demo
+database
+
+# NOTE: `genai-hub` is deliberately NOT excluded. The all-in-one image compiles the hub and
+# copies its Python AST parser, so the directory must stay in the build context. Its own
+# node_modules and dist are already covered by the patterns above.
+genai-hub/test

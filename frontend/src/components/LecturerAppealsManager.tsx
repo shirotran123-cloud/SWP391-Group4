@@ -24,6 +24,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import type { Appeal } from '../types';
+import { API_BASE_URL } from '../config/api';
 
 interface LecturerAppealsManagerProps {
   apiBaseUrl?: string;
@@ -31,7 +32,7 @@ interface LecturerAppealsManagerProps {
 }
 
 export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
-  apiBaseUrl = 'http://localhost:3000',
+  apiBaseUrl = API_BASE_URL,
   lecturerId = 'GV001',
 }) => {
   const [appeals, setAppeals] = useState<Appeal[]>([]);

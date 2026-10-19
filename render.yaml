@@ -1,0 +1,88 @@
+# Render blueprint for the AITA autograding system.
+#
+# Render's free tier allows one web service, so the whole system runs in a single container:
+# `api-gateway/Dockerfile.render` builds the frontend, then the gateway serves the API, the
+# Socket.IO stream and the SPA from one origin.
+#
+# What this deliberately does NOT try to do is run the Docker grading sandbox. A container cannot
+# start sibling containers without the host Docker socket, and no free tier provides one. The
+# gateway already degrades gracefully: it falls back to a static analysis mode and reports
+# `executedInContainer: false`, so the deployment stays honest about what it did rather than
+# pretending the code ran. Full test-case execution requires the Docker Compose deployment
+# documented in docs/MILESTONE_3_RUBRIC_EVIDENCE.md §5.
+#
+# Deploy:
+#   1. Push this repository to GitHub.
+#   2. Render dashboard -> New -> Blueprint -> pick the repository and the `trung` branch.
+#   3. Render reads this file and provisions the service.
+#   4. Set the `sync: false` secrets below in the dashboard when prompted.
+
+services:
+  - type: web
+    name: aita-autograding
+    runtime: docker
+    plan: free
+    region: singapore
+    branch: trung
+    dockerfilePath: ./api-gateway/Dockerfile.render
+    # The build context must be the repository root: the image needs both the frontend and the
+    # gateway, and .dockerignore at the root trims everything else out.
+    dockerContext: .
+    healthCheckPath: /api/v1/submissions/stats
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Render assigns the port; the gateway reads PORT and defaults to 3000.
+      - key: PORT
+        value: 3000
+
+      # ── Persistence ────────────────────────────────────────────────────────
+      # No PostgreSQL or Redis instance is attached, so the gateway uses its JSON stores and the
+      # in-memory queue. That is the documented graceful-degradation path and it keeps the free
+      # deployment self-contained. To attach a real database, uncomment the block below, create a
+      # Render PostgreSQL instance, and set these from its connection details.
+      - key: POSTGRES_HOST
+        sync: false
+      - key: POSTGRES_PORT
+        value: 5432
+      - key: POSTGRES_USER
+        sync: false
+      - key: POSTGRES_PASSWORD
+        sync: false
+      - key: POSTGRES_DB
+        sync: false
+      - key: REDIS_HOST
+        sync: false
+      - key: REDIS_PORT
+        value: 6379
+
+      # ── Security ───────────────────────────────────────────────────────────
+      # MUST be replaced. A predictable JWT secret lets anyone mint a valid token for any role,
+      # including ADMIN. Render can generate one instead: use `generateValue: true` below.
+      - key: JWT_SECRET
+        generateValue: true
+
+      # Google SSO. The client ID must match the frontend's build-time value, and the deployed
+      # origin must be an authorised JavaScript origin in the Google Cloud console — otherwise
+      # the browser refuses the sign-in popup.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+
+      # Email for the OTP login flow. Without these the gateway runs in MOCK mode: it returns the
+      # code in the API response instead of sending mail, which is fine for a demo and unsuitable
+      # for anything real.
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+
+      # The GenAI Hub normally runs as a separate service. Left unset, exam generation falls back
+      # to the deterministic offline engine, so the feature still works end to end.
+      - key: GENAI_HUB_URL
+        sync: false
+
+      # A generated key lets the hub call a real model when one is provided.
+      - key: GEMINI_API_KEYS
+        sync: false
