@@ -138,6 +138,8 @@ export class QueueService implements OnModuleInit, OnModuleDestroy {
         });
         const durationMs = Math.round((performance.now() - startTime) * 100) / 100;
         this.logger.log(`[BullMQ] Job ${job.id} queued in Redis BullMQ in ${durationMs}ms`);
+        // Đồng thời đưa vào hàng đợi thực thi của Worker cục bộ
+        this.memoryQueue.push({ id: job.id as string, name: 'grade_submission', data });
         return { jobId: job.id as string, durationMs, mode: 'REDIS' };
       } catch (err) {
         this.logger.warn(`[BullMQ] Failed to push to Redis (${err.message}). Falling back to In-Memory queue.`);
