@@ -131,6 +131,13 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      # `npm run build` runs `tsc -b`, which deliberately excludes the test files so a
+      # test-only type error cannot break the deployable bundle. That means the suites need
+      # their own typecheck, or they would drift out of type-safety unnoticed.
+      - name: Typecheck the Test Suites
+        working-directory: frontend
+        run: npx tsc -p tsconfig.test.json
+
       # Vitest enforces the thresholds declared in vitest.config.ts, so this step fails the
       # build the moment coverage drops below the Milestone 3 requirement.
       - name: Unit Test Suite with Coverage Gate (≥ 80%)
@@ -144,3 +151,49 @@ jobs:
           name: frontend-coverage
           path: frontend/coverage/
           if-no-files-found: ignore
+
+  docker-build-gate:
+    name: 🐳 Production images build on Linux
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      # Building the images is itself a regression test. Two defects shipped here that local
+      # Windows development could never reveal: a hard dependency on
+      # `@rolldown/binding-win32-x64-msvc` (npm refuses to install it on Linux with
+      # EBADPLATFORM), and an undeclared `react-is` peer that only resolved on the developer's
+      # machine because npm happened to hoist it. Both broke the Linux build outright.
+      - name: Build API Gateway image
+        run: docker build -t aita-api-gateway:ci ./api-gateway
+
+      - name: Build GenAI Hub image
+        run: docker build -t aita-genai-hub:ci ./genai-hub
+
+      - name: Build Frontend image
+        run: docker build -t aita-frontend:ci ./frontend
+
+      # A crash-looping entry point (wrong `dist/` path for the compiled server) is invisible
+      # until the container is actually started, so smoke-test each one.
+      - name: Smoke-test the Gateway image
+        run: |
+          docker run -d --name gw-ci -p 3000:3000 \
+            -e REDIS_HOST=host.docker.internal -e POSTGRES_HOST=host.docker.internal \
+            aita-api-gateway:ci
+          sleep 12
+          docker logs gw-ci | tail -20
+          # It must not have exited; a missing entry point shows up as a restart loop.
+          test "$(docker inspect -f '{{.State.Running}}' gw-ci)" = "true"
+          docker rm -f gw-ci
+
+      - name: Smoke-test the GenAI Hub image
+        run: |
+          docker run -d --name hub-ci -p 3001:3001 aita-genai-hub:ci
+          sleep 12
+          docker logs hub-ci | tail -20
+          test "$(docker inspect -f '{{.State.Running}}' hub-ci)" = "true"
+          curl -fsS http://localhost:3001/health
+          docker rm -f hub-ci
+
+      - name: Validate the production compose file
+        run: docker compose -f docker-compose.prod.yml config --quiet

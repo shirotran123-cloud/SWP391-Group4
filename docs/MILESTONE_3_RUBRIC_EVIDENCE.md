@@ -47,9 +47,12 @@ With it, every file under `src/**` counts, including the ones still untested.
 
 | Subsystem | Statements | Branches | Functions | Lines | Gate |
 |:--|--:|--:|--:|--:|:--|
-| API Gateway | **82.80%** | 62.93% | 84.76% | **82.80%** | ✅ ≥ 80% |
+| API Gateway | **82.50%** | 63.65% | 84.52% | **82.50%** | ✅ ≥ 80% |
 | GenAI Hub | **90.64%** | 75.77% | 93.15% | **90.64%** | ✅ ≥ 80% |
-| Frontend | see §2.3 | — | — | see §2.3 | tracked |
+| Frontend | **89.69%** | **81.10%** | 85.96% | **90.87%** | ✅ ≥ 80% |
+
+All three gates exit 0. Recorded from a clean run with the development stack up — see §5.4 for
+why that matters.
 
 > **Reproduce:** `cd api-gateway && npm run test:coverage`
 > The gateway reports `COVERAGE-ALL: all gateway suites green` and exits 0 only when the
@@ -81,26 +84,36 @@ Suites and the behaviour they pin:
 | `submission.test.tsx` | 116 | Upload validation, archive rejection, detail modal tabs, clipboard, per-assignment size limit |
 | `appeals.test.tsx` | 68 | Appeal filing and lecturer resolution, validation bounds, cross-student isolation |
 | `live-grading.test.tsx` | 100 | Grading progress for all four step states, AI review, plagiarism banner, HOD console, `plagiarism.service` |
+| `services-and-charts.test.tsx` | 94 | Radar chart including the hover tooltip, appeals view states, Gemini model selection and timeouts, parser edge cases |
+| `lecturer-dashboard.test.tsx` | 77 | All six lecturer tabs, the AI composer end to end, Excel bulk import, publishing, gradebook rows |
+| `test-environment.test.ts` | 6 | Guards the jsdom shims themselves — see §4.12 |
 
-**Full suite: 507 tests passing.** The suite was run four consecutive times with identical
-results — see §4.6 for the cross-test pollution that had to be fixed to make that true.
+**Full suite: 684 tests passing, 13 files.** Verified stable across consecutive runs; §4.11 and
+§4.12 record the two defects that had to be fixed before that was true.
 
 ### 2.4 Per-file coverage after the suites landed
 
 | File | Statements |
 |:--|--:|
-| `App.tsx` | 81.4% |
-| `HodDashboard.tsx` | 100% |
 | `LiveGradingModal.tsx` | 100% |
+| `HodDashboard.tsx` | 100% |
+| `SolidRadarChart.tsx` | 100% |
+| `StudentAppealsView.tsx` | 100% |
+| `CountdownTimer.tsx` | 100% |
+| `gemini-ai.service.ts` | 99.4% |
 | `SubmissionDetailModal.tsx` | 98.5% |
+| `LecturerDashboard.tsx` | 98.2% |
 | `SubmissionView.tsx` | 98.1% |
-| `AppealModal.tsx` | 96.3% |
 | `LoginModal.tsx` | 96.9% |
-| `LoginView.tsx` | 94.9% |
+| `AppealModal.tsx` | 96.3% |
 | `LecturerAppealsManager.tsx` | 94.9% |
+| `LoginView.tsx` | 94.9% |
 | `StudentHistoryView.tsx` | 87.9% |
 | `ast-normalizer.ts` | 83.2% |
-| `assignmentParser.ts` | 82.9% |
+| `App.tsx` | 81.4% |
+
+`LecturerPanel.tsx` (41%) and `AssignmentDescriptionView.tsx` (32%) remain the weakest files;
+both are display-heavy components whose uncovered lines are mostly presentational branches.
 
 ---
 
@@ -293,6 +306,64 @@ with a different subset each time. It was initially reported by two separate rev
 
 **Fix:** `socket.off(...)` for all eight events before `disconnect()`. The suite then passed
 **507/507 on four consecutive runs**.
+
+### 4.12 The jsdom shim that never installed, blanking every chart
+
+**File:** `frontend/src/test/setup.ts`
+**Severity:** High for test integrity — a whole class of assertions was vacuous
+
+The shim that gives charts a measurable container was guarded by:
+
+```ts
+if (!HTMLElement.prototype.getBoundingClientRect) { ...install stub... }
+```
+
+jsdom **always** defines `getBoundingClientRect`, so the condition was never true and the stub
+never installed. jsdom's real method returns all zeros, so every chart computed a 0×0 box and
+rendered nothing. Tests still passed — they simply asserted against an empty container, and the
+only symptom was recharts quietly logging *"width(0) and height(0) of chart should be greater
+than 0"*.
+
+This is the most dangerous kind of defect in a test suite: **green results that verify nothing**.
+It was found by a reviewer who noticed the guard could not fire, and it had been silently
+weakening chart coverage across several suites.
+
+**Fix:** test for a **zero box** rather than a missing method, and added
+`src/__tests__/test-environment.test.ts`, which asserts each shim actually took effect so the
+mistake cannot return unnoticed. Confirmed by running the new test against the old code first —
+it failed with `expected 0 to be greater than 0`, proving the defect before fixing it.
+
+### 4.13 A published assignment filed against a course that does not exist
+
+**File:** `frontend/src/components/LecturerDashboard.tsx`
+**Severity:** High — silent data loss on a primary lecturer action
+
+`selectedCourse` was initialised to the placeholder `'COURSE-SWP391'`, but every real course id
+the gateway issues is prefixed `CRS-`. A `<select>` whose `value` matches no `<option>` still
+**displays the first option**, so the composer looked correct while React state held an orphan id.
+
+The consequence: a lecturer who opened the AI composer and pressed "Lưu & Xuất Bản" without
+manually re-picking the course POSTed `courseId: 'COURSE-SWP391'` to `/api/v1/assignments` and
+every test case to `/api/v1/test-cases`. The assignment was filed against a course that does not
+exist, it never appeared under the intended course, and that course's "Đã giao" counter never
+incremented.
+
+**Fix:** once the real course list arrives, adopt a valid id while preserving any hand-picked
+selection. Three regression tests cover it.
+
+### 4.14 Empty headings rendered a blank bullet instead of the default text
+
+**File:** `frontend/src/utils/assignmentParser.ts`
+**Severity:** Medium
+
+Every section used `items.length > 0 ? items : [text]`. When a heading had **no body**, `text` is
+`''`, so the parser returned `['']` rather than `[]`. `AssignmentDescriptionView` branches on
+`inputFormat.length > 0`, so an empty section rendered **one blank bullet** instead of the
+explanatory default — visible to any student reading an assignment whose description had a
+heading with no content under it.
+
+**Fix:** return `[]` for an empty body. Two regression tests cover a trailing empty heading and
+all four headings empty.
 
 ---
 
@@ -505,10 +576,11 @@ Recorded so the defence is not caught out by a question it cannot answer.
    demos and CI*, not a substitute for a real model. Assignments whose titles contradicted their
    test cases were identified and removed (see `tools/find-mismatched-testcases.py`).
 
-3. **Branch coverage is below 80%** (gateway 62.93%, hub 75.77%, frontend tested at 70%). The
-   gate enforces statements, lines and functions at 80%. Branch coverage was deliberately set
-   lower rather than gamed: the uncovered branches are defensive error paths that need fault
-   injection to reach honestly.
+3. **Branch coverage is below 80% on the two Node services** (gateway 63.65%, hub 75.77%). The
+   frontend reaches 81.10% branches; the backend gates enforce statements, lines and functions at
+   80% and do not enforce branches. The uncovered backend branches are defensive error paths —
+   `catch` blocks, `??` fallbacks and transport-failure arms — that would need fault injection to
+   reach honestly. They are left uncovered rather than covered with tests that assert nothing.
 
 4. **Deployment is containerised but not hosted publicly.** `docker-compose.prod.yml` builds and
    runs the whole system — five healthy services behind nginx — and `tools/verify-deployment.py`
@@ -559,12 +631,18 @@ cd frontend     ; npx vite                    # port 5173
 
 ### 10.3 Coverage gates
 
+> **Run these with the DEVELOPMENT stack up** (`docker compose up -d`). The production stack
+> does not publish the database ports, and the backend repositories then fall back to the JSON
+> stores and coverage silently drops — see §5.4.
+
 ```powershell
+docker compose up -d                      # PostgreSQL 5432 + Redis 6379 must be reachable
+
 cd api-gateway  ; npm run test:coverage   # expect EXIT 0, statements >= 80%
 cd genai-hub    ; npx c8 --check-coverage --lines 80 --functions 80 --statements 80 `
                      --include='src/**/*.ts' `
                      npx ts-node --transpile-only test/run-coverage-all.ts
-cd frontend     ; npm run test:coverage   # expect 507 tests passing, thresholds applied
+cd frontend     ; npm run test:coverage   # expect 684 tests passing, thresholds applied
 ```
 
 ### 10.4 Functional verification
