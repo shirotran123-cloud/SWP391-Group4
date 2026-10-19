@@ -62,7 +62,11 @@ export function parseAssignmentDescription(rawText: string): ParsedAssignmentSpe
       .split(/(?:(?:\r?\n|^)\s*(?:\d+[\.\)]|\-|\*)\s+|(?:^|\s)(?=\d+[\.\)]\s+))/)
       .map(s => s.trim().replace(/^[\d\.\-\*\)\s]+/, ''))
       .filter(s => s.length > 5);
-    technicalRequirements = items.length > 0 ? items : [techText];
+    // Regression: the `items.length > 0 ? items : [text]` fallback produced `['']` when the
+    // heading had no body, and the view renders one row per entry — so "Định dạng Đầu ra:" with
+    // nothing under it showed a blank bullet instead of the explanatory default text, which is
+    // what an empty array selects.
+    technicalRequirements = items.length > 0 ? items : (techText ? [techText] : []);
   }
 
   // 3. Trích xuất Input Format
@@ -75,7 +79,7 @@ export function parseAssignmentDescription(rawText: string): ParsedAssignmentSpe
       .split(/(?:(?:\r?\n|^)\s*[\-\*\•]\s*|\s*-\s*(?=[A-ZĐd0-9]))/)
       .map(s => s.trim().replace(/^[\-\*\•\s]+/, ''))
       .filter(s => s.length > 3);
-    inputFormat = items.length > 0 ? items : [inputText];
+    inputFormat = items.length > 0 ? items : (inputText ? [inputText] : []);
   }
 
   // 4. Trích xuất Output Format
@@ -88,7 +92,7 @@ export function parseAssignmentDescription(rawText: string): ParsedAssignmentSpe
       .split(/(?:(?:\r?\n|^)\s*[\-\*\•]\s*|\s*-\s*(?=[A-ZĐd0-9]))/)
       .map(s => s.trim().replace(/^[\-\*\•\s]+/, ''))
       .filter(s => s.length > 3);
-    outputFormat = items.length > 0 ? items : [outputText];
+    outputFormat = items.length > 0 ? items : (outputText ? [outputText] : []);
   }
 
   // 5. Trích xuất Constraints
@@ -99,7 +103,7 @@ export function parseAssignmentDescription(rawText: string): ParsedAssignmentSpe
       .split(/(?:(?:\r?\n|^)\s*[\-\*\•]\s*|\s*-\s*(?=[0-9A-Za-z<]))/)
       .map(s => s.trim().replace(/^[\-\*\•\s]+/, ''))
       .filter(s => s.length > 1);
-    constraints = items.length > 0 ? items : [constrText];
+    constraints = items.length > 0 ? items : (constrText ? [constrText] : []);
   }
 
   // 6. Phát hiện các tags công nghệ tự động để gắn chip nổi bật

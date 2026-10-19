@@ -25,6 +25,22 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.{test,spec}.{ts,tsx}'],
     exclude: ['node_modules', 'dist'],
+
+    // Vitest's 5 s default is measured per test and is generous on an idle machine, but this
+    // project's components render large trees and some suites take several seconds each. When
+    // the default is exceeded under load the failure reads as `Test timed out in 5000ms`,
+    // which looks like a hang in the code rather than a busy machine. A higher ceiling keeps
+    // the signal honest: a genuine hang still fails, but a slow-but-correct render does not.
+    testTimeout: 20000,
+    hookTimeout: 20000,
+
+    // jsdom + recharts + Monaco make each worker memory-hungry. Left unbounded, Vitest sized
+    // the pool to the core count and the resulting contention produced nondeterministic
+    // timeouts in unrelated files — the classic "it fails only in a full run" symptom. Capping
+    // the pool trades a little wall clock for a deterministic result.
+    maxWorkers: 4,
+    minWorkers: 1,
+
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary', 'json-summary', 'html'],

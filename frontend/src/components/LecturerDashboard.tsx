@@ -264,6 +264,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   // Form state cho tạo đề bài
   const [assignmentTitle, setAssignmentTitle] = useState('Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị');
+  // Placeholder until `fetchLiveCourses` reports a real course id (never a real one: the
+  // gateway issues `CRS-*`). `fetchLiveCourses` replaces it, so nothing is filed under it.
   const [selectedCourse, setSelectedCourse] = useState('COURSE-SWP391');
   const [assignmentDesc, setAssignmentDesc] = useState('Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian và tuân thủ các nguyên lý SOLID.');
   const [deadlineDate, setDeadlineDate] = useState('2026-10-26T23:59');
@@ -780,6 +782,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           if (mapped.length > 0 && !targetCourseId) {
             setTargetCourseId(mapped[0].courseId);
           }
+          // Regression: `selectedCourse` starts on the placeholder 'COURSE-SWP391', which no
+          // real course uses (the gateway issues `CRS-*` ids). A <select> whose value matches
+          // no <option> silently *displays* the first option while the state keeps the orphan
+          // id, so publishing filed the assignment and every testcase under a course that does
+          // not exist, and the "Đã giao" counter never moved. Adopt a real id as soon as the
+          // course list arrives.
+          setSelectedCourse((prev) =>
+            mapped.some((c) => c.courseId === prev) ? prev : mapped[0].courseId,
+          );
         }
       }
     } catch {

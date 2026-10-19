@@ -182,10 +182,16 @@ try:
     counters = ("waitingCount", "activeCount", "completedCount", "failedCount")
     check(all(k in stats for k in counters), "queue stats expose every job counter",
           {k: stats.get(k) for k in counters})
-    check(stats.get("completedCount", 0) > 0, "jobs have completed on the queue",
-          stats.get("completedCount"))
     check(stats.get("mode") in ("REDIS", "IN_MEMORY", "MEMORY"),
           "queue reports its transport mode", stats.get("mode"))
+    # The job just enqueued must be visible: either still waiting/active in this fresh queue, or
+    # already completed if the worker was fast. Asserting `completedCount > 0` would only hold on
+    # a queue that had prior traffic, which makes the check depend on run order rather than on
+    # this submission.
+    in_flight = (stats.get("waitingCount") or 0) + (stats.get("activeCount") or 0)
+    check(in_flight > 0 or (stats.get("completedCount") or 0) > 0,
+          "the submitted job is visible on the queue",
+          {k: stats.get(k) for k in counters})
 except Exception as exc:  # noqa: BLE001
     check(False, "queue stats endpoint", exc)
 

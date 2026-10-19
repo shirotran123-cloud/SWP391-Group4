@@ -38,19 +38,42 @@ if (!(globalThis as any).ResizeObserver) {
   };
 }
 
-// Recharts/recharts-like containers measure themselves; give them a non-zero box.
-if (!(HTMLElement.prototype as any).getBoundingClientRect) {
-  (HTMLElement.prototype as any).getBoundingClientRect = () => ({
-    width: 400,
-    height: 300,
-    top: 0,
-    left: 0,
-    bottom: 300,
-    right: 400,
-    x: 0,
-    y: 0,
-    toJSON: () => {},
-  });
+// Charts measure their container before rendering. jsdom DOES define
+// `getBoundingClientRect`, but it returns all zeros, so a chart inside it computes a 0x0 box and
+// renders nothing at all.
+//
+// This previously read `if (!HTMLElement.prototype.getBoundingClientRect)`, which is never true
+// because jsdom always provides the method. The shim therefore never installed and every chart
+// test silently asserted against an empty container — recharts logged the warning
+// "width(0) and height(0) of chart should be greater than 0" and produced no SVG.
+//
+// The check is now for a ZERO box rather than a missing method, which is the condition that
+// actually matters. `src/__tests__/test-environment.test.ts` guards this so the mistake cannot
+// return unnoticed.
+const jsdomRect = HTMLElement.prototype.getBoundingClientRect;
+const rectIsZero = (() => {
+  try {
+    const probe = jsdomRect.call(document.createElement('div'));
+    return !probe || (probe.width === 0 && probe.height === 0);
+  } catch {
+    return true;
+  }
+})();
+
+if (rectIsZero) {
+  (HTMLElement.prototype as any).getBoundingClientRect = function getBoundingClientRect() {
+    return {
+      width: 1024,
+      height: 768,
+      top: 0,
+      left: 0,
+      bottom: 768,
+      right: 1024,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    } as DOMRect;
+  };
 }
 
 // `URL.createObjectURL` is used when exporting files; jsdom has no implementation.
