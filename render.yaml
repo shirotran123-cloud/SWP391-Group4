@@ -41,22 +41,15 @@ services:
       # ── Persistence ────────────────────────────────────────────────────────
       # No PostgreSQL or Redis instance is attached, so the gateway uses its JSON stores and the
       # in-memory queue. That is the documented graceful-degradation path and it keeps the free
-      # deployment self-contained. To attach a real database, uncomment the block below, create a
-      # Render PostgreSQL instance, and set these from its connection details.
+      # deployment self-contained and working.
+      #
+      # These are declared empty on purpose rather than omitted: if they were set to a hostname
+      # that does not resolve, the gateway would spend time on connection attempts before
+      # falling back. Empty means "use the local store" immediately.
       - key: POSTGRES_HOST
-        sync: false
-      - key: POSTGRES_PORT
-        value: 5432
-      - key: POSTGRES_USER
-        sync: false
-      - key: POSTGRES_PASSWORD
-        sync: false
-      - key: POSTGRES_DB
-        sync: false
+        value: ""
       - key: REDIS_HOST
-        sync: false
-      - key: REDIS_PORT
-        value: 6379
+        value: ""
 
       # ── Security ───────────────────────────────────────────────────────────
       # MUST be replaced. A predictable JWT secret lets anyone mint a valid token for any role,
@@ -64,11 +57,28 @@ services:
       - key: JWT_SECRET
         generateValue: true
 
-      # Google SSO. The client ID must match the frontend's build-time value, and the deployed
-      # origin must be an authorised JavaScript origin in the Google Cloud console — otherwise
-      # the browser refuses the sign-in popup.
+      # Google SSO.
+      #
+      # The server verifies the ID token's RS256 signature against Google's JWKS and requires
+      # `aud` to equal this value. The frontend asks Google for a token for the SAME client ID
+      # (it is compiled into the bundle), so a mismatch here makes every sign-in fail with
+      # "invalid token" while looking like a broken integration.
+      #
+      # The deployed origin must also be listed under "Authorised JavaScript origins" for this
+      # client in the Google Cloud console. Without that the browser refuses the popup before
+      # the request is ever sent, with no server-side trace.
+      #
+      # Leave unset to keep Google sign-in disabled; password login keeps working either way.
+      #
+      # This is a PUBLIC OAuth client ID, not a secret — it is compiled into the frontend bundle
+      # and visible to every visitor. Committing it is correct; a client *secret* never would be.
       - key: GOOGLE_CLIENT_ID
-        sync: false
+        value: 788798423051-4c6pqis6sjcrnit4c74omft9kqrvp623.apps.googleusercontent.com
+
+      # Demo accounts. The built-in seed stores a PLACEHOLDER password hash so no seeded account
+      # can sign in until this is "true". Leave it unset on a real deployment.
+      - key: SEED_DEMO_ACCOUNTS
+        value: "true"
 
       # Email for the OTP login flow. Without these the gateway runs in MOCK mode: it returns the
       # code in the API response instead of sending mail, which is fine for a demo and unsuitable
