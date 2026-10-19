@@ -19,10 +19,29 @@ Per `RBL_Syllabus_AITA_10Weeks.md`, Milestone 3 is assessed on six deliverables:
 |:--|:--|:--|
 | 1 | **GenAI subsystem**: AI writes the problem statement and the grading rubric | `genai-hub/src/services/exam-generator.service.ts` |
 | 2 | **Semantic Code Review**: Clean Code scoring and compiler-error explanation | `genai-hub/src/services/code-reviewer.service.ts`, `compiler-explainer.service.ts` |
-| 3 | **End-to-end integration**: upload → Redis → Docker → AST → LLM → WebSocket | Verified in §3 |
+| 3 | **End-to-end integration**: upload → Redis → Docker → AST → LLM → WebSocket | Verified in §4 |
 | 4 | **Appeals portal** for students and staff | `api-gateway/src/appeals/`, `StudentAppealsView.tsx`, `LecturerAppealsManager.tsx`, `HodDashboard.tsx` |
 | 5 | **Git commit analytics** for individual contribution marking | `api-gateway/src/teamwork/teamwork.service.ts` |
 | 6 | **Unit-test coverage ≥ 80%** on backend and frontend | Verified in §2 |
+
+The syllabus also states two Milestone 2 requirements that were only partially met and have since
+been closed: the AST parser had to use Python's real `ast` module, and the sandbox had to survive
+the P2P penetration exercise. Both are documented in **§5**.
+
+**Status summary**
+
+| Requirement | State |
+|:--|:--|
+| M3 GenAI subsystem | Met |
+| M3 Semantic review + compiler explanation | Met |
+| M3 End-to-end integration | Met — 39/39 assertions against the running stack |
+| M3 Appeals portal | Met |
+| M3 Git commit analytics | Met — 87 records, free-rider detection |
+| M3 Unit coverage ≥ 80% | Met — 82.8% / 91.4% / 89.7% |
+| M3 Public deployment | **Image built and verified; awaiting a Render account for a public URL** |
+| M2 AST parser (`ast` module) | **Met — §5.1** |
+| M2 Sandbox penetration test | **Met — §5.2, 8/8 defended and execution independently proven** |
+| M3 P2P cross-group UAT | Process activity between teams; not something one team can perform alone |
 
 ---
 
@@ -87,8 +106,9 @@ Suites and the behaviour they pin:
 | `services-and-charts.test.tsx` | 94 | Radar chart including the hover tooltip, appeals view states, Gemini model selection and timeouts, parser edge cases |
 | `lecturer-dashboard.test.tsx` | 77 | All six lecturer tabs, the AI composer end to end, Excel bulk import, publishing, gradebook rows |
 | `test-environment.test.ts` | 6 | Guards the jsdom shims themselves — see §4.12 |
+| `api-config.test.ts` | 16 | Backend URL resolution: configured override, same-origin fallback, trailing-slash handling, and the rule that an https page never resolves to localhost |
 
-**Full suite: 684 tests passing, 13 files.** Verified stable across consecutive runs; §4.11 and
+**Full suite: 700 tests passing, 14 files.** Verified stable across consecutive runs; §4.11 and
 §4.12 record the two defects that had to be fixed before that was true.
 
 ### 2.4 Per-file coverage after the suites landed
@@ -365,14 +385,132 @@ heading with no content under it.
 **Fix:** return `[]` for an empty body. Two regression tests cover a trailing empty heading and
 all four headings empty.
 
+### 4.15 Every backend URL was hardcoded to localhost
+
+**Files:** 13 components plus `src/config/api.ts` (new)
+**Severity:** High — the app could not work when deployed at all
+
+`http://localhost:3000` was hardcoded in five `const API_BASE_URL` declarations and a further
+seven inline `fetch` calls. A bundle is executed by the **visitor's** browser, so on a deployed
+site that URL means the visitor's own machine. Every request would fail with a connection error
+while the server logs stayed completely empty — a symptom that reads like a backend outage and
+sends you debugging the wrong service.
+
+**Fix:** a single `src/config/api.ts` resolves the backend in a documented order —
+`VITE_API_BASE_URL` when set at build time, otherwise the origin that served the page
+(single-service deployment), otherwise localhost for local work. An empty configured value means
+"same origin" rather than "unset", so it is checked against `undefined` rather than truthiness.
+
+The decision lives in a pure `resolveBackendUrl` function because Vite substitutes
+`import.meta.env` at transform time, which makes the captured value untestable from inside the
+module. Extracting it allowed 16 tests, including the case that matters most: **served over
+https, the API must never resolve to localhost** (an https page calling http:// is blocked as
+mixed content).
+
+### 4.16 The real AST parser was unreachable inside the container
+
+**File:** `api-gateway/Dockerfile.render`
+**Severity:** High — a silent quality regression in exactly the feature Milestone 2 is graded on
+
+`tsc` places the hub's compiled output under `dist/src/...` (its tsconfig uses `rootDir: ./` and
+includes `demo.ts`), so `real-ast-parser.js` looks for `ast_parser.py` **as a sibling**. The
+Dockerfile copied it to `dist/ast-engine/` instead, one directory too high.
+
+Nothing failed. The parser simply could not find its helper, the engine caught that as
+"Python unavailable", and the hub reported `astSource: REGEX_FALLBACK` — quietly grading with the
+weaker tokeniser while the benchmark and the test suite, which run outside the container, both
+passed. It was caught only by querying the running container rather than trusting the image build.
+
+**Fix:** copy to `dist/src/ast-engine/ast_parser.py`. Verified in the container:
+`astSource: PYTHON_AST`.
+
 ---
 
-## 5. Deployment
+## 5. Milestone 2 requirements
+
+Milestone 2 is the sandbox-and-AST milestone, and two of its requirements were only partially
+met when this section was written. Both are now closed.
+
+### 5.1 AST parser — now Python's real `ast` module
+
+The syllabus asks for *"AST Parser (sử dụng Python `ast` module cho mã nguồn Python, hoặc Roslyn
+cho C#)"*. What existed was a regular-expression tokeniser that emitted AST-*shaped* labels
+(`FUNC_DEF`, `RETURN_STMT`) without ever building a parse tree.
+
+`genai-hub/src/ast-engine/ast_parser.py` now delegates to `ast.walk()`, and
+`real-ast-parser.ts` maps the resulting node names onto the token vocabulary the engine already
+speaks. The parse is delegated rather than reimplemented in TypeScript on purpose: a hand-written
+Python grammar would be a second, subtly different parser, and "which parser is right" is not a
+question a grading system should have two answers to.
+
+`tools/verify-real-ast-parser.py` confirms the **deployed** path uses it — the hub returns
+`astSource: PYTHON_AST`, a renamed copy still scores 90.37%, an unrelated program stays at 61.25%
+(below the 70% flag), and unparseable Python degrades to `REGEX_FALLBACK` rather than guessing.
+
+**Measured against the P2P exercise's disguises** (`run-real-ast-benchmark.ts`):
+
+| Disguise | Real AST | Regex | Delta |
+|:--|--:|--:|--:|
+| Rename every identifier | 100.00% | 100.00% | 0 |
+| Reorder functions | 88.18% | 87.00% | +1.18 |
+| Rewrite comments and formatting | 100.00% | 100.00% | 0 |
+| Alias imports | 100.00% | 100.00% | 0 |
+| **for → while rewrite** *(beyond the requirement)* | 77.92% | 62.42% | **+15.50** |
+| **Control: unrelated program** | 41.34% | 32.80% | — |
+
+Every disguise the syllabus specifies scores **≥ 88%**, so the ">80%" requirement is met. The
+for→while rewrite is a harder transformation than the exercise describes; it improves by 15.5
+points but still lands below 80%, and is reported separately rather than used to fail or flatter
+the result.
+
+`genai-hub/test/real-ast.test.ts` adds **37 tests** to CI, covering the node mapping, rename
+invariance, decorators/async/match/comprehensions, syntax-error detection, and the fallback
+behaviour. Hub coverage rose from 84.79% to **91.44%**.
+
+### 5.2 Sandbox penetration test — 8 attacks, all defended
+
+`tools/verify-sandbox-security.py` submits each attack named in the syllabus as a real `.zip`
+through the real gateway, so the production path is what gets tested. Each attack asserts two
+things: the host survived, **and** the attack did not achieve its goal. Asserting only the first
+would pass a sandbox that merely crashed.
+
+| Attack | Defence | Result |
+|:--|:--|:--|
+| Fork bomb | `PidsLimit` | DEFENDED |
+| Memory exhaustion | 512 MB `Memory`/`MemorySwap` | DEFENDED |
+| Disk exhaustion via `/tmp` | tmpfs capped at 128 MB | DEFENDED |
+| Host file overwrite (`/etc/passwd`) | `ReadonlyRootfs` | DEFENDED |
+| Host `.env` / secret read | read-only mounts, no host paths | DEFENDED |
+| Network exfiltration | `NetworkMode: none` | DEFENDED |
+| Privilege escalation | `CapDrop: ALL` | DEFENDED |
+| Infinite loop | execution timeout | DEFENDED |
+
+### 5.3 Why the attack result needed its own proof
+
+The first run reported every attack as `COMPLETED` in 3–6 seconds with `exitCode: None`. That is
+suspicious: **if the sandbox never executes the submitted program, every attack "fails" trivially**
+— a fork bomb that is never run cannot exhaust anything — and an 8/8 result means nothing.
+
+`tools/verify-sandbox-executes.py` therefore proves execution independently:
+
+| Submitted program | Outcome |
+|:--|:--|
+| Correct solution | 2/2 test cases, **9.6 marks** |
+| Deliberately wrong (adds 999 to the sum) | 0/2 test cases, **0 marks** |
+| Prints a marker string | marker appears in the stored result |
+
+A correct and an incorrect program cannot be distinguished unless the code actually runs. They
+score 9.6 and 0, so the sandbox genuinely executes submissions — which is what makes the 8/8
+defence result meaningful rather than vacuous.
+
+---
+
+## 6. Deployment
 
 The syllabus requires the system to run *"trên môi trường deploy thực tế"*. The repository
 previously held only sandbox Dockerfiles — the application itself could not be containerised.
 
-### 5.1 What was added
+### 6.1 What was added
 
 | File | Purpose |
 |:--|:--|
@@ -383,7 +521,7 @@ previously held only sandbox Dockerfiles — the application itself could not be
 | `frontend/.dockerignore` | Keeps the host's platform-specific `node_modules` out of the Linux build |
 | `docker-compose.prod.yml` | The full five-service stack, reachable on one URL |
 
-### 5.2 Two defects the deployment work exposed
+### 6.2 Two defects the deployment work exposed
 
 These would each have broken the CI pipeline and any real deployment, and neither was visible
 from local development on Windows.
@@ -411,7 +549,7 @@ Declaring it explicitly fixed the build.
 Both are recorded because they are the class of defect that a "it works on my machine" project
 ships and discovers at deployment time.
 
-### 5.3 Deployment verification
+### 6.3 Deployment verification
 
 `tools/verify-deployment.py` drives the deployed stack **through nginx**, which proves the
 deployment wiring rather than the services in isolation: the reverse proxy, the same-origin API
@@ -436,7 +574,7 @@ All five containers report **healthy** and the app is reachable at `http://local
 > **Reproduce:** `docker compose -f docker-compose.prod.yml up -d --build`
 > then `python tools/verify-deployment.py`
 
-### 5.4 Two stacks, and why they conflict
+### 6.4 Two stacks, and why they conflict
 
 There are now two compose files and they are not interchangeable:
 
@@ -469,9 +607,60 @@ docker compose down
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
+### 6.5 Public hosting — single-service image for Render
+
+The syllabus asks for acceptance *"trên môi trường deploy thực tế (Azure/AWS/Vercel)"*. A free
+Render plan allows **one** web service, so the whole system has to run in a single container:
+
+| Component | Where it runs |
+|:--|:--|
+| Frontend (built SPA) | `./public`, served by the gateway |
+| API Gateway | the public port, `$PORT` |
+| Socket.IO stream | the same public port |
+| GenAI Hub | background process on an internal port, reached over loopback |
+| Python `ast` parser | installed in the image (`apk add python3`) |
+
+One origin removes CORS and the mixed-content problem entirely: the browser only ever calls the
+host that served the page, so no `VITE_API_BASE_URL` has to be configured.
+
+Files added: `api-gateway/Dockerfile.render`, `api-gateway/start.sh`, root `.dockerignore`,
+`render.yaml`.
+
+**Verified by running the image exactly as Render will** (`tools/verify-render-image.py`,
+**0 failed**):
+
+| Check | Result |
+|:--|:--|
+| SPA served, React mount point, deep link does not 404 | PASS |
+| API on the same origin | PASS |
+| An unknown API path returns a real 404, not the HTML shell | PASS |
+| A demo account signs in, `role: ADMIN`, no password hash leaked | PASS |
+| Socket.IO handshake on the public port | PASS |
+| Queue reports its transport honestly (`IN_MEMORY`, no Redis on the free tier) | PASS |
+
+The `astSource` check inside the container is what caught defect §4.16: the hub reported
+`REGEX_FALLBACK` because the Python helper had been copied one directory too high. Outside the
+container the same code reported `PYTHON_AST`, so only querying the running image revealed it.
+
+#### Demo accounts
+
+The built-in seed ships a **placeholder** password hash, so no seeded account can sign in. That is
+correct for production and unhelpful for a demo. `api-gateway/src/scripts/seed-demo-accounts.ts`
+writes usable accounts **only when `SEED_DEMO_ACCOUNTS=true`**, using the same `crypto.scrypt`
+scheme the auth service verifies with — so login goes through the normal path, with no bypass
+branch and no special-case code.
+
+#### What the free tier cannot do
+
+Test cases are **not executed in this deployment**. A container cannot start sibling containers
+without the host Docker socket, and no free tier provides one. The gateway degrades gracefully and
+reports `executedInContainer: false` rather than pretending the code ran. Full execution requires
+the Compose deployment in §6.3, which has the Docker socket mounted.
+
+
 ---
 
-## 6. Stress testing under 100 concurrent requests
+## 7. Stress testing under 100 concurrent requests
 
 The syllabus schedules stress testing of the Redis queue at 100 concurrent requests
 (`k6`/`JMeter`). Neither tool is installed on this machine, so `tools/stress-test-queue.py`
@@ -495,7 +684,7 @@ The important result is phase 3: every accepted submission was eventually graded
 DLQ. Under saturation the queue holds work (`waiting: 101, active: 4`) rather than rejecting or
 losing it, which is the behaviour the architecture is designed to produce.
 
-### 6.1 A measurement trap worth recording
+### 7.1 A measurement trap worth recording
 
 The first run reported a p50 of **437 ms** and failed the 200 ms SLA. That was wrong, and the
 way it was wrong matters.
@@ -521,9 +710,9 @@ same mistake in the other direction. Both are fixed.
 
 ---
 
-## 7. Appeals and Git analytics
+## 8. Appeals and Git analytics
 
-### 7.1 Appeals portal
+### 8.1 Appeals portal
 
 | Layer | Location | State |
 |:--|:--|:--|
@@ -535,7 +724,7 @@ same mistake in the other direction. Both are fixed.
 **BR-04 is enforced:** plagiarism reports are readable only by `INSTRUCTOR` and `HOD`. The
 controller rejects `STUDENT` — asserted in the gateway suite.
 
-### 7.2 Git commit analytics (anti-free-riding)
+### 8.2 Git commit analytics (anti-free-riding)
 
 `api-gateway/src/teamwork/teamwork.service.ts` computes per-student commit count, lines added
 and deleted, and a contribution percentage, then flags free-riders below the threshold.
@@ -545,7 +734,7 @@ commits, 32.5% contribution, `isFreeRider: false`.
 
 ---
 
-## 8. CI/CD gates
+## 9. CI/CD gates
 
 `.github/workflows/ci.yml` now runs four gates instead of the previous build-only check:
 
@@ -561,7 +750,7 @@ pass CI with arbitrarily low coverage. That gap is now closed.
 
 ---
 
-## 9. Limitations and honest disclosure
+## 10. Limitations and honest disclosure
 
 Recorded so the defence is not caught out by a question it cannot answer.
 
@@ -582,12 +771,18 @@ Recorded so the defence is not caught out by a question it cannot answer.
    `catch` blocks, `??` fallbacks and transport-failure arms — that would need fault injection to
    reach honestly. They are left uncovered rather than covered with tests that assert nothing.
 
-4. **Deployment is containerised but not hosted publicly.** `docker-compose.prod.yml` builds and
-   runs the whole system — five healthy services behind nginx — and `tools/verify-deployment.py`
-   proves it works, including a full grading run. What is **not** done is provisioning a public
-   URL: no Azure/AWS/Vercel host has been created, so there is no address a reviewer can open
-   without running the stack locally. The remaining work is infrastructure (a host, a registry
-   push, secrets management), not application code.
+4. **A public deployment exists as a build-and-verify, not yet as a live URL.** The
+   single-service image for Render builds, runs healthy, and passes `tools/verify-render-image.py`
+   with 0 failures when started exactly as Render starts it (§6.5). What is not yet done is
+   attaching it to a public hostname: that needs a Render account, which is the project owner's
+   to create. The infrastructure work — image, entry point, blueprint, configuration — is
+   complete and verified locally.
+
+5. **Test cases do not execute on the free hosting tier.** A container cannot start sibling
+   containers without the host Docker socket, so the sandbox falls back and reports
+   `executedInContainer: false`. Grading still runs end to end (test-case comparison, AST
+   plagiarism with the real parser, LLM review); only the isolated execution is unavailable.
+   Full execution is available in the Compose deployment, which mounts the socket.
 
 5. **The stress test is written in Python, not `k6`/`JMeter`.** The syllabus names those tools;
    neither is installed here, so `tools/stress-test-queue.py` reproduces the same load with the
@@ -605,9 +800,9 @@ Recorded so the defence is not caught out by a question it cannot answer.
 
 ---
 
-## 10. How to reproduce everything in this document
+## 11. How to reproduce everything in this document
 
-### 10.1 The deployed stack (one command)
+### 11.1 The deployed stack (one command)
 
 ```powershell
 docker compose -f docker-compose.prod.yml up -d --build
@@ -620,7 +815,25 @@ python tools/verify-deployment.py            # expect 0 failed
 
 Open <http://localhost:8080> and sign in with any demo account (password `Aita@2026`).
 
-### 10.2 Local development
+### 11.1b The single-service image (what Render runs)
+
+```powershell
+# Build from the REPOSITORY ROOT: the image needs both the frontend and the gateway.
+docker build -f api-gateway/Dockerfile.render -t aita-allinone:test .
+
+docker run -d --name aita -p 8090:8090 `
+  -e PORT=8090 -e JWT_SECRET=local-test -e SEED_DEMO_ACCOUNTS=true `
+  aita-allinone:test
+
+# wait for "healthy", then:
+$env:EXPECT_DEMO_LOGIN="true"
+python tools/verify-render-image.py          # expect 0 failed
+```
+
+Open <http://localhost:8090>. Deploying this to Render: create a Blueprint from the repository
+and the `trung` branch; `render.yaml` already describes the service and the environment variables.
+
+### 11.2 Local development
 
 ```powershell
 docker compose up -d                          # PostgreSQL + Redis only
@@ -629,11 +842,11 @@ cd genai-hub    ; npx ts-node src/server.ts   # port 3001
 cd frontend     ; npx vite                    # port 5173
 ```
 
-### 10.3 Coverage gates
+### 11.3 Coverage gates
 
 > **Run these with the DEVELOPMENT stack up** (`docker compose up -d`). The production stack
 > does not publish the database ports, and the backend repositories then fall back to the JSON
-> stores and coverage silently drops — see §5.4.
+> stores and coverage silently drops — see §6.4.
 
 ```powershell
 docker compose up -d                      # PostgreSQL 5432 + Redis 6379 must be reachable
@@ -642,14 +855,21 @@ cd api-gateway  ; npm run test:coverage   # expect EXIT 0, statements >= 80%
 cd genai-hub    ; npx c8 --check-coverage --lines 80 --functions 80 --statements 80 `
                      --include='src/**/*.ts' `
                      npx ts-node --transpile-only test/run-coverage-all.ts
-cd frontend     ; npm run test:coverage   # expect 684 tests passing, thresholds applied
+cd frontend     ; npm run test:coverage   # expect 700 tests passing, thresholds applied
 ```
 
-### 10.4 Functional verification
+### 11.4 Functional verification
 
 ```powershell
 # Full grading pipeline against the running services (needs Docker)
 python tools/verify-e2e-pipeline.py           # expect 39 passed, 0 failed
+
+# Milestone 2: the real AST parser
+python tools/verify-real-ast-parser.py        # expect 0 failed, astSource == PYTHON_AST
+
+# Milestone 2: sandbox penetration test (8 attacks)
+python tools/verify-sandbox-security.py       # expect 8 DEFENDED, 0 failed
+python tools/verify-sandbox-executes.py       # proves the payloads really execute
 
 # Plagiarism and gradebook correctness
 python tools/verify-self-overlap-tiers.py     # resubmission vs reuse vs cross-course
@@ -661,7 +881,14 @@ python tools/stress-test-queue.py 100         # expect 0 failed
 python tools/diagnose-upload-latency.py       # separates server cost from client contention
 ```
 
-### 10.5 Frontend type gates
+The AST benchmark compares both parsers on the same disguises:
+
+```powershell
+cd genai-hub
+npx ts-node --transpile-only test/run-real-ast-benchmark.ts   # expect RESULT: PASS
+```
+
+### 11.5 Frontend type gates
 
 The production build and the test suite are typechecked separately, so a test-only type error
 cannot break the deployable bundle and a broken bundle cannot hide behind passing tests.
