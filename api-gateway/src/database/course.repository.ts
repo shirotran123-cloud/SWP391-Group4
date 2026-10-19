@@ -462,46 +462,84 @@ export class CourseRepository implements OnModuleInit {
           await client.query('BEGIN');
           this.logger.log(`[CourseRepository:ACID] Bắt đầu SQL TRANSACTION nhập ${students.length} sinh viên vào lớp ${classId}...`);
 
-        for (let i = 0; i < students.length; i++) {
-          const s = students[i];
-          const row = i + 1;
-
-          // Thử nghiệm cờ lỗi mô phỏng (nếu studentCode chứa trigger ROLLBACK)
-          if (s.studentCode.includes('ERROR_ROLLBACK')) {
-            throw new Error(`Dòng số ${row}: Vi phạm ràng buộc dữ liệu R06 [${s.studentCode}]! Kích hoạt ROLLBACK 100%.`);
+          // Đảm bảo lớp học phần tồn tại trong PostgreSQL trước khi ghi danh
+          const classCheck = await client.query(`SELECT class_id FROM classes WHERE class_id = $1 LIMIT 1`, [classId]);
+          if (classCheck.rows.length === 0) {
+            const memCourse = this.records.get(classId);
+            if (memCourse) {
+              await this.saveToPostgres(memCourse);
+            }
           }
 
-          // A. Insert/Update vào bảng users
-          await client.query(
-            `INSERT INTO users (user_id, student_code, full_name, email, role_id, role, password_hash, is_active, created_at, updated_at)
-             VALUES ($1, $2, $3, $4, 'STUDENT', 'STUDENT', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', true, NOW(), NOW())
-             ON CONFLICT (user_id) DO UPDATE SET
-               full_name = EXCLUDED.full_name,
-               email = EXCLUDED.email,
-               updated_at = NOW()`,
-            [s.studentCode, s.studentCode, s.fullName || s.studentCode, s.email],
-          );
+          for (let i = 0; i < students.length; i++) {
+            const s = students[i];
+            const row = i + 1;
 
-          // B. Ghi danh vào bảng class_members
-          await client.query(
-            `INSERT INTO class_members (class_id, user_id, status, enrolled_at)
-             VALUES ($1, $2, 'ACTIVE', NOW())
-             ON CONFLICT (class_id, user_id) DO UPDATE SET status = 'ACTIVE'`,
-            [classId, s.studentCode],
-          );
+            // Thử nghiệm cờ lỗi mô phỏng (nếu studentCode chứa trigger ROLLBACK)
+            if (s.studentCode && s.studentCode.includes('ERROR_ROLLBACK')) {
+              throw new Error(`Dòng số ${row}: Vi phạm ràng buộc dữ liệu R06 [${s.studentCode}]! Kích hoạt ROLLBACK 100%.`);
+            }
+
+            const studentCodeTrimmed = (s.studentCode || '').trim();
+            const emailTrimmed = (s.email || '').trim().toLowerCase();
+            const fullNameTrimmed = (s.fullName || s.studentCode || '').trim();
+
+            // A. Kiểm tra xem user đã tồn tại theo email hoặc student_code hoặc user_id chưa
+            const existingUserRes = await client.query(
+              `SELECT user_id, student_code, email FROM users 
+               WHERE LOWER(email) = LOWER($1) OR student_code = $2 OR user_id = $2 
+               LIMIT 1`,
+              [emailTrimmed, studentCodeTrimmed],
+            );
+
+            let effectiveUserId = studentCodeTrimmed;
+
+            if (existingUserRes.rows.length > 0) {
+              effectiveUserId = existingUserRes.rows[0].user_id;
+              // Cập nhật thông tin sinh viên hiện có
+              await client.query(
+                `UPDATE users 
+                 SET student_code = COALESCE(NULLIF($1, ''), student_code),
+                     full_name = COALESCE(NULLIF($2, ''), full_name),
+                     is_active = true,
+                     updated_at = NOW()
+                 WHERE user_id = $3`,
+                [studentCodeTrimmed, fullNameTrimmed, effectiveUserId],
+              );
+            } else {
+              // Tạo mới sinh viên
+              await client.query(
+                `INSERT INTO users (user_id, student_code, full_name, email, role_id, role, password_hash, is_active, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, 'STUDENT', 'STUDENT', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', true, NOW(), NOW())
+                 ON CONFLICT (user_id) DO UPDATE SET
+                   student_code = EXCLUDED.student_code,
+                   full_name = EXCLUDED.full_name,
+                   email = EXCLUDED.email,
+                   updated_at = NOW()`,
+                [effectiveUserId, studentCodeTrimmed, fullNameTrimmed, emailTrimmed],
+              );
+            }
+
+            // B. Ghi danh vào bảng class_members bằng effectiveUserId
+            await client.query(
+              `INSERT INTO class_members (class_id, user_id, status, enrolled_at)
+               VALUES ($1, $2, 'ACTIVE', NOW())
+               ON CONFLICT (class_id, user_id) DO UPDATE SET status = 'ACTIVE'`,
+              [classId, effectiveUserId],
+            );
+          }
+
+          await client.query('COMMIT');
+          this.logger.log(`✅ [CourseRepository:ACID] SQL TRANSACTION COMMITTED THÀNH CÔNG: Đã nhập ${students.length} sinh viên vào lớp ${classId}!`);
+        } catch (err: any) {
+          await client.query('ROLLBACK');
+          this.logger.error(`❌ [CourseRepository:ACID] SQL TRANSACTION ROLLBACK 100%: ${err.message}`);
+          throw new Error(`[GIAO DỊCH THẤT BẠI - ĐÃ ROLLBACK 100%]: ${err.message}`);
+        } finally {
+          client.release();
         }
-
-        await client.query('COMMIT');
-        this.logger.log(`✅ [CourseRepository:ACID] SQL TRANSACTION COMMITTED THÀNH CÔNG: Đã nhập ${students.length} sinh viên vào lớp ${classId}!`);
-      } catch (err: any) {
-        await client.query('ROLLBACK');
-        this.logger.error(`❌ [CourseRepository:ACID] SQL TRANSACTION ROLLBACK 100%: ${err.message}`);
-        throw new Error(`[GIAO DỊCH THẤT BẠI - ĐÃ ROLLBACK 100%]: ${err.message}`);
-      } finally {
-        client.release();
       }
     }
-  }
 
     // 3. Cập nhật bộ nhớ đệm (Lưu theo cả Mã SV lẫn Email để hỗ trợ truy vấn)
     if (!this.courseMembers.has(classId)) {
@@ -510,16 +548,20 @@ export class CourseRepository implements OnModuleInit {
     const classMap = this.courseMembers.get(classId)!;
 
     for (const s of students) {
-      classMap.set(s.studentCode, {
-        userId: s.studentCode,
-        studentCode: s.studentCode,
-        fullName: s.fullName || s.studentCode,
-        email: s.email,
+      const studentCodeTrimmed = (s.studentCode || '').trim();
+      const emailTrimmed = (s.email || '').trim().toLowerCase();
+      const fullNameTrimmed = (s.fullName || s.studentCode || '').trim();
+
+      classMap.set(studentCodeTrimmed, {
+        userId: studentCodeTrimmed,
+        studentCode: studentCodeTrimmed,
+        fullName: fullNameTrimmed,
+        email: emailTrimmed,
         enrolledAt: new Date(),
         status: 'ACTIVE',
       });
 
-      const keys = [s.studentCode, s.email, s.email?.toLowerCase()].filter(Boolean) as string[];
+      const keys = [studentCodeTrimmed, emailTrimmed].filter(Boolean) as string[];
       for (const k of keys) {
         if (!this.studentEnrollments.has(k)) {
           this.studentEnrollments.set(k, new Set());
@@ -534,22 +576,33 @@ export class CourseRepository implements OnModuleInit {
       if (fs.existsSync(usersFile)) {
         const rawUsers = fs.readFileSync(usersFile, 'utf-8');
         const userList: any[] = JSON.parse(rawUsers);
-        const existingEmails = new Set(userList.map((u) => u.email?.toLowerCase()));
         let hasNewUser = false;
 
         for (const s of students) {
-          if (!existingEmails.has(s.email.toLowerCase())) {
+          const studentCodeTrimmed = (s.studentCode || '').trim();
+          const emailTrimmed = (s.email || '').trim().toLowerCase();
+          const fullNameTrimmed = (s.fullName || s.studentCode || '').trim();
+
+          const existingUser = userList.find(
+            (u) => (u.email && u.email.toLowerCase() === emailTrimmed) || u.studentCode === studentCodeTrimmed || u.userId === studentCodeTrimmed,
+          );
+
+          if (existingUser) {
+            existingUser.studentCode = studentCodeTrimmed;
+            existingUser.fullName = fullNameTrimmed || existingUser.fullName;
+            existingUser.updatedAt = new Date().toISOString();
+            hasNewUser = true;
+          } else {
             userList.push({
-              userId: s.studentCode,
-              studentCode: s.studentCode,
-              email: s.email,
-              fullName: s.fullName || s.studentCode,
+              userId: studentCodeTrimmed,
+              studentCode: studentCodeTrimmed,
+              email: emailTrimmed,
+              fullName: fullNameTrimmed,
               role: 'STUDENT',
               isActive: true,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
             });
-            existingEmails.add(s.email.toLowerCase());
             hasNewUser = true;
           }
         }
