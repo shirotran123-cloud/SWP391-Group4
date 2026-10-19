@@ -86,6 +86,10 @@ interface SubmissionRecord {
   finalScore: number;
   plagiarismStatus: 'AN TOÀN' | 'NGHI VẤN' | 'ĐẠO VĂN';
   similarityRate: number;
+  /** How many times the student submitted this assignment; 1 means a single attempt. */
+  attemptsCount?: number;
+  /** Explanation of why the counted attempt differs from the newest one. */
+  attemptNote?: string;
 }
 
 // NOTE: the hard-coded `initialCourses`, `defaultPublishedAssignments` and
@@ -132,37 +136,59 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setDetailModalOpen(true);
   };
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  /** Which attempt counts when a student submits the same assignment more than once. */
+  const [attemptPolicy, setAttemptPolicy] = useState<'LAST' | 'BEST' | 'FIRST'>('LAST');
+  /** One-line summary of how many attempts the gradebook collapsed. */
+  const [gradebookSummary, setGradebookSummary] = useState<string>('');
 
-  const fetchRealSubmissions = async () => {
+  /**
+   * Loads the gradebook: ONE row per student per assignment.
+   *
+   * A student may submit several times; `policy` decides which attempt is the mark of record
+   * (LAST / BEST / FIRST). The row still carries every attempt so the lecturer can see how the
+   * final mark was reached, and `attemptsCount` makes a resubmission visible at a glance.
+   */
+  const fetchRealSubmissions = async (policy: 'LAST' | 'BEST' | 'FIRST' = attemptPolicy) => {
     setLoadingSubmissions(true);
+    setAttemptPolicy(policy);
     try {
       const token = localStorage.getItem('aita_token') || '';
-      const res = await fetch('http://localhost:3000/api/v1/submissions', {
+      const res = await fetch(`${API_BASE_URL}/api/v1/submissions/gradebook?policy=${policy}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (res.ok) {
-        const json = await res.json();
-        const serverList = json.data || json || [];
-        if (Array.isArray(serverList) && serverList.length > 0) {
-          const mapped: SubmissionRecord[] = serverList.map((s: any) => ({
-            id: s.submissionId || s.id,
-            studentId: s.studentId || 'SE-N/A',
-            studentName: s.studentName || s.studentId || 'Sinh viên',
-            assignmentTitle: s.assignmentId || 'Bài nộp',
-            fileName: s.fileName || `${s.submissionId || s.id}.zip`,
-            submittedAt: s.createdAt ? new Date(s.createdAt).toLocaleString('vi-VN') : 'Vừa xong',
-            testcaseScore: s.score !== undefined ? Math.round(s.score * 0.7 * 10) / 10 : 7.0,
-            cleanCodeScore: s.result?.aiRating?.cleanCodeScore ?? 8.5,
-            solidScore: 8.0,
-            finalScore: s.score ?? 8.5,
-            plagiarismStatus: s.plagiarismStatus || 'AN TOÀN',
-            similarityRate: s.similarityRate ?? 15,
-          }));
-          setRealSubmissions(mapped);
-        }
+      if (!res.ok) {
+        console.warn('[Gradebook] HTTP', res.status);
+        return;
       }
-    } catch {
-      // ignore
+      const json = await res.json();
+      const book = json.data || {};
+      const rows: any[] = Array.isArray(book.entries) ? book.entries : [];
+
+      const mapped: SubmissionRecord[] = rows.map((row: any) => ({
+        id: row.countedSubmissionId,
+        studentId: row.studentId,
+        studentName: row.studentName || row.studentId,
+        assignmentTitle: row.assignmentTitle || row.assignmentId,
+        fileName: `${row.countedSubmissionId}.zip`,
+        submittedAt: row.submittedAt ? new Date(row.submittedAt).toLocaleString('vi-VN') : 'Vừa xong',
+        testcaseScore: row.score !== null && row.score !== undefined ? Math.round(row.score * 0.7 * 10) / 10 : 0,
+        cleanCodeScore: 0,
+        solidScore: 0,
+        finalScore: row.score ?? 0,
+        plagiarismStatus: 'AN TOÀN',
+        similarityRate: 0,
+        // Extra fields the table uses to explain which attempt counts.
+        attemptsCount: row.attemptsCount ?? 1,
+        attemptNote: row.note as string | undefined,
+      }));
+
+      setRealSubmissions(mapped);
+      setGradebookSummary(
+        `${book.totalRows ?? mapped.length} dòng điểm · ${book.totalSubmissionsConsidered ?? 0} lượt nộp · ` +
+          `${book.supersededCount ?? 0} lượt bị thay thế`,
+      );
+    } catch (err: any) {
+      console.warn('[Gradebook] không tải được bảng điểm:', err?.message);
     } finally {
       setLoadingSubmissions(false);
     }
@@ -2597,12 +2623,66 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             </button>
           </div>
 
+          {/* Quy tắc chọn bài khi sinh viên nộp nhiều lần.
+              Mỗi cặp sinh viên + bài tập chỉ có MỘT dòng điểm chốt; bảng bên dưới vẫn cho thấy
+              mọi lần nộp để giảng viên đối chiếu. */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              flexWrap: 'wrap',
+              padding: '12px 16px',
+              marginBottom: '16px',
+              borderRadius: '10px',
+              background: 'rgba(99, 102, 241, 0.08)',
+              border: '1px solid rgba(99, 102, 241, 0.25)',
+            }}
+          >
+            <span style={{ fontSize: '12.5px', color: '#c7d2fe', fontWeight: 600 }}>
+              Khi sinh viên nộp nhiều lần, tính điểm theo:
+            </span>
+            {([
+              { key: 'LAST', label: 'Bài nộp cuối' },
+              { key: 'BEST', label: 'Điểm cao nhất' },
+              { key: 'FIRST', label: 'Bài nộp đầu' },
+            ] as const).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => void fetchRealSubmissions(opt.key)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border:
+                    attemptPolicy === opt.key
+                      ? '1px solid rgba(129, 140, 248, 0.8)'
+                      : '1px solid rgba(255, 255, 255, 0.12)',
+                  background:
+                    attemptPolicy === opt.key ? 'rgba(129, 140, 248, 0.28)' : 'rgba(255, 255, 255, 0.04)',
+                  color: attemptPolicy === opt.key ? '#ffffff' : 'var(--text-muted)',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+            {gradebookSummary && (
+              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                {gradebookSummary}
+              </span>
+            )}
+          </div>
+
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '12px 16px' }}>Mã Nộp</th>
                   <th style={{ padding: '12px 16px' }}>Sinh Viên</th>
+                  <th style={{ padding: '12px 16px' }}>Lượt Nộp</th>
                   <th style={{ padding: '12px 16px' }}>File Nén (.zip)</th>
                   <th style={{ padding: '12px 16px' }}>Thời Gian</th>
                   <th style={{ padding: '12px 16px' }}>Testcase</th>
@@ -2629,6 +2709,29 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ fontWeight: 700, color: '#ffffff' }}>{sub.studentName}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{sub.studentId}</div>
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      {/* How many times this student submitted the assignment. More than one
+                          means the row shows the attempt chosen by the policy, not the only one. */}
+                      <span
+                        style={{
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          padding: '3px 9px',
+                          borderRadius: '8px',
+                          background:
+                            (sub.attemptsCount ?? 1) > 1 ? 'rgba(245, 158, 11, 0.18)' : 'rgba(255,255,255,0.05)',
+                          color: (sub.attemptsCount ?? 1) > 1 ? '#fbbf24' : 'var(--text-muted)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {(sub.attemptsCount ?? 1) > 1 ? `${sub.attemptsCount} lần` : '1 lần'}
+                      </span>
+                      {sub.attemptNote && (
+                        <div style={{ fontSize: '10.5px', color: 'var(--text-dim)', marginTop: '4px', maxWidth: '190px' }}>
+                          {sub.attemptNote}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '14px 16px', color: '#c7d2fe', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
                       📦 {sub.fileName}
