@@ -19,24 +19,27 @@ export class ExamGeneratorService {
   public async generateExam(request: ExamGenerateRequest): Promise<GeneratedExam> {
     const { topic, courseCode, difficulty, language, learningOutcomes, numTestCases = 5 } = request;
 
-    const systemPrompt = `You are an expert Computer Science Professor and Curriculum Designer for the AITA Autograding System.
-Your job is to generate rigorous, academically sound programming assignments and exams.
-You must generate:
-1. Clear problem statement and real-world context.
-2. Exact input/output format specifications and constraints.
-3. Test cases (both sample and hidden) with edge cases (empty input, large numbers, boundary conditions).
-4. Multi-level rubric for automated and manual grading.
-5. Minimal starter boilerplate and a full reference working solution.`;
+    const systemPrompt = `Bạn là giảng viên Khoa học Máy tính giàu kinh nghiệm và là chuyên gia thiết kế chương trình cho Hệ thống AITA.
+Nhiệm vụ của bạn là tạo ra các đề bài lập trình chặt chẽ, có giá trị học thuật.
+Bạn phải tạo đầy đủ:
+1. Đề bài rõ ràng kèm bối cảnh thực tế.
+2. Quy định chính xác về định dạng dữ liệu vào/ra và các ràng buộc.
+3. Bộ test case (cả công khai và ẩn) bao phủ các trường hợp biên (dữ liệu rỗng, số lớn, giá trị biên).
+4. Thang điểm nhiều mức dùng cho cả chấm tự động lẫn chấm thủ công.
+5. Mã khung tối thiểu cho sinh viên và lời giải tham khảo hoàn chỉnh.
+
+QUAN TRỌNG: Toàn bộ nội dung văn bản (đề bài, mô tả, tiêu chí chấm, gợi ý) PHẢI viết bằng TIẾNG VIỆT.
+Tên các trường JSON thì giữ nguyên theo đúng schema.`;
 
     const userPrompt = `GENERATE_EXAM
-Course: ${courseCode}
-Topic: ${topic}
-Target Difficulty: ${difficulty}
-Programming Language: ${language}
-Target Learning Outcomes: ${learningOutcomes.join(", ")}
-Requested Test Cases: ${numTestCases}
+Môn học: ${courseCode}
+Chủ đề: ${topic}
+Độ khó mong muốn: ${difficulty}
+Ngôn ngữ lập trình: ${language}
+Mục tiêu học tập: ${learningOutcomes.join(", ")}
+Số lượng test case yêu cầu: ${numTestCases}
 
-Ensure output conforms strictly to the provided JSON schema.`;
+Hãy đảm bảo kết quả trả về đúng theo JSON schema đã cho, và viết toàn bộ phần chữ bằng tiếng Việt.`;
 
     const response = await this.provider.generateCompletion(
       [

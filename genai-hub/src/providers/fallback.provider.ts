@@ -38,7 +38,7 @@ export class FallbackProvider implements ILLMProvider {
       const offlineResponse = await this.offlineFallback.generateCompletion(messages, options);
       return {
         ...offlineResponse,
-        model: `${offlineResponse.model} (Emergency Offline Fallback)`,
+        model: `${offlineResponse.model} (dự phòng ngoại tuyến)`,
       };
     }
 

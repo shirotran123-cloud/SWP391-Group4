@@ -66,10 +66,10 @@ export class MockProvider implements ILLMProvider {
         line_start: 12,
         line_end: 95,
         severity: "CRITICAL",
-        rule: "Single Responsibility Principle (SRP)",
-        smell_type: "God Class / Bloated Controller",
+        rule: "Nguyên lý Đơn trách nhiệm (SRP)",
+        smell_type: "Lớp ôm đồm quá nhiều việc",
         suggestion:
-          "Split the God Class into separate focused classes: separate business calculation, I/O presentation, and validation logic.",
+          "Hãy tách lớp ôm đồm này thành nhiều lớp nhỏ, mỗi lớp chỉ đảm nhận một việc: tính toán nghiệp vụ, hiển thị nhập/xuất và kiểm tra dữ liệu nên nằm ở ba lớp riêng.",
       });
     }
 
@@ -80,10 +80,10 @@ export class MockProvider implements ILLMProvider {
         line_start: 10,
         line_end: 22,
         severity: "WARNING",
-        rule: "Open/Closed Principle (OCP)",
-        smell_type: "Type-Switch / Long if-else Chain",
+        rule: "Nguyên lý Mở/Đóng (OCP)",
+        smell_type: "Chuỗi if-else quá dài",
         suggestion:
-          "Replace the if/else-if chain with polymorphism (Strategy pattern) so new operations can be added without modifying existing code.",
+          "Chuỗi if/else-if dài khiến mỗi lần thêm chức năng mới phải sửa lại mã cũ. Hãy thay bằng đa hình (mẫu Strategy) để thêm chức năng mà không phải sửa mã hiện có.",
       });
     }
 
@@ -94,10 +94,10 @@ export class MockProvider implements ILLMProvider {
         line_start: 27,
         line_end: 31,
         severity: "WARNING",
-        rule: "Dependency Inversion Principle (DIP)",
-        smell_type: "Tight Coupling to Concrete Implementation",
+        rule: "Nguyên lý Đảo ngược Phụ thuộc (DIP)",
+        smell_type: "Phụ thuộc cứng vào lớp cụ thể",
         suggestion:
-          "Depend on an abstraction (e.g. an ILogger / IRepository interface) injected through the constructor instead of instantiating concrete classes inline.",
+          "Hãy phụ thuộc vào một giao diện trừu tượng (ví dụ ILogger hoặc IRepository) được truyền vào qua hàm khởi tạo, thay vì tự tạo đối tượng cụ thể ngay trong hàm.",
       });
     }
 
@@ -108,10 +108,10 @@ export class MockProvider implements ILLMProvider {
         line_start: 24,
         line_end: 28,
         severity: "WARNING",
-        rule: "Meaningful Names & Magic Literals",
-        smell_type: "Magic Numbers / Unclear Identifiers",
+        rule: "Đặt tên rõ nghĩa & tránh số ma thuật",
+        smell_type: "Tên biến khó hiểu / số xuất hiện trực tiếp",
         suggestion:
-          "Replace cryptic single-letter variables and raw numbers with self-explanatory named constants (e.g. const int MAX_BUFFER_SIZE = 1024;).",
+          "Hãy thay các biến một ký tự và các con số xuất hiện trực tiếp trong mã bằng hằng số có tên rõ nghĩa, ví dụ: const int MAX_BUFFER_SIZE = 1024;",
       });
     }
 
@@ -122,9 +122,10 @@ export class MockProvider implements ILLMProvider {
         line_start: 35,
         line_end: 80,
         severity: "WARNING",
-        rule: "Small Functions & High Cohesion",
-        smell_type: "Long Method",
-        suggestion: "Extract subroutines from the large method into smaller helper functions with a single responsibility.",
+        rule: "Hàm ngắn & gắn kết cao",
+        smell_type: "Hàm quá dài",
+        suggestion:
+          "Hãy tách hàm dài này thành nhiều hàm nhỏ hơn, mỗi hàm chỉ làm một việc duy nhất.",
       });
     }
 
@@ -144,11 +145,11 @@ export class MockProvider implements ILLMProvider {
       solid_breakdown,
       overall_summary:
         smells.length === 0
-          ? "The submission follows clean coding practices with modular functions, clear naming conventions, and adherence to SOLID design principles."
-          : `The submission exhibits ${smells.length} architectural smell(s). Addressing them will significantly improve maintainability.`,
+          ? "Bài làm tuân thủ tốt nguyên tắc viết mã sạch: các hàm được chia nhỏ hợp lý, cách đặt tên rõ ràng và bám sát các nguyên lý thiết kế SOLID."
+          : `Bài làm còn ${smells.length} điểm cần cải thiện về cấu trúc. Khắc phục những điểm này sẽ giúp mã nguồn dễ bảo trì hơn đáng kể.`,
       code_smells: smells,
       compiler_explanation: hasCompilerError
-        ? "The build or execution failed. Check the line reported by the compiler, verify header inclusions, and make sure every pointer is initialized before use."
+        ? "Chương trình không biên dịch hoặc không chạy được. Hãy kiểm tra dòng mà trình biên dịch báo lỗi, xem lại các thư viện đã khai báo và chắc chắn mọi con trỏ đều được khởi tạo trước khi sử dụng."
         : "",
     };
   }

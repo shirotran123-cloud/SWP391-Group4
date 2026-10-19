@@ -147,7 +147,10 @@ async function runTests(): Promise<boolean> {
   assert(reviewResult.solid_score >= 0 && reviewResult.solid_score <= 10, "solid_score is within [0.0, 10.0]");
   assert(Array.isArray(reviewResult.feedback_json), "feedback_json is an array of code smells");
   assert(
-    reviewResult.feedback_json.some((s) => s.smell_type.includes("God Class") || s.rule.includes("Single Responsibility")),
+    // The review text is Vietnamese, so the assertions match the Vietnamese wording.
+    reviewResult.feedback_json.some(
+      (s) => s.smell_type.includes("ôm đồm") || s.rule.includes("Đơn trách nhiệm")
+    ),
     "Correctly identifies God Class and SRP violation"
   );
   assert(
@@ -166,14 +169,15 @@ async function runTests(): Promise<boolean> {
     "cpp"
   );
 
-  assert(segfaultExplanation.errorType.includes("Segmentation Fault"), "Diagnoses Segmentation Fault correctly");
+  assert(segfaultExplanation.errorType.includes("Truy cập bộ nhớ"), "Diagnoses Segmentation Fault correctly");
   assert(segfaultExplanation.actionableHints.length >= 2, "Provides actionable debugging hints");
 
   const linkerExplanation = await compilerExplainer.explainError(
     "/usr/bin/ld: /tmp/ccXyZ.o: undefined reference to 'Calculator::calculate()'",
     "cpp"
   );
-  assert(linkerExplanation.errorType.includes("Linker Error"), "Diagnoses Linker / Undefined Reference error");
+  // The explanation text is Vietnamese now, so match the Vietnamese wording.
+  assert(linkerExplanation.errorType.includes("Lỗi liên kết"), "Diagnoses Linker / Undefined Reference error");
 
   // ------------------------------------------------------------------
   // SUITE 5: Exam & Rubric Generator (UC-08)
@@ -221,7 +225,7 @@ async function runTests(): Promise<boolean> {
   assert(crashedEnvelope.submissionId === "SUBM-CRASH-TEST-99", "Worker processes submission ID");
   assert(crashedEnvelope.compilerDiagnostic !== undefined, "Worker triggers diagnostic for sandbox crash");
   assert(
-    crashedEnvelope.compilerDiagnostic!.errorType.includes("Segmentation Fault"),
+    crashedEnvelope.compilerDiagnostic!.errorType.includes("Truy cập bộ nhớ"),
     "Diagnostic diagnoses Segfault from sandbox output"
   );
   assert(crashedEnvelope.aiReview.clean_code_score >= 0, "Produces clean code review scores");
@@ -361,7 +365,7 @@ async function runTests(): Promise<boolean> {
   const fallback = new FallbackProvider([failingProvider as any], true);
   const fallbackRes = await fallback.generateCompletion([{ role: "user", content: "int a = 1;" }]);
   assert(fallbackRes.content.length > 0, "Fallback cascades to offline engine on primary outage");
-  assert(fallbackRes.model.includes("Offline Fallback"), "Fallback tags model with offline recovery status");
+  assert(fallbackRes.model.includes("dự phòng ngoại tuyến"), "Fallback tags model with offline recovery status");
 
   // ------------------------------------------------------------------
   // SUITE 11: AST Normalizer, Winnowing & Plagiarism Engine
