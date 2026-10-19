@@ -344,6 +344,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setCreateSuccessMsg(null);
     setAiSuccessBadge(null);
 
+    // ── The lecturer's own API key is the primary path (per the product decision).
+    // Ask for it up front so the flow is explicit rather than silently using a server key.
+    if (!geminiApiKey.trim()) {
+      setTempApiKey('');
+      setIsConfigModalOpen(true);
+      setAiErrorMsg(
+        'Hãy nhập khóa API Google Gemini của bạn để sinh đề. Khóa chỉ lưu trên trình duyệt này, không gửi lên máy chủ AITA.',
+      );
+      return;
+    }
+
     setIsAiGenerating(true);
     setAiTimerSeconds(0);
     const timerInterval = setInterval(() => {
@@ -357,66 +368,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       const detectedCount = GeminiAIService.extractRequestedCount(lecturerPrompt);
       const testCountToUse = detectedCount || desiredTestCount || 5;
-
-      // ── Preferred path: ask the GenAI Hub (Workflow 1).
-      // The hub holds the Gemini key on the SERVER (genai-hub/.env), so the lecturer never
-      // has to paste one and no credential is shipped to the browser. Only if the hub is
-      // unreachable do we fall back to a key the lecturer typed in manually.
-      const hubResult = await generateViaHub({
-        topic: lecturerPrompt?.trim() || assignmentTitle || `${courseCode} - Bài tập lập trình`,
-        courseCode,
-        difficulty: 'MEDIUM',
-        language: allowedLanguages[0] || 'python',
-        learningOutcomes: ['Mã nguồn sạch', 'Nguyên lý SOLID'],
-        numTestCases: testCountToUse,
-      });
-
-      if (hubResult) {
-        setAssignmentTitle(hubResult.title);
-        setAssignmentDesc(hubResult.description || hubResult.problemStatement || '');
-        if (hubResult.timeLimitMs) setTimeLimitMs(hubResult.timeLimitMs);
-        if (hubResult.memoryLimitMb) setMemoryLimitMb(hubResult.memoryLimitMb);
-        if (hubResult.testCases && hubResult.testCases.length > 0) {
-          setTestCases(
-            hubResult.testCases.map((tc: any) => ({
-              input: tc.input,
-              output: tc.output,
-              weight: tc.weight ?? 1.0,
-              isHidden: tc.isHidden ?? false,
-            })),
-          );
-        }
-        if (hubResult.rubric && hubResult.rubric.length > 0) {
-          setGeneratedRubrics(
-            hubResult.rubric.map((r: any) => ({
-              criterion: r.criterion,
-              maxScore: r.maxScore,
-              description: r.description || '',
-            })),
-          );
-        }
-        if (hubResult.starterCode) setStarterCode(hubResult.starterCode);
-        if (hubResult.referenceSolution) setReferenceSolution(hubResult.referenceSolution);
-
-        setAiSuccessBadge(
-          `✨ Trợ lý AI đã sinh đề và barem thành công trong ${Math.round(hubResult.latencyMs ?? 0)}ms.`,
-        );
-        setCreateSuccessMsg(
-          `Đã tạo đề bài "${hubResult.title}" kèm ${hubResult.testCases?.length ?? 0} test case và ${hubResult.rubric?.length ?? 0} tiêu chí chấm điểm.`,
-        );
-        return;
-      }
-
-      // ── Fallback: the hub is down and the lecturer supplied their own key.
-      if (!geminiApiKey.trim()) {
-        setAiErrorMsg(
-          'Không kết nối được Trợ lý AI của hệ thống, và chưa có khóa Google Gemini dự phòng. ' +
-            'Hãy kiểm tra GenAI Hub đang chạy, hoặc nhập khóa API của bạn trong phần cấu hình.',
-        );
-        setTempApiKey('');
-        setIsConfigModalOpen(true);
-        return;
-      }
 
             // Ưu tiên yêu cầu cụ thể của giảng viên; tránh truyền lại tiêu đề cũ nếu đã bị gán từ lần sinh trước
       let topicToUse = lecturerPrompt?.trim() || '';
@@ -470,7 +421,67 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       );
     } catch (err: any) {
       console.error('Lỗi khi gọi Google Gemini AI:', err);
-      setAiErrorMsg(err.message || 'Không thể kết nối tới Google Gemini AI. Vui lòng kiểm tra lại khóa API hoặc hạn mức sử dụng.');
+
+      // If the lecturer's key is rejected or out of quota, offer the server-side engine
+      // rather than leaving them stuck. It produces the same structure, so the form still
+      // fills in; the badge tells them plainly which engine answered.
+      const msg = String(err?.message || '');
+      const keyProblem =
+        /api_key_invalid|api key not valid|api key expired|forbidden|quota|429|400/i.test(msg);
+
+      if (keyProblem) {
+        setAiErrorMsg(
+          `Khóa Google Gemini không dùng được (${msg.slice(0, 120)}). ` +
+            'Đang thử lại bằng trợ lý AI của hệ thống...',
+        );
+        const hubResult = await generateViaHub({
+          topic: lecturerPrompt?.trim() || assignmentTitle || 'Bài tập lập trình',
+          courseCode: courses.find((c) => c.courseId === selectedCourse)?.courseCode || 'SWP391',
+          difficulty: 'MEDIUM',
+          language: allowedLanguages[0] || 'python',
+          learningOutcomes: ['Mã nguồn sạch', 'Nguyên lý SOLID'],
+          numTestCases: desiredTestCount || 5,
+        });
+        if (hubResult) {
+          setAssignmentTitle(hubResult.title);
+          setAssignmentDesc(hubResult.description || hubResult.problemStatement || '');
+          if (hubResult.testCases?.length) {
+            setTestCases(
+              hubResult.testCases.map((tc: any) => ({
+                input: tc.input,
+                output: tc.output,
+                weight: tc.weight ?? 1.0,
+                isHidden: tc.isHidden ?? false,
+              })),
+            );
+          }
+          if (hubResult.rubric?.length) {
+            setGeneratedRubrics(
+              hubResult.rubric.map((r: any) => ({
+                criterion: r.criterion,
+                maxScore: r.maxScore,
+                description: r.description || '',
+              })),
+            );
+          }
+          if (hubResult.starterCode) setStarterCode(hubResult.starterCode);
+          if (hubResult.referenceSolution) setReferenceSolution(hubResult.referenceSolution);
+          setAiErrorMsg(null);
+          setAiSuccessBadge('✨ Đã sinh đề bằng trợ lý AI của hệ thống (khóa của bạn không dùng được).');
+          setCreateSuccessMsg(
+            `Đã tạo đề bài "${hubResult.title}" kèm ${hubResult.testCases?.length ?? 0} test case và ${hubResult.rubric?.length ?? 0} tiêu chí chấm điểm.`,
+          );
+        } else {
+          setAiErrorMsg(
+            `Không sinh được đề: khóa Google Gemini không dùng được và trợ lý AI của hệ thống cũng không phản hồi. Chi tiết: ${msg.slice(0, 160)}`,
+          );
+        }
+      } else {
+        setAiErrorMsg(
+          err.message ||
+            'Không thể kết nối tới Google Gemini AI. Vui lòng kiểm tra lại khóa API hoặc hạn mức sử dụng.',
+        );
+      }
     } finally {
       clearInterval(timerInterval);
       setIsAiGenerating(false);
@@ -1595,7 +1606,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     border: `1px solid ${geminiApiKey ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
                   }}
                 >
-                  {geminiApiKey ? '🟢 AI Thật Đã Kích Hoạt' : '🟡 Chưa Cấu Hình Khóa API'}
+                  {geminiApiKey
+                    ? '🟢 Đã có khóa API — sẵn sàng sinh đề'
+                    : '🟡 Nhập khóa API để sinh đề'}
                 </span>
               </div>
               <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
