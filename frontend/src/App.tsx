@@ -35,11 +35,36 @@ const initialSteps: GradingStep[] = [
   { id: '6', label: 'Kiểm tra đạo văn mã nguồn', status: 'pending', detail: 'So khớp cấu trúc mã nguồn giữa các bài nộp' },
 ];
 
+/**
+ * Detects a display name that lost its Vietnamese diacritics.
+ *
+ * Older builds wrote names to localStorage after they had passed through a Latin-1 API call,
+ * so a cached session can hold "Dinh Th?nh Trung" or "Dinh Th<U+FFFD>nh Trung" instead of
+ * "Đinh Thành Trung". Because the cached user is rendered directly, the corruption persisted
+ * for as long as the browser kept the value — even after the database was repaired.
+ */
+function isNameCorrupted(value: unknown): boolean {
+  if (typeof value !== 'string' || value.length === 0) return false;
+  if (value.includes('\uFFFD')) return true;
+  // A '?' between two letters is always a lost accent, never intentional.
+  return /[A-Za-zÀ-ỹ]\?[A-Za-zÀ-ỹ]/.test(value);
+}
+
 export function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const stored = localStorage.getItem('aita_user');
-      return stored ? JSON.parse(stored) : null;
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      // A corrupted cached name is discarded so the user re-authenticates and receives a
+      // fresh, correctly encoded profile from the API.
+      if (isNameCorrupted(parsed?.fullName)) {
+        console.warn('[App] Phiên đăng nhập cũ có tên bị lỗi font — sẽ đăng nhập lại.');
+        localStorage.removeItem('aita_user');
+        localStorage.removeItem('aita_token');
+        return null;
+      }
+      return parsed;
     } catch {
       return null;
     }
@@ -234,6 +259,29 @@ export function App() {
   }, []);
 
   const handleLoginSuccess = (user: User) => {
+    // Refuse to cache a profile whose name lost its diacritics: storing it would make the
+    // broken text survive every reload. The API is the source of truth, so ask it again.
+    if (isNameCorrupted(user.fullName)) {
+      console.warn(
+        '[App] Tên người dùng nhận từ máy chủ bị lỗi font, sẽ tải lại hồ sơ từ API.',
+        user.fullName,
+      );
+      void fetch(`${API_BASE_URL}/api/v1/users/${user.userId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          const fresh = json?.data;
+          if (fresh && !isNameCorrupted(fresh.fullName)) {
+            const repaired: User = { ...user, fullName: fresh.fullName, role: fresh.role ?? user.role };
+            localStorage.setItem('aita_user', JSON.stringify(repaired));
+            setCurrentUser(repaired);
+          } else {
+            setCurrentUser(user);
+          }
+        })
+        .catch(() => setCurrentUser(user));
+      return;
+    }
+
     localStorage.setItem('aita_user', JSON.stringify(user));
     setCurrentUser(user);
     if (user.role === 'INSTRUCTOR') {
