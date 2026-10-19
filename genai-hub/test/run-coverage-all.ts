@@ -5,6 +5,10 @@ async function main(): Promise<void> {
   if (runUnitTests() !== true) code = 1;
   const { runASTBenchmark } = require("./run-ast-benchmark");
   try { runASTBenchmark(); } catch (e) { console.error(e); code = 1; }
+  // Milestone 2 requires the AST parser to be Python's own `ast` module. This suite keeps that
+  // requirement enforced by CI; it self-skips with a clear message when Python is absent.
+  const { runRealAstTests } = require("./real-ast.test");
+  if ((await runRealAstTests()) !== true) code = 1;
   const { runCover80 } = require("./cover-80");
   if (!(await runCover80())) code = 1;
   const { runGoalGatesSuite } = require("./goal-gates");

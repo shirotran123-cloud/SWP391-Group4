@@ -163,7 +163,13 @@ export function createServer(customHub?: ReturnType<typeof createGenAIHub>): htt
             error: "Bad Request: 'submissions' array with at least 2 elements is required.",
           });
         }
-        const matrixReport = ASTPlagiarismEngine.computeClassSimilarityMatrix(payload.submissions, payload.assignmentId);
+        // Milestone 2 requires the parser to be Python's own `ast` module. The real parse is
+        // attempted first and degrades to the regex tokeniser when Python is unavailable or the
+        // submissions are not Python; the response reports which engine actually ran.
+        const matrixReport = await ASTPlagiarismEngine.computeClassSimilarityMatrixWithRealAst(
+          payload.submissions,
+          payload.assignmentId,
+        );
         return sendJson(res, 200, matrixReport);
       }
 

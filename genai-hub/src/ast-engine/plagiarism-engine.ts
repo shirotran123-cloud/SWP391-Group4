@@ -6,8 +6,9 @@
  * and exports fine-grained token & line mapping coordinates (matched_tokens_json) for Monaco Diff Viewer.
  */
 
-import { ASTNormalizer, NormalizedToken } from "./ast-normalizer";
+import { ASTNormalizer, NormalizedToken, NormalizationResult } from "./ast-normalizer";
 import { Fingerprint, WinnowingEngine, WinnowingOptions } from "./winnowing";
+import { parsePythonSources } from "./real-ast-parser";
 
 export interface CodeSubmission {
   submissionId: string;
@@ -67,6 +68,62 @@ export class ASTPlagiarismEngine {
   public static readonly PLAGIARISM_THRESHOLD = 70.0; // 70% by task spec
 
   /**
+   * Compares two submissions using the REAL Python `ast` module when available.
+   *
+   * This is the Milestone 2 requirement: *"AST Parser (sử dụng Python `ast` module...)"*. The
+   * synchronous `compareSubmissions` above tokenises with regular expressions, which produces
+   * AST-shaped labels without a parse tree. Here the source is handed to Python, which walks the
+   * genuine tree, and the resulting structural tokens feed the same Winnowing + cosine pipeline.
+   *
+   * Degradation is deliberate and explicit: when Python is unavailable, or the source is not
+   * valid Python (Java/C++ submissions, for instance), the result is computed by the regex
+   * normaliser and `astSource` reports `"REGEX_FALLBACK"` so the caller can say which engine
+   * actually judged the pair. Silently comparing with the weaker parser would make the
+   * plagiarism verdict look stronger than it is.
+   */
+  public static async compareSubmissionsWithRealAst(
+    subA: CodeSubmission,
+    subB: CodeSubmission,
+    options?: WinnowingOptions
+  ): Promise<PairwisePlagiarismResult & { astSource: "PYTHON_AST" | "REGEX_FALLBACK" }> {
+    const languageA = (subA.language || "python").toLowerCase();
+    const languageB = (subB.language || "python").toLowerCase();
+
+    // The Python `ast` module can only judge Python. Anything else uses the regex tokeniser,
+    // which is language-agnostic by design.
+    if (languageA === "python" && languageB === "python") {
+      const parsed = await parsePythonSources({
+        A: subA.sourceCode,
+        B: subB.sourceCode,
+      });
+
+      if (parsed && parsed.A.ok && parsed.B.ok) {
+        const result = this.compareNormalizedTokens(
+          subA,
+          subB,
+          {
+            tokens: parsed.A.tokens,
+            normalizedString: parsed.A.tokens.map((t) => t.token).join(" "),
+            totalLines: subA.sourceCode.split("\n").length,
+            totalOriginalTokensCount: parsed.A.tokens.length,
+          },
+          {
+            tokens: parsed.B.tokens,
+            normalizedString: parsed.B.tokens.map((t) => t.token).join(" "),
+            totalLines: subB.sourceCode.split("\n").length,
+            totalOriginalTokensCount: parsed.B.tokens.length,
+          },
+          options
+        );
+        return { ...result, astSource: "PYTHON_AST" };
+      }
+    }
+
+    const result = this.compareSubmissions(subA, subB, options);
+    return { ...result, astSource: "REGEX_FALLBACK" };
+  }
+
+  /**
    * Compares two single submissions and computes Jaccard + Winnowing Containment + AST Structural Cosine Similarity
    */
   public static compareSubmissions(
@@ -79,6 +136,24 @@ export class ASTPlagiarismEngine {
     // 1. AST Normalize
     const normA = ASTNormalizer.normalize(subA.sourceCode, subA.language || "python");
     const normB = ASTNormalizer.normalize(subB.sourceCode, subB.language || "python");
+
+    return this.compareNormalizedTokens(subA, subB, normA, normB, options);
+  }
+
+  /**
+   * The comparison itself, independent of how the token streams were produced.
+   *
+   * Split out so the real-AST path and the regex path cannot drift apart: both feed the same
+   * fingerprinting, containment and ensemble arithmetic, and only the tokeniser differs.
+   */
+  private static compareNormalizedTokens(
+    subA: CodeSubmission,
+    subB: CodeSubmission,
+    normA: NormalizationResult,
+    normB: NormalizationResult,
+    options?: WinnowingOptions
+  ): PairwisePlagiarismResult {
+    const startTime = Date.now();
 
     // 2. Compute Winnowing Fingerprints
     const fingerprintsA = WinnowingEngine.computeFingerprints(normA.tokens, options);
@@ -246,6 +321,101 @@ export class ASTPlagiarismEngine {
       similarityMatrix,
       flaggedReports: flaggedReports.sort((a, b) => b.similarityRate - a.similarityRate),
       totalExecutionTimeMs,
+    };
+  }
+
+  /**
+   * Class-wide matrix using the REAL Python `ast` module.
+   *
+   * The class matrix is what the gateway actually asks for, so this is where the real parser has
+   * to be used for the change to matter in grading rather than only in a benchmark.
+   *
+   * Sources are parsed in ONE batch rather than per pair: an N-submission assignment has
+   * N(N-1)/2 pairs, and spawning a Python process per pair would make the parser cost dominate
+   * the whole plagiarism stage. The token streams are computed once and then compared
+   * pairwise with the same arithmetic as the synchronous version.
+   *
+   * The report gains `astSource`, so a caller can state which engine judged the class instead of
+   * implying the stronger one was used.
+   */
+  public static async computeClassSimilarityMatrixWithRealAst(
+    submissions: CodeSubmission[],
+    assignmentId?: string,
+    options?: WinnowingOptions
+  ): Promise<ClassPlagiarismMatrixReport & { astSource: 'PYTHON_AST' | 'REGEX_FALLBACK' }> {
+    const startTime = Date.now();
+    const N = submissions.length;
+
+    // Only Python submissions can go through the Python parser. Mixed-language cohorts fall
+    // back wholesale rather than mixing engines within one matrix, which would make two pairs
+    // in the same table incomparable.
+    const allPython = submissions.every(
+      (s) => (s.language || 'python').toLowerCase() === 'python',
+    );
+
+    let tokenStreams: NormalizationResult[] | null = null;
+    let astSource: 'PYTHON_AST' | 'REGEX_FALLBACK' = 'REGEX_FALLBACK';
+
+    if (allPython && N > 0) {
+      const payload: Record<string, string> = {};
+      for (const s of submissions) payload[s.submissionId] = s.sourceCode;
+
+      const parsed = await parsePythonSources(payload);
+      if (parsed && submissions.every((s) => parsed[s.submissionId]?.ok)) {
+        tokenStreams = submissions.map((s) => {
+          const tokens = parsed[s.submissionId].tokens;
+          return {
+            tokens,
+            normalizedString: tokens.map((t) => t.token).join(' '),
+            totalLines: s.sourceCode.split('\n').length,
+            totalOriginalTokensCount: tokens.length,
+          };
+        });
+        astSource = 'PYTHON_AST';
+      }
+    }
+
+    if (!tokenStreams) {
+      const fallback = this.computeClassSimilarityMatrix(submissions, assignmentId, options);
+      return { ...fallback, astSource: 'REGEX_FALLBACK' };
+    }
+
+    const similarityMatrix: number[][] = Array.from({ length: N }, () => Array(N).fill(100.0));
+    const flaggedReports: PairwisePlagiarismResult[] = [];
+    let pairsCount = 0;
+
+    for (let i = 0; i < N; i++) {
+      similarityMatrix[i][i] = 100.0;
+      for (let j = i + 1; j < N; j++) {
+        pairsCount++;
+        const result = this.compareNormalizedTokens(
+          submissions[i],
+          submissions[j],
+          tokenStreams[i],
+          tokenStreams[j],
+          options,
+        );
+
+        similarityMatrix[i][j] = result.similarityRate;
+        similarityMatrix[j][i] = result.similarityRate;
+
+        if (result.isFlagged) flaggedReports.push(result);
+      }
+    }
+
+    return {
+      assignmentId,
+      totalSubmissions: N,
+      totalPairsCompared: pairsCount,
+      flaggedPairsCount: flaggedReports.length,
+      submissionsList: submissions.map((s) => ({
+        id: s.submissionId,
+        name: s.studentName || s.submissionId,
+      })),
+      similarityMatrix,
+      flaggedReports: flaggedReports.sort((a, b) => b.similarityRate - a.similarityRate),
+      totalExecutionTimeMs: Date.now() - startTime,
+      astSource,
     };
   }
 }
