@@ -365,6 +365,39 @@ All five containers report **healthy** and the app is reachable at `http://local
 > **Reproduce:** `docker compose -f docker-compose.prod.yml up -d --build`
 > then `python tools/verify-deployment.py`
 
+### 5.4 Two stacks, and why they conflict
+
+There are now two compose files and they are not interchangeable:
+
+| File | Publishes | Purpose |
+|:--|:--|:--|
+| `docker-compose.yml` | PostgreSQL 5432, Redis 6379 | Local development and the test suites |
+| `docker-compose.prod.yml` | Only nginx on 8080 | Deployment; databases stay on the internal network |
+
+The production file deliberately does **not** publish the database ports — exposing PostgreSQL
+and Redis to the host is exactly what a deployment should not do, and the application containers
+reach them by service name over the compose network.
+
+The consequence is easy to trip over: bringing the production stack up **displaces the
+development one**, because both define containers named `aita-postgres` and `aita-redis`.
+Running the gateway coverage gate in that state does not fail loudly. The repositories cannot
+reach a database, silently fall back to the JSON stores, and coverage drops from 82.5% to 76.2%
+— which reads like a regression in the code rather than a missing database. It also means the
+HTTP suites are talking to a container built from older compiled sources instead of the working
+tree.
+
+**Rule: run the test and coverage gates with the development stack, and the deployment
+verification with the production stack.**
+
+```powershell
+# testing / coverage
+docker compose up -d
+
+# deployment verification
+docker compose down
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
 ---
 
 ## 6. Stress testing under 100 concurrent requests
