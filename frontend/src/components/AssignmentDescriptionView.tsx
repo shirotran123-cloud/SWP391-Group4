@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   BookOpen, Zap, Terminal, Code, AlertTriangle, CheckCircle,
   Layers, ShieldAlert, Cpu, HardDrive, Sparkles, ChevronDown, ChevronUp, Copy, Check
@@ -87,6 +87,22 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
   if (mode === 'HEADER_COMPACT') {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {/* Tiêu đề đề bài. Trước đây prop `title` được nhận vào và truyền từ phía gọi nhưng
+            KHÔNG hề được render, nên tiêu đề đề bài biến mất khỏi giao diện. */}
+        {title && (
+          <h3
+            style={{
+              margin: 0,
+              fontSize: '16px',
+              fontWeight: 700,
+              color: '#ffffff',
+              lineHeight: '1.4',
+            }}
+          >
+            {title}
+          </h3>
+        )}
+
         {/* Tóm tắt nghiệp vụ 1-2 câu */}
         <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
           {isExpanded ? overview : parsedSpec.shortSummary}
@@ -185,6 +201,22 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
   // ==========================================
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+      {/* TIÊU ĐỀ ĐỀ BÀI. Prop `title` trước đây được nhận và truyền vào nhưng không hề render
+          ở bất kỳ nhánh nào, nên tiêu đề đề bài biến mất khỏi giao diện. */}
+      {title && (
+        <h2
+          style={{
+            margin: 0,
+            fontSize: '20px',
+            fontWeight: 800,
+            color: '#ffffff',
+            lineHeight: '1.35',
+          }}
+        >
+          {title}
+        </h2>
+      )}
+
       {/* KHỐI 1: BỐI CẢNH NGHIỆP VỤ & MÔ TẢ BÀI TOÁN */}
       <div
         style={{

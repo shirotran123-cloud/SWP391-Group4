@@ -12,6 +12,13 @@ interface AppealModalProps {
   onAppealSuccess?: () => void;
 }
 
+/**
+ * BR-05 reason bounds. The counter in the form and the backend DTO both say 1000, so the limit
+ * lives here once instead of being re-typed as a literal in three places.
+ */
+const MIN_REASON_LENGTH = 10;
+const MAX_REASON_LENGTH = 1000;
+
 export const AppealModal: React.FC<AppealModalProps> = ({
   isOpen,
   onClose,
@@ -66,6 +73,9 @@ export const AppealModal: React.FC<AppealModalProps> = ({
   const appealsCount = appeals.length;
   const maxAppeals = 2; // Quy tắc BR-05: Tối đa 2 lần cho MỖI bài nộp độc lập
   const canSubmit = appealsCount < maxAppeals;
+  // A reason longer than MAX_REASON_LENGTH is rejected by the gateway DTO, so hold the button.
+  const isReasonTooLong = reason.trim().length > MAX_REASON_LENGTH;
+  const canSubmitReason = reason.trim().length >= MIN_REASON_LENGTH && !isReasonTooLong;
 
   const handleSubmitAppeal = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,8 +84,15 @@ export const AppealModal: React.FC<AppealModalProps> = ({
       setErrorMessage('Vui lòng nhập mã bài nộp (Submission ID) cần phúc khảo.');
       return;
     }
-    if (reason.trim().length < 10) {
+    if (reason.trim().length < MIN_REASON_LENGTH) {
       setErrorMessage('Vui lòng nhập lý do khiếu nại cụ thể (tối thiểu 10 ký tự)');
+      return;
+    }
+    // Regression: the counter under the textarea advertised "x/1000 ký tự" and the gateway DTO
+    // rejects >1000 with MaxLength, but nothing stopped the student from typing an 8800-character
+    // essay and having the whole appeal rejected after a round trip. Block it client-side.
+    if (reason.trim().length > MAX_REASON_LENGTH) {
+      setErrorMessage('Lý do khiếu nại tối đa 1000 ký tự. Vui lòng rút gọn nội dung.');
       return;
     }
 
@@ -368,7 +385,11 @@ export const AppealModal: React.FC<AppealModalProps> = ({
               </label>
               <textarea
                 value={reason}
-                onChange={(e) => setReason(e.target.value)}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  setErrorMessage(null);
+                }}
+                maxLength={MAX_REASON_LENGTH}
                 placeholder="Trình bày chi tiết lý do bạn cho rằng điểm số chưa chính xác (Ví dụ: testcase biên, vi phạm SRP, hoặc giải thuật tối ưu)..."
                 rows={4}
                 style={{
@@ -405,24 +426,24 @@ export const AppealModal: React.FC<AppealModalProps> = ({
 
             <button
               type="submit"
-              disabled={submitting || reason.trim().length < 10}
+              disabled={submitting || !canSubmitReason}
               style={{
                 width: '100%',
                 padding: '14px',
                 borderRadius: '12px',
                 border: 'none',
-                background: reason.trim().length >= 10
+                background: canSubmitReason
                   ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
                   : 'rgba(255, 255, 255, 0.08)',
                 color: '#ffffff',
                 fontSize: '15px',
                 fontWeight: 700,
-                cursor: reason.trim().length >= 10 && !submitting ? 'pointer' : 'not-allowed',
+                cursor: canSubmitReason && !submitting ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: reason.trim().length >= 10 ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none',
+                boxShadow: canSubmitReason ? '0 10px 25px -5px rgba(99, 102, 241, 0.4)' : 'none',
                 transition: 'all 0.2s ease',
               }}
             >

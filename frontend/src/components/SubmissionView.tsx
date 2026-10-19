@@ -407,7 +407,17 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     // Nếu props task được truyền vào cụ thể ban đầu, mở nó
     if (task) {
       const matched = listToDisplay.find((t: StudentTaskItem) => t.id === task.id);
-      setSelectedTask(matched || { ...task, allowedExtensions: ['.zip'], maxSizeMb: 10 });
+      // Chỉ điền giá trị mặc định khi bài tập chưa khai báo. Trước đây nhánh dự phòng ghi đè
+      // cứng `maxSizeMb: 10`, nên giảng viên đặt giới hạn 1 MB cho một bài tập không nằm trong
+      // danh sách API vẫn bị nới thành 10 MB ngay trên trình duyệt.
+      setSelectedTask(
+        matched || {
+          ...task,
+          allowedExtensions:
+            task.allowedExtensions && task.allowedExtensions.length > 0 ? task.allowedExtensions : ['.zip'],
+          maxSizeMb: task.maxSizeMb || 10,
+        },
+      );
     }
   };
 
@@ -579,6 +589,11 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     if (isExpired) {
       setErrorMessage(`Đã quá hạn nộp bài (${new Date(currentTask.deadline).toLocaleString('vi-VN')})! Cổng nộp đã tự động đóng.`);
       setExceptionType('EXPIRED');
+      return;
+    }
+
+    if (file.size <= 0) {
+      setErrorMessage('File rỗng (0 byte) không có nội dung mã nguồn để chấm. Vui lòng nén lại bài làm rồi thử lại.');
       return;
     }
 
@@ -1684,7 +1699,13 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             <button
               type="button"
               disabled={!selectedFile || isHashing || isExpired}
+              aria-disabled={isExpired}
               onClick={handleSubmit}
+              title={
+                isExpired
+                  ? 'Cổng nộp đã đóng vì bài tập đã quá hạn'
+                  : 'Nộp bài lên hệ thống chấm điểm tự động'
+              }
               style={{
                 padding: '12px 28px',
                 borderRadius: '10px',
@@ -1718,6 +1739,18 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Modal chi tiết bài nộp cũng phải gắn ở nhánh chi tiết bài tập: nút
+            "Xem Chi Tiết (Mã Nguồn, Testcases & AI)" gọi handleOpenDetailModal() và bật
+            detailModalOpen, nhưng modal chỉ được render ở nhánh danh sách deadline, nên
+            trước đây bấm nút này không mở ra gì cả. */}
+        <SubmissionDetailModal
+          isOpen={detailModalOpen}
+          onClose={() => setDetailModalOpen(false)}
+          submission={selectedDetailSubmission}
+          apiBaseUrl={apiBaseUrl}
+          onOpenAppeal={onOpenAppeal}
+        />
       </div>
     );
   }

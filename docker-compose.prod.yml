@@ -1,0 +1,129 @@
+# Full-stack deployment for AITA.
+#
+# `docker-compose.yml` at the repository root runs only the two backing services (PostgreSQL
+# and Redis) for local development. This file is the DEPLOYMENT stack: it additionally builds
+# and runs the three application services, so a reviewer can bring the whole system up with a
+# single command and reach it on one URL.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   → open http://localhost:8080
+#
+# The grading sandbox needs the Docker daemon. The gateway mounts the host socket so it can
+# start per-submission containers; the sandbox therefore runs as sibling containers on the
+# host rather than nested inside the gateway image.
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: aita-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aita_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aita_secret_password}
+      POSTGRES_DB: ${POSTGRES_DB:-aita_autograding}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init_all_13_tables.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aita_admin} -d ${POSTGRES_DB:-aita_autograding}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [aita]
+
+  redis:
+    image: redis:7-alpine
+    container_name: aita-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [aita]
+
+  genai-hub:
+    build:
+      context: ./genai-hub
+      dockerfile: Dockerfile
+    container_name: aita-genai-hub
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      # Comma-separated pools; the hub rotates through them. Left empty, the hub runs its
+      # deterministic offline engine, which is what CI and a keyless demo use.
+      GEMINI_API_KEYS: ${GEMINI_API_KEYS:-}
+      OPENAI_API_KEYS: ${OPENAI_API_KEYS:-}
+      DEFAULT_PROVIDER: ${DEFAULT_PROVIDER:-mock}
+    ports:
+      - "3001:3001"
+    networks: [aita]
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: aita-api-gateway
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # Service names on the compose network, not localhost.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aita_admin}:${POSTGRES_PASSWORD:-aita_secret_password}@postgres:5432/${POSTGRES_DB:-aita_autograding}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-aita_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aita_secret_password}
+      POSTGRES_DB: ${POSTGRES_DB:-aita_autograding}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      GENAI_HUB_URL: http://genai-hub:3001
+      JWT_SECRET: ${JWT_SECRET:-change_me_before_deploying}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+    volumes:
+      # Uploaded archives must survive a container restart.
+      - uploads:/app/uploads
+      - gateway_data:/app/data
+      # The sandbox runs as sibling containers, so the gateway needs the Docker socket.
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "3000:3000"
+    networks: [aita]
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Baked into the bundle at build time. Same-origin paths are used so nginx can proxy
+        # them; see frontend/nginx.conf.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000}
+        VITE_GENAI_HUB_URL: ${VITE_GENAI_HUB_URL:-http://localhost:3001}
+    container_name: aita-frontend
+    restart: unless-stopped
+    depends_on:
+      - api-gateway
+    ports:
+      - "8080:80"
+    networks: [aita]
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads:
+  gateway_data:
+
+networks:
+  aita:
+    driver: bridge

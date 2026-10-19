@@ -62,6 +62,11 @@ async function main(): Promise<void> {
     process.env.AITA_TEST_PORT = "3126";
     const { runTestCasesSuite } = require("./test-cases.test");
     if (!(await runTestCasesSuite())) code = 1;
+    // Milestone 3 suite: the modules the older suites leave thin (exam generation, gradebook,
+    // token verification, BR-04 gating, sandbox degraded paths). Runs last because it swaps
+    // the global `fetch`; keeping it at the end means no later suite can see the stub.
+    const { runMilestone3Suite } = require("./cover-milestone3.test");
+    if (!(await runMilestone3Suite())) code = 1;
   } finally {
     // Suites write COV/GATE/TEST rows into cwd data stores; restore seeds.
     restoreStores(snap);

@@ -56,7 +56,10 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
   if (!isOpen) return null;
 
   const completedCount = steps.filter((s) => s.status === 'passed' || s.status === 'failed').length;
-  const progressPercent = Math.round((completedCount / steps.length) * 100);
+  // `steps` can legitimately be empty (before the first grading event arrives), and `0 / 0 * 100`
+  // is NaN, which used to render the literal text "NaN%" in the progress label and set the bar
+  // width to `NaN%`. Guard the denominator.
+  const progressPercent = steps.length === 0 ? 0 : Math.round((completedCount / steps.length) * 100);
 
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(5, 7, 13, 0.85)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -241,7 +244,16 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                 {aiRating.codeSmells.map((smell, index) => (
                   <div key={index} style={{ padding: '8px 10px', borderRadius: '6px', backgroundColor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '12px', display: 'flex', gap: '8px' }}>
                     <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-amber)', fontWeight: 600 }}>Dòng {smell.line || 15}:</span>
-                    <span style={{ color: '#d1d5db' }}>{smell.description}</span>
+                    <span style={{ color: '#d1d5db' }}>
+                      {/* `rule` is the short name of the violation (e.g. "Single Responsibility
+                          Principle"). It was accepted by the AIRating type and returned by the
+                          API but never rendered, so the card showed only the prose explanation
+                          and the student could not tell which principle was broken. */}
+                      {smell.rule && (
+                        <strong style={{ color: '#fbbf24' }}>{smell.rule}: </strong>
+                      )}
+                      {smell.description}
+                    </span>
                   </div>
                 ))}
               </div>

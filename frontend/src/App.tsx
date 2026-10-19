@@ -126,8 +126,13 @@ export function App() {
             const seen = new Set<string>();
             const deduped: any[] = [];
             for (const c of list) {
+              // A row can arrive without a `courseCode` — older class imports only carried the
+              // generated id. `norm` used to be copied straight from `c.courseCode`, so such a
+              // row was stored as `courseCode: undefined` and SubmissionView then crashed on
+              // `c.courseCode.replace(...)` ("Cannot read properties of undefined"), taking the
+              // whole student console down for anyone enrolled in that class.
               const upper = (c.courseCode || c.courseId || '').toUpperCase();
-              let norm = c.courseCode;
+              let norm = upper || c.courseId || 'CHUA-RO-MA';
               if (upper.includes('SWP391')) norm = 'SWP391';
               else if (upper.includes('PRN211')) norm = 'PRN211';
               else if (upper.includes('CSD201') || upper.includes('CSD')) norm = 'CSD201';
@@ -254,6 +259,19 @@ export function App() {
     socketRef.current = socket;
 
     return () => {
+      // Detach every listener before disconnecting. `disconnect()` alone only closes the
+      // transport: the handlers stay registered on the socket object. Any code that reuses a
+      // socket instance — a reconnecting client, or a test double that returns a singleton —
+      // would then accumulate duplicate handlers, so one `grading:progress` event would be
+      // processed N times and N stale closures would each call setState on an unmounted tree.
+      socket.off('connect');
+      socket.off('disconnect');
+      socket.off('connect_error');
+      socket.off('grading:progress');
+      socket.off('testcase:evaluated');
+      socket.off('ai:reviewed');
+      socket.off('grading:completed');
+      socket.off('grading:failed');
       socket.disconnect();
     };
   }, []);
@@ -675,18 +693,24 @@ export function App() {
                 backgroundColor:
                   currentUser.role === 'ADMIN'
                     ? 'rgba(245, 158, 11, 0.2)'
+                    : currentUser.role === 'HOD'
+                    ? 'rgba(168, 85, 247, 0.2)'
                     : currentUser.role === 'INSTRUCTOR'
                     ? 'rgba(99, 102, 241, 0.2)'
                     : 'rgba(16, 185, 129, 0.2)',
                 color:
                   currentUser.role === 'ADMIN'
                     ? '#f59e0b'
+                    : currentUser.role === 'HOD'
+                    ? '#d8b4fe'
                     : currentUser.role === 'INSTRUCTOR'
                     ? '#a5b4fc'
                     : '#6ee7b7',
                 border: `1px solid ${
                   currentUser.role === 'ADMIN'
                     ? 'rgba(245, 158, 11, 0.4)'
+                    : currentUser.role === 'HOD'
+                    ? 'rgba(168, 85, 247, 0.4)'
                     : currentUser.role === 'INSTRUCTOR'
                     ? 'rgba(99, 102, 241, 0.4)'
                     : 'rgba(16, 185, 129, 0.4)'
@@ -695,6 +719,8 @@ export function App() {
             >
               {currentUser.role === 'ADMIN'
                 ? '⚙️ ADMIN'
+                : currentUser.role === 'HOD'
+                ? '🛡️ TRƯỞNG BỘ MÔN'
                 : currentUser.role === 'INSTRUCTOR'
                 ? '👨‍🏫 GIẢNG VIÊN'
                 : '👨‍🎓 SINH VIÊN'}

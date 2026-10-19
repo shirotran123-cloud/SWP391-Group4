@@ -102,7 +102,13 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
         const fallbackRes = await fetch(`${apiBaseUrl}/api/v1/appeals`);
         if (fallbackRes.ok) {
           const fallbackJson = await fallbackRes.json();
-          allAppeals = fallbackJson.data || [];
+          const fallbackAppeals: Appeal[] = fallbackJson.data || [];
+          // Regression: the unfiltered `/api/v1/appeals` fallback used to be adopted wholesale.
+          // An appeal filed by ANOTHER student was therefore rendered under this student's
+          // submission card — reason, lecturer feedback and adjusted score included — as if the
+          // student had filed it themselves. The fallback must stay scoped to this student.
+          const ownerId = studentId || 'SE170000';
+          allAppeals = fallbackAppeals.filter((app) => app.studentId === ownerId);
         }
       }
 
@@ -385,7 +391,12 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
         <div className="glass-panel" style={{ padding: '60px 24px', textAlign: 'center' }}>
           <FileCode size={48} color="#6366f1" style={{ margin: '0 auto 16px', opacity: 0.6 }} />
           <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', marginBottom: '8px' }}>
-            {searchTerm ? 'Không tìm thấy bài nộp nào phù hợp bộ lọc' : 'Bạn chưa có bài nộp nào'}
+            {/* An active status filter that matches nothing is NOT the same thing as "this student
+                has never submitted anything": with 3 graded submissions and the "Chưa đạt" filter
+                selected, the old condition still claimed the student had no submissions at all. */}
+            {searchTerm || statusFilter !== 'ALL'
+              ? 'Không tìm thấy bài nộp nào phù hợp bộ lọc'
+              : 'Bạn chưa có bài nộp nào'}
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 24px' }}>
             Khi nộp bài tập qua hệ thống chấm điểm tự động, toàn bộ kết quả chấm, điểm số và file zip sẽ được lưu trữ tại đây.

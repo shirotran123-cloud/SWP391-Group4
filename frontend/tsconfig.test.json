@@ -1,0 +1,33 @@
+{
+  /* Typechecks the test suites.
+   *
+   * The production build (`tsconfig.app.json`) deliberately excludes tests, so without this
+   * file a test-only type error would never be caught. CI runs `tsc -p tsconfig.test.json`
+   * so the suites stay type-safe without shipping test code.
+   */
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "types": ["vite/client", "vitest/globals", "node", "@testing-library/jest-dom"]
+  },
+  /* The jest-dom matchers (`toBeInTheDocument`, `toBeEmptyDOMElement`, ...) are registered by
+     importing the package for its side effect. Without this the matchers exist at runtime but
+     are unknown to the type checker. */
+  "include": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test/**/*.ts",
+    "src/__tests__/**/*.ts",
+    "src/__tests__/**/*.tsx",
+    "src/vitest-matchers.d.ts"
+  ]
+}

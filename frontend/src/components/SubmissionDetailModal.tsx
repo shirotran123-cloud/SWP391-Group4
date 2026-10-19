@@ -114,16 +114,36 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
     explanation: 'Mã nguồn tổ chức rõ ràng, cấu trúc thuật toán tối ưu và tuân thủ tốt các tiêu chuẩn kiến trúc.',
   };
 
+  // `navigator.clipboard` is undefined outside a secure context (plain HTTP on a LAN address, an
+  // older embedded webview) and `writeText` rejects when the student denies the permission. The
+  // original code called `navigator.clipboard.writeText(...)` unguarded, so over plain HTTP the
+  // press threw a TypeError that unmounted the whole modal, and a denied permission produced an
+  // unhandled rejection. The button also claimed "Đã sao chép!" even when nothing was copied.
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    try {
+      if (!navigator.clipboard?.writeText) return false;
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (err) {
+      console.warn('Không thể sao chép vào clipboard:', err);
+      return false;
+    }
+  };
+
   const handleCopyCode = () => {
-    navigator.clipboard.writeText(currentSource);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
+    void copyToClipboard(currentSource).then((copied) => {
+      if (!copied) return;
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    });
   };
 
   const handleCopyId = () => {
-    navigator.clipboard.writeText(submission.submissionId);
-    setCopiedId(true);
-    setTimeout(() => setCopiedId(false), 2000);
+    void copyToClipboard(submission.submissionId).then((copied) => {
+      if (!copied) return;
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    });
   };
 
   const handleDownload = () => {
@@ -244,6 +264,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
           <button
             type="button"
             onClick={onClose}
+            title="Đóng cửa sổ chi tiết bài nộp"
             style={{
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -614,6 +635,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   <button
                     type="button"
                     onClick={handleCopyCode}
+                    title="Sao chép toàn bộ mã nguồn đã nộp"
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',

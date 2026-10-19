@@ -9,7 +9,9 @@
     "start:dev": "ts-node src/main.ts",
     "start:prod": "node dist/main.js",
     "test": "ts-node --transpile-only test/verify-gateway.ts",
-    "test:e2e": "ts-node --transpile-only test/verify-gateway.ts"
+    "test:e2e": "ts-node --transpile-only test/verify-gateway.ts",
+    "test:coverage": "c8 --reporter=text --reporter=text-summary --reporter=json-summary --check-coverage --lines 80 --functions 80 --statements 80 --include='src/**/*.ts' --exclude='src/main.ts' npx ts-node --transpile-only test/run-coverage-all.ts",
+    "test:all": "ts-node --transpile-only test/run-coverage-all.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.8",

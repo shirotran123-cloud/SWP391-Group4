@@ -2,9 +2,15 @@ name: AITA Continuous Integration & Quality Gate
 
 on:
   push:
-    branches: [ main, develop, 'feature/**' ]
+    branches: [ main, develop, 'feature/**', trung ]
   pull_request:
     branches: [ main, develop ]
+
+# Milestone 3 requires linting to pass and unit-test coverage of at least 80% on the core
+# backend and frontend modules. Every job below therefore runs the real measured gate rather
+# than a smoke test: c8 enforces the thresholds for the Node services and Vitest enforces them
+# for the frontend. A build that drops below the bar fails here instead of being discovered
+# during the defence.
 
 jobs:
   commit-lint:
@@ -30,8 +36,8 @@ jobs:
         run: |
           npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
-  build-and-test-gateway:
-    name: ⚡ NestJS API Gateway & Queue Test Suite
+  gateway-quality-gate:
+    name: ⚡ API Gateway — typecheck, lint & coverage ≥ 80%
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Codebase
@@ -61,15 +67,46 @@ jobs:
         working-directory: api-gateway
         run: npm run build
 
-      - name: Run Gateway Automated Test Suite (<200ms & Socket.IO Stream)
+      # Runs every suite (cover-gates, demo-real, cover-80, goal gates, test-cases and the
+      # Milestone 3 suite) in one process so c8 reports a single honest number.
+      - name: Unit Test Suite with Coverage Gate (≥ 80%)
         working-directory: api-gateway
-        run: |
-          node dist/src/main.js &
-          sleep 3
-          npx ts-node test/verify-gateway.ts
+        env:
+          AITA_TEST_PORT: '3111'
+        run: npm run test:coverage
 
-  build-frontend:
-    name: 💻 Frontend React 19 + Vite Quality Gate
+  genai-hub-quality-gate:
+    name: 🧠 GenAI Hub — typecheck & coverage ≥ 80%
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Codebase
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: genai-hub/package.json
+
+      - name: Install Dependencies
+        working-directory: genai-hub
+        run: npm ci || npm install
+
+      - name: TypeScript Static Typecheck
+        working-directory: genai-hub
+        run: npx tsc --noEmit
+
+      - name: Unit Test Suite with Coverage Gate (≥ 80%)
+        working-directory: genai-hub
+        run: |
+          npx c8 --reporter=text --reporter=text-summary \
+            --check-coverage --lines 80 --functions 80 --statements 80 \
+            --include='src/**/*.ts' \
+            npx ts-node --transpile-only test/run-coverage-all.ts
+
+  frontend-quality-gate:
+    name: 💻 Frontend React 19 — lint, build & coverage ≥ 80%
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Codebase
@@ -86,6 +123,24 @@ jobs:
         working-directory: frontend
         run: npm ci || npm install
 
+      - name: Lint (oxlint)
+        working-directory: frontend
+        run: npm run lint
+
       - name: Vite Production Build
         working-directory: frontend
         run: npm run build
+
+      # Vitest enforces the thresholds declared in vitest.config.ts, so this step fails the
+      # build the moment coverage drops below the Milestone 3 requirement.
+      - name: Unit Test Suite with Coverage Gate (≥ 80%)
+        working-directory: frontend
+        run: npm run test:coverage
+
+      - name: Upload Frontend Coverage Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          if-no-files-found: ignore

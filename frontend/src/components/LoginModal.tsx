@@ -68,11 +68,18 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
   }, [step, countdown]);
 
   useEffect(() => {
-    if (step === 'OTP' && otpInputRefs.current[0]) {
-      setTimeout(() => {
-        otpInputRefs.current[0]?.focus();
-      }, 150);
-    }
+    if (step !== 'OTP') return;
+    // The boxes are not in the DOM until React has committed the OTP step, hence the delay.
+    // The timer is cleared on cleanup (it previously outlived the step and could even fire
+    // after unmount), and it refuses to steal focus once the user is already typing in one of
+    // the boxes: otherwise a slow first paint yanked the caret back to box 1 mid-code and
+    // silently dropped every digit entered after the first.
+    const timer = setTimeout(() => {
+      const focused = document.activeElement as HTMLInputElement | null;
+      if (focused && otpInputRefs.current.includes(focused)) return;
+      otpInputRefs.current[0]?.focus();
+    }, 150);
+    return () => clearTimeout(timer);
   }, [step]);
 
   if (!isOpen) return null;
@@ -111,7 +118,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(data.message || 'Yêu cầu gửi mã OTP thất bại!');
+        // `message` can be a class-validator array, and printing an array into JSX throws
+        // "Objects are not valid as a React child", which blanked the whole modal instead of
+        // showing the reason the OTP was refused.
+        const rawMessage = (data as any)?.message;
+        const detail = Array.isArray(rawMessage) ? rawMessage.join('; ') : rawMessage;
+        setErrorMsg(typeof detail === 'string' && detail ? detail : 'Yêu cầu gửi mã OTP thất bại!');
         setLoading(false);
         return;
       }
@@ -170,7 +182,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       const json = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(json.message || 'Mã xác thực OTP không chính xác!');
+        // Same array-of-messages hazard as the request-otp call above.
+        const rawMessage = (json as any)?.message;
+        const detail = Array.isArray(rawMessage) ? rawMessage.join('; ') : rawMessage;
+        setErrorMsg(typeof detail === 'string' && detail ? detail : 'Mã xác thực OTP không chính xác!');
         setLoading(false);
         return;
       }
@@ -224,14 +239,27 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
     }
   };
 
-  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  const handleOtpPaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').trim().replace(/[^0-9]/g, '');
-    if (pasted.length >= 6) {
-      const sixDigits = pasted.slice(0, 6).split('');
-      setOtpDigits(sixDigits);
-      otpInputRefs.current[5]?.focus();
-      void handleVerifyOtp(sixDigits.join(''));
+    if (!pasted) return;
+
+    // A 6-digit code is normally copied in one piece. Only a paste of six or more digits used
+    // to be honoured, so pasting into any box other than the first — or pasting a code that
+    // still carried the surrounding text — dropped the input on the floor.
+    const next = [...otpDigits];
+    const digits = pasted.slice(0, 6 - index).split('');
+    digits.forEach((digit, offset) => {
+      next[index + offset] = digit;
+    });
+    setOtpDigits(next);
+
+    const lastFilled = Math.min(index + digits.length, 5);
+    otpInputRefs.current[lastFilled]?.focus();
+
+    const combined = next.join('');
+    if (combined.length === 6 && !next.includes('')) {
+      void handleVerifyOtp(combined);
     }
   };
 
@@ -263,6 +291,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
       >
         <button
           onClick={onClose}
+          aria-label="Đóng hộp thoại đăng nhập"
+          title="Đóng"
           style={{
             position: 'absolute',
             top: '16px',
@@ -515,7 +545,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLogin
                   value={digit}
                   onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                   onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                  onPaste={handleOtpPaste}
+                  onPaste={(e) => handleOtpPaste(idx, e)}
+                  aria-label={`Chữ số OTP thứ ${idx + 1}`}
                   style={{
                     width: '42px',
                     height: '50px',

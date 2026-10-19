@@ -62,6 +62,10 @@ export const HodDashboard: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [flaggedOnly, setFlaggedOnly] = useState(true);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  // `actionMsg` carries BOTH the "đã chấp thuận/từ chối" confirmations and the "Không xử lý
+  // được ..." failures. Without this flag a failed approval rendered in the green success banner
+  // with a check mark, telling the HOD the opposite of what happened.
+  const [actionFailed, setActionFailed] = useState(false);
 
   const loadReports = useCallback(async () => {
     setLoading(true);
@@ -111,6 +115,7 @@ export const HodDashboard: React.FC = () => {
 
   const handleResolveAppeal = async (appeal: AppealRow, decision: 'ACCEPTED' | 'REJECTED') => {
     setActionMsg(null);
+    setActionFailed(false);
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/appeals/${appeal.appealId}/resolve`, {
         method: 'PUT',
@@ -126,12 +131,14 @@ export const HodDashboard: React.FC = () => {
       });
       const json = await res.json();
       if (!res.ok) {
+        setActionFailed(true);
         setActionMsg(`Không xử lý được ${appeal.appealId}: ${json.message || res.status}`);
       } else {
         setActionMsg(`Đã ${decision === 'ACCEPTED' ? 'chấp thuận' : 'từ chối'} đơn ${appeal.appealId}.`);
         await loadAppeals();
       }
     } catch (err: any) {
+      setActionFailed(true);
       setActionMsg('Lỗi kết nối: ' + err.message);
     }
   };
@@ -270,16 +277,20 @@ export const HodDashboard: React.FC = () => {
         <div
           style={{
             ...card,
-            borderColor: 'rgba(16, 185, 129, 0.4)',
-            background: 'rgba(16, 185, 129, 0.08)',
+            borderColor: actionFailed ? 'rgba(244, 63, 94, 0.4)' : 'rgba(16, 185, 129, 0.4)',
+            background: actionFailed ? 'rgba(244, 63, 94, 0.08)' : 'rgba(16, 185, 129, 0.08)',
             marginBottom: '16px',
             display: 'flex',
             gap: '10px',
             alignItems: 'center',
           }}
         >
-          <CheckCircle size={16} color="#10b981" style={{ flexShrink: 0 }} />
-          <div style={{ fontSize: '13px', color: '#bbf7d0' }}>{actionMsg}</div>
+          {actionFailed ? (
+            <AlertTriangle size={16} color="#f43f5e" style={{ flexShrink: 0 }} />
+          ) : (
+            <CheckCircle size={16} color="#10b981" style={{ flexShrink: 0 }} />
+          )}
+          <div style={{ fontSize: '13px', color: actionFailed ? '#fecdd3' : '#bbf7d0' }}>{actionMsg}</div>
         </div>
       )}
 
