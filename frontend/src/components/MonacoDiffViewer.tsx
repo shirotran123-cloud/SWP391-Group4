@@ -75,7 +75,7 @@ export const MonacoDiffViewer: React.FC<MonacoDiffViewerProps> = ({
             </span>
             {matchedTokensCount > 0 && (
               <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: '#d1d5db' }}>
-                {matchedTokensCount} đoạn token trùng
+                {matchedTokensCount} đoạn mã trùng khớp
               </span>
             )}
           </div>
@@ -86,7 +86,7 @@ export const MonacoDiffViewer: React.FC<MonacoDiffViewerProps> = ({
         {activeTab === 'single' ? (
           <div>
             <div style={{ backgroundColor: '#252526', padding: '8px 16px', fontSize: '12px', color: '#858585', borderBottom: '1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Solution.cpp / Solution.java (Syntax Highlighting)</span>
+              <span>Solution.cpp / Solution.java (tô sáng cú pháp)</span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
                 <CheckCircle2 size={13} /> Chế độ xem độc lập
               </span>

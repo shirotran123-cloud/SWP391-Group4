@@ -27,12 +27,12 @@ function generateFallbackSubId(): string {
 // published list, and the source code always comes from the file the student uploads.
 
 const initialSteps: GradingStep[] = [
-  { id: '1', label: 'Hàng đợi Redis BullMQ', status: 'pending', detail: 'Đang xếp hàng chờ Worker xử lý' },
-  { id: '2', label: 'Khởi tạo Docker Sandbox', status: 'pending', detail: 'Cấp phát 512MB RAM & cách ly seccomp.json' },
+  { id: '1', label: 'Hàng đợi xử lý bài nộp', status: 'pending', detail: 'Đang xếp hàng chờ hệ thống chấm bài' },
+  { id: '2', label: 'Khởi tạo môi trường cách ly', status: 'pending', detail: 'Cấp phát 512MB RAM và giới hạn quyền truy cập' },
   { id: '3', label: 'Chạy Testcase 1 (Dữ liệu cơ sở)', status: 'pending', detail: 'Đánh giá tính chính xác thuật toán' },
   { id: '4', label: 'Chạy Testcase 2 (Trường hợp biên)', status: 'pending', detail: 'Kiểm tra giới hạn thời gian (TLE) & bộ nhớ' },
-  { id: '5', label: 'Đánh giá Clean Code & SOLID (GenAI)', status: 'pending', detail: 'Phân tích thiết kế hướng đối tượng qua Gemini/GPT' },
-  { id: '6', label: 'Kiểm định Đạo văn AST Winnowing', status: 'pending', detail: 'So khớp vân tay mã nguồn trên cây cú pháp trừu tượng' },
+  { id: '5', label: 'Đánh giá mã nguồn sạch & nguyên lý SOLID', status: 'pending', detail: 'Phân tích thiết kế hướng đối tượng bằng trí tuệ nhân tạo' },
+  { id: '6', label: 'Kiểm tra đạo văn mã nguồn', status: 'pending', detail: 'So khớp cấu trúc mã nguồn giữa các bài nộp' },
 ];
 
 export function App() {
@@ -85,7 +85,7 @@ export function App() {
       courseCode: 'CSD201',
       courseName: 'Data Structures and Algorithms (CSD201)',
       semester: 'Fall 2026',
-      description: 'Cấu trúc dữ liệu và giải thuật nâng cao (Cây AVL, Dijkstra, Winnowing)',
+      description: 'Cấu trúc dữ liệu và giải thuật nâng cao (cây AVL, đường đi ngắn nhất, thuật toán so khớp mã nguồn)',
     },
   ]);
   const [selectedStudentCourseId, setSelectedStudentCourseId] = useState<string>('ALL');
@@ -471,7 +471,7 @@ export function App() {
               const currentDetail =
                 step.id === '6'
                   ? realPlagiarism
-                    ? `Đang chạy thuật toán Winnowing w=10, k=15... (${realPlagiarism.similarityRate}% tương đồng)`
+                    ? `Đang so khớp cấu trúc mã nguồn... (${realPlagiarism.similarityRate}% tương đồng)`
                     : 'Đang tra cứu cơ sở dữ liệu đối sánh...'
                   : 'Đang thực thi...';
               return { ...step, status: 'in_progress', detail: currentDetail };
@@ -480,7 +480,7 @@ export function App() {
               const passDetail =
                 step.id === '6'
                   ? realPlagiarism
-                    ? `Hoàn tất AST & Winnowing: ${realPlagiarism.similarityRate}% (${realPlagiarism.isFlagged ? 'NGHI VẤN' : 'AN TOÀN'})`
+                    ? `Đã so khớp xong: ${realPlagiarism.similarityRate}% tương đồng (${realPlagiarism.isFlagged ? 'NGHI VẤN' : 'AN TOÀN'})`
                     : 'Không phát hiện trùng khớp trong kho bài nội bộ'
                   : 'Hoàn thành (ĐẠT)';
               return { ...step, status: 'passed', detail: passDetail };
@@ -498,8 +498,8 @@ export function App() {
                 detail:
                   s.id === '6'
                     ? realPlagiarism
-                      ? `Hoàn tất AST & Winnowing: ${realPlagiarism.similarityRate}% (${realPlagiarism.isFlagged ? 'CẢNH BÁO ĐẠO VĂN' : 'MÃ NGUỒN AN TOÀN'})`
-                      : 'Hoàn tất AST: Không phát hiện gian lận trong kho mã nguồn'
+                      ? `Đã so khớp xong: ${realPlagiarism.similarityRate}% tương đồng (${realPlagiarism.isFlagged ? 'CẢNH BÁO ĐẠO VĂN' : 'MÃ NGUỒN AN TOÀN'})`
+                      : 'Đã kiểm tra xong: không phát hiện gian lận trong kho mã nguồn'
                     : 'Hoàn thành (ĐẠT)',
               }))
             );
@@ -883,7 +883,7 @@ export function App() {
                   transition: 'all 0.2s ease',
                 }}
               >
-                <ArrowLeftRight size={16} /> Đối Soát Đạo Văn (AST Winnowing)
+                <ArrowLeftRight size={16} /> Đối Soát Đạo Văn
               </button>
 
               <button
@@ -907,7 +907,7 @@ export function App() {
                   transition: 'all 0.2s ease',
                 }}
               >
-                <Scale size={16} /> Phúc Khảo &amp; Khiếu Nại (UC-06)
+                <Scale size={16} /> Phúc Khảo &amp; Khiếu Nại
               </button>
             </div>
 

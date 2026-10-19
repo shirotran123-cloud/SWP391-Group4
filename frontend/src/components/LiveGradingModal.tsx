@@ -71,7 +71,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
               <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>Sinh viên: <strong>{studentName}</strong></span>
             </div>
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
-              {isCompleted ? '🎉 Kết Quả Đánh Giá Mã Nguồn & Nhận Xét AI' : '⚡ Đang Chấm Bài Tự Động (Thời Gian Thực Socket.IO)'}
+              {isCompleted ? '🎉 Kết Quả Đánh Giá Mã Nguồn & Nhận Xét AI' : '⚡ Đang Chấm Bài Tự Động (Cập Nhật Thời Gian Thực)'}
             </h2>
             {isCompleted && score !== undefined && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
@@ -95,7 +95,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                     🧪 TC2: {(scoreBreakdown?.testcase2 ?? 0).toFixed(1)} / 3.0đ
                   </span>
                   <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-                    ✨ Clean Code: {(scoreBreakdown?.cleanCode ?? 0).toFixed(1)} / 2.0đ
+                    ✨ Mã Nguồn Sạch: {(scoreBreakdown?.cleanCode ?? 0).toFixed(1)} / 2.0đ
                   </span>
                   <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(234, 179, 8, 0.15)', color: '#fbbf24', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
                     📐 SOLID: {(scoreBreakdown?.solid ?? 0).toFixed(1)} / 1.0đ
@@ -125,7 +125,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                   transition: 'all 0.2s',
                 }}
               >
-                <Scale size={16} /> Khiếu Nại Điểm (UC-06)
+                <Scale size={16} /> Khiếu Nại Điểm
               </button>
               <button
                 type="button"
@@ -222,7 +222,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
             <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', alignSelf: 'flex-start' }}>
                 <Award size={18} color="var(--accent-primary)" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Đánh Giá 5 Trục SOLID (GenAI)</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Đánh Giá 5 Trục SOLID (Trợ Lý AI)</h3>
               </div>
               <SolidRadarChart rating={aiRating} />
             </div>
@@ -240,7 +240,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '120px', overflowY: 'auto' }}>
                 {aiRating.codeSmells.map((smell, index) => (
                   <div key={index} style={{ padding: '8px 10px', borderRadius: '6px', backgroundColor: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '12px', display: 'flex', gap: '8px' }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-amber)', fontWeight: 600 }}>L{smell.line || 15}:</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-amber)', fontWeight: 600 }}>Dòng {smell.line || 15}:</span>
                     <span style={{ color: '#d1d5db' }}>{smell.description}</span>
                   </div>
                 ))}
@@ -260,11 +260,11 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                 {aiRating.codeSmells && aiRating.codeSmells.length > 0 ? (
                   <span>
                     <strong>Phát hiện vi phạm: </strong>
-                    {aiRating.codeSmells[0].description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử refactor lại các phương thức để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.
+                    {aiRating.codeSmells[0].description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử viết lại các phương thức để tuân thủ <strong>nguyên lý Đơn Trách Nhiệm (SRP)</strong>.
                   </span>
                 ) : (
                   <span>
-                    ✨ <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện Code Smells nào, phân tách trách nhiệm giữa các class/module rõ ràng và tuân thủ tốt nguyên lý <strong>Single Responsibility Principle (SRP)</strong>.
+                    ✨ <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện mùi mã nguồn nào, phân tách trách nhiệm giữa các lớp và mô-đun rõ ràng, tuân thủ tốt <strong>nguyên lý Đơn Trách Nhiệm (SRP)</strong>.
                   </span>
                 )}
               </p>

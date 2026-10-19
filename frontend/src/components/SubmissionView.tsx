@@ -118,35 +118,35 @@ const getEffectiveRequirements = (task: StudentTaskItem): TechnicalRequirement =
   const code = (task.courseCode || task.course || '').toUpperCase();
   if (code.includes('CSD')) {
     return {
-      problemContext: `Bài tập thuộc môn Cấu Trúc Dữ Liệu & Giải Thuật (${task.courseCode || 'CSD201'}). Yêu cầu sinh viên cài đặt cấu trúc dữ liệu nâng cao (Cây tự cân bằng AVL, Hàng đợi ưu tiên Min-Heap, Đồ thị), giải quyết bài toán với độ phức tạp thời gian tối ưu, hạn chế tối đa rò rỉ bộ nhớ trong môi trường Docker Sandbox.`,
+      problemContext: `Bài tập thuộc môn Cấu Trúc Dữ Liệu & Giải Thuật (${task.courseCode || 'CSD201'}). Yêu cầu sinh viên cài đặt cấu trúc dữ liệu nâng cao (Cây tự cân bằng AVL, Hàng đợi ưu tiên Min-Heap, Đồ thị), giải quyết bài toán với độ phức tạp thời gian tối ưu, hạn chế tối đa rò rỉ bộ nhớ trong môi trường chấm bài cách ly.`,
       inputFormat: [
         'Dòng 1: Số nguyên dương N biểu diễn số lượng phần tử hoặc số lượng thao tác truy vấn (1 ≤ N ≤ 100,000).',
         'N dòng tiếp theo: Mỗi dòng chứa câu lệnh thao tác (INSERT value, DELETE value, FIND value hoặc QUERY từ đỉnh u đến v).',
       ],
       outputFormat: [
-        'In ra kết quả của các truy vấn theo đúng thứ tự trên từng dòng tới STDOUT.',
+        'In ra kết quả của các truy vấn theo đúng thứ tự trên từng dòng ra màn hình.',
         'Đối với cây AVL: In thứ tự duyệt In-Order hoặc Pre-Order khi kết thúc thao tác.',
         'Đối với thuật toán đồ thị: In khoảng cách ngắn nhất hoặc chuỗi các đỉnh trên đường đi.',
       ],
       constraints: [
-        `Giới hạn thời gian (Time Limit): ${task.timeLimitMs || 2000} ms cho toàn bộ testcases.`,
-        `Giới hạn bộ nhớ (Memory Limit): ${task.memoryLimitMb || 512} MB trong Docker Sandbox.`,
+        `Giới hạn thời gian chạy: ${task.timeLimitMs || 2000} ms cho toàn bộ testcases.`,
+        `Giới hạn bộ nhớ: ${task.memoryLimitMb || 512} MB trong môi trường chấm bài cách ly.`,
         'Độ phức tạp thời gian bắt buộc: O(log N) cho các thao tác cây AVL, O((V + E) log V) cho Dijkstra.',
         'Không được sử dụng các cấu trúc dữ liệu có sẵn của ngôn ngữ nếu đề bài yêu cầu tự cài đặt con trỏ Node.',
       ],
       complexityRequirements: [
-        'Thời gian (Time Complexity): O(log N) cho tìm kiếm/chèn/xóa.',
-        'Không gian (Space Complexity): O(N) cho bộ nhớ lưu trữ cây/đồ thị.',
+        'Độ phức tạp thời gian: O(log N) cho tìm kiếm/chèn/xóa.',
+        'Độ phức tạp không gian: O(N) cho bộ nhớ lưu trữ cây/đồ thị.',
       ],
       solidGuidelines: [
-        'Single Responsibility Principle (SRP): Tách bạch Node, Tree/Graph và lớp Runner/I-O.',
-        'Clean Code: Đặt tên biến tường minh (height, balanceFactor, leftChild, rightChild).',
+        'Nguyên lý đơn nhiệm: Tách bạch phần xử lý dữ liệu, cấu trúc cây/đồ thị và phần đọc ghi dữ liệu.',
+        'Mã nguồn sạch: Đặt tên biến tường minh (height, balanceFactor, leftChild, rightChild).',
       ],
     };
   }
 
   return {
-    problemContext: `Đề bài yêu cầu sinh viên xây dựng giải thuật xử lý dữ liệu chuẩn hóa trong dự án phần mềm (${task.courseCode || 'SWP391'}). Mã nguồn phải được đóng gói theo chuẩn Clean Code, áp dụng các nguyên lý SOLID và đảm bảo vượt qua các trường hợp kiểm thử biên trong môi trường Docker Sandbox.`,
+    problemContext: `Đề bài yêu cầu sinh viên xây dựng giải thuật xử lý dữ liệu chuẩn hóa trong dự án phần mềm (${task.courseCode || 'SWP391'}). Mã nguồn phải được đóng gói theo chuẩn mã nguồn sạch, áp dụng các nguyên lý thiết kế hướng đối tượng và đảm bảo vượt qua các trường hợp kiểm thử biên trong môi trường chấm bài cách ly.`,
     inputFormat: [
       'Dòng 1: Số nguyên dương N biểu diễn số lượng phần tử trong tập dữ liệu (1 ≤ N ≤ 100,000).',
       'Dòng 2: Gồm N số nguyên A[1], A[2], ..., A[N] cách nhau bởi khoảng trắng (-10^9 ≤ A[i] ≤ 10^9).',
@@ -156,8 +156,8 @@ const getEffectiveRequirements = (task: StudentTaskItem): TechnicalRequirement =
       'Kết thúc bằng ký tự xuống dòng (\\n).',
     ],
     constraints: [
-      `Giới hạn thời gian (Time Limit): ${task.timeLimitMs || 2000} ms. Các giải thuật O(N^2) sẽ bị lỗi Time Limit Exceeded (TLE).`,
-      `Giới hạn bộ nhớ (RAM Limit): ${task.memoryLimitMb || 512} MB.`,
+      `Giới hạn thời gian chạy: ${task.timeLimitMs || 2000} ms. Các giải thuật O(N^2) sẽ bị báo lỗi vượt quá thời gian cho phép.`,
+      `Giới hạn bộ nhớ: ${task.memoryLimitMb || 512} MB.`,
       'Không được in ra các thông báo phụ (như "Nhap N:") làm sai lệch kết quả đối chiếu testcases.',
     ],
     complexityRequirements: [
@@ -165,8 +165,8 @@ const getEffectiveRequirements = (task: StudentTaskItem): TechnicalRequirement =
       'Độ phức tạp không gian: Tối đa O(N).',
     ],
     solidGuidelines: [
-      'Single Responsibility (SRP): Tách riêng logic thuật toán và logic in ấn màn hình.',
-      'Dependency Inversion (DIP): Sử dụng Interface trừu tượng để decoupling mã nguồn.',
+      'Nguyên lý đơn nhiệm: Tách riêng phần xử lý thuật toán và phần in kết quả ra màn hình.',
+      'Nguyên lý đảo ngược phụ thuộc: Sử dụng giao diện trừu tượng để tách rời các thành phần mã nguồn.',
     ],
   };
 };
@@ -577,7 +577,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     if (!currentTask) return;
 
     if (isExpired) {
-      setErrorMessage(`[BR-02 Ngoại Lệ] Đã quá hạn chót nộp bài (${new Date(currentTask.deadline).toLocaleString('vi-VN')})! Cổng nộp đã tự động đóng.`);
+      setErrorMessage(`Đã quá hạn nộp bài (${new Date(currentTask.deadline).toLocaleString('vi-VN')})! Cổng nộp đã tự động đóng.`);
       setExceptionType('EXPIRED');
       return;
     }
@@ -585,7 +585,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     const maxBytes = (currentTask.maxSizeMb || 10) * 1024 * 1024;
     if (file.size > maxBytes) {
       const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-      setErrorMessage(`[413 Payload Too Large - Ngoại Lệ 1] Dung lượng file (${sizeMb} MB) vượt quá giới hạn tối đa ${currentTask.maxSizeMb || 10} MB! Đã đánh chặn ngay tại Client-side trước khi truyền tải qua mạng.`);
+      setErrorMessage(`Dung lượng file (${sizeMb} MB) vượt quá giới hạn tối đa ${currentTask.maxSizeMb || 10} MB nên đã bị chặn ngay trên trình duyệt trước khi tải lên máy chủ.`);
       setExceptionType('OVERSIZE');
       return;
     }
@@ -636,7 +636,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     setSha256Checksum(null);
     const currentTask = selectedTask || task;
     setErrorMessage(
-      `[413 Payload Too Large - Ngoại Lệ 1] Dung lượng file (12.45 MB) vượt quá giới hạn tối đa ${currentTask?.maxSizeMb || 10} MB! Đã đánh chặn ngay tại Client-side trước khi truyền tải qua mạng.`,
+      `Dung lượng file (12.45 MB) vượt quá giới hạn tối đa ${currentTask?.maxSizeMb || 10} MB nên đã bị chặn ngay trên trình duyệt trước khi tải lên máy chủ.`,
     );
     setExceptionType('OVERSIZE');
   };
@@ -648,7 +648,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     setSha256Checksum(null);
     if (nextState) {
       setErrorMessage(
-        '[BR-02 Ngoại Lệ 2] Cổng nộp bài đã đóng do quá hạn chót Deadline. Không cho phép nộp bổ sung nhằm bảo toàn tính toàn vẹn học thuật.',
+        'Cổng nộp bài đã đóng do quá hạn nộp. Không cho phép nộp bổ sung nhằm bảo toàn tính toàn vẹn học thuật.',
       );
       setExceptionType('EXPIRED');
     } else {
@@ -659,7 +659,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
   const handleSubmit = () => {
     if (isExpired) {
-      setErrorMessage('[BR-02 Ngoại Lệ] Không thể nộp bài do đã quá hạn chót!');
+      setErrorMessage('Không thể nộp bài do đã quá hạn nộp!');
       return;
     }
     const currentTask = selectedTask || task;
@@ -741,7 +741,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13px', fontWeight: 700 }}>
             <Bug size={16} />
-            <span>Kịch bản Demo Đường Ngoại Lệ (Milestone 2 Defense):</span>
+            <span>Kịch bản Demo Các Trường Hợp Ngoại Lệ:</span>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -761,7 +761,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 gap: '4px',
               }}
             >
-              🔴 Demo File &gt; 10MB
+              🔴 Demo File Vượt 10MB
             </button>
             <button
               type="button"
@@ -781,7 +781,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               }}
             >
               {isDeadlineSimulatedExpired ? <RefreshCw size={12} /> : <Lock size={12} />}
-              {isDeadlineSimulatedExpired ? 'Khôi phục Deadline' : '🔴 Demo Quá Deadline (BR-02)'}
+              {isDeadlineSimulatedExpired ? 'Khôi phục hạn nộp' : '🔴 Demo Quá Hạn Nộp'}
             </button>
           </div>
         </div>
@@ -868,7 +868,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Cpu size={18} color="var(--accent-cyan)" />
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>CPU Time Limit</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Giới hạn thời gian chạy</div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
                   {selectedTask.timeLimitMs || 2000} ms
                 </div>
@@ -878,7 +878,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <HardDrive size={18} color="var(--accent-emerald)" />
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>RAM Sandbox Limit</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Giới hạn bộ nhớ</div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
                   {selectedTask.memoryLimitMb || 512} MB
                 </div>
@@ -920,8 +920,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             {[
               { key: 'SPEC', label: 'Yêu Cầu Kỹ Thuật & Đề Bài', icon: <FileText size={15} /> },
               { key: 'SAMPLES', label: 'Testcase Mẫu & Ví Dụ', icon: <Code size={15} />, badge: `${getEffectiveSampleTestCases(selectedTask).length} Mẫu` },
-              { key: 'RUBRICS', label: 'Barem Điểm & SOLID', icon: <Award size={15} />, badge: 'Thang 10đ' },
-              { key: 'GUIDE', label: 'Cấu Trúc File & Sandbox', icon: <Layers size={15} /> },
+              { key: 'RUBRICS', label: 'Barem Điểm & Tiêu Chuẩn SOLID', icon: <Award size={15} />, badge: 'Thang 10đ' },
+              { key: 'GUIDE', label: 'Cấu Trúc File & Môi Trường Cách Ly', icon: <Layers size={15} /> },
             ].map((tab) => {
               const active = activeDetailTab === tab.key;
               return (
@@ -1017,7 +1017,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         {/* Đầu vào mẫu */}
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8' }}>ĐẦU VÀO (STDIN):</span>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8' }}>ĐẦU VÀO (Dữ liệu nhập chuẩn):</span>
                             <button
                               type="button"
                               onClick={() => handleCopyCode(tc.input, `input-${idx}`)}
@@ -1059,7 +1059,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         {/* Đầu ra mong đợi */}
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399' }}>ĐẦU RA MONG ĐỢI (STDOUT):</span>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399' }}>ĐẦU RA MONG ĐỢI (Dữ liệu xuất chuẩn):</span>
                             <button
                               type="button"
                               onClick={() => handleCopyCode(tc.expectedOutput, `output-${idx}`)}
@@ -1124,15 +1124,15 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 ? selectedTask.rubrics
                 : [
                     { criterion: 'Tính đúng đắn thuật toán & Vượt qua 100% Testcases', maxScore: 5.0, description: 'Vượt qua toàn bộ bộ testcases cơ sở và testcases dữ liệu lớn (TLE check)' },
-                    { criterion: 'Thiết kế Hướng đối tượng & SOLID (SRP, DIP)', maxScore: 2.5, description: 'Tách riêng bộ xử lý nghiệp vụ khỏi I/O, sử dụng interface ISorter' },
-                    { criterion: 'Tối ưu độ phức tạp O(N log N) & Clean Code', maxScore: 1.5, description: 'Mã nguồn tường minh, đặt tên chuẩn CamelCase, tối ưu thời gian CPU < 2000ms' },
-                    { criterion: 'Liêm chính học thuật & AST Winnowing', maxScore: 1.0, description: 'Mã nguồn độc lập, mức độ tương đồng AST với sinh viên khác dưới 25%' },
+                    { criterion: 'Thiết kế hướng đối tượng & nguyên lý thiết kế SOLID', maxScore: 2.5, description: 'Tách riêng phần xử lý nghiệp vụ khỏi phần đọc ghi dữ liệu, sử dụng giao diện trừu tượng cho bộ sắp xếp' },
+                    { criterion: 'Tối ưu độ phức tạp O(N log N) & mã nguồn sạch', maxScore: 1.5, description: 'Mã nguồn tường minh, đặt tên chuẩn CamelCase, tối ưu thời gian CPU < 2000ms' },
+                    { criterion: 'Liêm chính học thuật & kiểm tra tương đồng mã nguồn', maxScore: 1.0, description: 'Mã nguồn độc lập, mức độ tương đồng với mã nguồn của sinh viên khác dưới 25%' },
                   ];
 
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                    Hệ thống AITA sử dụng quy trình chấm điểm 2 tầng: Tầng 1 thực thi testcases trong Docker Sandbox cô lập, Tầng 2 phân tích cây cú pháp trừu tượng AST bằng mô hình GenAI để đánh giá tính tuân thủ nguyên lý SOLID và liêm chính học thuật.
+                    Hệ thống AITA sử dụng quy trình chấm điểm 2 tầng: Tầng 1 chạy thử bộ dữ liệu kiểm thử trong môi trường cách ly, Tầng 2 phân tích cấu trúc mã nguồn bằng trí tuệ nhân tạo để đánh giá mức độ tuân thủ nguyên lý thiết kế và liêm chính học thuật.
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
@@ -1171,7 +1171,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--accent-cyan)' }}>
-                          <CheckCircle size={12} /> Tự động đánh giá bởi AITA Autograding Engine
+                          <CheckCircle size={12} /> Tự động đánh giá bởi hệ thống chấm điểm AITA
                         </div>
                       </div>
                     ))}
@@ -1191,8 +1191,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   >
                     <ShieldCheck size={24} color="#34d399" />
                     <div style={{ fontSize: '12.5px', color: '#d1d5db', lineHeight: '1.5' }}>
-                      <strong style={{ color: '#ffffff' }}>Giám sát Liêm chính học thuật AST: </strong>
-                      Mọi bài nộp sẽ được tạo chữ ký k-gram thông qua giải thuật Winnowing AST. Nếu độ tương đồng vượt quá 70%, bài nộp sẽ bị tự động đánh dấu nghi vấn gian lận và chuyển tới hội đồng giảng viên xem xét.
+                      <strong style={{ color: '#ffffff' }}>Giám sát liêm chính học thuật: </strong>
+                      Mọi bài nộp sẽ được tạo dấu vân tay mã nguồn bằng thuật toán so khớp cấu trúc chương trình. Nếu độ tương đồng vượt quá 70%, bài nộp sẽ bị tự động đánh dấu nghi vấn gian lận và chuyển tới hội đồng giảng viên xem xét.
                     </div>
                   </div>
                 </div>
@@ -1233,8 +1233,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       >
 {`solution.zip
 ├── Solution.java (hoặc Main.java / main.py / main.cpp)
-├── OrderSorter.java (nếu tách class SRP)
-└── ISorter.java (nếu áp dụng DIP)`}
+├── OrderSorter.java (nếu tách lớp theo nguyên lý đơn nhiệm)
+└── ISorter.java (nếu dùng giao diện trừu tượng)`}
                       </pre>
                     </div>
 
@@ -1248,13 +1248,13 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
-                        <Lock size={16} /> Quy Định An Toàn Docker Sandbox
+                        <Lock size={16} /> Quy Định An Toàn Khi Chấm Bài
                       </div>
                       <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px', color: '#d1d5db', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <li>File nén chỉ chứa mã nguồn (.java, .py, .cpp, .cs). Không đính kèm file .class, .exe hoặc file rác.</li>
-                        <li>Dung lượng file tối đa: <strong>10 MB</strong>. Vượt quá sẽ bị chặn theo chuẩn <em>BR-01</em>.</li>
+                        <li>Dung lượng file tối đa: <strong>10 MB</strong>. Vượt quá sẽ bị chặn ngay khi tải lên.</li>
                         <li>Nghiêm cấm: Gọi <code>System.exit()</code>, mở kết nối mạng Socket/HTTP, truy xuất file hệ thống.</li>
-                        <li>Thời hạn nộp bài: Sau khi hết thời gian đếm ngược, cổng nộp bài tự động khóa theo chuẩn <em>BR-02</em>.</li>
+                        <li>Thời hạn nộp bài: Sau khi hết thời gian đếm ngược, cổng nộp bài tự động khóa.</li>
                       </ul>
                     </div>
                   </div>
@@ -1343,9 +1343,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)',
                     transition: 'all 0.15s ease',
                   }}
-                  title="Xem chi tiet ma nguon da nop, diem testcase, SOLID va nhan xet AI"
+                  title="Xem chi tiết mã nguồn đã nộp, điểm testcase, SOLID và nhận xét AI"
                 >
-                  <Sparkles size={16} /> 🔍 Xem Chi Tiết (Code, Testcases & AI)
+                  <Sparkles size={16} /> 🔍 Xem Chi Tiết (Mã Nguồn, Testcases & AI)
                 </button>
               </div>
             </div>
@@ -1391,7 +1391,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   gap: '5px',
                 }}
               >
-                <Sparkles size={14} /> Clean Code: {prevSubmission?.aiRating?.cleanCodeScore ?? taskSubmissions[0]?.details?.aiRating?.cleanCodeScore ?? 9.5} / 10.0
+                <Sparkles size={14} /> Mã nguồn sạch: {prevSubmission?.aiRating?.cleanCodeScore ?? taskSubmissions[0]?.details?.aiRating?.cleanCodeScore ?? 9.5} / 10.0
               </span>
 
               <span
@@ -1429,7 +1429,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   gap: '5px',
                 }}
               >
-                <Clock size={14} /> Sandbox: {prevSubmission?.executionTimeMs ?? taskSubmissions[0]?.details?.executionTimeMs ?? 185} ms
+                <Clock size={14} /> Thời gian chạy: {prevSubmission?.executionTimeMs ?? taskSubmissions[0]?.details?.executionTimeMs ?? 185} ms
               </span>
             </div>
 
@@ -1652,9 +1652,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               <div>
                 <div style={{ fontWeight: 700, marginBottom: '2px' }}>
                   {exceptionType === 'OVERSIZE'
-                    ? 'ĐÁNH CHẶN NGOẠI LỆ: DUNG LƯỢNG VƯỢT QUÁ 10MB'
+                    ? 'KHÔNG THỂ NỘP: DUNG LƯỢNG FILE VƯỢT QUÁ 10MB'
                     : exceptionType === 'EXPIRED'
-                    ? 'ĐÁNH CHẶN NGOẠI LỆ: QUÁ HẠN NỘP BÀI (BR-02)'
+                    ? 'KHÔNG THỂ NỘP: ĐÃ QUÁ HẠN NỘP BÀI'
                     : 'LỖI BÀI NỘP'}
                 </div>
                 <span>{errorMessage}</span>
@@ -1707,12 +1707,12 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             >
               {isExpired ? (
                 <>
-                  <Lock size={16} /> Cổng Nộp Đã Đóng (Quá Hạn Chót BR-02)
+                  <Lock size={16} /> Cổng Nộp Đã Đóng (Đã Quá Hạn Nộp)
                 </>
               ) : (
                 <>
                   <Send size={16} />
-                  {prevSubmission ? 'Nộp Lại Bài & Chấm AI Sandbox' : 'Nộp Bài & Kích Hoạt Chấm Điểm AI'}
+                  {prevSubmission ? 'Nộp Lại Bài & Chấm Điểm Tự Động' : 'Nộp Bài & Kích Hoạt Chấm Điểm Tự Động'}
                 </>
               )}
             </button>

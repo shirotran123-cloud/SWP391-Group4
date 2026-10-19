@@ -241,13 +241,13 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              USE CASE 04 &amp; 06 • SINH VIÊN
+              LỊCH SỬ NỘP BÀI &amp; PHÚC KHẢO • SINH VIÊN
             </span>
             <h1 style={{ fontSize: '26px', fontWeight: 800, marginTop: '4px', marginBottom: '8px', color: '#ffffff' }}>
               Lịch Sử Bài Nộp &amp; Điểm Số
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
-              Xem danh sách bài tập đã nộp, điểm số chi tiết từng tiêu chí, tải lại mã nguồn gốc (.zip) và quản lý khiếu nại phúc khảo theo quy tắc BR-05 (2 lượt/bài nộp).
+              Xem danh sách bài tập đã nộp, điểm số chi tiết từng tiêu chí, tải lại mã nguồn gốc (.zip) và quản lý khiếu nại phúc khảo (tối đa 2 lượt cho mỗi bài nộp).
             </p>
           </div>
 
@@ -314,7 +314,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
           </div>
 
           <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>QUY TẮC PHÚC KHẢO BR-05</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>QUY ĐỊNH PHÚC KHẢO</div>
             <div style={{ fontSize: '13px', fontWeight: 600, color: '#fbbf24', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Scale size={16} /> 2 lượt độc lập / mỗi bài tập
             </div>
@@ -388,7 +388,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
             {searchTerm ? 'Không tìm thấy bài nộp nào phù hợp bộ lọc' : 'Bạn chưa có bài nộp nào'}
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 24px' }}>
-            Khi nộp bài tập qua hệ thống chấm điểm tự động Docker Sandbox, toàn bộ kết quả chấm, điểm số và file zip sẽ được lưu trữ tại đây.
+            Khi nộp bài tập qua hệ thống chấm điểm tự động, toàn bộ kết quả chấm, điểm số và file zip sẽ được lưu trữ tại đây.
           </p>
           {onNavigateToSubmit && (
             <button
@@ -462,11 +462,11 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                       </span>
                     ) : isPassed ? (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '12px', fontWeight: 700 }}>
-                        <CheckCircle size={14} /> ĐẠT ({displayScore !== undefined ? `${displayScore.toFixed(1)}/10` : 'PASS'})
+                        <CheckCircle size={14} /> ĐẠT ({displayScore !== undefined ? `${displayScore.toFixed(1)}/10` : 'Đạt yêu cầu'})
                       </span>
                     ) : (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', fontSize: '12px', fontWeight: 700 }}>
-                        <XCircle size={14} /> CHƯA ĐẠT ({displayScore !== undefined ? `${displayScore.toFixed(1)}/10` : 'FAIL'})
+                        <XCircle size={14} /> CHƯA ĐẠT ({displayScore !== undefined ? `${displayScore.toFixed(1)}/10` : 'Chưa đạt yêu cầu'})
                       </span>
                     )}
 
@@ -552,7 +552,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 {/* Dòng 2: Tên đề bài & thông tin file */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', backgroundColor: 'rgba(255, 255, 255, 0.02)', padding: '14px 16px', borderRadius: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Đề bài / Assignment</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Đề bài</div>
                     <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', marginTop: '2px' }}>
                       {sub.assignmentId || 'SWP391 - Đồ Án Chuyên Ngành'}
                     </div>
@@ -582,19 +582,19 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                   {testcaseText && (
                     <div style={{ padding: '8px 14px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', fontSize: '12px', color: '#6ee7b7' }}>
-                      <strong>Testcases:</strong> {testcaseText} (70% trọng số)
+                      <strong>Testcases:</strong> {testcaseText} (chiếm 70% trọng số)
                     </div>
                   )}
 
                   {cleanCodeScore !== undefined && (
                     <div style={{ padding: '8px 14px', borderRadius: '8px', backgroundColor: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.2)', fontSize: '12px', color: '#c7d2fe' }}>
-                      <strong>Clean Code:</strong> {cleanCodeScore.toFixed(1)} / 10.0
+                      <strong>Mã nguồn sạch:</strong> {cleanCodeScore.toFixed(1)} / 10.0
                     </div>
                   )}
 
                   {sub.details?.aiRating?.solidScore && (
                     <div style={{ padding: '8px 14px', borderRadius: '8px', backgroundColor: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.2)', fontSize: '12px', color: '#67e8f9' }}>
-                      <strong>SOLID:</strong> S:{sub.details.aiRating.solidScore.s} O:{sub.details.aiRating.solidScore.o} L:{sub.details.aiRating.solidScore.l} I:{sub.details.aiRating.solidScore.i} D:{sub.details.aiRating.solidScore.d}
+                      <strong>Nguyên lý thiết kế:</strong> S:{sub.details.aiRating.solidScore.s} O:{sub.details.aiRating.solidScore.o} L:{sub.details.aiRating.solidScore.l} I:{sub.details.aiRating.solidScore.i} D:{sub.details.aiRating.solidScore.d}
                     </div>
                   )}
                 </div>
@@ -627,7 +627,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                           Thông Tin Phúc Khảo Bài Nộp (Đã sử dụng: {appealsCount}/2 lượt của bài này)
                         </span>
                         <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-                          — Quy tắc BR-05
+                          — Quy định phúc khảo
                         </span>
                       </div>
 
@@ -761,9 +761,9 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                         boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
                         transition: 'all 0.15s ease',
                       }}
-                      title="Xem toan bo ma nguon da nop, chi tiet testcase va danh gia AI"
+                      title="Xem toàn bộ mã nguồn đã nộp, chi tiết testcase và đánh giá của AI"
                     >
-                      <Sparkles size={15} /> Xem Chi Tiết (Code & AI)
+                      <Sparkles size={15} /> Xem Chi Tiết (Mã Nguồn &amp; AI)
                     </button>
 
                     <button
@@ -818,7 +818,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                       }}
                       title={
                         isMaxAppeals
-                          ? 'Bài nộp này đã sử dụng tối đa 2/2 lượt phúc khảo theo quy tắc BR-05. Không thể khiếu nại thêm.'
+                          ? 'Bài nộp này đã sử dụng tối đa 2/2 lượt phúc khảo. Không thể khiếu nại thêm.'
                           : appealsCount === 1
                             ? 'Gửi đơn phúc khảo lần 2 cho riêng bài nộp này (còn 1 lượt)'
                             : 'Gửi đơn khiếu nại & phúc khảo cho riêng bài nộp này (tối đa 2 lượt)'

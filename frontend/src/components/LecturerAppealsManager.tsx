@@ -299,12 +299,12 @@ public class Solution {
       codeSmells: [
         {
           line: 29,
-          rule: 'Single Responsibility Principle (SRP)',
+          rule: 'Nguyên lý Đơn Trách Nhiệm (SRP)',
           description: 'Hàm sortAndDisplay vừa thực hiện gọi sắp xếp mảng vừa đảm nhận việc in kết quả ra System.out.',
         },
         {
           line: 36,
-          rule: 'Resource Leak Warning',
+          rule: 'Cảnh báo rò rỉ tài nguyên',
           description: 'Đối tượng Scanner chưa được bọc trong khối try-with-resources để tự động đóng luồng dữ liệu.',
         },
       ],
@@ -318,7 +318,7 @@ public class Solution {
       winnowingContainment: 15.0,
       isFlagged: false,
       comparedSubmissionsCount: 15,
-      verdict: 'Mã nguồn có tính độc lập cao. Cấu trúc cây cú pháp AST nguyên bản, không phát hiện dấu hiệu sao chép trái phép.',
+      verdict: 'Mã nguồn có tính độc lập cao. Cấu trúc cây cú pháp nguyên bản, không phát hiện dấu hiệu sao chép trái phép.',
     };
 
     return {
@@ -351,7 +351,7 @@ public class Solution {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)', textTransform: 'uppercase' }}>
-            HỘI ĐỒNG PHÚC KHẢO (UC-06 / BR-05)
+            HỘI ĐỒNG PHÚC KHẢO
           </span>
           <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
             Quản Lý &amp; Thẩm Định Đơn Phúc Khảo
@@ -665,7 +665,7 @@ public class Solution {
                 }}
               >
                 <Terminal size={16} color={activeModalTab === 'TESTCASES' ? '#10b981' : '#94a3b8'} />
-                2. Test Cases &amp; Sandbox ({auditData.passedTestcases}/{auditData.totalTestcases})
+                2. Test Cases &amp; Môi Trường Cách Ly ({auditData.passedTestcases}/{auditData.totalTestcases})
               </button>
 
               <button
@@ -707,7 +707,7 @@ public class Solution {
                 }}
               >
                 <ShieldCheck size={16} color={activeModalTab === 'PLAGIARISM' ? '#ec4899' : '#94a3b8'} />
-                4. Kiểm Tra Đạo Văn (Moss/AST)
+                4. Kiểm Tra Đạo Văn
               </button>
             </div>
 
@@ -804,10 +804,10 @@ public class Solution {
               </div>
             )}
 
-            {/* Nội dung TAB 2: TEST CASES & SANDBOX */}
+            {/* Nội dung TAB 2: TEST CASES & MÔI TRƯỜNG CÁCH LY */}
             {activeModalTab === 'TESTCASES' && (
               <div>
-                {/* Thông số Sandbox */}
+                {/* Thông số môi trường cách ly */}
                 <div
                   style={{
                     display: 'grid',
@@ -817,9 +817,9 @@ public class Solution {
                   }}
                 >
                   <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>MÔI TRƯỜNG SANDBOX</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>MÔI TRƯỜNG CÁCH LY</div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#38bdf8', marginTop: '2px' }}>
-                      Docker (cgroups v2)
+                      Cách ly hoàn toàn (cgroups v2)
                     </div>
                   </div>
                   <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
@@ -829,15 +829,15 @@ public class Solution {
                     </div>
                   </div>
                   <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>WATCHDOG TIMEOUT</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>THỜI GIAN CHỜ TỐI ĐA</div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#e2e8f0', marginTop: '2px' }}>
-                      {auditData.sandbox.watchdogSec} (SIGKILL)
+                      {auditData.sandbox.watchdogSec} (tự động dừng bài chạy quá lâu)
                     </div>
                   </div>
                   <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>BẢO MẬT &amp; SECCOMP</div>
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>BẢO MẬT &amp; GIỚI HẠN HỆ THỐNG</div>
                     <div style={{ fontSize: '13px', fontWeight: 700, color: '#34d399', marginTop: '2px' }}>
-                      PidsLimit=64, Net=None
+                      Tối đa 64 tiến trình, không kết nối mạng
                     </div>
                   </div>
                 </div>
@@ -875,7 +875,7 @@ public class Solution {
                               color: tc.status === 'PASSED' ? '#34d399' : '#f43f5e',
                             }}
                           >
-                            {tc.status === 'PASSED' ? `PASSED (+${tc.score}đ)` : 'FAILED (0.0đ)'}
+                            {tc.status === 'PASSED' ? `ĐẠT (+${tc.score}đ)` : 'KHÔNG ĐẠT (0.0đ)'}
                           </span>
                         </div>
                       </div>
@@ -883,11 +883,11 @@ public class Solution {
                       {/* Chi tiết I/O */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
                         <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <span style={{ color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Dữ liệu đầu vào (Input):</span>
+                          <span style={{ color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Dữ liệu đầu vào:</span>
                           <code style={{ color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>{tc.input}</code>
                         </div>
                         <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <span style={{ color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Kết quả thực tế (Actual Output):</span>
+                          <span style={{ color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Kết quả thực tế:</span>
                           <code style={{ color: tc.status === 'PASSED' ? '#4ade80' : '#f87171', fontFamily: 'var(--font-mono)' }}>{tc.actual}</code>
                         </div>
                       </div>
@@ -911,7 +911,7 @@ public class Solution {
                       textAlign: 'center',
                     }}
                   >
-                    <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>ĐIỂM CLEAN CODE</span>
+                    <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>ĐIỂM MÃ NGUỒN SẠCH</span>
                     <div style={{ fontSize: '38px', fontWeight: 900, color: '#f59e0b', margin: '4px 0' }}>
                       {auditData.aiRating.cleanCodeScore}
                       <span style={{ fontSize: '18px', color: '#94a3b8', fontWeight: 500 }}>/10</span>
@@ -922,11 +922,11 @@ public class Solution {
                         ĐÁNH GIÁ 5 NGUYÊN LÝ SOLID:
                       </span>
                       {[
-                        { label: 'S - Single Responsibility', val: auditData.aiRating.solidScore.s },
-                        { label: 'O - Open/Closed Principle', val: auditData.aiRating.solidScore.o },
-                        { label: 'L - Liskov Substitution', val: auditData.aiRating.solidScore.l },
-                        { label: 'I - Interface Segregation', val: auditData.aiRating.solidScore.i },
-                        { label: 'D - Dependency Inversion', val: auditData.aiRating.solidScore.d },
+                        { label: 'S - Đơn Trách Nhiệm', val: auditData.aiRating.solidScore.s },
+                        { label: 'O - Mở/Đóng', val: auditData.aiRating.solidScore.o },
+                        { label: 'L - Thay Thế Liskov', val: auditData.aiRating.solidScore.l },
+                        { label: 'I - Phân Tách Giao Diện', val: auditData.aiRating.solidScore.i },
+                        { label: 'D - Đảo Ngược Phụ Thuộc', val: auditData.aiRating.solidScore.d },
                       ].map((s) => (
                         <div key={s.label} style={{ marginBottom: '6px' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#cbd5e1', marginBottom: '2px' }}>
@@ -946,7 +946,7 @@ public class Solution {
                     <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
                         <Sparkles size={16} />
-                        Nhận xét sư phạm từ Trí tuệ nhân tạo (GenAI Hub):
+                        Nhận xét sư phạm từ Trợ lý AI:
                       </div>
                       <p style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.6, margin: 0 }}>
                         {auditData.aiRating.explanation}
@@ -956,7 +956,7 @@ public class Solution {
                     <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f87171', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
                         <AlertTriangle size={16} />
-                        Các điểm cần cải tiến (Code Smells phát hiện qua AST):
+                        Các điểm cần cải tiến (mùi mã nguồn phát hiện qua cây cú pháp):
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {auditData.aiRating.codeSmells.map((smell: any, i: number) => (
@@ -974,12 +974,12 @@ public class Solution {
               </div>
             )}
 
-            {/* Nội dung TAB 4: KIỂM TRA ĐẠO VĂN (MOSS / AST) */}
+            {/* Nội dung TAB 4: KIỂM TRA ĐẠO VĂN */}
             {activeModalTab === 'PLAGIARISM' && (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '18px' }}>
                   <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(52, 211, 153, 0.3)' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>TỈ LỆ TƯƠNG ĐỒNG AST TỔNG THỂ</span>
+                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>TỈ LỆ TƯƠNG ĐỒNG CẤU TRÚC TỔNG THỂ</span>
                     <div style={{ fontSize: '32px', fontWeight: 900, color: auditData.plagiarism.similarityRate > 40 ? '#f43f5e' : '#34d399', margin: '4px 0' }}>
                       {auditData.plagiarism.similarityRate}%
                     </div>
@@ -989,19 +989,19 @@ public class Solution {
                   </div>
 
                   <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>AST CÂY CÚ PHÁP TRỪU TƯỢNG</span>
+                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>TƯƠNG ĐỒNG CÂY CÚ PHÁP</span>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#38bdf8', margin: '4px 0' }}>
                       {auditData.plagiarism.astStructuralSimilarity}%
                     </div>
-                    <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>So khớp node giải thuật</span>
+                    <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>So khớp cấu trúc giải thuật</span>
                   </div>
 
                   <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>WINNOWING TOKEN CONTAINMENT</span>
+                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>TỈ LỆ TRÙNG LẶP VÂN TAY MÃ NGUỒN</span>
                     <div style={{ fontSize: '24px', fontWeight: 800, color: '#a5b4fc', margin: '4px 0' }}>
                       {auditData.plagiarism.winnowingContainment}%
                     </div>
-                    <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>Jaccard index n-gram</span>
+                    <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>So khớp chuỗi ký tự đặc trưng</span>
                   </div>
 
                   <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
@@ -1158,7 +1158,7 @@ public class Solution {
                     rows={3}
                     value={resolutionNote}
                     onChange={(e) => setResolutionNote(e.target.value)}
-                    placeholder="Ví dụ: Đã đối chiếu mã nguồn QuickSort và kiểm tra lại log Docker Sandbox; thuật toán đạt O(N log N) chuẩn xác, không có dấu hiệu đạo văn. Chấp thuận cộng 2.0 điểm..."
+                    placeholder="Ví dụ: Đã đối chiếu mã nguồn QuickSort và kiểm tra lại nhật ký chạy bài trong môi trường cách ly; thuật toán đạt O(N log N) chuẩn xác, không có dấu hiệu đạo văn. Chấp thuận cộng 2.0 điểm..."
                     style={{
                       width: '100%',
                       padding: '12px 14px',

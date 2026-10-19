@@ -347,9 +347,9 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
     // "explanation": "mục đích của test case này"
   ],
   "rubric": [
-    { "criterion": "Tính đúng đắn thuật toán & Vượt qua Testcases", "maxScore": 5.0, "description": "Pass 100% testcases theo yêu cầu" },
-    { "criterion": "Clean Code & Tối ưu O(N log N)", "maxScore": 2.5, "description": "Mã nguồn rõ ràng, đặt tên biến chuẩn, tối ưu thời gian" },
-    { "criterion": "Thiết kế Hướng đối tượng & SOLID", "maxScore": 2.5, "description": "Tuân thủ nguyên lý Single Responsibility (SRP)" }
+    { "criterion": "Tính đúng đắn thuật toán & Vượt qua bộ kiểm thử", "maxScore": 5.0, "description": "Vượt qua 100% test case theo yêu cầu" },
+    { "criterion": "Mã nguồn sạch & Tối ưu độ phức tạp", "maxScore": 2.5, "description": "Mã nguồn rõ ràng, đặt tên biến chuẩn, tối ưu thời gian chạy" },
+    { "criterion": "Thiết kế hướng đối tượng & nguyên lý SOLID", "maxScore": 2.5, "description": "Tuân thủ nguyên lý Đơn trách nhiệm (SRP)" }
   ],
   "starterCode": "// Khung mã nguồn khởi tạo cho sinh viên",
   "referenceSolution": "// Lời giải tham chiếu chuẩn xác"

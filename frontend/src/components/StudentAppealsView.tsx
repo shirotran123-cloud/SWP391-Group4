@@ -71,13 +71,13 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-              USE CASE 06 &amp; QUY TẮC BR-05
+              QUY ĐỊNH PHÚC KHẢO ĐIỂM
             </span>
             <h1 style={{ fontSize: '26px', fontWeight: 800, marginTop: '4px', marginBottom: '8px', color: '#ffffff' }}>
               Theo Dõi Khiếu Nại &amp; Phúc Khảo Điểm (Appeals)
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-              Sinh viên có quyền gửi tối đa <strong>2 đơn phúc khảo cho MỖI bài nộp độc lập</strong> trong vòng <strong>48 giờ</strong> sau khi công bố kết quả (Quy tắc BR-05). Mỗi bài tập đều có hạn mức 2 lượt riêng biệt, không tính gộp toàn khóa học.
+              Sinh viên có quyền gửi tối đa <strong>2 đơn phúc khảo cho MỖI bài nộp độc lập</strong> trong vòng <strong>48 giờ</strong> sau khi công bố kết quả. Mỗi bài tập đều có hạn mức 2 lượt riêng biệt, không tính gộp toàn khóa học.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>

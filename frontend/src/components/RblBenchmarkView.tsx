@@ -40,7 +40,7 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
           </div>
           <div>
             <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff' }}>
-              Phòng Thí Nghiệm Nghiên Cứu AST & Thuật Toán Winnowing (RBL Core)
+              Phòng Thí Nghiệm Nghiên Cứu Đối Soát Mã Nguồn
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
               Kiểm định độ nhạy của thuật toán băm vân tay số trên Cây Cú Pháp Trừu Tượng với 10 kịch bản ngụy trang mã nguồn phức tạp
@@ -50,10 +50,10 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
 
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px', fontSize: '13px' }}>
           <span style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)', fontWeight: 600 }}>
-            ⚡ Thuật toán: Winnowing K-gram (k=15, w=10)
+            ⚡ Thuật toán: vân tay mã nguồn (k=15, w=10)
           </span>
           <span style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-cyan)', fontWeight: 600 }}>
-            🌲 Chuẩn hóa AST: Tree-sitter Canonical Tokenizer
+            🌲 Chuẩn hóa cây cú pháp: bộ tách từ chuẩn
           </span>
           <span style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: 'var(--accent-rose)', fontWeight: 600 }}>
             🚨 Ngưỡng cảnh báo gian lận: ≥ 70.0%
@@ -143,7 +143,7 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
             }}
           >
             {evaluating ? (
-              <>Đang phân tích AST...</>
+              <>Đang phân tích cây cú pháp...</>
             ) : (
               <>
                 <Play size={16} /> Chạy Kiểm Tra Đối Soát Cặp Này
@@ -186,7 +186,7 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
             </div>
 
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-              💡 <strong>Nhận định chuyên môn:</strong> Thuật toán Winnowing đã tiến hành bóc tách toàn bộ định danh biến và hàm, xóa bỏ cấu trúc bình luận, và thực hiện băm trượt trên Cây Cú Pháp Trừu Tượng. Kết quả cho thấy các kỹ thuật ngụy trang ({selectedPair.obfuscationType}) hoàn toàn bị vô hiệu hóa bởi bộ chuẩn hóa AST.
+              💡 <strong>Nhận định chuyên môn:</strong> Thuật toán vân tay mã nguồn đã tiến hành bóc tách toàn bộ định danh biến và hàm, xóa bỏ cấu trúc bình luận, và thực hiện băm trượt trên Cây Cú Pháp Trừu Tượng. Kết quả cho thấy các kỹ thuật ngụy trang ({selectedPair.obfuscationType}) hoàn toàn bị vô hiệu hóa bởi bộ chuẩn hóa cây cú pháp.
             </p>
 
             {onOpenDiffViewer && (
@@ -208,14 +208,14 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
                   cursor: 'pointer',
                 }}
               >
-                <FileCode size={16} /> Mở Trình So Khớp Mã Nguồn Chi Tiết (Monaco Diff Viewer)
+                <FileCode size={16} /> Mở Trình So Khớp Mã Nguồn Chi Tiết
               </button>
             )}
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
             <Sparkles size={32} style={{ margin: '0 auto 12px', color: 'var(--accent-primary)' }} />
-            <p>Bấm nút <strong>"Chạy Kiểm Tra Đối Soát Cặp Này"</strong> để bắt đầu quá trình trích xuất AST và băm Winnowing.</p>
+            <p>Bấm nút <strong>"Chạy Kiểm Tra Đối Soát Cặp Này"</strong> để bắt đầu quá trình trích xuất cây cú pháp và băm vân tay mã nguồn.</p>
           </div>
         )}
       </div>

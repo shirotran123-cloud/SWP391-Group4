@@ -126,7 +126,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         cleanCodeScore: sub.cleanCodeScore ?? 9.5,
         solidScore: { s: 9.0, o: 8.5, l: 9.0, i: 9.0, d: 8.5 },
         codeSmells: [],
-        explanation: "Ma nguon to chuc ro rang, phan tach trach nhiem module tot.",
+        explanation: "Mã nguồn tổ chức rõ ràng, phân tách trách nhiệm giữa các mô-đun tốt.",
       },
     });
     setDetailModalOpen(true);
@@ -193,7 +193,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         URL.revokeObjectURL(url);
       } else {
         // Fallback cho bài mẫu demo
-        const sampleCode = `// AITA Code Submission Archive: ${subId}\n// Sinh vien: ${preferredFileName || 'solution.zip'}\n\npublic class Solution {\n    public static void main(String[] args) {\n        System.out.println("AITA Grading Demo - Source Code Extracted");\n    }\n}`;
+        const sampleCode = `// Kho mã nguồn bài nộp: ${subId}\n// Sinh viên: ${preferredFileName || 'solution.zip'}\n\npublic class Solution {\n    public static void main(String[] args) {\n        System.out.println("Bản demo chấm điểm - Đã trích xuất mã nguồn");\n    }\n}`;
         const blob = new Blob([sampleCode], { type: 'application/zip' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -278,7 +278,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [availableModelList, setAvailableModelList] = useState<string[]>([]);
   const [desiredTestCount, setDesiredTestCount] = useState<number>(5);
   const [lecturerPrompt, setLecturerPrompt] = useState<string>(
-    'Tạo bài tập về Thuật toán Dijkstra tìm đường đi ngắn nhất, có tối ưu bằng Hàng đợi ưu tiên PriorityQueue, sinh viên phải áp dụng nguyên lý SOLID Single Responsibility (SRP).'
+    'Tạo bài tập về Thuật toán Dijkstra tìm đường đi ngắn nhất, có tối ưu bằng hàng đợi ưu tiên, sinh viên phải áp dụng nguyên lý Đơn Trách Nhiệm (SRP).'
   );
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [tempApiKey, setTempApiKey] = useState(geminiApiKey);
@@ -319,10 +319,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   // Ping kiểm tra kết nối API Key với Google Gemini
   const handleTestApiKey = async () => {
     if (!tempApiKey.trim()) {
-      setPingStatus({ loading: false, message: 'Vui lòng nhập API Key trước khi kiểm tra.', success: false });
+      setPingStatus({ loading: false, message: 'Vui lòng nhập khóa API trước khi kiểm tra.', success: false });
       return;
     }
-    setPingStatus({ loading: true, message: 'Đang kết nối tới máy chủ Google Gemini (ModelService.ListModels)...', success: null });
+    setPingStatus({ loading: true, message: 'Đang kết nối tới máy chủ Google Gemini...', success: null });
     const res = await GeminiAIService.pingKey(tempApiKey, selectedAiModel === 'auto' ? undefined : selectedAiModel);
     setPingStatus({
       loading: false,
@@ -348,7 +348,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     if (!geminiApiKey.trim()) {
       setTempApiKey('');
       setIsConfigModalOpen(true);
-      setAiErrorMsg('Bạn cần cung cấp Google Gemini API Key để hệ thống kết nối AI tạo đề bài.');
+      setAiErrorMsg('Bạn cần cung cấp khóa API Google Gemini để hệ thống kết nối AI tạo đề bài.');
       return;
     }
 
@@ -418,7 +418,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       );
     } catch (err: any) {
       console.error('Lỗi khi gọi Google Gemini AI:', err);
-      setAiErrorMsg(err.message || 'Không thể kết nối tới Google Gemini AI. Vui lòng kiểm tra lại API Key hoặc hạn mức quota.');
+      setAiErrorMsg(err.message || 'Không thể kết nối tới Google Gemini AI. Vui lòng kiểm tra lại khóa API hoặc hạn mức sử dụng.');
     } finally {
       clearInterval(timerInterval);
       setIsAiGenerating(false);
@@ -448,7 +448,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
     if (!res.ok && res.status !== 409) {
       const body = await res.text().catch(() => '');
-      throw new Error(`Không lưu được đề bài lên Gateway (HTTP ${res.status}). ${body.slice(0, 160)}`);
+      throw new Error(`Không lưu được đề bài lên hệ thống (mã lỗi ${res.status}). ${body.slice(0, 160)}`);
     }
 
     // Lưu từng test case (công khai + ẩn) kèm barem trọng số
@@ -510,7 +510,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       persistWarning = persisted.warning;
     } catch (persistErr: any) {
       // Gateway offline -> vẫn lưu cục bộ để demo không bị chặn, nhưng báo rõ cho giảng viên.
-      persistWarning = `Chưa lưu được lên CSDL Gateway (${persistErr.message}). Đề bài chỉ được lưu tạm trên trình duyệt.`;
+      persistWarning = `Chưa lưu được lên hệ thống (${persistErr.message}). Đề bài chỉ được lưu tạm trên trình duyệt.`;
       console.warn('[Workflow1] Persist failed:', persistErr);
     }
 
@@ -551,7 +551,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
     const toastMsg = persistWarning
       ? `⚠️ ĐÃ XUẤT BẢN (một phần): Bài tập "${assignmentTitle}" — ${persistWarning}`
-      : `🎉 ĐÃ XUẤT BẢN THÀNH CÔNG: Bài tập "${assignmentTitle}" (${savedTestCases}/${testCases.length} testcases đã lưu vào CSDL) đã giao cho lớp ${courseCode} (${courseName})!`;
+      : `🎉 ĐÃ XUẤT BẢN THÀNH CÔNG: Bài tập "${assignmentTitle}" (${savedTestCases}/${testCases.length} testcases đã lưu vào hệ thống) đã giao cho lớp ${courseCode} (${courseName})!`;
     setPublishSuccessToast(toastMsg);
     setCreateSuccessMsg(toastMsg);
     setAiErrorMsg(persistWarning ? persistWarning : null);
@@ -604,7 +604,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [newCourseDesc, setNewCourseDesc] = useState('Lập trình ứng dụng đa nền tảng với .NET Core & Clean Architecture');
   const [createCourseLoading, setCreateCourseLoading] = useState(false);
 
-  // State cho việc nạp Roster Excel vào lớp
+  // State cho việc nạp danh sách sinh viên từ Excel vào lớp
   const [targetCourseId, setTargetCourseId] = useState<string>('CRS-SWP391');
 
   // Tải danh sách khóa học thực tế từ API Gateway (PostgreSQL 15)
@@ -675,7 +675,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       setCourses((prev) => [newCourseObj, ...prev.filter((c) => c.courseId !== generatedId)]);
       setTargetCourseId(generatedId);
       setIsCreateCourseModalOpen(false);
-      setPublishSuccessToast(`🎉 Đã tạo thành công khóa học mới [${newCourseCode}] và lưu vào PostgreSQL 15!`);
+      setPublishSuccessToast(`🎉 Đã tạo thành công khóa học mới [${newCourseCode}]!`);
     } catch (err: any) {
       alert(`Lỗi tạo khóa học: ${err.message}`);
     } finally {
@@ -764,12 +764,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setSimulatedRollback(null);
 
     // Chỉ dùng mã TEST-* khi giảng viên chưa chọn file CSV. Trước đây khối này ghi
-    // thẳng tên và email của các thành viên trong nhóm vào lớp học, khiến roster thật
+    // thẳng tên và email của các thành viên trong nhóm vào lớp học, khiến danh sách thật
     // bị trộn lẫn dữ liệu minh hoạ.
     const studentsToImport = customStudents || (parsedCsvStudents.length > 0 ? parsedCsvStudents : (triggerError ? [
       { studentCode: 'TEST-SV001', fullName: 'Sinh Viên Kiểm Thử 1', email: 'test.sv001@fpt.edu.vn' },
       { studentCode: 'TEST-SV002', fullName: 'Sinh Viên Kiểm Thử 2', email: 'test.sv002@fpt.edu.vn' },
-      { studentCode: 'TEST-SV001', fullName: 'Bản Ghi Trùng Mã (Kiểm Thử Rollback)', email: 'test.duplicate@fpt.edu.vn' },
+      { studentCode: 'TEST-SV001', fullName: 'Bản Ghi Trùng Mã (Kiểm Thử Hoàn Tác)', email: 'test.duplicate@fpt.edu.vn' },
     ] : [
       { studentCode: 'TEST-SV001', fullName: 'Sinh Viên Kiểm Thử 1', email: 'test.sv001@fpt.edu.vn' },
       { studentCode: 'TEST-SV002', fullName: 'Sinh Viên Kiểm Thử 2', email: 'test.sv002@fpt.edu.vn' },
@@ -786,12 +786,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Lỗi giao dịch SQL!');
+        throw new Error(data.message || data.error || 'Lỗi khi nạp danh sách sinh viên!');
       }
 
       setSimulatedRollback(false);
       setExcelStatus(
-        `✅ GIAO DỊCH SQL THÀNH CÔNG (100% COMMIT): Đã nạp và ghi danh thành công ${studentsToImport.length} sinh viên vào lớp [${courseIdToUse}] trong PostgreSQL 15! Sinh viên đăng nhập vào sẽ thấy môn học ngay.`
+        `✅ GIAO DỊCH THÀNH CÔNG (ĐÃ LƯU TRỌN VẸN): Đã nạp và ghi danh thành công ${studentsToImport.length} sinh viên vào lớp [${courseIdToUse}]! Sinh viên đăng nhập vào sẽ thấy môn học ngay.`
       );
       setCourses((prev) =>
         prev.map((c) =>
@@ -801,7 +801,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     } catch (err: any) {
       setSimulatedRollback(true);
       setExcelStatus(
-        `❌ GIAO DỊCH SQL THẤT BẠI: ${err.message}. Hệ thống đã tự động kích hoạt 100% SQL TRANSACTION ROLLBACK (R06) bảo toàn dữ liệu PostgreSQL, không có bất kỳ bản ghi mồ côi nào!`
+        `❌ GIAO DỊCH THẤT BẠI: ${err.message}. Hệ thống đã tự động hoàn tác toàn bộ dữ liệu để bảo toàn cơ sở dữ liệu, không có bất kỳ bản ghi mồ côi nào!`
       );
     } finally {
       setExcelLoading(false);
@@ -814,13 +814,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       <div className="glass-panel" style={{ padding: '24px 28px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            Bảng Quản Trị Giảng Viên • Vai Trò: INSTRUCTOR
+            Bảng Quản Trị Giảng Viên • Vai Trò: Giảng Viên
           </span>
           <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
             Cổng Điều Hành Học Phần & Khảo Thí Lập Trình
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '2px' }}>
-            Quản lý đề bài, phân công lớp học, tích hợp AI soạn đề tự động và kiểm định đạo văn AST
+            Quản lý đề bài, phân công lớp học, tích hợp AI soạn đề tự động và kiểm định đạo văn bằng cây cú pháp
           </p>
         </div>
 
@@ -846,7 +846,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             }}
           >
             <Key size={15} />
-            {geminiApiKey ? 'Đã Cấu Hình Gemini AI Key' : '⚙️ Nhập Gemini AI Key'}
+            {geminiApiKey ? 'Đã Cấu Hình Khóa Google Gemini' : '⚙️ Nhập Khóa Google Gemini'}
           </button>
 
           <button
@@ -908,7 +908,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <Sparkles size={16} color="var(--accent-cyan)" /> 2. Soạn Đề & Barem AI (UC-08)
+          <Sparkles size={16} color="var(--accent-cyan)" /> 2. Soạn Đề &amp; Barem AI
         </button>
 
         <button
@@ -928,7 +928,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <FileSpreadsheet size={16} color="#10b981" /> 3. Nhập Roster Excel (ACID Rollback)
+          <FileSpreadsheet size={16} color="#10b981" /> 3. Nhập Danh Sách Lớp Từ Excel (Hoàn Tác An Toàn)
         </button>
 
         <button
@@ -968,7 +968,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <Sparkles size={16} /> 5. RBL Lab (Nghiên Cứu)
+          <Sparkles size={16} /> 5. Phòng Nghiên Cứu
         </button>
 
         <button
@@ -988,7 +988,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             gap: '8px',
           }}
         >
-          <Scale size={16} color="#fbbf24" /> 6. Phúc Khảo Điểm (UC-06)
+          <Scale size={16} color="#fbbf24" /> 6. Phúc Khảo Điểm
         </button>
       </div>
 
@@ -1480,11 +1480,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     border: `1px solid ${geminiApiKey ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
                   }}
                 >
-                  {geminiApiKey ? '🟢 AI Thật Đã Kích Hoạt' : '🟡 Chưa Cấu Hình Key'}
+                  {geminiApiKey ? '🟢 AI Thật Đã Kích Hoạt' : '🟡 Chưa Cấu Hình Khóa API'}
                 </span>
               </div>
               <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-                Nhập chủ đề hoặc bấm nút sinh AI để Google Gemini tự động biên soạn đề bài, bộ test cases ẩn/công khai và barem Clean Code / SOLID
+                Nhập chủ đề hoặc bấm nút sinh AI để Google Gemini tự động biên soạn đề bài, bộ test cases ẩn/công khai và barem mã nguồn sạch / SOLID
               </p>
             </div>
 
@@ -1509,7 +1509,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   cursor: 'pointer',
                 }}
               >
-                <Settings size={16} /> Cấu Hình Key
+                <Settings size={16} /> Cấu Hình Khóa API
               </button>
 
               <button
@@ -1553,7 +1553,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sparkles size={20} color="var(--accent-cyan)" />
                 <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>
-                  Yêu Cầu & Ý Tưởng Cụ Thể Của Giảng Viên (Prompt Dành Cho AI Soạn Đề)
+                  Yêu Cầu &amp; Ý Tưởng Cụ Thể Của Giảng Viên (Dành Cho AI Soạn Đề)
                 </h3>
               </div>
               <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 700 }}>
@@ -1693,7 +1693,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 onClick={() => setIsConfigModalOpen(true)}
                 style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #f43f5e', backgroundColor: 'transparent', color: '#f43f5e', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
               >
-                Nhập Key Ngay
+                Nhập Khóa Ngay
               </button>
             </div>
           )}
@@ -1720,7 +1720,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     gap: '4px',
                   }}
                 >
-                  <Code2 size={13} /> Xem Lời Giải & Code Mẫu AI
+                  <Code2 size={13} /> Xem Lời Giải &amp; Mã Nguồn Mẫu AI
                 </button>
               )}
             </div>
@@ -1805,16 +1805,16 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               />
             </div>
 
-            {/* Cấu hình hạn ngạch Sandbox */}
+            {/* Cấu hình hạn ngạch môi trường cách ly */}
             <div style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
               <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Cpu size={16} /> Cấu Hình Giới Hạn Tài Nguyên Docker Sandbox & Thời Gian Hạn Nộp
+                <Cpu size={16} /> Cấu Hình Giới Hạn Tài Nguyên Môi Trường Cách Ly &amp; Thời Gian Hạn Nộp
               </h4>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    <Calendar size={14} style={{ display: 'inline', marginRight: '4px' }} /> Hạn Chót Nộp Bài (Deadline)
+                    <Calendar size={14} style={{ display: 'inline', marginRight: '4px' }} /> Hạn Chót Nộp Bài
                   </label>
                   <input
                     type="datetime-local"
@@ -1857,7 +1857,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>
-                    <HardDrive size={14} style={{ display: 'inline', marginRight: '4px' }} /> Giới Hạn RAM Sandbox (MB)
+                    <HardDrive size={14} style={{ display: 'inline', marginRight: '4px' }} /> Giới Hạn RAM Môi Trường Cách Ly (MB)
                   </label>
                   <input
                     type="number"
@@ -1906,7 +1906,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Layers size={16} color="var(--accent-primary)" /> Bộ Test Cases Tự Động (StdIn / StdOut) - Tổng {testCases.length} Test
+                    <Layers size={16} color="var(--accent-primary)" /> Bộ Test Cases Tự Động - Tổng {testCases.length} Test
                   </h4>
                   <span
                     style={{
@@ -1957,7 +1957,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         fontWeight: 600,
                         cursor: 'pointer',
                       }}
-                      title="Quy đổi về 7.0đ (theo Barem chuẩn AITA: 7đ Testcase + 3đ Clean Code & SOLID)"
+                      title="Quy đổi về 7.0đ (theo barem chuẩn: 7đ Testcase + 3đ mã nguồn sạch & SOLID)"
                     >
                       ⚡ Quy đổi về 7.0đ (Barem)
                     </button>
@@ -1983,7 +1983,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 && (
                 <div style={{ marginBottom: '10px', padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.2)', fontSize: '12px', color: '#fbbf24' }}>
-                  💡 <strong>Tổng điểm các testcase hiện là {totalTestcaseWeight.toFixed(1)}đ (khác 10đ):</strong> Khi chấm bài, hệ thống tự động chuẩn hóa theo tỷ lệ: <code>Điểm đạt = (Tổng điểm TC Pass / {totalTestcaseWeight.toFixed(1)}) × Thang Điểm Barem</code>. Hoặc Giảng viên có thể bấm nút <em>"Quy đổi về 10.0đ"</em> hoặc <em>"7.0đ (Barem)"</em> ở trên để chuẩn hóa tự động.
+                  💡 <strong>Tổng điểm các testcase hiện là {totalTestcaseWeight.toFixed(1)}đ (khác 10đ):</strong> Khi chấm bài, hệ thống tự động chuẩn hóa theo tỷ lệ: <code>Điểm đạt = (Tổng điểm testcase đạt / {totalTestcaseWeight.toFixed(1)}) × Thang Điểm Barem</code>. Hoặc Giảng viên có thể bấm nút <em>"Quy đổi về 10.0đ"</em> hoặc <em>"7.0đ (Barem)"</em> ở trên để chuẩn hóa tự động.
                 </div>
               )}
 
@@ -1991,7 +1991,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 {testCases.map((tc, idx) => (
                   <div key={idx} style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'rgba(18, 24, 36, 0.6)', border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 100px 90px auto', gap: '12px', alignItems: 'center' }}>
                     <div>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Input (StdIn #{idx + 1}):</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Dữ liệu nhập #{idx + 1}:</span>
                       <input
                         type="text"
                         value={tc.input}
@@ -2006,7 +2006,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     </div>
 
                     <div>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Kỳ Vọng (StdOut #{idx + 1}):</span>
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Kết quả kỳ vọng #{idx + 1}:</span>
                       <input
                         type="text"
                         value={tc.output}
@@ -2069,7 +2069,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <div style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Award size={18} color="var(--accent-primary)" /> Barem Chấm Điểm Học Thuật Rubrics (Sinh Bởi Google Gemini AI)
+                    <Award size={18} color="var(--accent-primary)" /> Barem Chấm Điểm Học Thuật (Sinh Bởi Google Gemini AI)
                   </h4>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     Tổng Điểm: 10.0 Điểm
@@ -2132,10 +2132,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         <div className="glass-panel" style={{ padding: '32px', borderRadius: '16px' }}>
           <div style={{ marginBottom: '24px' }}>
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>
-              Nhập Danh Sách Sinh Viên Hàng Loạt & Kiểm Định Giao Dịch ACID (UC-02)
+              Nhập Danh Sách Sinh Viên Hàng Loạt &amp; Kiểm Định Giao Dịch An Toàn
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
-              Tính năng tuân thủ chặt chẽ ràng buộc R06: Bắt buộc sử dụng SQL Transaction khi nạp danh sách từ file Excel. Khi có bất kỳ lỗi nào xảy ra ở dòng thứ N, 100% dữ liệu đã xử lý trước đó phải được Rollback nguyên vẹn.
+              Tính năng tuân thủ chặt chẽ quy định nạp dữ liệu an toàn: Toàn bộ danh sách từ file Excel được nạp trong một giao dịch duy nhất. Khi có bất kỳ lỗi nào xảy ra ở dòng thứ N, 100% dữ liệu đã xử lý trước đó sẽ được hoàn tác nguyên vẹn.
             </p>
           </div>
 
@@ -2198,7 +2198,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 gap: '8px',
               }}
             >
-              <Download size={15} /> Tải File Mẫu Roster (.csv)
+              <Download size={15} /> Tải File Mẫu Danh Sách Lớp (.csv)
             </button>
           </div>
 
@@ -2220,7 +2220,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               <div>
                 <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#ffffff', marginBottom: '4px' }}>
-                  2. Tải Lên &amp; Nhập File Roster Sinh Viên (.csv)
+                  2. Tải Lên &amp; Nhập Danh Sách Sinh Viên (.csv)
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
                   Hỗ trợ định dạng file <code>.csv</code> chuẩn UTF-8 (xuất từ Excel hoặc Google Sheets với các cột: <strong>Mã Sinh Viên, Họ Và Tên, Email</strong>)
@@ -2341,7 +2341,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
                       }}
                     >
-                      <Upload size={18} /> ⚡ Bắt Đầu Import {parsedCsvStudents.length} Sinh Viên Vào PostgreSQL 15 (SQL ACID)
+                      <Upload size={18} /> ⚡ Bắt Đầu Nạp {parsedCsvStudents.length} Sinh Viên Vào Lớp
                     </button>
                   </div>
                 </div>
@@ -2353,10 +2353,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <div style={{ padding: '24px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <CheckCircle2 size={24} color="#10b981" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 1: Nhập Live Thành Công 100% (Commit)</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 1: Nhập Thành Công Trọn Vẹn</h3>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
-                Nạp danh sách sinh viên chuẩn vào PostgreSQL 15 bảng <code>class_members</code>. Tất cả tài khoản được cấp quyền truy cập môn học. Giao diện thực hiện COMMIT toàn bộ.
+                Nạp danh sách sinh viên chuẩn vào lớp học. Tất cả tài khoản được cấp quyền truy cập môn học. Toàn bộ dữ liệu được lưu trọn vẹn.
               </p>
               <button
                 type="button"
@@ -2378,17 +2378,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   gap: '8px',
                 }}
               >
-                <Upload size={16} /> ⚡ Thực Thi Giao Dịch Nhập Roster (Live PostgreSQL)
+                <Upload size={16} /> ⚡ Thực Thi Nạp Danh Sách Sinh Viên
               </button>
             </div>
 
             <div style={{ padding: '24px', borderRadius: '12px', backgroundColor: 'rgba(244, 63, 94, 0.08)', border: '1px solid rgba(244, 63, 94, 0.3)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
                 <AlertTriangle size={24} color="#f43f5e" />
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 2: Minh Chứng Lỗi Dòng N & 100% Rollback (R06)</h3>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>Kịch Bản 2: Minh Chứng Lỗi Dòng N &amp; Hoàn Tác Toàn Bộ</h3>
               </div>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px', lineHeight: '1.5' }}>
-                Gửi file Excel có dòng số 3 chứa lỗi trùng lặp MSSV [SE170123]. Backend mở SQL Transaction, phát hiện vi phạm và thực thi 100% ROLLBACK bảo toàn dữ liệu.
+                Gửi file Excel có dòng số 3 chứa lỗi trùng lặp MSSV [SE170123]. Hệ thống phát hiện vi phạm và hoàn tác toàn bộ dữ liệu để bảo toàn tính nguyên vẹn.
               </p>
               <button
                 type="button"
@@ -2410,14 +2410,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   gap: '8px',
                 }}
               >
-                <AlertTriangle size={16} /> ⚠️ Kích Hoạt Thử Nghiệm Lỗi Dòng 3 &amp; Rollback
+                <AlertTriangle size={16} /> ⚠️ Kích Hoạt Thử Nghiệm Lỗi Dòng 3 &amp; Hoàn Tác
               </button>
             </div>
           </div>
 
           {excelLoading && (
             <div style={{ textAlign: 'center', padding: '20px', color: 'var(--accent-primary)', fontSize: '14px', fontWeight: 600 }}>
-              Đang phân tích cú pháp Excel và mở SQL Transaction...
+              Đang phân tích cú pháp Excel và chuẩn bị nạp dữ liệu...
             </div>
           )}
 
@@ -2448,7 +2448,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 Sổ Theo Dõi Bài Nộp Lập Trình &amp; Giám Sát Liêm Chính Học Thuật
               </h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '2px' }}>
-                Danh sách bài làm sinh viên dưới dạng file nén .zip, điểm số đa trục và cảnh báo đạo văn AST Winnowing
+                Danh sách bài làm sinh viên dưới dạng file nén .zip, điểm số đa trục và cảnh báo đạo văn theo thuật toán vân tay mã nguồn
               </p>
             </div>
             <button
@@ -2483,10 +2483,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   <th style={{ padding: '12px 16px' }}>File Nén (.zip)</th>
                   <th style={{ padding: '12px 16px' }}>Thời Gian</th>
                   <th style={{ padding: '12px 16px' }}>Testcase</th>
-                  <th style={{ padding: '12px 16px' }}>Clean Code</th>
+                  <th style={{ padding: '12px 16px' }}>Mã Nguồn Sạch</th>
                   <th style={{ padding: '12px 16px' }}>SOLID</th>
                   <th style={{ padding: '12px 16px' }}>Tổng Điểm</th>
-                  <th style={{ padding: '12px 16px' }}>Trùng Lặp AST</th>
+                  <th style={{ padding: '12px 16px' }}>Trùng Lặp Cấu Trúc</th>
                   <th style={{ padding: '12px 16px' }}>Trạng Thái</th>
                   <th style={{ padding: '12px 16px', textAlign: 'center' }}>Tải Bài Làm (.zip)</th>
                 </tr>
@@ -2546,7 +2546,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       <button
                         type="button"
                         onClick={() => handleOpenDetailModal(sub)}
-                        title={`Xem chi tiet bai nop ${sub.fileName} cua ${sub.studentName}`}
+                        title={`Xem chi tiết bài nộp ${sub.fileName} của ${sub.studentName}`}
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',
@@ -2622,7 +2622,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 </div>
                 <div>
                   <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>Cấu Hình Trí Tuệ Nhân Tạo Thật (Google Gemini AI)</h3>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Kết nối trực tiếp tới Google Generative AI để sinh đề và testcases</p>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Kết nối trực tiếp tới Google Gemini để sinh đề và testcases</p>
                 </div>
               </div>
               <button
@@ -2636,13 +2636,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             <div style={{ marginBottom: '18px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
-                Google Gemini API Key *
+                Khóa API Google Gemini *
               </label>
               <input
                 type="password"
                 value={tempApiKey}
                 onChange={(e) => setTempApiKey(e.target.value)}
-                placeholder="Dán API Key của bạn (bắt đầu bằng AIzaSy...)"
+                placeholder="Dán khóa API của bạn vào đây..."
                 style={{
                   width: '100%',
                   padding: '12px 14px',
@@ -2670,7 +2670,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
-                Lựa Chọn Mô Hình AI (Model)
+                Lựa Chọn Mô Hình AI
               </label>
               <select
                 value={selectedAiModel}
@@ -2685,7 +2685,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   fontSize: '13px',
                 }}
               >
-                <option value="auto">✨ Tự Động Chọn Mô Hình Flash Nhanh Nhất (Khuyên Dùng - Auto Detect)</option>
+                <option value="auto">✨ Tự Động Chọn Mô Hình Nhanh Nhất (Khuyên Dùng)</option>
                 {availableModelList.length > 0 ? (
                   availableModelList.map((m) => (
                     <option key={m} value={m}>
@@ -2739,7 +2739,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 }}
               >
                 {pingStatus.loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                Kiểm Tra Kết Nối AI (Ping Gemini)
+                Kiểm Tra Kết Nối AI
               </button>
 
               <button
@@ -2781,7 +2781,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             {starterCode && (
               <div style={{ marginBottom: '20px' }}>
                 <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#a5b4fc', marginBottom: '6px' }}>
-                  1. Khung Mã Khởi Tạo Cho Sinh Viên (Starter Code):
+                  1. Khung Mã Khởi Tạo Cho Sinh Viên:
                 </h4>
                 <pre style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.08)' }}>
                   {starterCode}
@@ -2792,7 +2792,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             {referenceSolution && (
               <div>
                 <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#6ee7b7', marginBottom: '6px' }}>
-                  2. Lời Giải Tham Chiếu Chuẩn Xác (Reference Working Solution):
+                  2. Lời Giải Tham Chiếu Chuẩn Xác:
                 </h4>
                 <pre style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.08)' }}>
                   {referenceSolution}
@@ -2952,13 +2952,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Đầu vào (Input / StdIn):</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Đầu vào (dữ liệu nhập chuẩn):</span>
                         <pre style={{ margin: 0, padding: '8px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', border: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto' }}>
                           {tc.input}
                         </pre>
                       </div>
                       <div>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Đầu ra kỳ vọng (Expected Output / StdOut):</span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Đầu ra kỳ vọng:</span>
                         <pre style={{ margin: 0, padding: '8px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', color: '#34d399', fontSize: '12px', fontFamily: 'var(--font-mono)', border: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto' }}>
                           {tc.output}
                         </pre>
@@ -2993,7 +2993,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             {previewAssignment.starterCode && (
               <div>
                 <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#a5b4fc', marginBottom: '6px' }}>
-                  Khung Mã Nguồn Khởi Tạo (Starter Code):
+                  Khung Mã Nguồn Khởi Tạo:
                 </h4>
                 <pre style={{ margin: 0, padding: '12px', borderRadius: '8px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.06)' }}>
                   {previewAssignment.starterCode}
@@ -3061,7 +3061,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         </div>
       )}
 
-      {/* MODAL TẠO KHÓA HỌC MỚI (LƯU VÀO POSTGRESQL 15) */}
+      {/* MODAL TẠO KHÓA HỌC MỚI */}
       {isCreateCourseModalOpen && (
         <div
           style={{
@@ -3092,7 +3092,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <BookOpen size={24} color="var(--accent-primary)" />
                 <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>
-                  Tạo Lớp Học Phần Mới (PostgreSQL 15)
+                  Tạo Lớp Học Phần Mới
                 </h2>
               </div>
               <button
@@ -3224,7 +3224,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     gap: '8px',
                   }}
                 >
-                  <PlusCircle size={16} /> {createCourseLoading ? 'Đang Lưu...' : 'Lưu Vào PostgreSQL 15'}
+                  <PlusCircle size={16} /> {createCourseLoading ? 'Đang Lưu...' : 'Lưu Lớp Học'}
                 </button>
               </div>
             </form>

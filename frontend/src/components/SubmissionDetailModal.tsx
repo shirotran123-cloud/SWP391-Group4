@@ -309,7 +309,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               transition: 'all 0.15s ease',
             }}
           >
-            <Sparkles size={15} /> 2. Đánh Giá SOLID & Clean Code ({aiRating.cleanCodeScore}/10)
+            <Sparkles size={15} /> 2. Đánh Giá SOLID &amp; Mã Nguồn Sạch ({aiRating.cleanCodeScore}/10)
           </button>
 
           <button
@@ -349,7 +349,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     {displayScore.toFixed(1)} <span style={{ fontSize: '14px', fontWeight: 500, color: '#94a3b8' }}>/ 10.0</span>
                   </div>
                   <div style={{ fontSize: '11px', color: '#818cf8', marginTop: '4px' }}>
-                    Trọng số: 70% TC + 15% CC + 15% SOLID
+                    Trọng số: 70% Testcase + 15% Mã Nguồn Sạch + 15% SOLID
                   </div>
                 </div>
 
@@ -358,7 +358,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     Kết Quả Testcases
                   </div>
                   <div style={{ fontSize: '26px', fontWeight: 900, color: '#34d399', marginTop: '4px' }}>
-                    {passedTC}/{totalTC} <span style={{ fontSize: '14px', fontWeight: 500, color: '#94a3b8' }}>Passed</span>
+                    {passedTC}/{totalTC} <span style={{ fontSize: '14px', fontWeight: 500, color: '#94a3b8' }}>Đạt</span>
                   </div>
                   <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
                     {totalTC > 0 ? ((passedTC / totalTC) * 100).toFixed(0) : 100}% độ chính xác thuật toán
@@ -367,7 +367,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
 
                 <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
                   <div style={{ fontSize: '11px', color: '#7dd3fc', fontWeight: 700, textTransform: 'uppercase' }}>
-                    Clean Code Score
+                    Điểm Mã Nguồn Sạch
                   </div>
                   <div style={{ fontSize: '26px', fontWeight: 900, color: '#38bdf8', marginTop: '4px' }}>
                     {aiRating.cleanCodeScore} <span style={{ fontSize: '14px', fontWeight: 500, color: '#94a3b8' }}>/ 10.0</span>
@@ -398,13 +398,13 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Chi tiết Testcases trong Docker Sandbox */}
+              {/* Chi tiết Testcases trong môi trường cách ly */}
               <div style={{ padding: '20px', borderRadius: '14px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Terminal size={18} color="var(--accent-cyan)" />
                     <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff', margin: 0 }}>
-                      Môi Trường Docker Sandbox & Chi Tiết Chạy Testcase
+                      Môi Trường Cách Ly & Chi Tiết Chạy Testcase
                     </h3>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: '#94a3b8' }}>
@@ -415,7 +415,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       <Cpu size={13} color="#a855f7" /> Giới hạn RAM: <strong>512 MB</strong>
                     </span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
-                      <ShieldCheck size={13} /> Strict Sandbox Isolation
+                      <ShieldCheck size={13} /> Cách Ly Nghiêm Ngặt
                     </span>
                   </div>
                 </div>
@@ -437,7 +437,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       <CheckCircle size={16} color="#10b981" />
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
-                          Test Case 01: Chuẩn hóa dữ liệu đầu vào (Standard Input / Output)
+                          Test Case 01: Chuẩn hóa dữ liệu đầu vào
                         </div>
                         <div style={{ fontSize: '11px', color: '#94a3b8' }}>
                           Kiểm tra logic thuật toán với tập dữ liệu quy mô nhỏ và trung bình
@@ -445,7 +445,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981' }}>PASSED</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981' }}>ĐẠT</span>
                       <div style={{ fontSize: '11px', color: '#94a3b8' }}>45ms • 14MB</div>
                     </div>
                   </div>
@@ -465,7 +465,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       <CheckCircle size={16} color="#10b981" />
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
-                          Test Case 02: Trường hợp biên & Tải lớn (Boundary & Edge Cases)
+                          Test Case 02: Trường hợp biên và Tải lớn
                         </div>
                         <div style={{ fontSize: '11px', color: '#94a3b8' }}>
                           Kiểm tra giá trị cực đại, tràn số 64-bit và xử lý tối ưu bộ nhớ
@@ -473,7 +473,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981' }}>PASSED</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981' }}>ĐẠT</span>
                       <div style={{ fontSize: '11px', color: '#94a3b8' }}>62ms • 18MB</div>
                     </div>
                   </div>
@@ -493,7 +493,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: ĐÁNH GIÁ SOLID & CLEAN CODE */}
+          {/* TAB 2: ĐÁNH GIÁ SOLID & MÃ NGUỒN SẠCH */}
           {activeTab === 'ai' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
@@ -527,7 +527,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
 
                   {aiRating.codeSmells.length === 0 ? (
                     <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', fontSize: '12px', color: '#a7f3d0' }}>
-                      ✅ <strong>Mã nguồn hoàn hảo:</strong> Không phát hiện Code Smell nào. Cấu trúc hàm gọn gàng, không có tham số dư thừa hay magic numbers.
+                      ✅ <strong>Mã nguồn hoàn hảo:</strong> Không phát hiện mùi mã nguồn nào. Cấu trúc hàm gọn gàng, không có tham số dư thừa hay số liệu tự phát.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto' }}>
@@ -545,7 +545,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                           }}
                         >
                           <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-amber)', fontWeight: 600 }}>
-                            L{smell.line || 15}:
+                            Dòng {smell.line || 15}:
                           </span>
                           <span style={{ color: '#d1d5db' }}>{smell.description}</span>
                         </div>
@@ -576,11 +576,11 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     {aiRating.codeSmells && aiRating.codeSmells.length > 0 ? (
                       <span>
                         <strong>Phát hiện vi phạm: </strong>
-                        {aiRating.codeSmells[0].description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử refactor lại các phương thức để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.
+                        {aiRating.codeSmells[0].description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử viết lại các phương thức để tuân thủ <strong>nguyên lý Đơn Trách Nhiệm (SRP)</strong>.
                       </span>
                     ) : (
                       <span>
-                        ✨ <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện Code Smells nào, phân tách trách nhiệm giữa các class/module rõ ràng và tuân thủ tốt nguyên lý <strong>Single Responsibility Principle (SRP)</strong>.
+                        ✨ <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện mùi mã nguồn nào, phân tách trách nhiệm giữa các lớp và mô-đun rõ ràng, tuân thủ tốt <strong>nguyên lý Đơn Trách Nhiệm (SRP)</strong>.
                       </span>
                     )}
                   </p>
@@ -607,7 +607,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <FileCode size={16} color="var(--accent-cyan)" />
                   <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
-                    {submission.fileName} (Syntax Highlighting)
+                    {submission.fileName} (Tô Màu Cú Pháp)
                   </span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
@@ -629,7 +629,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     }}
                   >
                     {copiedCode ? <Check size={13} /> : <Copy size={13} />}
-                    {copiedCode ? 'Đã sao chép!' : 'Sao chép code'}
+                    {copiedCode ? 'Đã sao chép!' : 'Sao chép mã nguồn'}
                   </button>
 
                   <button
@@ -737,7 +737,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   cursor: 'pointer',
                 }}
               >
-                <Scale size={15} /> Phúc Khảo Bài Nộp Này (BR-05)
+                <Scale size={15} /> Phúc Khảo Bài Nộp Này
               </button>
             )}
           </div>

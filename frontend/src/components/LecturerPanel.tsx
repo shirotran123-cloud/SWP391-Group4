@@ -114,9 +114,9 @@ function ManualGradeModal({ submission, onClose, onSaved, token }: ManualGradeMo
           <div style={{ padding: '12px 16px', background: 'rgba(99,102,241,0.08)', borderRadius: 10, border: '1px solid rgba(99,102,241,0.2)', marginBottom: 20 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: '#818cf8', marginBottom: 8 }}>🤖 AI Review Summary</div>
             <div style={{ display: 'flex', gap: 16, fontSize: 13 }}>
-              <span>Clean Code: <strong style={{ color: '#10b981' }}>{submission.result.aiRating.cleanCodeScore?.toFixed(1)}/10</strong></span>
-              {solidAvg && <span>SOLID avg: <strong style={{ color: '#06b6d4' }}>{solidAvg}/10</strong></span>}
-              {submission.result.aiRating.codeSmells && <span>Code Smells: <strong style={{ color: '#f59e0b' }}>{submission.result.aiRating.codeSmells.length}</strong></span>}
+              <span>Mã nguồn sạch: <strong style={{ color: '#10b981' }}>{submission.result.aiRating.cleanCodeScore?.toFixed(1)}/10</strong></span>
+              {solidAvg && <span>Điểm SOLID trung bình: <strong style={{ color: '#06b6d4' }}>{solidAvg}/10</strong></span>}
+              {submission.result.aiRating.codeSmells && <span>Điểm cần cải thiện: <strong style={{ color: '#f59e0b' }}>{submission.result.aiRating.codeSmells.length}</strong></span>}
             </div>
             {submission.result.aiRating.explanation && (
               <p style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>{submission.result.aiRating.explanation}</p>
@@ -440,7 +440,7 @@ export function LecturerPanel({ token }: { token: string }) {
                         {sub.result?.aiRating ? (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-                              <span style={{ color: 'var(--text-muted)' }}>Clean Code:</span>
+                              <span style={{ color: 'var(--text-muted)' }}>Mã nguồn sạch:</span>
                               <span style={{ fontWeight: 700, color: '#10b981' }}>{sub.result.aiRating.cleanCodeScore?.toFixed(1)}/10</span>
                             </div>
                             {sub.result.aiRating.solidScore && (

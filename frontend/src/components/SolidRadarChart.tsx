@@ -118,7 +118,7 @@ export const SolidRadarChart: React.FC<SolidRadarChartProps> = ({ rating }) => {
 
       <div style={{ marginTop: '10px', display: 'flex', gap: '12px', alignItems: 'center', fontSize: '13px', flexWrap: 'wrap', justifyContent: 'center' }}>
         <span style={{ color: 'var(--text-muted)' }}>
-          Mã Sạch (Clean Code): <strong style={{ color: '#38bdf8' }}>{rating.cleanCodeScore}/10</strong>
+          Điểm mã nguồn sạch: <strong style={{ color: '#38bdf8' }}>{rating.cleanCodeScore}/10</strong>
         </span>
         <span style={{ color: 'var(--border-color)' }}>•</span>
         <span style={{ color: 'var(--text-muted)' }}>
