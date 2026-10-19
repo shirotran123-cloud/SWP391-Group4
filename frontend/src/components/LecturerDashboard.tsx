@@ -344,14 +344,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setCreateSuccessMsg(null);
     setAiSuccessBadge(null);
 
-    // Nếu chưa có API Key, mở modal cấu hình để người dùng nhập
-    if (!geminiApiKey.trim()) {
-      setTempApiKey('');
-      setIsConfigModalOpen(true);
-      setAiErrorMsg('Bạn cần cung cấp khóa API Google Gemini để hệ thống kết nối AI tạo đề bài.');
-      return;
-    }
-
     setIsAiGenerating(true);
     setAiTimerSeconds(0);
     const timerInterval = setInterval(() => {
@@ -365,6 +357,66 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       const detectedCount = GeminiAIService.extractRequestedCount(lecturerPrompt);
       const testCountToUse = detectedCount || desiredTestCount || 5;
+
+      // ── Preferred path: ask the GenAI Hub (Workflow 1).
+      // The hub holds the Gemini key on the SERVER (genai-hub/.env), so the lecturer never
+      // has to paste one and no credential is shipped to the browser. Only if the hub is
+      // unreachable do we fall back to a key the lecturer typed in manually.
+      const hubResult = await generateViaHub({
+        topic: lecturerPrompt?.trim() || assignmentTitle || `${courseCode} - Bài tập lập trình`,
+        courseCode,
+        difficulty: 'MEDIUM',
+        language: allowedLanguages[0] || 'python',
+        learningOutcomes: ['Mã nguồn sạch', 'Nguyên lý SOLID'],
+        numTestCases: testCountToUse,
+      });
+
+      if (hubResult) {
+        setAssignmentTitle(hubResult.title);
+        setAssignmentDesc(hubResult.description || hubResult.problemStatement || '');
+        if (hubResult.timeLimitMs) setTimeLimitMs(hubResult.timeLimitMs);
+        if (hubResult.memoryLimitMb) setMemoryLimitMb(hubResult.memoryLimitMb);
+        if (hubResult.testCases && hubResult.testCases.length > 0) {
+          setTestCases(
+            hubResult.testCases.map((tc: any) => ({
+              input: tc.input,
+              output: tc.output,
+              weight: tc.weight ?? 1.0,
+              isHidden: tc.isHidden ?? false,
+            })),
+          );
+        }
+        if (hubResult.rubric && hubResult.rubric.length > 0) {
+          setGeneratedRubrics(
+            hubResult.rubric.map((r: any) => ({
+              criterion: r.criterion,
+              maxScore: r.maxScore,
+              description: r.description || '',
+            })),
+          );
+        }
+        if (hubResult.starterCode) setStarterCode(hubResult.starterCode);
+        if (hubResult.referenceSolution) setReferenceSolution(hubResult.referenceSolution);
+
+        setAiSuccessBadge(
+          `✨ Trợ lý AI đã sinh đề và barem thành công trong ${Math.round(hubResult.latencyMs ?? 0)}ms.`,
+        );
+        setCreateSuccessMsg(
+          `Đã tạo đề bài "${hubResult.title}" kèm ${hubResult.testCases?.length ?? 0} test case và ${hubResult.rubric?.length ?? 0} tiêu chí chấm điểm.`,
+        );
+        return;
+      }
+
+      // ── Fallback: the hub is down and the lecturer supplied their own key.
+      if (!geminiApiKey.trim()) {
+        setAiErrorMsg(
+          'Không kết nối được Trợ lý AI của hệ thống, và chưa có khóa Google Gemini dự phòng. ' +
+            'Hãy kiểm tra GenAI Hub đang chạy, hoặc nhập khóa API của bạn trong phần cấu hình.',
+        );
+        setTempApiKey('');
+        setIsConfigModalOpen(true);
+        return;
+      }
 
             // Ưu tiên yêu cầu cụ thể của giảng viên; tránh truyền lại tiêu đề cũ nếu đã bị gán từ lần sinh trước
       let topicToUse = lecturerPrompt?.trim() || '';
@@ -426,8 +478,71 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
+  /**
+   * Generates an exam through the API Gateway, which proxies to the GenAI Hub.
+   *
+   * This is the path that keeps the Gemini key server-side: the hub reads GEMINI_API_KEYS
+   * from its own .env, so nothing sensitive is baked into the browser bundle. Returns null
+   * when the hub is unreachable so the caller can fall back to a lecturer-supplied key.
+   */
+  const generateViaHub = async (request: {
+    topic: string;
+    courseCode: string;
+    difficulty: string;
+    language: string;
+    learningOutcomes: string[];
+    numTestCases: number;
+  }): Promise<any | null> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/exams/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify(request),
+        signal: AbortSignal.timeout(60_000),
+      });
+      if (!res.ok) {
+        console.warn('[AI] Trợ lý AI trả về HTTP', res.status, '— sẽ dùng phương án dự phòng.');
+        return null;
+      }
+      const json = await res.json();
+      const exam = json?.data?.exam;
+      if (!exam) return null;
+
+      // The hub returns sample and hidden cases separately; the form edits one list.
+      const sample = (exam.sampleTestCases || []).map((tc: any, idx: number) => ({
+        input: tc.input,
+        output: tc.expectedOutput ?? tc.output,
+        weight: tc.weight ?? 1.0,
+        isHidden: false,
+        key: `sample-${idx}`,
+      }));
+      const hidden = (exam.hiddenTestCases || []).map((tc: any, idx: number) => ({
+        input: tc.input,
+        output: tc.expectedOutput ?? tc.output,
+        weight: tc.weight ?? 1.5,
+        isHidden: true,
+        key: `hidden-${idx}`,
+      }));
+
+      return {
+        title: exam.title,
+        description: exam.description,
+        problemStatement: exam.problemStatement,
+        timeLimitMs: exam.timeLimitMs,
+        memoryLimitMb: exam.memoryLimitMb,
+        testCases: [...sample, ...hidden],
+        rubric: exam.rubric || [],
+        starterCode: exam.starterCode,
+        referenceSolution: exam.referenceSolution,
+        latencyMs: json?.data?.latencyMs ?? 0,
+      };
+    } catch (err: any) {
+      console.warn('[AI] Không gọi được Trợ lý AI:', err?.message || err);
+      return null;
+    }
+  };
+
   // Lưu & Xuất bản đề bài tập: PERSIST lên API Gateway (Workflow 1) rồi lưu cục bộ và điều hướng.
-  // Trước đây hàm này CHỈ ghi localStorage nên đề bài + testcases không hề vào CSDL.
   const persistAssignmentToGateway = async (asmId: string, courseCode: string): Promise<{ assignmentId: string; savedTestCases: number; warning?: string }> => {
     const res = await fetch(`${API_BASE_URL}/api/v1/assignments`, {
       method: 'POST',
