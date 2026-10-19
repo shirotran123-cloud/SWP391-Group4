@@ -511,12 +511,16 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
           jaccardSimilarity: top.jaccardSimilarity,
           winnowingContainment: top.winnowingContainment,
           astStructuralSimilarity: top.astStructuralSimilarity,
+          // Carries the self-overlap classification (resubmission / same-course reuse /
+          // cross-course self-plagiarism) so the client and the scoring step can tell them
+          // apart without re-deriving the relationship.
+          selfOverlap: top.selfOverlap,
           executionTimeMs: plagiarismResult.executionTimeMs,
         };
         plagiarismDetail =
           `Đã đối chiếu ${plagiarismResult.comparedCount} bài nộp (${plagiarismResult.engine}). ` +
           `Tương đồng cao nhất ${top.similarityRate}% với ${top.matchedStudentName} ` +
-          `[${top.isFlagged ? 'NGHI VẤN ĐẠO VĂN >= 70%' : 'AN TOÀN'}] · ` +
+          `[${top.selfOverlap?.label ?? (top.isFlagged ? 'NGHI VẤN ĐẠO VĂN >= 70%' : 'AN TOÀN')}] · ` +
           `${plagiarismResult.fingerprintsStored} vân tay, ${plagiarismResult.reportsPersisted} báo cáo đã lưu.`;
       } else {
         plagiarismDetail =
@@ -584,7 +588,48 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // ─────────────────────────────────────────────────────────────────────────
     const CONFIRMED_PLAGIARISM_THRESHOLD = 80.0;
     const plagiarismRate = plagiarismMatch ? plagiarismMatch.similarityRate : 0;
-    const isConfirmedPlagiarism = plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD;
+
+    // ── Self-overlap is a three-way decision, not a yes/no one.
+    //
+    //   SAME_ASSIGNMENT  the student resubmitted the same task → ordinary coursework.
+    //                    Never zero the score; that was the bug that failed honest students.
+    //   CROSS_ASSIGNMENT reused work in another task of the same course → warn only. The
+    //                    course may permit it, so a lecturer decides.
+    //   CROSS_COURSE     submitted the same work to a different course → this is
+    //                    self-plagiarism (duplicate submission) and is penalised.
+    //
+    // When the service did not label the overlap we fall back to comparing student ids, so a
+    // self-match can never be mistaken for collusion.
+    const selfOverlap = (plagiarismMatch as any)?.selfOverlap as
+      | { kind: 'SAME_ASSIGNMENT' | 'CROSS_ASSIGNMENT' | 'CROSS_COURSE'; isSelfPlagiarism: boolean; label: string }
+      | undefined;
+    const matchedStudentId = (plagiarismMatch as any)?.matchedStudentId;
+    const isSelfMatch =
+      !!matchedStudentId && !!jobData.studentId && matchedStudentId === jobData.studentId;
+    const selfKind = selfOverlap?.kind ?? (isSelfMatch ? 'SAME_ASSIGNMENT' : undefined);
+
+    if (selfKind === 'SAME_ASSIGNMENT' && plagiarismRate > 0) {
+      this.logger.log(
+        `[BR-03] ${submissionId}: trùng ${plagiarismRate}% với bài nộp trước của chính sinh viên — ` +
+          `đây là nộp lại, KHÔNG trừ điểm.`,
+      );
+    } else if (selfKind === 'CROSS_ASSIGNMENT' && plagiarismRate > 0) {
+      this.logger.warn(
+        `[BR-03] ${submissionId}: trùng ${plagiarismRate}% với bài làm khác của sinh viên ${jobData.studentId} trong cùng môn — ` +
+          `chỉ cảnh báo để giảng viên xem xét, không tự trừ điểm.`,
+      );
+    } else if (selfKind === 'CROSS_COURSE' && plagiarismRate > 0) {
+      this.logger.warn(
+        `[BR-03] ${submissionId}: tự đạo văn ${plagiarismRate}% — bài đã nộp cho một môn khác.`,
+      );
+    }
+
+    // Only another student's copy, or cross-course reuse, can zero the score. A same-course
+    // resubmission and a same-course reuse never can.
+    const isConfirmedPlagiarism =
+      selfKind === 'CROSS_COURSE'
+        ? plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD
+        : !isSelfMatch && plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD;
 
     let finalScore = computedScore;
     let scoreBreakdown: ScoreBreakdown = {

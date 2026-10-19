@@ -14,6 +14,31 @@ import { SubmissionRepository } from '../database/submission.repository';
 import { UserRepository } from '../database/user.repository';
 import { SubmissionRecord } from '../database/submission.entity';
 import { PlagiarismReportRecord, PlagiarismReportStatus } from '../database/plagiarism-report.entity';
+import { AssignmentRepository } from '../database/assignment.repository';
+
+/**
+ * How a matched pair relates to the submission under analysis.
+ *
+ * Academic-integrity guidance separates three situations that all look like "the same code,
+ * same student", but carry very different judgements:
+ *
+ *   SAME_ASSIGNMENT   the student resubmitted the same task (e.g. after a fix). This is
+ *                     normal coursework. It must NOT be treated as plagiarism.
+ *   CROSS_ASSIGNMENT  the same student reused their work in another task of the SAME course.
+ *                     Warn for the lecturer to review; may or may not be allowed by the
+ *                     course's own rules.
+ *   CROSS_COURSE      the same student submitted the same work to a DIFFERENT course. This is
+ *                     self-plagiarism (duplicate submission) in the academic sense.
+ */
+export type SelfOverlapKind = 'SAME_ASSIGNMENT' | 'CROSS_ASSIGNMENT' | 'CROSS_COURSE';
+
+export interface SelfOverlapInfo {
+  kind: SelfOverlapKind;
+  /** True only for CROSS_COURSE, which is the case treated as actual self-plagiarism. */
+  isSelfPlagiarism: boolean;
+  /** Human-readable Vietnamese explanation shown to staff. */
+  label: string;
+}
 
 export interface PlagiarismDetectionResult {
   submissionId: string;
@@ -32,7 +57,18 @@ export interface PlagiarismDetectionResult {
     jaccardSimilarity: number;
     winnowingContainment: number;
     astStructuralSimilarity: number;
+    /** Set when the matched submission belongs to the SAME student. */
+    selfOverlap?: SelfOverlapInfo;
   } | null;
+  /** True when the top match is the student's own work in another task. */
+  selfOverlap?: SelfOverlapInfo | null;
+  /** Per-category counts of peers excluded or kept. */
+  peerBreakdown?: {
+    otherStudents: number;
+    sameAssignmentResubmissions: number;
+    crossAssignmentReuse: number;
+    crossCourseReuse: number;
+  };
   engine: 'GENAI_HUB_HTTP' | 'LOCAL_AST_ENGINE';
   executionTimeMs: number;
 }
@@ -61,6 +97,7 @@ export class PlagiarismService {
     private readonly plagiarismRepo: PlagiarismRepository,
     private readonly submissionRepo: SubmissionRepository,
     private readonly userRepo: UserRepository,
+    private readonly assignmentRepo: AssignmentRepository,
   ) {}
 
   public static readonly PLAGIARISM_THRESHOLD = ASTPlagiarismEngine.PLAGIARISM_THRESHOLD;
@@ -98,8 +135,17 @@ export class PlagiarismService {
       `[Plagiarism] ${params.submissionId}: ${normalized.tokens.length} AST tokens, ${fingerprints.length} winnowing fingerprints stored.`,
     );
 
-    // 2) Peer discovery — same assignment, excluding self, deduplicated.
-    const peers = await this.loadPeerSubmissions(params.submissionId, params.assignmentId, language);
+    // 2) Peer discovery — same assignment, excluding self.
+    //
+    // Peers from OTHER students are always compared. Peers from the SAME student are also
+    // kept, but tagged with how they relate (resubmission / another task / another course),
+    // because "same code from the same person" is only self-plagiarism in the last case.
+    const { peers, breakdown } = await this.loadPeerSubmissions(
+      params.submissionId,
+      params.assignmentId,
+      language,
+      params.studentId,
+    );
 
     const emptyResult: PlagiarismDetectionResult = {
       submissionId: params.submissionId,
@@ -107,6 +153,8 @@ export class PlagiarismService {
       reportsPersisted: 0,
       fingerprintsStored,
       topMatch: null,
+      selfOverlap: null,
+      peerBreakdown: breakdown,
       engine: 'LOCAL_AST_ENGINE',
       executionTimeMs: Date.now() - startTime,
     };
@@ -192,7 +240,20 @@ export class PlagiarismService {
         jaccardSimilarity: best.matchedTokensJson.jaccardSimilarity,
         winnowingContainment: best.matchedTokensJson.winnowingContainment,
         astStructuralSimilarity: best.matchedTokensJson.astStructuralSimilarity,
+        // Only set when the match is the student's own work; lets every caller distinguish a
+        // resubmission from collusion without re-deriving it.
+        selfOverlap: peer?.selfOverlap,
       };
+
+      // A resubmission of the same task must not be surfaced as a plagiarism flag at all.
+      if (peer?.selfOverlap?.kind === 'SAME_ASSIGNMENT') {
+        this.logger.log(
+          `[Plagiarism] ${params.submissionId}: trùng ${best.similarityRate}% với bài nộp trước của cùng sinh viên — ` +
+            `đây là nộp lại, không gắn cờ đạo văn.`,
+        );
+        topMatch.isFlagged = false;
+        topMatch.status = 'SELF_RESUBMISSION';
+      }
     }
 
     return {
@@ -201,6 +262,8 @@ export class PlagiarismService {
       reportsPersisted,
       fingerprintsStored,
       topMatch,
+      selfOverlap: topMatch?.selfOverlap ?? null,
+      peerBreakdown: breakdown,
       engine: comparison.engine,
       executionTimeMs: Date.now() - startTime,
     };
@@ -266,29 +329,82 @@ export class PlagiarismService {
   // Internals
   // ────────────────────────────────────────────────────────────────────────────
 
-  /** Loads every OTHER submission of the assignment, unzipping valid source code. */
+  /**
+   * Loads the submissions this one should be compared against, tagging self-overlap.
+   *
+   * All peers of the same assignment are compared — including the student's own earlier
+   * submissions. What changes is the LABEL attached to each, because "same code, same person"
+   * has three very different meanings:
+   *
+   *   • other student            → ordinary plagiarism check
+   *   • same student, same task  → a resubmission; legitimate, must never be penalised
+   *   • same student, same course, different task → reuse; warn for review
+   *   • same student, different course            → self-plagiarism; flag
+   *
+   * The last case needs the course of the matched assignment, so that lookup happens here.
+   */
   private async loadPeerSubmissions(
     currentSubmissionId: string,
     assignmentId: string,
     language: string,
-  ): Promise<Array<{ record: SubmissionRecord; sourceCode: string; studentName: string }>> {
+    currentStudentId?: string,
+  ): Promise<{
+    peers: Array<{ record: SubmissionRecord; sourceCode: string; studentName: string; selfOverlap?: SelfOverlapInfo }>;
+    breakdown: { otherStudents: number; sameAssignmentResubmissions: number; crossAssignmentReuse: number; crossCourseReuse: number };
+  }> {
+    const breakdown = {
+      otherStudents: 0,
+      sameAssignmentResubmissions: 0,
+      crossAssignmentReuse: 0,
+      crossCourseReuse: 0,
+    };
+
     let all: SubmissionRecord[] = [];
     try {
       all = await this.submissionRepo.findAll({ assignmentId });
     } catch (err: any) {
       this.logger.warn(`[Plagiarism] Không tải được danh sách bài nộp của ${assignmentId}: ${err.message}`);
-      return [];
+      return { peers: [], breakdown };
+    }
+
+    // The current assignment's course, needed to tell "another task" from "another course".
+    let currentCourseId: string | undefined;
+    try {
+      currentCourseId = (await this.assignmentRepo.findById(assignmentId))?.courseId;
+    } catch {
+      currentCourseId = undefined;
     }
 
     const seenIds = new Set<string>([currentSubmissionId]);
     const seenHashes = new Set<string>();
-    const peers: Array<{ record: SubmissionRecord; sourceCode: string; studentName: string }> = [];
+    const peers: Array<{ record: SubmissionRecord; sourceCode: string; studentName: string; selfOverlap?: SelfOverlapInfo }> = [];
 
     for (const record of all) {
-      // Guard: never compare a submission against itself.
+      // Never compare a submission against itself.
       if (!record || record.submissionId === currentSubmissionId) continue;
-      // Guard: duplicate peers (same id, or byte-identical upload seen twice).
+      // Duplicate peers (same id, or byte-identical upload already considered).
       if (seenIds.has(record.submissionId)) continue;
+
+      const isSameStudent = !!currentStudentId && record.studentId === currentStudentId;
+
+      // For a same-student peer, decide how it relates. Finding the matched assignment's
+      // course is a small extra query, but only for self-peers, which are rare.
+      let selfOverlap: SelfOverlapInfo | undefined;
+      if (isSameStudent) {
+        const matchedCourseId = await this.resolveAssignmentCourse(record.assignmentId);
+        selfOverlap = PlagiarismService.classifySelfOverlap(
+          assignmentId,
+          currentCourseId,
+          record.assignmentId,
+          matchedCourseId,
+        );
+        if (selfOverlap.kind === 'SAME_ASSIGNMENT') breakdown.sameAssignmentResubmissions++;
+        else if (selfOverlap.kind === 'CROSS_ASSIGNMENT') breakdown.crossAssignmentReuse++;
+        else breakdown.crossCourseReuse++;
+      }
+
+      // Byte-identical duplicates are noise EXCEPT when they come from another student — two
+      // students uploading the same archive is the strongest plagiarism signal there is.
       if (record.sha256Hash && seenHashes.has(record.sha256Hash)) continue;
 
       const sourceCode = this.extractSourceCodeFromZip(record.filePath, record.language || language);
@@ -301,15 +417,76 @@ export class PlagiarismService {
 
       seenIds.add(record.submissionId);
       if (record.sha256Hash) seenHashes.add(record.sha256Hash);
+      if (!isSameStudent) breakdown.otherStudents++;
 
       peers.push({
         record,
         sourceCode,
         studentName: await this.resolveStudentName(record.studentId),
+        selfOverlap,
       });
     }
 
-    return peers;
+    if (breakdown.sameAssignmentResubmissions > 0 || breakdown.crossAssignmentReuse > 0 || breakdown.crossCourseReuse > 0) {
+      this.logger.log(
+        `[Plagiarism] ${currentSubmissionId}: cùng sinh viên — nộp lại=${breakdown.sameAssignmentResubmissions}, ` +
+          `tái sử dụng khác bài=${breakdown.crossAssignmentReuse}, khác môn=${breakdown.crossCourseReuse}; ` +
+          `bài của sinh viên khác=${breakdown.otherStudents}.`,
+      );
+    }
+
+    return { peers, breakdown };
+  }
+
+  /** Looks up the course of an assignment, tolerating a missing repository or record. */
+  private async resolveAssignmentCourse(assignmentId: string): Promise<string | undefined> {
+    try {
+      return (await this.assignmentRepo.findById(assignmentId))?.courseId;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /**
+   * Classifies a same-student match. Pure function so the rule is testable without a DB.
+   *
+   * Only CROSS_COURSE is genuine self-plagiarism. A resubmission of the same assignment is
+   * ordinary coursework, and reuse inside one course is a matter for that course's own rules.
+   *
+   * Order matters: the COURSE is checked before the assignment id. Two courses can both use
+   * an assignment code like "ASM-01", so an id-only comparison would label cross-course
+   * reuse as a harmless resubmission — the one case that must be caught.
+   */
+  public static classifySelfOverlap(
+    currentAssignmentId: string,
+    currentCourseId: string | undefined,
+    matchedAssignmentId: string,
+    matchedCourseId: string | undefined,
+  ): SelfOverlapInfo {
+    // A different course is self-plagiarism regardless of what the assignment is called.
+    const bothCoursesKnown = !!currentCourseId && !!matchedCourseId;
+    if (bothCoursesKnown && currentCourseId !== matchedCourseId) {
+      return {
+        kind: 'CROSS_COURSE',
+        isSelfPlagiarism: true,
+        label: 'Tự đạo văn: dùng lại bài đã nộp cho một môn khác',
+      };
+    }
+
+    if (matchedAssignmentId === currentAssignmentId) {
+      return {
+        kind: 'SAME_ASSIGNMENT',
+        isSelfPlagiarism: false,
+        label: 'Nộp lại cùng một bài tập — không tính là đạo văn',
+      };
+    }
+
+    // Same course (or the courses are unknown, in which case we do not accuse anyone).
+    return {
+      kind: 'CROSS_ASSIGNMENT',
+      isSelfPlagiarism: false,
+      label: 'Dùng lại bài làm của chính mình cho bài tập khác trong cùng môn — giảng viên nên xem xét',
+    };
   }
 
   /**
@@ -331,6 +508,9 @@ export class PlagiarismService {
     const pairs: PairwisePlagiarismResult[] = [];
     for (let i = 0; i < submissions.length; i++) {
       for (let j = i + 1; j < submissions.length; j++) {
+        // Self-pairs ARE compared here so the relationship can be classified and reported.
+        // Whether the result counts as plagiarism is decided later, from `selfOverlap`:
+        // a resubmission of the same task is never flagged, cross-course reuse is.
         pairs.push(ASTPlagiarismEngine.compareSubmissions(submissions[i], submissions[j]));
       }
     }
@@ -357,6 +537,8 @@ export class PlagiarismService {
       for (let j = i + 1; j < submissions.length; j++) {
         const a = submissions[i];
         const b = submissions[j];
+
+        // Self-pairs are kept for classification, exactly as in the local engine.
         const exact = flaggedIndex.get(`${a.submissionId}::${b.submissionId}`);
         if (exact) {
           pairs.push(exact);

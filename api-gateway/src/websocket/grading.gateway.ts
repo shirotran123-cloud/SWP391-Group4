@@ -86,6 +86,16 @@ export interface GradingCompletedPayload {
     jaccardSimilarity?: number;
     winnowingContainment?: number;
     astStructuralSimilarity?: number;
+    /**
+     * Set when the matched submission belongs to the same student. Distinguishes a
+     * resubmission (never penalised) from reuse in another task (warn) and from
+     * cross-course self-plagiarism (penalised).
+     */
+    selfOverlap?: {
+      kind: 'SAME_ASSIGNMENT' | 'CROSS_ASSIGNMENT' | 'CROSS_COURSE';
+      isSelfPlagiarism: boolean;
+      label: string;
+    };
     executionTimeMs?: number;
   };
   /** BR-03: true when the score was forced to 0 because AST plagiarism was confirmed (>= 80%). */
