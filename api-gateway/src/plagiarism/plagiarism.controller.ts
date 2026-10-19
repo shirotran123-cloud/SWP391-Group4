@@ -26,7 +26,11 @@ function assertStaffRole(role: string | undefined, logger: Logger): void {
   const normalized = (role || '').toUpperCase();
   if (normalized === 'STUDENT') {
     logger.warn(`[Plagiarism] BR-04: từ chối truy cập báo cáo đạo văn cho role=${normalized}.`);
-    throw new ForbiddenException('Báo cáo đạo văn chỉ dành cho Giảng viên/HOD (BR-04).');
+    // The message must read as plain Vietnamese: rule codes are internal and mean nothing
+    // to a student who hits this screen.
+    throw new ForbiddenException(
+      'Báo cáo đạo văn chỉ dành cho Giảng viên và Trưởng bộ môn.',
+    );
   }
 }
 
