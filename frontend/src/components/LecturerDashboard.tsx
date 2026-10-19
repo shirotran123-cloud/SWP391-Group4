@@ -1677,16 +1677,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               border: '1.5px solid rgba(99, 102, 241, 0.35)',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={20} color="var(--accent-cyan)" />
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>
-                  Yêu Cầu &amp; Ý Tưởng Cụ Thể Của Giảng Viên (Dành Cho AI Soạn Đề)
-                </h3>
-              </div>
-              <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 700 }}>
-                ⚡ Google Gemini · hủy sau 45s nếu không phản hồi
-              </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <Sparkles size={20} color="var(--accent-cyan)" />
+              <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>
+                Yêu Cầu &amp; Ý Tưởng Cụ Thể Của Giảng Viên (Dành Cho AI Soạn Đề)
+              </h3>
             </div>
 
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.5' }}>
