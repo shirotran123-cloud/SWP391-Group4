@@ -11,6 +11,7 @@ import { SubmissionsModule } from './submissions/submissions.module';
 import { AppealsModule } from './appeals/appeals.module';
 import { TeamworkModule } from './teamwork/teamwork.module';
 import { SandboxModule } from './sandbox/sandbox.module';
+import { PlagiarismModule } from './plagiarism/plagiarism.module';
 import { InternalEventsController } from './internal/internal-events.controller';
 
 @Module({
@@ -27,6 +28,7 @@ import { InternalEventsController } from './internal/internal-events.controller'
     AppealsModule,
     TeamworkModule,
     SandboxModule,
+    PlagiarismModule,
   ],
   controllers: [InternalEventsController],
   providers: [],

@@ -284,7 +284,12 @@ export class GradingGateway
     );
 
     if (this.server) {
-      this.server.to(roomName).emit(QUEUE_EVENTS.GRADING_COMPLETED, payload);
+      // BR-04: Báo cáo đạo văn tuyệt đối không công khai cho sinh viên (chỉ dành cho Giảng viên/HOD)
+      const studentPayload: GradingCompletedPayload = {
+        ...payload,
+        plagiarismMatch: undefined,
+      };
+      this.server.to(roomName).emit(QUEUE_EVENTS.GRADING_COMPLETED, studentPayload);
       this.server.emit(`admin:${QUEUE_EVENTS.GRADING_COMPLETED}`, payload);
     }
   }

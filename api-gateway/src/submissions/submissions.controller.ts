@@ -86,7 +86,11 @@ export class SubmissionsController {
     @Query('assignmentId') assignmentId?: string,
     @Query('status') status?: SubmissionRecord['status'],
     @Query('limit') limit?: string,
+    @Query('requesterRole') requesterRole?: string,
   ) {
+    // BR-04: Báo cáo đạo văn tuyệt đối không công khai cho sinh viên
+    const isPrivileged = ['LECTURER', 'HOD', 'ADMIN'].includes((requesterRole || '').toUpperCase());
+
     const parsedLimit = limit ? parseInt(limit, 10) : undefined;
     const submissions = await this.submissionsService.getAllSubmissions({
       studentId,
@@ -97,19 +101,50 @@ export class SubmissionsController {
     return {
       statusCode: HttpStatus.OK,
       total: submissions.length,
-      data: submissions.map((s) => ({ ...s, result: s.details ?? undefined })),
+      data: submissions.map((s) => {
+        const details = s.details || {};
+        if (!isPrivileged) {
+          // Student: strip sạch plagiarism data
+          const { plagiarismMatch: _pm, plagiarismStatus: _ps, similarityRate: _sr, ...safeDetails } = details as any;
+          return { ...s, result: safeDetails };
+        }
+        // Lecturer/HOD/Admin: trả đầy đủ bao gồm plagiarism metrics
+        const sim = details.similarityRate ?? details.plagiarismMatch?.similarityRate ?? 0;
+        const pStatus = details.plagiarismStatus ||
+          (sim >= 70 ? 'ĐẠO VĂN' : sim >= 40 ? 'NGHI VẤN' : 'AN TOÀN');
+        return {
+          ...s,
+          similarityRate: sim,
+          plagiarismStatus: pStatus,
+          plagiarismMatch: details.plagiarismMatch ?? null,
+          result: details,
+        };
+      }),
     };
   }
 
   @Get(':id')
-  public async getSubmissionById(@Param('id') id: string) {
+  public async getSubmissionById(
+    @Param('id') id: string,
+    @Query('requesterRole') requesterRole?: string,
+  ) {
     const submission = await this.submissionsService.getSubmissionById(id);
     if (!submission) {
       throw new NotFoundException(`Không tìm thấy bài nộp với ID: ${id}`);
     }
+    const isPrivileged = ['LECTURER', 'HOD', 'ADMIN'].includes((requesterRole || '').toUpperCase());
+    const details = submission.details || {};
+
+    if (!isPrivileged) {
+      const { plagiarismMatch: _pm, plagiarismStatus: _ps, similarityRate: _sr, ...safeDetails } = details as any;
+      return { statusCode: HttpStatus.OK, data: { ...submission, result: safeDetails } };
+    }
+    const sim = details.similarityRate ?? details.plagiarismMatch?.similarityRate ?? 0;
+    const pStatus = details.plagiarismStatus ||
+      (sim >= 70 ? 'ĐẠO VĂN' : sim >= 40 ? 'NGHI VẤN' : 'AN TOÀN');
     return {
       statusCode: HttpStatus.OK,
-      data: { ...submission, result: submission.details ?? undefined },
+      data: { ...submission, similarityRate: sim, plagiarismStatus: pStatus, plagiarismMatch: details.plagiarismMatch ?? null, result: details },
     };
   }
 

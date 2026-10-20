@@ -78,6 +78,8 @@ interface SubmissionRecord {
   id: string;
   studentId: string;
   studentName: string;
+  courseId?: string;
+  assignmentId?: string;
   assignmentTitle: string;
   fileName: string;
   submittedAt: string;
@@ -87,6 +89,19 @@ interface SubmissionRecord {
   finalScore: number;
   plagiarismStatus: 'AN TOÀN' | 'NGHI VẤN' | 'ĐẠO VĂN';
   similarityRate: number;
+  plagiarismMatch?: {
+    matchedStudentId: string;
+    matchedStudentName?: string;
+    matchedSubmissionId?: string;
+    similarityRate: number;
+    maxContainment?: number;
+    sourceCodeA?: string;
+    sourceCodeB?: string;
+    matchedTokens?: Array<{ lineA: [number, number]; lineB: [number, number] }>;
+    isFlagged?: boolean;
+    status?: string;
+  } | null;
+  sourceCode?: string;
 }
 
 const initialCourses: CourseItem[] = [
@@ -189,6 +204,8 @@ const mockSubmissionsList: SubmissionRecord[] = [
     id: 'SUB-001',
     studentId: 'SE170000',
     studentName: 'Đinh Thành Trung',
+    courseId: 'COURSE-SWP391',
+    assignmentId: 'TASK-SWP391-SPRINT2',
     assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
     fileName: 'solution_sorting_v2.zip',
     submittedAt: '12/10/2026 14:22',
@@ -203,6 +220,8 @@ const mockSubmissionsList: SubmissionRecord[] = [
     id: 'SUB-002',
     studentId: 'SE170123',
     studentName: 'Trần Thanh Nguyên',
+    courseId: 'COURSE-SWP391',
+    assignmentId: 'TASK-SWP391-SPRINT2',
     assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
     fileName: 'sorting_fast.zip',
     submittedAt: '12/10/2026 14:15',
@@ -217,6 +236,8 @@ const mockSubmissionsList: SubmissionRecord[] = [
     id: 'SUB-003',
     studentId: 'SE170456',
     studentName: 'Lê Hoàng Nam',
+    courseId: 'COURSE-SWP391',
+    assignmentId: 'TASK-SWP391-SPRINT2',
     assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
     fileName: 'sort_algorithm_final.zip',
     submittedAt: '12/10/2026 13:50',
@@ -231,6 +252,8 @@ const mockSubmissionsList: SubmissionRecord[] = [
     id: 'SUB-004',
     studentId: 'SE170889',
     studentName: 'Phạm Minh Tuấn',
+    courseId: 'COURSE-SWP391',
+    assignmentId: 'TASK-SWP391-SPRINT2',
     assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
     fileName: 'assignment_sort.zip',
     submittedAt: '12/10/2026 12:10',
@@ -285,27 +308,42 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setLoadingSubmissions(true);
     try {
       const token = localStorage.getItem('aita_token') || '';
-      const res = await fetch('http://localhost:3000/api/v1/submissions', {
+      // requesterRole=LECTURER → API trả đầy đủ plagiarism data (BR-04)
+      const res = await fetch('http://localhost:3000/api/v1/submissions?requesterRole=LECTURER', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
         const json = await res.json();
         const serverList = json.data || json || [];
         if (Array.isArray(serverList) && serverList.length > 0) {
-          const mapped: SubmissionRecord[] = serverList.map((s: any) => ({
-            id: s.submissionId || s.id,
-            studentId: s.studentId || 'SE-N/A',
-            studentName: s.studentName || s.studentId || 'Sinh viên',
-            assignmentTitle: s.assignmentId || 'Bài nộp',
-            fileName: s.fileName || `${s.submissionId || s.id}.zip`,
-            submittedAt: s.createdAt ? new Date(s.createdAt).toLocaleString('vi-VN') : 'Vừa xong',
-            testcaseScore: s.score !== undefined ? Math.round(s.score * 0.7 * 10) / 10 : 7.0,
-            cleanCodeScore: s.result?.aiRating?.cleanCodeScore ?? 8.5,
-            solidScore: 8.0,
-            finalScore: s.score ?? 8.5,
-            plagiarismStatus: s.plagiarismStatus || 'AN TOÀN',
-            similarityRate: s.similarityRate ?? 15,
-          }));
+          const mapped: SubmissionRecord[] = serverList.map((s: any) => {
+            const sim = s.similarityRate ?? s.result?.similarityRate ?? 0;
+            const pStatus = s.plagiarismStatus ||
+              (sim >= 70 ? 'ĐẠO VĂN' : sim >= 40 ? 'NGHI VẤN' : 'AN TOÀN');
+            const rawAssignId = s.assignmentId || s.assignmentTitle || '';
+            const matchedAssign = publishedAssignments.find(
+              (a) => a.id === rawAssignId || a.title === rawAssignId
+            );
+            const courseId = s.courseId || matchedAssign?.courseId || (rawAssignId.includes('PRN211') ? 'COURSE-PRN211' : rawAssignId.includes('CSD') ? 'COURSE-CSD201' : 'COURSE-SWP391');
+            return {
+              id: s.submissionId || s.id,
+              studentId: s.studentId || 'SE-N/A',
+              studentName: s.studentName || s.studentId || 'Sinh viên',
+              courseId,
+              assignmentId: s.assignmentId || rawAssignId,
+              assignmentTitle: matchedAssign?.title || s.assignmentTitle || s.assignmentId || 'Bài nộp',
+              fileName: s.fileName || `${s.submissionId || s.id}.zip`,
+              submittedAt: s.createdAt ? new Date(s.createdAt).toLocaleString('vi-VN') : 'Vừa xong',
+              testcaseScore: s.score !== undefined ? Math.round(s.score * 0.7 * 10) / 10 : 7.0,
+              cleanCodeScore: s.result?.aiRating?.cleanCodeScore ?? 8.5,
+              solidScore: 8.0,
+              finalScore: s.score ?? 8.5,
+              plagiarismStatus: pStatus as any,
+              similarityRate: sim,
+              plagiarismMatch: s.plagiarismMatch || s.result?.plagiarismMatch || null,
+              sourceCode: s.sourceCode || s.result?.sourceCode,
+            };
+          });
           setRealSubmissions(mapped);
         }
       }
@@ -313,6 +351,48 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       // ignore
     } finally {
       setLoadingSubmissions(false);
+    }
+  };
+
+  // ── Bộ lọc lớp học phần & bài tập cho Sổ Điểm ──────────────────────────────
+  const [selectedClassFilter, setSelectedClassFilter] = useState<string>('ALL');
+  const [selectedAssignmentFilter, setSelectedAssignmentFilter] = useState<string>('ALL');
+
+  // ── Quét đạo văn theo Lớp học phần & Bài tập ────────────────────────────────
+  const [scanningPlagiarism, setScanningPlagiarism] = useState(false);
+  const [plagiarismScanResult, setPlagiarismScanResult] = useState<any>(null);
+  const [showPlagiarismMatrix, setShowPlagiarismMatrix] = useState(false);
+
+  const handleScanClassPlagiarism = async (targetAssignId?: string) => {
+    let assignIdToScan = targetAssignId;
+    if (!assignIdToScan) {
+      if (selectedAssignmentFilter !== 'ALL') {
+        assignIdToScan = selectedAssignmentFilter;
+      } else if (selectedClassFilter !== 'ALL') {
+        const classAssignments = publishedAssignments.filter(
+          (a) => a.courseId === selectedClassFilter || selectedClassFilter.includes(a.courseId) || a.courseId.includes(selectedClassFilter)
+        );
+        assignIdToScan = classAssignments[0]?.id || 'TASK-SWP391-SPRINT2';
+      } else {
+        assignIdToScan = realSubmissions[0]?.assignmentId || 'TASK-SWP391-SPRINT2';
+      }
+    }
+
+    setScanningPlagiarism(true);
+    setPlagiarismScanResult(null);
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/plagiarism/matrix/${encodeURIComponent(assignIdToScan)}`);
+      if (res.ok) {
+        const json = await res.json();
+        setPlagiarismScanResult(json.data);
+        setShowPlagiarismMatrix(true);
+      } else {
+        alert(`Không thể kết nối tới server để quét đạo văn bài tập: ${assignIdToScan}`);
+      }
+    } catch {
+      alert('Lỗi kết nối. Hãy kiểm tra API Gateway đang chạy.');
+    } finally {
+      setScanningPlagiarism(false);
     }
   };
 
@@ -385,6 +465,46 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
     return defaultPublishedAssignments;
   });
+
+// Danh sách bài tập hiển thị theo lớp đang chọn
+  const availableAssignmentsForFilter = publishedAssignments.filter((a) => {
+    if (selectedClassFilter === 'ALL') return true;
+    return a.courseId === selectedClassFilter || selectedClassFilter.includes(a.courseId) || a.courseId.includes(selectedClassFilter);
+  });
+
+  // Toàn bộ bài nộp và lọc theo Lớp học phần + Bài tập
+  const allSubmissionsList = realSubmissions.length > 0 ? [...realSubmissions, ...mockSubmissionsList] : mockSubmissionsList;
+  const filteredSubmissions = allSubmissionsList.filter((sub) => {
+    if (selectedClassFilter !== 'ALL') {
+      const selectedCourseObj = courses.find((c) => c.courseId === selectedClassFilter);
+      const subCourse = sub.courseId || '';
+      const matchesCourse =
+        subCourse === selectedClassFilter ||
+        (selectedCourseObj && (
+          subCourse.toLowerCase().includes(selectedCourseObj.courseCode.toLowerCase()) ||
+          selectedCourseObj.courseCode.toLowerCase().includes(subCourse.toLowerCase())
+        ));
+      if (!matchesCourse) return false;
+    }
+    if (selectedAssignmentFilter !== 'ALL') {
+      const matchesAssign =
+        sub.assignmentId === selectedAssignmentFilter ||
+        sub.assignmentTitle === selectedAssignmentFilter;
+      if (!matchesAssign) return false;
+    }
+    return true;
+  });
+
+  // Thống kê nhanh cho lớp / bài tập đang lọc
+  const totalFilteredCount = filteredSubmissions.length;
+  const avgFilteredScore = totalFilteredCount > 0
+    ? (filteredSubmissions.reduce((acc, s) => acc + (s.finalScore || 0), 0) / totalFilteredCount).toFixed(1)
+    : '0.0';
+  const plagiarizedFilteredCount = filteredSubmissions.filter((s) => s.plagiarismStatus === 'ĐẠO VĂN').length;
+  const suspectedFilteredCount = filteredSubmissions.filter((s) => s.plagiarismStatus === 'NGHI VẤN').length;
+  const cleanFilteredCount = filteredSubmissions.filter((s) => s.plagiarismStatus === 'AN TOÀN').length;
+  const currentSelectedCourseObj = courses.find((c) => c.courseId === selectedClassFilter);
+  const currentSelectedAssignmentObj = publishedAssignments.find((a) => a.id === selectedAssignmentFilter);
 
   // Môn học đang xem chi tiết (nếu null thì hiện danh sách tất cả môn học)
   const [selectedCourseDetailId, setSelectedCourseDetailId] = useState<string | null>(null);
@@ -2653,40 +2773,326 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         </div>
       )}
 
-      {/* TAB 4: SỔ ĐIỂM & DANH SÁCH BÀI NỘP VỚI TÍNH NĂNG TẢI FILE ZIP */}
+      {/* TAB 4: SỔ ĐIỂM & DANH SÁCH BÀI NỘP PHÂN CẤP THEO LỚP HỌC & BÀI TẬP */}
       {activeTab === 'SUBMISSIONS' && (
         <div className="glass-panel" style={{ padding: '28px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-main)' }}>
-                Sổ Theo Dõi Bài Nộp Lập Trình &amp; Giám Sát Liêm Chính Học Thuật
+                Sổ Theo Dõi Điểm &amp; Chống Đạo Văn Phân Theo Lớp Học Phần
               </h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '2px' }}>
-                Danh sách bài làm sinh viên dưới dạng file nén .zip, điểm số đa trục và cảnh báo đạo văn AST Winnowing
+                Phân loại bài nộp theo từng lớp học, bộ môn và đề bài; hỗ trợ quét đạo văn AST Winnowing theo từng lớp riêng biệt
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => void fetchRealSubmissions()}
-              disabled={loadingSubmissions}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(11, 18, 32, 0.04)',
-                border: '1px solid var(--border-color)',
-                color: 'var(--text-main)',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              <RefreshCw size={14} className={loadingSubmissions ? 'animate-spin' : ''} />
-              {loadingSubmissions ? 'Đang đồng bộ...' : 'Làm mới'}
-            </button>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+              {/* Nút Quét Đạo Văn theo Lớp & Bài tập đang chọn */}
+              <button
+                type="button"
+                onClick={() => void handleScanClassPlagiarism()}
+                disabled={scanningPlagiarism || filteredSubmissions.length < 2}
+                title={filteredSubmissions.length < 2 ? 'Cần ít nhất 2 bài nộp trong phạm vi lọc để đối chiếu đạo văn' : 'Phân tích đạo văn Winnowing cho bài tập này'}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  background: scanningPlagiarism ? 'rgba(239,68,68,0.15)' : 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                  border: 'none',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: filteredSubmissions.length < 2 ? 'not-allowed' : 'pointer',
+                  opacity: (scanningPlagiarism || filteredSubmissions.length < 2) ? 0.6 : 1,
+                  boxShadow: '0 2px 8px rgba(239,68,68,0.35)',
+                }}
+              >
+                {scanningPlagiarism
+                  ? <><Loader2 size={14} className="animate-spin" /> Đang quét ma trận...
+                  </>
+                  : <><Scale size={14} /> Quét Đạo Văn {selectedAssignmentFilter !== 'ALL' ? (currentSelectedAssignmentObj?.title?.substring(0, 18) + '...') : selectedClassFilter !== 'ALL' ? (currentSelectedCourseObj?.courseCode || 'Lớp Này') : 'Toàn Bộ'}
+                  </>}
+              </button>
+              <button
+                type="button"
+                onClick={() => void fetchRealSubmissions()}
+                disabled={loadingSubmissions}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-main)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <RefreshCw size={14} className={loadingSubmissions ? 'animate-spin' : ''} />
+                {loadingSubmissions ? 'Đang đồng bộ...' : 'Làm mới'}
+              </button>
+            </div>
           </div>
+
+          {/* BỘ LỌC PHÂN CẤP THEO LỚP HỌC PHẦN (BỘ MÔN) & BÀI TẬP */}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '16px',
+              alignItems: 'flex-end',
+              marginBottom: '20px',
+              padding: '16px 20px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(11, 18, 32, 0.025)',
+              border: '1px solid var(--border-color)',
+            }}
+          >
+            {/* Dropdown 1: Lớp Học Phần */}
+            <div style={{ flex: '1 1 260px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-soft)', marginBottom: '6px' }}>
+                🏫 Lớp Học Phần (Bộ Môn):
+              </label>
+              <select
+                value={selectedClassFilter}
+                onChange={(e) => {
+                  setSelectedClassFilter(e.target.value);
+                  setSelectedAssignmentFilter('ALL');
+                }}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--text-main)',
+                  outline: 'none',
+                }}
+              >
+                <option value="ALL">-- Tất Cả Các Lớp ({courses.length} lớp học phần) --</option>
+                {courses.map((c) => (
+                  <option key={c.courseId} value={c.courseId}>
+                    [{c.courseCode}] {c.courseName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Dropdown 2: Đề Bài / Bài Tập */}
+            <div style={{ flex: '1 1 300px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-soft)', marginBottom: '6px' }}>
+                📝 Bài Tập / Đề Thực Hành:
+              </label>
+              <select
+                value={selectedAssignmentFilter}
+                onChange={(e) => setSelectedAssignmentFilter(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '9px 12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: 'var(--text-main)',
+                  outline: 'none',
+                }}
+              >
+                <option value="ALL">-- Tất Cả Bài Tập Trong Lớp ({availableAssignmentsForFilter.length} bài) --</option>
+                {availableAssignmentsForFilter.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.title} ({a.id})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Nút Reset */}
+            {(selectedClassFilter !== 'ALL' || selectedAssignmentFilter !== 'ALL') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedClassFilter('ALL');
+                  setSelectedAssignmentFilter('ALL');
+                }}
+                style={{
+                  padding: '9px 14px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-color)',
+                  background: 'transparent',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  height: '38px',
+                }}
+              >
+                ✕ Bỏ lọc
+              </button>
+            )}
+          </div>
+
+          {/* DẢI THỐNG KÊ NHANH CHO PHẠM VI LỌC HIỆN TẠI */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+              gap: '12px',
+              marginBottom: '20px',
+            }}
+          >
+            <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.15)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+                Tổng Bài Nộp
+              </span>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-main)', marginTop: '2px' }}>
+                {totalFilteredCount} bài
+              </div>
+            </div>
+
+            <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+                Điểm Trung Bình
+              </span>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
+                {avgFilteredScore} / 10
+              </div>
+            </div>
+
+            <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+                Liêm Chính An Toàn
+              </span>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
+                {cleanFilteredCount} bài
+              </div>
+            </div>
+
+            <div style={{ padding: '12px 16px', borderRadius: '8px', background: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(11, 18, 32, 0.03)', border: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid var(--border-soft)' }}>
+              <span style={{ fontSize: '11px', color: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? '#ef4444' : 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+                Cảnh Báo Đạo Văn
+              </span>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? '#ef4444' : 'var(--text-main)', marginTop: '2px' }}>
+                {plagiarizedFilteredCount} đạo văn • {suspectedFilteredCount} nghi vấn
+              </div>
+            </div>
+          </div>
+
+          {/* Bảng Kết Quả Quét Đạo Văn Toàn Lớp (hiện khi có kết quả) */}
+          {showPlagiarismMatrix && plagiarismScanResult && (
+            <div style={{ marginBottom: '24px', padding: '20px', borderRadius: '12px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ef4444', marginBottom: '4px' }}>
+                    ⚠️ Kết Quả Quét Đạo Văn AST Winnowing &mdash; {plagiarismScanResult.assignmentId}
+                  </h3>
+                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                    Đã phân tích {plagiarismScanResult.totalSubmissions} bài nộp • {plagiarismScanResult.totalPairsCompared} cặp so sánh •
+                    <span style={{ color: plagiarismScanResult.flaggedPairsCount > 0 ? '#ef4444' : '#10b981', fontWeight: 700 }}>
+                      {' '}{plagiarismScanResult.flaggedPairsCount} cặp cảnh báo
+                    </span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowPlagiarismMatrix(false)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '20px' }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Danh sách cặp bị cảnh báo */}
+              {plagiarismScanResult.flaggedReports?.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {plagiarismScanResult.flaggedReports.map((report: any, idx: number) => (
+                    <div
+                      key={idx}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '12px 16px',
+                        borderRadius: '8px',
+                        background: report.similarityRate >= 80
+                          ? 'rgba(239,68,68,0.12)'
+                          : 'rgba(245,158,11,0.10)',
+                        border: `1px solid ${report.similarityRate >= 80 ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'}`,
+                      }}
+                    >
+                      <div style={{ fontSize: '13px' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>
+                          {report.submissionAId}
+                        </span>
+                        <span style={{ color: 'var(--text-muted)', margin: '0 8px' }}>⇔</span>
+                        <span style={{ fontWeight: 700, color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>
+                          {report.submissionBId}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{
+                          fontSize: '16px',
+                          fontWeight: 800,
+                          color: report.similarityRate >= 80 ? '#ef4444' : '#f59e0b',
+                        }}>
+                          {report.similarityRate.toFixed(1)}%
+                        </span>
+                        <span style={{
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          background: report.similarityRate >= 80 ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)',
+                          color: report.similarityRate >= 80 ? '#ef4444' : '#f59e0b',
+                        }}>
+                          {report.status}
+                        </span>
+                        {onOpenDiffViewer && report.matchedTokensJson && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenDiffViewer({
+                              matchedStudentName: report.submissionBId,
+                              matchedStudentId: report.submissionBId,
+                              similarityRate: report.similarityRate,
+                              sourceCodeA: report.matchedTokensJson?.sourceCodeA || '',
+                              sourceCodeB: report.matchedTokensJson?.sourceCodeB || '',
+                              matchedTokens: report.matchedTokensJson?.matchedSegments?.map((s: any) => ({
+                                lineA: [s.lineRangeA?.start, s.lineRangeA?.end],
+                                lineB: [s.lineRangeB?.start, s.lineRangeB?.end],
+                              })) || [],
+                              isFlagged: report.isFlagged,
+                            } as any)}
+                            style={{
+                              padding: '4px 10px',
+                              borderRadius: '6px',
+                              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                              border: 'none',
+                              color: '#fff',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            So Sánh
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '20px', color: '#10b981', fontWeight: 600 }}>
+                  ✅ Không phát hiện đạo văn. Tất cả cặp bài đều dưới ngưỡng cảnh báo 65%.
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
@@ -2706,12 +3112,28 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 </tr>
               </thead>
               <tbody>
-                {(realSubmissions.length > 0 ? [...realSubmissions, ...mockSubmissionsList] : mockSubmissionsList).map((sub) => (
+                {filteredSubmissions.length === 0 ? (
+                  <tr>
+                    <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                      Không có bài nộp nào phù hợp với Lớp học phần hoặc Bài tập đang chọn.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSubmissions.map((sub) => (
                   <tr
                     key={sub.id}
                     style={{
-                      borderBottom: '1px solid rgba(11, 18, 32, 0.035)',
-                      backgroundColor: sub.plagiarismStatus === 'ĐẠO VĂN' ? 'rgba(11, 18, 32, 0.035)' : 'transparent',
+                      borderBottom: '1px solid rgba(11, 18, 32, 0.05)',
+                      borderLeft: sub.plagiarismStatus === 'ĐẠO VĂN'
+                        ? '4px solid #ef4444'
+                        : sub.plagiarismStatus === 'NGHI VẤN'
+                          ? '4px solid #f59e0b'
+                          : '4px solid transparent',
+                      backgroundColor: sub.plagiarismStatus === 'ĐẠO VĂN'
+                        ? 'rgba(239, 68, 68, 0.08)'
+                        : sub.plagiarismStatus === 'NGHI VẤN'
+                          ? 'rgba(245, 158, 11, 0.05)'
+                          : 'transparent',
                     }}
                   >
                     <td style={{ padding: '14px 16px', fontFamily: 'var(--font-mono)', color: 'var(--blue-200)', fontWeight: 600 }}>
@@ -2731,34 +3153,52 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-200)' }}>{sub.testcaseScore}/7.0</td>
                     <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-300)' }}>{sub.cleanCodeScore}/10</td>
                     <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-300)' }}>{sub.solidScore}/10</td>
-                    <td style={{ padding: '14px 16px', fontWeight: 600, fontSize: '14px', color: 'var(--text-main)' }}>{sub.finalScore}</td>
-                    <td style={{ padding: '14px 16px', fontWeight: 700, color: sub.similarityRate >= 70 ? 'var(--accent-rose)' : 'var(--text-muted)' }}>
-                      {sub.similarityRate}%
+                    <td style={{ padding: '14px 16px', fontWeight: 700, fontSize: '14px', color: 'var(--text-main)' }}>
+                      <div>{sub.finalScore} / 10</div>
+                      {sub.plagiarismStatus === 'ĐẠO VĂN' && (
+                        <div style={{ fontSize: '10.5px', color: '#ef4444', fontWeight: 700, marginTop: '2px' }}>
+                          ⚠️ Trùng {sub.similarityRate}%
+                        </div>
+                      )}
                     </td>
+                    {/* Cột Similarity Rate */}
+                    <td style={{ padding: '14px 16px', fontWeight: 800, color: sub.similarityRate >= 70 ? '#ef4444' : sub.similarityRate >= 40 ? '#f59e0b' : 'var(--text-muted)' }}>
+                      {sub.similarityRate > 0 ? (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          {sub.similarityRate >= 70 && '⚠️'} {sub.similarityRate}%
+                        </span>
+                      ) : (
+                        <span style={{ color: 'var(--text-dim)', fontWeight: 400, fontSize: '12px' }}>Chưa quét</span>
+                      )}
+                    </td>
+                    {/* Cột Trạng Thái Đạo Văn */}
                     <td style={{ padding: '14px 16px' }}>
                       <span
                         style={{
                           fontSize: '11px',
-                          padding: '3px 8px',
+                          padding: '4px 9px',
                           borderRadius: '6px',
-                          fontWeight: 700,
+                          fontWeight: 800,
                           backgroundColor:
                             sub.plagiarismStatus === 'ĐẠO VĂN'
-                              ? 'rgba(11, 18, 32, 0.07)'
+                              ? '#ef4444'
                               : sub.plagiarismStatus === 'NGHI VẤN'
-                              ? 'rgba(37, 99, 235, 0.1)'
-                              : 'rgba(37, 99, 235, 0.1)',
+                              ? 'rgba(245, 158, 11, 0.15)'
+                              : 'rgba(16, 185, 129, 0.12)',
                           color:
                             sub.plagiarismStatus === 'ĐẠO VĂN'
-                              ? 'var(--text-main)'
+                              ? '#ffffff'
                               : sub.plagiarismStatus === 'NGHI VẤN'
-                              ? 'var(--blue-200)'
-                              : 'var(--blue-200)',
+                              ? '#f59e0b'
+                              : '#10b981',
+                          boxShadow: sub.plagiarismStatus === 'ĐẠO VĂN' ? '0 1px 4px rgba(239,68,68,0.4)' : 'none',
                         }}
                       >
+                        {sub.plagiarismStatus === 'ĐẠO VĂN' && '⚠️ '}
                         {sub.plagiarismStatus}
                       </span>
                     </td>
+                    {/* Cột Hành Động */}
                     <td style={{ padding: '14px 16px', textAlign: 'center' }}>
                       <button
                         type="button"
@@ -2776,7 +3216,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           fontSize: '12px',
                           fontWeight: 700,
                           cursor: 'pointer',
-                          marginRight: '8px',
+                          marginRight: '6px',
                           boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
                           transition: 'all 0.15s ease',
                         }}
@@ -2784,6 +3224,46 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         <Sparkles size={13} />
                         Xem Chi Tiết
                       </button>
+
+                      {/* NÚt Xem Đạo Văn — chỉ hiện khi có plagiarismMatch và similarityRate ≥ 40 */}
+                      {sub.plagiarismMatch && sub.similarityRate >= 40 && onOpenDiffViewer && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenDiffViewer({
+                            matchedStudentName: sub.plagiarismMatch!.matchedStudentName || sub.plagiarismMatch!.matchedStudentId,
+                            matchedStudentId: sub.plagiarismMatch!.matchedStudentId,
+                            similarityRate: sub.plagiarismMatch!.similarityRate,
+                            sourceCodeA: sub.plagiarismMatch!.sourceCodeA || sub.sourceCode || '',
+                            sourceCodeB: sub.plagiarismMatch!.sourceCodeB || '',
+                            matchedTokens: sub.plagiarismMatch!.matchedTokens || [],
+                            isFlagged: sub.plagiarismMatch!.isFlagged ?? (sub.similarityRate >= 70),
+                          } as any)}
+                          title={`Xem so sánh code với ${sub.plagiarismMatch.matchedStudentId} (${sub.similarityRate}%)`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            background: sub.similarityRate >= 80
+                              ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)'
+                              : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                            border: 'none',
+                            color: '#ffffff',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            marginRight: '6px',
+                            boxShadow: sub.similarityRate >= 80
+                              ? '0 1px 4px rgba(239,68,68,0.5)'
+                              : '0 1px 4px rgba(245,158,11,0.5)',
+                          }}
+                        >
+                          <Scale size={13} />
+                          Xem Đạo Văn
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => handleDownloadZip(sub.id, sub.fileName)}
@@ -2810,7 +3290,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       </button>
                     </td>
                   </tr>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>

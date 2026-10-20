@@ -8,6 +8,7 @@ import { LecturerDashboard } from './components/LecturerDashboard';
 import { RblBenchmarkView } from './components/RblBenchmarkView';
 import { StudentAppealsView } from './components/StudentAppealsView';
 import { StudentHistoryView } from './components/StudentHistoryView';
+import { PlagiarismDiffModal } from './components/PlagiarismDiffModal';
 import type { Task, GradingStep, AIRating, PlagiarismMatch, User, ScoreBreakdown } from './types';
 import { isLecturerRole } from './types';
 import { Terminal, Shield, LogOut, FileCode, Upload, BookOpen, LayoutDashboard, Scale, ArrowLeftRight, Clock, GraduationCap, Check } from 'lucide-react';
@@ -91,8 +92,9 @@ export function App() {
     return 'student';
   });
 
-  // Tab cho Sinh viên: 'submission' (Khu vực nộp bài) | 'history' (Lịch sử nộp & điểm số) | 'benchmark' (Bộ dữ liệu Benchmark RBL) | 'appeals' (Khiếu nại điểm)
-  const [studentActiveTab, setStudentActiveTab] = useState<'submission' | 'history' | 'benchmark' | 'appeals'>('submission');
+  // Tab cho Sinh viên: 'submission' (Khu vực nộp bài) | 'history' (Lịch sử nộp & điểm số) | 'appeals' (Khiếu nại điểm)
+  // Quy chế BR-04: Đạo văn không được công khai cho sinh viên, chỉ dành cho Giảng viên/HOD
+  const [studentActiveTab, setStudentActiveTab] = useState<'submission' | 'history' | 'appeals'>('submission');
 
   // Danh sách môn học sinh viên đang tham gia (nạp từ PostgreSQL qua API)
   const [enrolledCourses, setEnrolledCourses] = useState<Array<{ courseId: string; courseCode: string; courseName: string; semester: string; description?: string }>>([
@@ -172,6 +174,7 @@ export function App() {
   const [currentSourceCode, setCurrentSourceCode] = useState<string>(mockSourceCodeStudent);
   const [aiRating, setAiRating] = useState<AIRating | undefined>(undefined);
   const [plagiarismMatch, setPlagiarismMatch] = useState<PlagiarismMatch | undefined>(undefined);
+  const [plagiarismDiffMatch, setPlagiarismDiffMatch] = useState<PlagiarismMatch | null>(null);
   const [score, setScore] = useState<number | undefined>(undefined);
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown | undefined>(undefined);
   const [executionTimeMs, setExecutionTimeMs] = useState<number | undefined>(undefined);
@@ -440,7 +443,11 @@ export function App() {
             socketRef.current.off('grading:completed');
             socketRef.current.on('grading:completed', (data: any) => {
               if (data.aiRating) setAiRating(data.aiRating);
-              setPlagiarismMatch(computedPlagiarism);
+              if (isLecturerRole(currentUser?.role)) {
+                setPlagiarismMatch(computedPlagiarism || data.plagiarismMatch);
+              } else {
+                setPlagiarismMatch(undefined);
+              }
               if (data.score !== undefined) setScore(data.score);
               if (data.scoreBreakdown) setScoreBreakdown(data.scoreBreakdown);
               if (data.executionTimeMs !== undefined) setExecutionTimeMs(data.executionTimeMs);
@@ -490,18 +497,14 @@ export function App() {
             if (idx === index) {
               const currentDetail =
                 step.id === '6'
-                  ? realPlagiarism
-                    ? `Đang chạy thuật toán Winnowing w=10, k=15... (${realPlagiarism.similarityRate}% tương đồng)`
-                    : 'Đang tra cứu cơ sở dữ liệu đối sánh...'
+                  ? 'Chuẩn hóa AST token và tính toán đặc trưng Winnowing...'
                   : 'Đang thực thi...';
               return { ...step, status: 'in_progress', detail: currentDetail };
             }
             if (idx < index) {
               const passDetail =
                 step.id === '6'
-                  ? realPlagiarism
-                    ? `Hoàn tất AST & Winnowing: ${realPlagiarism.similarityRate}% (${realPlagiarism.isFlagged ? 'NGHI VẤN' : 'AN TOÀN'})`
-                    : 'Không phát hiện trùng khớp trong kho bài nội bộ'
+                  ? 'Hoàn tất phân tích cấu trúc cây cú pháp trừu tượng AST.'
                   : 'Hoàn thành (ĐẠT)';
               return { ...step, status: 'passed', detail: passDetail };
             }
@@ -517,9 +520,7 @@ export function App() {
                 status: 'passed',
                 detail:
                   s.id === '6'
-                    ? realPlagiarism
-                      ? `Hoàn tất AST & Winnowing: ${realPlagiarism.similarityRate}% (${realPlagiarism.isFlagged ? 'CẢNH BÁO ĐẠO VĂN' : 'MÃ NGUỒN AN TOÀN'})`
-                      : 'Hoàn tất AST: Không phát hiện gian lận trong kho mã nguồn'
+                    ? 'Hoàn tất phân tích cấu trúc cây cú pháp trừu tượng AST.'
                     : 'Hoàn thành (ĐẠT)',
               }))
             );
@@ -533,7 +534,11 @@ export function App() {
               explanation: 'Mã nguồn có giải thuật rõ ràng, tối ưu thời gian chạy. Cần tách các phương thức in ấn và lưu trữ để tuân thủ nguyên lý Đơn trách nhiệm.',
             });
 
-            setPlagiarismMatch(realPlagiarism);
+            if (isLecturerRole(currentUser?.role)) {
+              setPlagiarismMatch(realPlagiarism);
+            } else {
+              setPlagiarismMatch(undefined);
+            }
             setScoreBreakdown(fallbackBreakdown);
             setScore(fallbackBreakdown.total);
             setExecutionTimeMs(1420);
@@ -739,10 +744,7 @@ export function App() {
           <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
             <LecturerDashboard
               onOpenDiffViewer={(match) => {
-                setPlagiarismMatch(match);
-                setCurrentSourceCode(match.sourceCodeA);
-                setIsModalOpen(true);
-                setIsCompleted(true);
+                setPlagiarismDiffMatch(match);
               }}
             />
           </div>
@@ -839,7 +841,6 @@ export function App() {
               {([
                 { key: 'submission', label: 'Nộp bài', icon: <FileCode size={14} /> },
                 { key: 'history', label: 'Lịch sử & điểm', icon: <Clock size={14} /> },
-                { key: 'benchmark', label: 'Đối soát đạo văn', icon: <ArrowLeftRight size={14} /> },
                 { key: 'appeals', label: 'Phúc khảo', icon: <Scale size={14} /> },
               ] as const).map((tab) => {
                 const active = studentActiveTab === tab.key;
@@ -890,15 +891,6 @@ export function App() {
                 apiBaseUrl={API_BASE_URL}
                 onNavigateToSubmit={() => setStudentActiveTab('submission')}
               />
-            ) : studentActiveTab === 'benchmark' ? (
-              <RblBenchmarkView
-                onOpenDiffViewer={(match) => {
-                  setPlagiarismMatch(match);
-                  setCurrentSourceCode(match.sourceCodeA);
-                  setIsModalOpen(true);
-                  setIsCompleted(true);
-                }}
-              />
             ) : (
               <StudentAppealsView
                 studentId={currentUser?.userId || 'SE170000'}
@@ -920,11 +912,19 @@ export function App() {
         steps={steps}
         isCompleted={isCompleted}
         aiRating={aiRating}
-        plagiarismMatch={plagiarismMatch}
+        plagiarismMatch={isLecturerRole(currentUser?.role) ? plagiarismMatch : undefined}
         sourceCode={currentSourceCode}
         score={score}
         scoreBreakdown={scoreBreakdown}
         executionTimeMs={executionTimeMs}
+      />
+
+      {/* MODAL ĐỐI SÁNH ĐẠO VĂN DÀNH CHO GIẢNG VIÊN (BR-04) */}
+      <PlagiarismDiffModal
+        isOpen={!!plagiarismDiffMatch}
+        onClose={() => setPlagiarismDiffMatch(null)}
+        match={plagiarismDiffMatch}
+        studentAName={currentUser?.fullName || 'Bài nộp A'}
       />
 
       {/* Login Modal (backup/fallback) */}
