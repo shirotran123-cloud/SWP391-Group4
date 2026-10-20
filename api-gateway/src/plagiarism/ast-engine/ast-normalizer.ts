@@ -98,15 +98,12 @@ export class ASTNormalizer {
             // Check if next non-space char is '(' → treat as function
             const rest = line.slice(col).trimStart();
             if (rest.startsWith('(')) {
-              if (!identifierMap.has(raw)) identifierMap.set(raw, `FUNC_${funcCounter++}`);
-              tokens.push({ token: identifierMap.get(raw)!, line: lineIdx + 1, col });
+              tokens.push({ token: 'FUNC', line: lineIdx + 1, col });
             } else if (/^[A-Z]/.test(raw)) {
               // PascalCase → type/class name
-              if (!identifierMap.has(raw)) identifierMap.set(raw, `TYPE_${typeCounter++}`);
-              tokens.push({ token: identifierMap.get(raw)!, line: lineIdx + 1, col });
+              tokens.push({ token: 'TYPE', line: lineIdx + 1, col });
             } else {
-              if (!identifierMap.has(raw)) identifierMap.set(raw, `VAR_${varCounter++}`);
-              tokens.push({ token: identifierMap.get(raw)!, line: lineIdx + 1, col });
+              tokens.push({ token: 'VAR', line: lineIdx + 1, col });
             }
           }
           continue;
@@ -233,11 +230,11 @@ export class ASTNormalizer {
           } else {
             const rest = line.slice(col).trimStart();
             if (rest.startsWith('(')) {
-              if (!identifierMap.has(raw)) identifierMap.set(raw, `FUNC_${funcCounter++}`);
-              tokens.push({ token: identifierMap.get(raw)!, line: lineIdx + 1, col });
+              tokens.push({ token: 'FUNC', line: lineIdx + 1, col });
+            } else if (/^[A-Z]/.test(raw)) {
+              tokens.push({ token: 'TYPE', line: lineIdx + 1, col });
             } else {
-              if (!identifierMap.has(raw)) identifierMap.set(raw, `VAR_${varCounter++}`);
-              tokens.push({ token: identifierMap.get(raw)!, line: lineIdx + 1, col });
+              tokens.push({ token: 'VAR', line: lineIdx + 1, col });
             }
           }
           continue;

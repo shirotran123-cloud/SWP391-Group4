@@ -49,7 +49,8 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
 
   const similarity = match.similarityRate || 0;
   const isSeverePlagiarism = similarity >= 80;
-  const isFlagged = similarity >= 70;
+  const isHighPlagiarism = similarity >= 65;
+  const isSuspected = similarity >= 40;
   const matchedTokensCount = match.matchedTokens?.length || 0;
 
   const handleCopyId = () => {
@@ -64,16 +65,25 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
         bg: '#fef2f2',
         border: '#ef4444',
         text: '#dc2626',
-        label: 'ĐẠO VĂN NGHIÊM TRỌNG (≥80% - ĐIỂM 0)',
+        label: 'ĐẠO VĂN NGHIÊM TRỌNG (≥80% - ĐỀ XUẤT ĐIỂM 0)',
         icon: ShieldAlert,
       };
     }
-    if (isFlagged) {
+    if (isHighPlagiarism) {
+      return {
+        bg: '#fff1f2',
+        border: '#f43f5e',
+        text: '#e11d48',
+        label: `CẢNH BÁO ĐẠO VĂN (${similarity.toFixed(1)}% - CỜ GIAN LẬN)`,
+        icon: AlertTriangle,
+      };
+    }
+    if (isSuspected) {
       return {
         bg: '#fffbeb',
         border: '#f59e0b',
         text: '#d97706',
-        label: 'CẢNH BÁO TRÙNG LẶP (≥70% - CỜ GIAN LẬN)',
+        label: `NGHI VẤN TRÙNG LẶP (${similarity.toFixed(1)}% - CẦN ĐỐI SOÁT)`,
         icon: AlertTriangle,
       };
     }
@@ -81,7 +91,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
       bg: '#f0fdf4',
       border: '#22c55e',
       text: '#16a34a',
-      label: 'ĐỘ TRÙNG KHỚP THẤP (<70%)',
+      label: `ĐỘ TRÙNG KHỚP THẤP (<40% - AN TOÀN)`,
       icon: CheckCircle2,
     };
   };
@@ -238,7 +248,13 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
               Quy chế xử lý BR-03
             </span>
             <div style={{ fontSize: '13px', fontWeight: 600, color: badge.text, marginTop: '6px' }}>
-              {isSeverePlagiarism ? 'Hủy điểm bài tập về 0.0' : isFlagged ? 'Gửi cảnh báo nghi vấn' : 'Hợp lệ / An toàn'}
+              {isSeverePlagiarism
+                ? 'Đề xuất hủy điểm về 0.0'
+                : isHighPlagiarism
+                ? 'Cảnh báo vi phạm (Cờ gian lận)'
+                : isSuspected
+                ? 'Nghi vấn cao (Cần đối soát)'
+                : 'Mã nguồn an toàn / Hợp lệ'}
             </div>
           </div>
         </div>
