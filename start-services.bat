@@ -5,6 +5,11 @@ echo    AITA-INTELLIGENT (SWP391 Group 4) - LOCAL SERVICES LAUNCHER
 echo ======================================================================
 echo.
 
+echo [0/3] Khoi dong Docker PostgreSQL 15 ^& Redis 7...
+docker compose up -d
+echo.
+timeout /t 2 /nobreak >nul
+
 echo [1/3] Khoi dong AITA API Gateway (Port 3000)...
 start "AITA API Gateway (Port 3000)" /D "%~dp0api-gateway" cmd /k "npm run start"
 

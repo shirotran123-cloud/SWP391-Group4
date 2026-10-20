@@ -97,4 +97,17 @@ export class CoursesService {
     await this.getCourseById(courseId);
     return this.courseRepo.getStudentsInCourse(courseId);
   }
+
+  public async removeStudentFromCourse(
+    courseId: string,
+    studentId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    await this.getCourseById(courseId);
+    const success = await this.courseRepo.removeStudentFromCourse(courseId, studentId);
+    return {
+      success,
+      message: `Đã xóa sinh viên ${studentId} khỏi lớp học phần ${courseId}.`,
+    };
+  }
 }
+

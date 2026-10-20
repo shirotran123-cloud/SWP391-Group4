@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { AppealRecord, AppealStatus } from './appeal.entity';
+import { PostgresService } from './postgres.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -11,16 +12,25 @@ export interface AppealQueryFilter {
 }
 
 @Injectable()
-export class AppealRepository {
+export class AppealRepository implements OnModuleInit {
   private readonly logger = new Logger(AppealRepository.name);
   private readonly records: Map<string, AppealRecord> = new Map();
   private readonly dataDir: string;
   private readonly dataFile: string;
 
-  constructor() {
-    this.dataDir = path.resolve(process.cwd(), 'data');
+  constructor(private readonly postgres: PostgresService) {
+    const candidateDirs = [
+      path.resolve(process.cwd(), 'data'),
+      path.resolve(process.cwd(), 'api-gateway', 'data'),
+      path.resolve(__dirname, '..', '..', 'data'),
+    ];
+    this.dataDir = candidateDirs.find((d) => fs.existsSync(d)) || candidateDirs[0];
     this.dataFile = path.join(this.dataDir, 'appeals_store.json');
     this.initStore();
+  }
+
+  public async onModuleInit(): Promise<void> {
+    await this.syncWithPostgres();
   }
 
   private initStore(): void {
@@ -73,6 +83,66 @@ export class AppealRepository {
     }
   }
 
+  private async syncWithPostgres(): Promise<void> {
+    if (!this.postgres.isAvailable()) return;
+    try {
+      const rows = await this.postgres.safeQuery<any>(
+        `SELECT appeal_id, submission_id, student_id, reason, status, reviewer_id, resolution_note, resolved_at, created_at, updated_at 
+         FROM appeals ORDER BY created_at DESC`,
+      );
+      if (rows && rows.length > 0) {
+        for (const r of rows) {
+          this.records.set(r.appeal_id, {
+            appealId: r.appeal_id,
+            submissionId: r.submission_id,
+            studentId: r.student_id,
+            reason: r.reason,
+            status: r.status,
+            reviewerId: r.reviewer_id || undefined,
+            resolutionNote: r.resolution_note || undefined,
+            resolvedAt: r.resolved_at ? new Date(r.resolved_at) : undefined,
+            createdAt: new Date(r.created_at),
+            updatedAt: new Date(r.updated_at),
+          });
+        }
+        this.logger.log(`✅ [AppealRepository] Đã nạp ${rows.length} đơn phúc khảo từ PostgreSQL 15.`);
+        this.flushToDisk();
+      }
+    } catch (err: any) {
+      this.logger.warn(`[AppealRepository] Lỗi đồng bộ PostgreSQL: ${err.message}`);
+    }
+  }
+
+  private async saveToPostgres(r: AppealRecord): Promise<void> {
+    if (!this.postgres.isAvailable()) return;
+    try {
+      await this.postgres.safeQuery(
+        `INSERT INTO appeals (appeal_id, submission_id, student_id, reason, status, reviewer_id, resolution_note, resolved_at, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         ON CONFLICT (appeal_id) DO UPDATE SET
+           status = EXCLUDED.status,
+           reviewer_id = EXCLUDED.reviewer_id,
+           resolution_note = EXCLUDED.resolution_note,
+           resolved_at = EXCLUDED.resolved_at,
+           updated_at = NOW()`,
+        [
+          r.appealId,
+          r.submissionId,
+          r.studentId,
+          r.reason,
+          r.status,
+          r.reviewerId || null,
+          r.resolutionNote || null,
+          r.resolvedAt || null,
+          r.createdAt,
+          r.updatedAt,
+        ],
+      );
+    } catch (err: any) {
+      this.logger.warn(`[AppealRepository] Postgres save error for ${r.appealId}: ${err.message}`);
+    }
+  }
+
   public async create(record: Omit<AppealRecord, 'createdAt' | 'updatedAt'>): Promise<AppealRecord> {
     const fullRecord: AppealRecord = {
       ...record,
@@ -81,6 +151,8 @@ export class AppealRepository {
     };
     this.records.set(fullRecord.appealId, fullRecord);
     this.flushToDisk();
+
+    await this.saveToPostgres(fullRecord);
     return fullRecord;
   }
 
@@ -111,7 +183,6 @@ export class AppealRepository {
       result = result.filter((r) => r.status === filter.status);
     }
 
-    // Sắp xếp mới nhất lên trước
     result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     if (filter?.limit && filter.limit > 0) {
@@ -143,6 +214,8 @@ export class AppealRepository {
 
     this.records.set(appealId, updated);
     this.flushToDisk();
+
+    await this.saveToPostgres(updated);
     return updated;
   }
 }

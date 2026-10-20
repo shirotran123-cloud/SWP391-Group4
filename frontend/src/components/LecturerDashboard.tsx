@@ -31,6 +31,7 @@ import {
   Scale,
   Download,
   RefreshCw,
+  Users,
 } from 'lucide-react';
 import { RblBenchmarkView } from './RblBenchmarkView';
 import { LecturerAppealsManager } from './LecturerAppealsManager';
@@ -683,6 +684,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   // State cho việc nạp Roster Excel vào lớp
   const [targetCourseId, setTargetCourseId] = useState<string>('CRS-SWP391');
+  const [courseStudents, setCourseStudents] = useState<Array<{ userId: string; studentCode: string; fullName: string; email: string }>>([]);
+  const [showCourseStudents, setShowCourseStudents] = useState<boolean>(false);
+  const [loadingCourseStudents, setLoadingCourseStudents] = useState<boolean>(false);
+
 
   // Tải danh sách khóa học thực tế từ API Gateway (PostgreSQL 15)
   const fetchLiveCourses = async () => {
@@ -823,6 +828,51 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       alert('Không thể xuất danh sách sinh viên: ' + err.message);
     }
   };
+
+  // 3. Tải danh sách sinh viên hiện tại trong lớp để quản lý
+  const handleLoadCourseStudents = async (cId?: string) => {
+    const courseIdToFetch = cId || targetCourseId || 'CRS-SWP391';
+    setLoadingCourseStudents(true);
+    try {
+      const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToFetch}/students`);
+      if (res.ok) {
+        const json = await res.json();
+        setCourseStudents(json.data || json || []);
+        setShowCourseStudents(true);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingCourseStudents(false);
+    }
+  };
+
+  // 4. Xóa sinh viên khỏi lớp học phần (Gỡ khỏi class_members trong PostgreSQL 15)
+  const handleRemoveStudentFromCourse = async (studentId: string, studentName: string) => {
+    if (!window.confirm(`Bạn có chắc muốn xóa sinh viên ${studentName} (${studentId}) khỏi lớp học phần này?`)) return;
+    try {
+      const courseIdToFetch = targetCourseId || 'CRS-SWP391';
+      const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToFetch}/students/${studentId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setCourseStudents((prev) => prev.filter((s) => s.studentCode !== studentId && s.userId !== studentId));
+        setCourses((prev) =>
+          prev.map((c) =>
+            c.courseId === courseIdToFetch ? { ...c, studentCount: Math.max(0, c.studentCount - 1) } : c
+          )
+        );
+        alert(`Đã xóa sinh viên ${studentName} khỏi lớp ${courseIdToFetch} thành công!`);
+        window.dispatchEvent(new Event('aita_courses_updated'));
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(`Không thể xóa sinh viên: ${err.message || 'Lỗi máy chủ'}`);
+      }
+    } catch (err: any) {
+      alert(`Lỗi khi xóa sinh viên: ${err.message}`);
+    }
+  };
+
 
   const handleCsvFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -2378,27 +2428,139 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               </select>
             </div>
 
-            <button
-              type="button"
-              onClick={handleExportCourseRoster}
-              style={{
-                padding: '9px 16px',
-                borderRadius: '8px',
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                color: '#34d399',
-                fontSize: '13px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-              title="Tải về danh sách tất cả sinh viên hiện đang có trong lớp học phần này"
-            >
-              <Download size={15} /> 📥 Xuất Danh Sách Sinh Viên Đã Có (.csv)
-            </button>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (showCourseStudents) {
+                    setShowCourseStudents(false);
+                  } else {
+                    handleLoadCourseStudents();
+                  }
+                }}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: showCourseStudents ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.15)',
+                  border: '1px solid rgba(99, 102, 241, 0.4)',
+                  color: '#818cf8',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <Users size={15} /> {showCourseStudents ? 'Ẩn Danh Sách Lớp' : '👥 Xem & Xóa Sinh Viên Trong Lớp'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleExportCourseRoster}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  color: '#34d399',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+                title="Tải về danh sách tất cả sinh viên hiện đang có trong lớp học phần này"
+              >
+                <Download size={15} /> 📥 Xuất Danh Sách (.csv)
+              </button>
+            </div>
           </div>
+
+          {/* BẢNG QUẢN LÝ & XÓA SINH VIÊN HIỆN CÓ TRONG LỚP */}
+          {showCourseStudents && (
+            <div
+              style={{
+                padding: '20px',
+                borderRadius: '12px',
+                backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                border: '1px solid rgba(99, 102, 241, 0.3)',
+                marginBottom: '24px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                  👥 Danh Sách Sinh Viên Đang Học Lớp [{targetCourseId}] ({courseStudents.length} Sinh Viên)
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => handleLoadCourseStudents()}
+                  disabled={loadingCourseStudents}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    color: '#ffffff',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {loadingCourseStudents ? 'Đang tải...' : '🔄 Làm mới'}
+                </button>
+              </div>
+
+              {courseStudents.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
+                  Lớp học phần này hiện chưa có sinh viên nào. Vui lòng tải file Excel phía dưới để import vào lớp.
+                </div>
+              ) : (
+                <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '8px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>STT</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Mã Số SV</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Họ Và Tên</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Email</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>Hành Động</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {courseStudents.map((st, i) => (
+                        <tr key={st.studentCode || st.userId || i} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                          <td style={{ padding: '8px 12px', color: 'var(--text-dim)' }}>{i + 1}</td>
+                          <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--accent-primary)' }}>{st.studentCode || st.userId}</td>
+                          <td style={{ padding: '8px 12px', color: '#ffffff' }}>{st.fullName}</td>
+                          <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{st.email}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveStudentFromCourse(st.studentCode || st.userId, st.fullName)}
+                              style={{
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                backgroundColor: 'rgba(244, 63, 94, 0.15)',
+                                border: '1px solid rgba(244, 63, 94, 0.3)',
+                                color: '#f43f5e',
+                                fontSize: '11.5px',
+                                fontWeight: 700,
+                                cursor: 'pointer',
+                              }}
+                            >
+                              Xóa khỏi lớp
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
 
           {/* KHU VỰC CHỌN FILE CSV THỰC TẾ */}
           <div

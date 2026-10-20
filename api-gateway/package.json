@@ -9,7 +9,11 @@
     "start:dev": "ts-node src/main.ts",
     "start:prod": "node dist/main.js",
     "test": "ts-node --transpile-only test/verify-gateway.ts",
-    "test:e2e": "ts-node --transpile-only test/verify-gateway.ts"
+    "test:e2e": "ts-node --transpile-only test/verify-gateway.ts",
+    "db:migrate": "ts-node src/database/migrate.ts latest",
+    "db:rollback": "ts-node src/database/migrate.ts rollback",
+    "db:status": "ts-node src/database/migrate.ts status",
+    "db:seed": "ts-node src/database/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.3.8",
@@ -26,6 +30,7 @@
     "class-validator": "^0.14.1",
     "dotenv": "^16.4.5",
     "ioredis": "^5.4.1",
+    "knex": "^3.3.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^10.1.0",
     "pg": "^8.23.1",

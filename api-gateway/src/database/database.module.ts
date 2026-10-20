@@ -7,6 +7,10 @@ import { DLQRepository } from './dlq.repository';
 import { AppealRepository } from './appeal.repository';
 import { TeamworkRepository } from './teamwork.repository';
 import { TestCaseRepository } from './test-case.repository';
+import { SubmissionDetailRepository } from './submission-detail.repository';
+import { AiReviewRepository } from './ai-review.repository';
+import { PlagiarismRepository } from './plagiarism.repository';
+import { AstFingerprintRepository } from './ast-fingerprint.repository';
 import { PostgresService } from './postgres.service';
 
 @Global()
@@ -21,6 +25,10 @@ import { PostgresService } from './postgres.service';
     AppealRepository,
     TeamworkRepository,
     TestCaseRepository,
+    SubmissionDetailRepository,
+    AiReviewRepository,
+    PlagiarismRepository,
+    AstFingerprintRepository,
   ],
   exports: [
     PostgresService,
@@ -32,6 +40,10 @@ import { PostgresService } from './postgres.service';
     AppealRepository,
     TeamworkRepository,
     TestCaseRepository,
+    SubmissionDetailRepository,
+    AiReviewRepository,
+    PlagiarismRepository,
+    AstFingerprintRepository,
   ],
 })
 export class DatabaseModule {}

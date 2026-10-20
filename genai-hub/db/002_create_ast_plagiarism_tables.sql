@@ -11,8 +11,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Stores Winnowing digital fingerprints extracted from AST-normalized code
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ast_fingerprints (
-    fingerprint_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    submission_id UUID NOT NULL,
+    fingerprint_id VARCHAR(64) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    submission_id VARCHAR(64) NOT NULL,
     file_path VARCHAR(255) NOT NULL DEFAULT 'main',
     hash_value VARCHAR(64) NOT NULL,
     line_start INT NOT NULL,
@@ -32,10 +32,10 @@ CREATE INDEX IF NOT EXISTS idx_ast_fingerprints_sub_hash ON ast_fingerprints(sub
 -- and matched token coordinates for Monaco Diff Viewer rendering.
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS plagiarism_reports (
-    report_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    assignment_id UUID,
-    submission_a_id UUID NOT NULL,
-    submission_b_id UUID NOT NULL,
+    report_id VARCHAR(64) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    assignment_id VARCHAR(64),
+    submission_a_id VARCHAR(64) NOT NULL,
+    submission_b_id VARCHAR(64) NOT NULL,
     similarity_rate NUMERIC(5, 2) NOT NULL CHECK (similarity_rate >= 0.0 AND similarity_rate <= 100.0),
     common_fingerprints_count INT NOT NULL DEFAULT 0,
     total_unique_fingerprints INT NOT NULL DEFAULT 0,
@@ -56,8 +56,8 @@ CREATE INDEX IF NOT EXISTS idx_plagiarism_reports_sub_b ON plagiarism_reports(su
 -- Relational mapping table for individual matched segments between submissions
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS plagiarism_matches (
-    match_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    report_id UUID NOT NULL REFERENCES plagiarism_reports(report_id) ON DELETE CASCADE,
+    match_id VARCHAR(64) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    report_id VARCHAR(64) NOT NULL REFERENCES plagiarism_reports(report_id) ON DELETE CASCADE,
     hash_value VARCHAR(64) NOT NULL,
     line_start_a INT NOT NULL,
     line_end_a INT NOT NULL,

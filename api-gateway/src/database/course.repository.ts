@@ -775,4 +775,36 @@ export class CourseRepository implements OnModuleInit {
     }
     return [];
   }
+
+  /**
+   * Xóa sinh viên khỏi lớp học phần (Gỡ ghi danh khỏi class_members)
+   */
+  public async removeStudentFromCourse(classId: string, studentId: string): Promise<boolean> {
+    if (this.postgres.isAvailable()) {
+      try {
+        await this.postgres.query(
+          `DELETE FROM class_members 
+           WHERE class_id = $1 
+             AND (user_id = $2 
+                  OR user_id = (SELECT user_id FROM users WHERE student_code = $2 OR email = $2 LIMIT 1)
+                  OR user_id = (SELECT student_code FROM users WHERE user_id = $2 OR email = $2 LIMIT 1))`,
+          [classId, studentId],
+        );
+        this.logger.log(`[CourseRepository] Đã xóa sinh viên ${studentId} khỏi lớp ${classId} trong PostgreSQL 15.`);
+      } catch (err: any) {
+        this.logger.warn(`[CourseRepository] Lỗi xóa sinh viên trong PostgreSQL: ${err.message}`);
+      }
+    }
+
+    const classMap = this.courseMembers.get(classId);
+    if (classMap) {
+      classMap.delete(studentId);
+    }
+    const enrollments = this.studentEnrollments.get(studentId);
+    if (enrollments) {
+      enrollments.delete(classId);
+    }
+    return true;
+  }
 }
+

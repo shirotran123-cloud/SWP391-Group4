@@ -1,17 +1,18 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { UserRecord, UserRole } from './user.entity';
+import { PostgresService } from './postgres.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
 @Injectable()
-export class UserRepository {
+export class UserRepository implements OnModuleInit {
   private readonly logger = new Logger(UserRepository.name);
   private readonly records: Map<string, UserRecord> = new Map();
   private readonly dataDir: string;
   private readonly dataFile: string;
   private lastMtime: number = 0;
 
-  constructor() {
+  constructor(private readonly postgres: PostgresService) {
     const candidateDirs = [
       path.resolve(process.cwd(), 'data'),
       path.resolve(process.cwd(), 'api-gateway', 'data'),
@@ -20,6 +21,13 @@ export class UserRepository {
     this.dataDir = candidateDirs.find((d) => fs.existsSync(d)) || candidateDirs[0];
     this.dataFile = path.join(this.dataDir, 'users_store.json');
     this.initStore();
+  }
+
+  public async onModuleInit(): Promise<void> {
+    await this.syncWithPostgres();
+    setTimeout(async () => {
+      await this.syncWithPostgres();
+    }, 1200);
   }
 
   private initStore(): void {
@@ -40,9 +48,6 @@ export class UserRepository {
     }
   }
 
-  /**
-   * Tự động đồng bộ lại bộ nhớ nếu file users_store.json được chỉnh sửa từ bên ngoài
-   */
   public reloadIfModified(): void {
     try {
       if (fs.existsSync(this.dataFile)) {
@@ -63,6 +68,90 @@ export class UserRepository {
       }
     } catch (err: any) {
       this.logger.warn(`[UserRepository] Không thể đọc users_store.json: ${err.message}`);
+    }
+  }
+
+  private async syncWithPostgres(): Promise<void> {
+    if (!this.postgres.isAvailable()) return;
+    try {
+      // 1. Tải danh sách người dùng từ PostgreSQL 15
+      const dbUsers = await this.postgres.safeQuery<any>(
+        `SELECT user_id, role_id, email, full_name, student_code, role, password_hash, avatar_url, is_active, created_at, updated_at
+         FROM users`,
+      );
+
+      const dbUserIds = new Set<string>();
+      if (dbUsers.length > 0) {
+        for (const row of dbUsers) {
+          dbUserIds.add(row.user_id);
+          this.records.set(row.user_id, {
+            userId: row.user_id,
+            studentCode: row.student_code || undefined,
+            email: row.email,
+            fullName: row.full_name,
+            role: (row.role || row.role_id) as UserRole,
+            passwordHash: row.password_hash,
+            avatarUrl: row.avatar_url || undefined,
+            isActive: row.is_active,
+            createdAt: new Date(row.created_at),
+            updatedAt: new Date(row.updated_at),
+          });
+        }
+        this.logger.log(`✅ [UserRepository] Đã nạp ${dbUsers.length} tài khoản từ PostgreSQL 15.`);
+      }
+
+      // 2. Đồng bộ 2 chiều (Bi-directional Sync): Đẩy các user có trong JSON store mà chưa có trong DB vào PostgreSQL
+      let newlySynced = 0;
+      for (const u of this.records.values()) {
+        if (!dbUserIds.has(u.userId)) {
+          await this.saveToPostgres(u);
+          dbUserIds.add(u.userId);
+          newlySynced++;
+        }
+      }
+      if (newlySynced > 0) {
+        this.logger.log(`✅ [UserRepository] Đã bảo toàn và đồng bộ ngược ${newlySynced} tài khoản từ JSON store vào PostgreSQL 15.`);
+      }
+
+      this.persist();
+    } catch (err: any) {
+      this.logger.warn(`[UserRepository] Lỗi đồng bộ PostgreSQL: ${err.message}`);
+    }
+  }
+
+  private async saveToPostgres(u: UserRecord): Promise<void> {
+    if (!this.postgres.isAvailable()) return;
+    try {
+      const roleId = u.role === 'INSTRUCTOR' ? 'LECTURER' : (u.role || 'STUDENT');
+      const hash = u.passwordHash || '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7';
+
+      await this.postgres.safeQuery(
+        `INSERT INTO users (user_id, role_id, email, full_name, student_code, role, password_hash, avatar_url, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         ON CONFLICT (user_id) DO UPDATE SET
+           role_id = EXCLUDED.role_id,
+           email = EXCLUDED.email,
+           full_name = EXCLUDED.full_name,
+           student_code = EXCLUDED.student_code,
+           role = EXCLUDED.role,
+           is_active = EXCLUDED.is_active,
+           updated_at = NOW()`,
+        [
+          u.userId,
+          roleId,
+          u.email,
+          u.fullName,
+          u.studentCode || (u.role === 'STUDENT' ? u.userId : null),
+          u.role,
+          hash,
+          u.avatarUrl || null,
+          u.isActive,
+          u.createdAt,
+          u.updatedAt,
+        ],
+      );
+    } catch (err: any) {
+      this.logger.warn(`[UserRepository] PostgreSQL save error for ${u.userId}: ${err.message}`);
     }
   }
 
@@ -97,6 +186,7 @@ export class UserRepository {
       },
       {
         userId: 'SE170000',
+        studentCode: 'SE170000',
         email: 'trungse170000@fpt.edu.vn',
         fullName: 'Đinh Thành Trung (Sinh viên)',
         role: 'STUDENT',
@@ -134,6 +224,8 @@ export class UserRepository {
     };
     this.records.set(newRecord.userId, newRecord);
     this.persist();
+
+    await this.saveToPostgres(newRecord);
     return newRecord;
   }
 
@@ -176,6 +268,7 @@ export class UserRepository {
       };
       this.records.set(record.userId, record);
       createdRecords.push(record);
+      await this.saveToPostgres(record);
     }
 
     this.persist();
@@ -219,6 +312,8 @@ export class UserRepository {
     };
     this.records.set(userId, updated);
     this.persist();
+
+    await this.saveToPostgres(updated);
     return updated;
   }
 
@@ -227,6 +322,9 @@ export class UserRepository {
     const existed = this.records.delete(userId);
     if (existed) {
       this.persist();
+      if (this.postgres.isAvailable()) {
+        await this.postgres.safeQuery(`DELETE FROM users WHERE user_id = $1`, [userId]);
+      }
     }
     return existed;
   }

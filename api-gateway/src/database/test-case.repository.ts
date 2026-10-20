@@ -1,19 +1,29 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { TestCaseRecord } from './test-case.entity';
+import { PostgresService } from './postgres.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
 @Injectable()
-export class TestCaseRepository {
+export class TestCaseRepository implements OnModuleInit {
   private readonly logger = new Logger(TestCaseRepository.name);
   private readonly records: Map<string, TestCaseRecord> = new Map();
   private readonly dataDir: string;
   private readonly dataFile: string;
 
-  constructor() {
-    this.dataDir = path.resolve(process.cwd(), 'data');
+  constructor(private readonly postgres: PostgresService) {
+    const candidateDirs = [
+      path.resolve(process.cwd(), 'data'),
+      path.resolve(process.cwd(), 'api-gateway', 'data'),
+      path.resolve(__dirname, '..', '..', 'data'),
+    ];
+    this.dataDir = candidateDirs.find((d) => fs.existsSync(d)) || candidateDirs[0];
     this.dataFile = path.join(this.dataDir, 'test_cases_store.json');
     this.initStore();
+  }
+
+  public async onModuleInit(): Promise<void> {
+    await this.syncWithPostgres();
   }
 
   private initStore(): void {
@@ -35,7 +45,7 @@ export class TestCaseRepository {
       } else {
         this.seedEmpty();
       }
-    } catch (err) {
+    } catch (err: any) {
       this.logger.warn(`[TestCaseRepository] Failed to load store: ${err.message}. Seeding empty.`);
       this.seedEmpty();
     }
@@ -50,8 +60,65 @@ export class TestCaseRepository {
     try {
       const recordsArray = Array.from(this.records.values());
       fs.writeFileSync(this.dataFile, JSON.stringify(recordsArray, null, 2), 'utf-8');
-    } catch (err) {
+    } catch (err: any) {
       this.logger.error(`[TestCaseRepository] Failed to persist store: ${err.message}`);
+    }
+  }
+
+  private async syncWithPostgres(): Promise<void> {
+    if (!this.postgres.isAvailable()) return;
+    try {
+      const rows = await this.postgres.safeQuery<any>(
+        `SELECT test_case_id, assignment_id, input_data, expected_output, is_hidden, weight, time_limit_ms, created_at 
+         FROM test_cases ORDER BY created_at ASC`,
+      );
+      if (rows && rows.length > 0) {
+        for (const r of rows) {
+          this.records.set(r.test_case_id, {
+            testCaseId: r.test_case_id,
+            assignmentId: r.assignment_id,
+            inputData: r.input_data,
+            expectedOutput: r.expected_output,
+            isHidden: r.is_hidden,
+            weight: parseFloat(r.weight) || 1.0,
+            timeLimitMs: r.time_limit_ms || 2000,
+            createdAt: new Date(r.created_at),
+            updatedAt: new Date(r.created_at),
+          });
+        }
+        this.logger.log(`✅ [TestCaseRepository] Đã nạp ${rows.length} test cases từ PostgreSQL 15.`);
+        this.persist();
+      }
+    } catch (err: any) {
+      this.logger.warn(`[TestCaseRepository] Lỗi đồng bộ PostgreSQL: ${err.message}`);
+    }
+  }
+
+  private async saveToPostgres(r: TestCaseRecord): Promise<void> {
+    if (!this.postgres.isAvailable()) return;
+    try {
+      await this.postgres.safeQuery(
+        `INSERT INTO test_cases (test_case_id, assignment_id, input_data, expected_output, is_hidden, weight, time_limit_ms, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+         ON CONFLICT (test_case_id) DO UPDATE SET
+           input_data = EXCLUDED.input_data,
+           expected_output = EXCLUDED.expected_output,
+           is_hidden = EXCLUDED.is_hidden,
+           weight = EXCLUDED.weight,
+           time_limit_ms = EXCLUDED.time_limit_ms`,
+        [
+          r.testCaseId,
+          r.assignmentId,
+          r.inputData,
+          r.expectedOutput,
+          r.isHidden,
+          r.weight,
+          r.timeLimitMs || 2000,
+          r.createdAt,
+        ],
+      );
+    } catch (err: any) {
+      this.logger.warn(`[TestCaseRepository] Postgres save error for ${r.testCaseId}: ${err.message}`);
     }
   }
 
@@ -60,6 +127,8 @@ export class TestCaseRepository {
     const newRecord: TestCaseRecord = { ...record, createdAt: now, updatedAt: now };
     this.records.set(newRecord.testCaseId, newRecord);
     this.persist();
+
+    await this.saveToPostgres(newRecord);
     return newRecord;
   }
 
@@ -89,12 +158,19 @@ export class TestCaseRepository {
     const updated: TestCaseRecord = { ...existing, ...partial, updatedAt: new Date() };
     this.records.set(testCaseId, updated);
     this.persist();
+
+    await this.saveToPostgres(updated);
     return updated;
   }
 
   public async delete(testCaseId: string): Promise<boolean> {
     const existed = this.records.delete(testCaseId);
-    if (existed) this.persist();
+    if (existed) {
+      this.persist();
+      if (this.postgres.isAvailable()) {
+        await this.postgres.safeQuery(`DELETE FROM test_cases WHERE test_case_id = $1`, [testCaseId]);
+      }
+    }
     return existed;
   }
 }

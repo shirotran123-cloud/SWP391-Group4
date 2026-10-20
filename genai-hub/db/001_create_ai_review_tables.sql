@@ -12,8 +12,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- and code smell locations per student submission.
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_review_results (
-    review_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    submission_id UUID NOT NULL,
+    review_id VARCHAR(64) PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    submission_id VARCHAR(64) NOT NULL,
     clean_code_score NUMERIC(3, 1) NOT NULL CHECK (clean_code_score >= 0.0 AND clean_code_score <= 10.0),
     solid_score NUMERIC(3, 1) NOT NULL CHECK (solid_score >= 0.0 AND solid_score <= 10.0),
     feedback_json JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -35,7 +35,7 @@ CREATE INDEX IF NOT EXISTS idx_ai_review_results_evaluated_at ON ai_review_resul
 -- schemas, and parameters without requiring redeployments.
 -- ----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS ai_prompt_templates (
-    template_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    template_id VARCHAR(64) PRIMARY KEY DEFAULT gen_random_uuid()::text,
     template_code VARCHAR(50) NOT NULL UNIQUE,
     version INT NOT NULL DEFAULT 1,
     description VARCHAR(255),

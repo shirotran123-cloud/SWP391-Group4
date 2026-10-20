@@ -99,4 +99,17 @@ export class CoursesController {
       ...result,
     };
   }
+
+  @Delete(':id/students/:studentId')
+  public async removeStudentFromCourse(
+    @Param('id') id: string,
+    @Param('studentId') studentId: string,
+  ) {
+    const result = await this.coursesService.removeStudentFromCourse(id, studentId);
+    return {
+      statusCode: HttpStatus.OK,
+      ...result,
+    };
+  }
 }
+
