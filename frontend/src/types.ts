@@ -61,17 +61,25 @@ export interface PlagiarismMatch {
   status?: string;
 }
 
+export type UserRole = 'STUDENT' | 'INSTRUCTOR' | 'LECTURER' | 'HOD' | 'ADMIN';
+
 export interface User {
   userId: string;
   email: string;
   fullName: string;
-  role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN';
+  role: UserRole;
   token?: string;
   avatarUrl?: string;
   department?: string;
 }
 
+export const isLecturerRole = (role?: string): boolean => {
+  const r = (role || '').toUpperCase();
+  return r === 'LECTURER' || r === 'INSTRUCTOR' || r === 'HOD';
+};
+
 export type UserProfile = User;
+
 
 export interface Appeal {
   appealId: string;

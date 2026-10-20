@@ -9,6 +9,7 @@ import { RblBenchmarkView } from './components/RblBenchmarkView';
 import { StudentAppealsView } from './components/StudentAppealsView';
 import { StudentHistoryView } from './components/StudentHistoryView';
 import type { Task, GradingStep, AIRating, PlagiarismMatch, User, ScoreBreakdown } from './types';
+import { isLecturerRole } from './types';
 import { Terminal, Shield, LogOut, FileCode, Sparkles, Upload, BookOpen, LayoutDashboard, Scale, ArrowLeftRight, Clock } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
@@ -81,7 +82,7 @@ export function App() {
       const stored = localStorage.getItem('aita_user');
       if (stored) {
         const u = JSON.parse(stored);
-        if (u.role === 'INSTRUCTOR') return 'lecturer';
+        if (isLecturerRole(u.role)) return 'lecturer';
         if (u.role === 'ADMIN') return 'admin';
       }
     } catch {
@@ -121,7 +122,7 @@ export function App() {
 
   useEffect(() => {
     const fetchStudentCourses = () => {
-      if (currentUser?.role === 'STUDENT') {
+      if (currentUser && !isLecturerRole(currentUser.role) && currentUser.role !== 'ADMIN') {
         const studentId = currentUser.userId || currentUser.email || 'SE170000';
         fetch(`${API_BASE_URL}/api/v1/courses/student/${studentId}`)
           .then((res) => res.json())
@@ -273,7 +274,7 @@ export function App() {
   const handleLoginSuccess = (user: User) => {
     localStorage.setItem('aita_user', JSON.stringify(user));
     setCurrentUser(user);
-    if (user.role === 'INSTRUCTOR') {
+    if (isLecturerRole(user.role)) {
       setActiveView('lecturer');
     } else if (user.role === 'ADMIN') {
       setActiveView('admin');
@@ -634,19 +635,19 @@ export function App() {
                 backgroundColor:
                   currentUser.role === 'ADMIN'
                     ? 'rgba(245, 158, 11, 0.2)'
-                    : currentUser.role === 'INSTRUCTOR'
+                    : isLecturerRole(currentUser.role)
                     ? 'rgba(99, 102, 241, 0.2)'
                     : 'rgba(16, 185, 129, 0.2)',
                 color:
                   currentUser.role === 'ADMIN'
                     ? '#f59e0b'
-                    : currentUser.role === 'INSTRUCTOR'
+                    : isLecturerRole(currentUser.role)
                     ? '#a5b4fc'
                     : '#6ee7b7',
                 border: `1px solid ${
                   currentUser.role === 'ADMIN'
                     ? 'rgba(245, 158, 11, 0.4)'
-                    : currentUser.role === 'INSTRUCTOR'
+                    : isLecturerRole(currentUser.role)
                     ? 'rgba(99, 102, 241, 0.4)'
                     : 'rgba(16, 185, 129, 0.4)'
                 }`,
@@ -654,7 +655,7 @@ export function App() {
             >
               {currentUser.role === 'ADMIN'
                 ? '⚙️ ADMIN'
-                : currentUser.role === 'INSTRUCTOR'
+                : isLecturerRole(currentUser.role)
                 ? '👨‍🏫 GIẢNG VIÊN'
                 : '👨‍🎓 SINH VIÊN'}
             </span>
@@ -716,8 +717,8 @@ export function App() {
           <AdminDashboard token={localStorage.getItem('aita_token') || ''} />
         )}
 
-        {/* LECTURER VIEW: Dành riêng cho Giảng viên (INSTRUCTOR) */}
-        {(currentUser.role === 'INSTRUCTOR' || (activeView === 'lecturer' && currentUser.role === 'ADMIN')) && (
+        {/* LECTURER VIEW: Dành riêng cho Giảng viên (INSTRUCTOR / LECTURER) */}
+        {(isLecturerRole(currentUser.role) || (activeView === 'lecturer' && currentUser.role === 'ADMIN')) && (
           <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
             <LecturerDashboard
               onOpenDiffViewer={(match) => {
@@ -731,7 +732,7 @@ export function App() {
         )}
 
         {/* STUDENT VIEW: Dành riêng cho Sinh viên (STUDENT) */}
-        {currentUser.role === 'STUDENT' && (
+        {!isLecturerRole(currentUser.role) && currentUser.role !== 'ADMIN' && (
           <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
             {/* KHỐI HIỂN THỊ CÁC MÔN HỌC ĐANG THEO HỌC (ENROLLED COURSES) */}
             <div

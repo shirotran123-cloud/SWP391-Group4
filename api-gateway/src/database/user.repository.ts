@@ -84,18 +84,24 @@ export class UserRepository implements OnModuleInit {
       if (dbUsers.length > 0) {
         for (const row of dbUsers) {
           dbUserIds.add(row.user_id);
+          let resolvedRole: UserRole = (row.role || row.role_id || 'STUDENT') as UserRole;
+          if ((resolvedRole as string) === 'LECTURER' || (resolvedRole as string) === 'HOD') {
+            resolvedRole = 'INSTRUCTOR';
+          }
+
           this.records.set(row.user_id, {
             userId: row.user_id,
             studentCode: row.student_code || undefined,
             email: row.email,
             fullName: row.full_name,
-            role: (row.role || row.role_id) as UserRole,
+            role: resolvedRole,
             passwordHash: row.password_hash,
             avatarUrl: row.avatar_url || undefined,
             isActive: row.is_active,
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at),
           });
+
         }
         this.logger.log(`✅ [UserRepository] Đã nạp ${dbUsers.length} tài khoản từ PostgreSQL 15.`);
       }
