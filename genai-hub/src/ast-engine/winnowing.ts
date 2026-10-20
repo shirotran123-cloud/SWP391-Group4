@@ -26,8 +26,8 @@ export interface WinnowingOptions {
 }
 
 export class WinnowingEngine {
-  public static readonly DEFAULT_K = 5;
-  public static readonly DEFAULT_W = 3;
+  public static readonly DEFAULT_K = 15; // SRS spec: k-gram size = 15 tokens
+  public static readonly DEFAULT_W = 10; // SRS spec: sliding window = 10 k-grams
 
   /**
    * Generates Winnowing digital fingerprints from normalized AST tokens.

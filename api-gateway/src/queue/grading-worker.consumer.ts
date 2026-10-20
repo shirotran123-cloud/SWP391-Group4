@@ -4,6 +4,8 @@ import { GradingGateway } from '../websocket/grading.gateway';
 import { SubmissionRepository } from '../database/submission.repository';
 import { SubmissionDetailRepository } from '../database/submission-detail.repository';
 import { AiReviewRepository } from '../database/ai-review.repository';
+import { PlagiarismRepository } from '../database/plagiarism.repository';
+import { AstFingerprintRepository } from '../database/ast-fingerprint.repository';
 import { SUBMISSION_STATUS, QUEUE_CONFIG } from '../common/constants/queue.constants';
 import { SandboxService } from '../sandbox/sandbox.service';
 import { PlagiarismService } from '../plagiarism/plagiarism.service';
@@ -81,6 +83,57 @@ function extractSourceCodeFromZip(filePath: string, language: string): string | 
   }
 }
 
+// ─── AST Plagiarism Types (mirror of genai-hub) ───────────────────────────────
+interface CodeSubmissionPayload {
+  submissionId: string;
+  studentName?: string;
+  studentId?: string;
+  sourceCode: string;
+  language?: string;
+}
+
+interface AstMatrixReport {
+  assignmentId?: string;
+  totalSubmissions: number;
+  totalPairsCompared: number;
+  flaggedPairsCount: number;
+  submissionsList: { id: string; name?: string }[];
+  similarityMatrix: number[][];
+  flaggedReports: AstPairResult[];
+  totalExecutionTimeMs: number;
+}
+
+interface AstPairResult {
+  submissionAId: string;
+  submissionBId: string;
+  similarityRate: number;
+  commonFingerprintsCount: number;
+  totalUniqueFingerprints: number;
+  isFlagged: boolean;
+  status: 'CLEAN' | 'SUSPECTED' | 'FLAGGED_HIGH' | 'FLAGGED_PLAGIARISM';
+  matchedTokensJson: {
+    submissionAId: string;
+    submissionBId: string;
+    similarityRate: number;
+    jaccardSimilarity: number;
+    winnowingContainment: number;
+    astStructuralSimilarity: number;
+    totalUniqueFingerprintsA: number;
+    totalUniqueFingerprintsB: number;
+    commonFingerprintsCount: number;
+    matchedSegments: Array<{
+      hashValue: string;
+      lineRangeA: { start: number; end: number };
+      lineRangeB: { start: number; end: number };
+      tokenRangeA: { start: number; end: number };
+      tokenRangeB: { start: number; end: number };
+      tokenCount: number;
+    }>;
+  };
+  executionTimeMs: number;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 @Injectable()
 export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GradingWorkerConsumer.name);
@@ -95,6 +148,8 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     private readonly sandboxService: SandboxService,
     private readonly submissionDetailRepo: SubmissionDetailRepository,
     private readonly aiReviewRepo: AiReviewRepository,
+    private readonly plagiarismRepo: PlagiarismRepository,
+    private readonly astFingerprintRepo: AstFingerprintRepository,
     private readonly plagiarismService: PlagiarismService,
   ) {}
 
@@ -449,10 +504,12 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       detail: `AI Review hoan tat: Clean Code ${liveAiRating.cleanCodeScore.toFixed(1)}/10, SOLID avg ${((liveAiRating.solidScore.s + liveAiRating.solidScore.o + liveAiRating.solidScore.l + liveAiRating.solidScore.i + liveAiRating.solidScore.d) / 5).toFixed(1)}/10`,
     });
 
-    // BƯỚC 6: AST Plagiarism – Winnowing Containment Index (UC-10, UC-11)
+    // BƯỚC 6: AST Plagiarism – Winnowing Fingerprinting
     // ═══════════════════════════════════════════════════════════════════════════
     this.gradingGateway.emitGradingProgress({
-      submissionId, stepId: '6', stepName: 'Phân tích AST & Winnowing',
+      submissionId,
+      stepId: '6',
+      stepName: 'Phân tích AST & Winnowing',
       status: 'in_progress',
       detail: 'Chuẩn hóa AST token, tính Winnowing fingerprints và đối chiếu kho bài nộp...',
     });
@@ -474,7 +531,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       if (match) {
         plagiarismMatch = match;
         similarityRate = match.similarityRate;
-        // Containment ≥ 70% → ĐẠO VĂN, ≥ 40% → NGHI VẤN
+        // Containment >= 70% -> ĐẠO VĂN, >= 40% -> NGHI VẤN
         plagiarismStatus = similarityRate >= 70 ? 'ĐẠO VĂN' : similarityRate >= 40 ? 'NGHI VẤN' : 'AN TOÀN';
 
         this.gradingGateway.emitGradingProgress({
@@ -490,17 +547,17 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
           stepId: '6',
           stepName: 'Phân tích AST & Winnowing',
           status: 'passed',
-          detail: 'Hoàn tất phân tích cấu trúc cây cú pháp trừu tượng AST.',
+          detail: 'Hoàn tất phân tích AST. Kho bài nộp cục bộ hiện tại chưa có bài trùng khớp.',
         });
       }
-    } catch (plagErr: any) {
-      this.logger.warn(`[Pipeline:Plagiarism] Lỗi khi quét đạo văn: ${plagErr.message}`);
+    } catch (astErr: any) {
+      this.logger.warn(`[Pipeline:AST] Lỗi đối chiếu AST: ${astErr.message}`);
       this.gradingGateway.emitGradingProgress({
         submissionId,
         stepId: '6',
         stepName: 'Phân tích AST & Winnowing',
         status: 'passed',
-        detail: 'Hoàn tất phân tích cấu trúc cây cú pháp trừu tượng AST.',
+        detail: 'Bỏ qua bước AST do lỗi môi trường kiểm thử.',
       });
     }
 
@@ -518,9 +575,9 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const tc2Score = analysis.tc2Status === 'PASSED' ? SCORE_WEIGHTS.testcase2 : 0;
     const cleanCodePart = Math.round((liveAiRating.cleanCodeScore / 10) * SCORE_WEIGHTS.cleanCode * 10) / 10;
     const solidPart = Math.round((liveSolidAvg / 10) * SCORE_WEIGHTS.solid * 10) / 10;
-    let finalScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
+    const finalScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
 
-    let scoreBreakdown: ScoreBreakdown = {
+    const scoreBreakdown: ScoreBreakdown = {
       testcase1: tc1Score,
       testcase2: tc2Score,
       cleanCode: cleanCodePart,
@@ -528,6 +585,9 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       total: finalScore,
     };
 
+
+    // Quy tắc đạt: phải pass TOÀN BỘ testcase mới PASSED (rớt 1 = FAILED toàn bài).
+    // Điểm số từng phần (scoreBreakdown) giữ nguyên để giảng viên thấy chi tiết.
     const totalTestcases = 2;
     let overallResult: 'PASSED' | 'FAILED' = passedCount === totalTestcases ? 'PASSED' : 'FAILED';
 
@@ -583,7 +643,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const completedPayload = {
       submissionId,
       status: 'COMPLETED' as const,
-      overallResult,
+      overallResult: (passedCount === totalTestcases ? 'PASSED' : 'FAILED') as 'PASSED' | 'FAILED',
       score: finalScore,
       scoreBreakdown,
       maxScore: 10.0,
@@ -595,7 +655,9 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
         cleanCodeScore: liveAiRating.cleanCodeScore,
         solidScore: liveAiRating.solidScore,
         codeSmells: liveAiRating.codeSmells,
-        explanation: liveAiRating.explanation,
+        explanation: similarityRate >= 70 && plagiarismMatch
+          ? `[ĐẠO VĂN] Phát hiện ${similarityRate}% tương đồng AST với bài ${plagiarismMatch.matchedStudentId}. ${liveAiRating.explanation}`
+          : liveAiRating.explanation,
       },
       plagiarismMatch,
       plagiarismStatus,
