@@ -365,6 +365,7 @@ export function AdminDashboard({ token }: { token: string }) {
               ))}
             </div>
           </div>
+          <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -400,6 +401,7 @@ export function AdminDashboard({ token }: { token: string }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -407,6 +409,7 @@ export function AdminDashboard({ token }: { token: string }) {
       {activeTab === 'submissions' && (
         <div className="glass-panel" style={{ padding: 24 }}>
           <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 20 }}>Tất cả bài nộp</h3>
+          <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -435,6 +438,7 @@ export function AdminDashboard({ token }: { token: string }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
