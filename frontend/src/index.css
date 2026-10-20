@@ -1,26 +1,92 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
+/* ============================================================
+   PALETTE — chỉ 3 màu gốc: XANH DƯƠNG · ĐEN · TRẮNG
+   Nền sáng: bề mặt trắng, chữ đen, xanh dương làm màu nhấn.
+   Mọi sắc độ còn lại đều là pha của 3 màu này.
+   ============================================================ */
 :root {
-  --bg-primary: #0a0d14;
-  --bg-secondary: #121824;
-  --bg-card: #182030;
-  --bg-glass: rgba(24, 32, 48, 0.7);
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-highlight: rgba(99, 102, 241, 0.4);
-  
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
-  --text-dim: #6b7280;
-  
-  --accent-primary: #6366f1;
-  --accent-secondary: #8b5cf6;
-  --accent-cyan: #06b6d4;
-  --accent-emerald: #10b981;
-  --accent-rose: #f43f5e;
-  --accent-amber: #f59e0b;
+  /* TRẮNG / XÁM — bề mặt và nền (giữ tên cũ để không vỡ component) */
+  --ink-900: #ffffff; /* nền chính */
+  --ink-850: #fbfcfe;
+  --ink-800: #f7f9fc; /* bề mặt thẻ */
+  --ink-700: #eef2f8; /* bề mặt lõm */
+  --ink-600: #e4eaf3;
+  --ink-500: #d8e0ec;
 
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* XANH DƯƠNG — màu nhấn duy nhất */
+  --blue-700: #1d4ed8;
+  --blue-600: #2563eb;
+  --blue-500: #3b82f6;
+  --blue-400: #2563eb; /* chữ nhấn trên nền sáng */
+  --blue-300: #1e40af; /* chữ nhấn đậm */
+  --blue-200: #1d4ed8; /* chữ nhấn trên chip nhạt */
+
+  /* ĐEN — chữ, đường viền */
+  --white: #0b1220; /* tên biến giữ nguyên, giá trị nay là màu chữ đậm */
+
+  /* Ánh xạ ngữ nghĩa (giữ nguyên tên biến cũ để không vỡ component) */
+  --bg-primary: var(--ink-900);
+  --bg-secondary: var(--ink-800);
+  --bg-card: #ffffff;
+  --bg-glass: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-sunken: var(--ink-700);
+
+  --border-color: rgba(11, 18, 32, 0.1);
+  --border-soft: rgba(11, 18, 32, 0.06);
+  --border-strong: rgba(11, 18, 32, 0.18);
+  --border-highlight: rgba(37, 99, 235, 0.45);
+  --border-blue: rgba(37, 99, 235, 0.28);
+
+  --text-main: #0b1220;
+  --text-soft: #33415a;
+  --text-muted: #4d5c76;
+  --text-dim: #5c6b80;
+  --text-faint: #6f7d93;
+
+  --accent-primary: var(--blue-600);
+  --accent-secondary: var(--blue-500);
+  --accent-cyan: var(--blue-600);
+  --accent-emerald: var(--blue-700);
+  --accent-rose: var(--text-main);
+  --accent-amber: var(--blue-700);
+
+  --accent-bg: rgba(37, 99, 235, 0.08);
+  --accent-border: rgba(37, 99, 235, 0.4);
+
+  /* Trạng thái — dùng màu ngữ nghĩa thật (đỏ = lỗi, xanh lá = đạt, hổ phách = cảnh báo).
+     Nền/khung trang vẫn giữ bộ 3 màu; chỉ chỉ báo trạng thái mới mang màu thật,
+     vì người dùng đọc trạng thái bằng màu nhanh hơn bằng chữ. */
+  --state-ok: #166534;
+  --state-ok-bg: rgba(22, 101, 52, 0.09);
+  --state-ok-border: rgba(22, 101, 52, 0.22);
+  --state-warn: #7d4f00;
+  --state-warn-bg: rgba(125, 79, 0, 0.10);
+  --state-warn-border: rgba(125, 79, 0, 0.24);
+  --state-bad: #b42318;
+  --state-bad-bg: rgba(180, 35, 24, 0.07);
+  --state-bad-border: rgba(180, 35, 24, 0.20);
+  --state-info: var(--blue-600);
+  --state-info-bg: rgba(37, 99, 235, 0.08);
+
+  /* Chữ đặt trên nền xanh đặc — luôn là trắng */
+  --on-blue: #ffffff;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(11, 18, 32, 0.06);
+  --shadow-md: 0 1px 3px rgba(11, 18, 32, 0.06), 0 8px 20px -12px rgba(11, 18, 32, 0.14);
+  --shadow-lg: 0 24px 60px -28px rgba(11, 18, 32, 0.28);
+  --ring: 0 0 0 3px rgba(37, 99, 235, 0.18);
+
+  color-scheme: light;
 }
 
 * {
@@ -29,55 +95,389 @@
   padding: 0;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background-color: var(--bg-primary);
   color: var(--text-main);
   font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.55;
   min-height: 100vh;
-  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'ss01';
+  letter-spacing: -0.006em;
 }
 
-/* Glassmorphism utility */
-.glass-panel {
-  background: var(--bg-glass);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+h1, h2, h3, h4, h5 {
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--white);
+}
+
+button {
+  font-family: inherit;
+  letter-spacing: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--blue-400);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.18);
+  color: var(--text-main);
+}
+
+/* ============================================================
+   BỀ MẶT — phẳng, viền mảnh, không bóng đổ loè loẹt
+   ============================================================ */
+.glass-panel,
+.panel {
+  position: relative;
+  background: #ffffff;
   border: 1px solid var(--border-color);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
-/* Gradient text */
+.panel-flush {
+  border-radius: var(--radius-md);
+  box-shadow: none;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.eyebrow {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.015em;
+}
+
+.hairline {
+  height: 1px;
+  background: var(--border-soft);
+  border: 0;
+}
+
+/* Chữ nhấn màu xanh — thay cho gradient nhiều màu */
 .gradient-text {
-  background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #38bdf8 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--white);
+  background: none;
+  -webkit-text-fill-color: currentColor;
 }
 
-/* Scrollbar customization */
+.text-accent {
+  color: var(--blue-600);
+}
+
+.text-mono {
+  font-family: var(--font-mono);
+  font-variant-ligatures: none;
+}
+
+/* ============================================================
+   NÚT
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--blue-600);
+  color: var(--on-blue);
+  border-color: var(--blue-600);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--blue-700);
+  border-color: var(--blue-700);
+}
+
+.btn-secondary {
+  background: #ffffff;
+  color: var(--text-main);
+  border-color: var(--border-strong);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--ink-700);
+  border-color: var(--border-strong);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: transparent;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(11, 18, 32, 0.05);
+  color: var(--text-main);
+}
+
+.btn-invert {
+  background: var(--text-main);
+  color: #ffffff;
+  border-color: var(--text-main);
+}
+
+.btn-invert:hover:not(:disabled) {
+  background: #1d2b45;
+}
+
+.btn-danger {
+  background: #ffffff;
+  color: var(--text-main);
+  border-color: rgba(11, 18, 32, 0.3);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(11, 18, 32, 0.06);
+  color: var(--text-main);
+  border-color: rgba(11, 18, 32, 0.45);
+}
+
+.btn-sm {
+  padding: 6px 11px;
+  font-size: 12px;
+  border-radius: var(--radius-xs);
+}
+
+/* ============================================================
+   NHÃN / CHIP TRẠNG THÁI
+   ============================================================ */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.5;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.chip-blue {
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--blue-700);
+  border-color: rgba(37, 99, 235, 0.24);
+}
+
+.chip-neutral {
+  background: rgba(11, 18, 32, 0.04);
+  color: var(--text-soft);
+  border-color: var(--border-color);
+}
+
+.chip-invert {
+  background: var(--text-main);
+  color: #ffffff;
+  border-color: var(--text-main);
+}
+
+.chip-outline {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+}
+
+.chip-mono {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+}
+
+/* ============================================================
+   BIỂU MẪU NHẬP LIỆU
+   ============================================================ */
+.field {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  border: 1px solid var(--border-strong);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 13px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.field::placeholder {
+  color: var(--text-faint);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--blue-500);
+  box-shadow: var(--ring);
+}
+
+select.field {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
+    linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) center, calc(100% - 11px) center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 32px;
+}
+
+/* ============================================================
+   BẢNG
+   ============================================================ */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+/* Bảng rộng hơn màn hình điện thoại thì tự cuộn ngang thay vì phá layout */
+@media (max-width: 720px) {
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.table thead th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--ink-800);
+  white-space: nowrap;
+}
+
+.table tbody td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-soft);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.table tbody tr:hover td {
+  background: rgba(37, 99, 235, 0.04);
+}
+
+/* ============================================================
+   LỚP PHỦ MODAL
+   ============================================================ */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(11, 18, 32, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.modal-card {
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ============================================================
+   THANH CUỘN
+   ============================================================ */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-::-webkit-scrollbar-track {
-  background: var(--bg-primary);
-}
-::-webkit-scrollbar-thumb {
-  background: #262f45;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #374363;
+  width: 10px;
+  height: 10px;
 }
 
-/* Pulse animation */
+::-webkit-scrollbar-track {
+  background: var(--ink-800);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c2cddf;
+  border: 2px solid var(--ink-800);
+  border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a7b4c9;
+}
+
+/* ============================================================
+   CHUYỂN ĐỘNG — tiết chế, chỉ dùng khi có ý nghĩa
+   ============================================================ */
 @keyframes pulse-subtle {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.02); }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 .pulse-animation {
-  animation: pulse-subtle 2s infinite ease-in-out;
+  animation: pulse-subtle 2.4s ease-in-out infinite;
 }
 
 @keyframes spin {
@@ -86,5 +486,112 @@ body {
 }
 
 .animate-spin {
-  animation: spin 1s linear infinite;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up {
+  animation: fade-up 0.22s ease-out both;
+}
+
+.dot-live {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue-500);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+/* ============================================================
+   MONACO — ép màu lồng ngoặc về đúng bảng màu 3 màu
+   ============================================================ */
+.monaco-editor .bracket-highlighting-0,
+.monaco-editor .bracket-highlighting-1,
+.monaco-editor .bracket-highlighting-2,
+.monaco-editor .bracket-highlighting-3,
+.monaco-editor .bracket-highlighting-4,
+.monaco-editor .bracket-highlighting-5 {
+  color: #33415a !important;
+}
+
+/* ============================================================
+   MÀN HÌNH ĐĂNG NHẬP — 2 cột trên desktop, gọn lại trên mobile
+   ============================================================ */
+@media (max-width: 1080px) {
+  .login-shell {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 0 !important;
+    padding: 24px !important;
+    justify-items: center;
+  }
+
+  .login-brand {
+    display: none !important;
+  }
+}
+
+/* ============================================================
+   THANH ĐIỀU HƯỚNG — thu gọn trên màn hình hẹp
+   ============================================================ */
+@media (max-width: 860px) {
+  .nav-user-name,
+  .nav-subtitle,
+  .nav-divider {
+    display: none !important;
+  }
+
+  .nav-inner {
+    gap: 10px !important;
+  }
+}
+
+@media (max-width: 560px) {
+  .nav-status-label,
+  .nav-version {
+    display: none !important;
+  }
+
+  .nav-logout-text {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   BẢNG DỮ LIỆU RỘNG — cho phép cuộn ngang thay vì tràn trang
+   ============================================================ */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll > table {
+  min-width: 640px;
+}
+
+/* ============================================================
+   HÀNG TESTCASE — 5 cột, gập thành 1 cột trên màn hình hẹp
+   ============================================================ */
+@media (max-width: 720px) {
+  .testcase-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  .stat-grid-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
 }

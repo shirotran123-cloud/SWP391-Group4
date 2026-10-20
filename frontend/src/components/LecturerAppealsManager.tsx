@@ -210,7 +210,7 @@ export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
 // Sinh vien: ${studentEmail}
 // Bai tap: ASM-SWP-01 (Thuat toan Sap xep O(N log N))
 // Ngon ngu: Java 17 (OpenJDK)
-// ⚠️ LƯU Ý HỘI ĐỒNG: File nộp thực tế trên máy chủ là PRJ301-1.zip (3.23 MB - Nộp nhầm file đồ án Web PRJ301).
+// LƯU Ý HỘI ĐỒNG: File nộp thực tế trên máy chủ là PRJ301-1.zip (3.23 MB - Nộp nhầm file đồ án Web PRJ301).
 // Do đó hệ thống tự động cho 0 điểm. Sinh viên gửi đơn phúc khảo kèm mã nguồn QuickSort chuẩn bên dưới để xin chấm lại:
 // ================================================================
 package com.aita.sorting;
@@ -379,10 +379,10 @@ public class Solution {
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-200)', textTransform: 'uppercase' }}>
             HỘI ĐỒNG PHÚC KHẢO (UC-06 / BR-05)
           </span>
-          <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-main)', marginTop: '4px' }}>
             Quản Lý &amp; Thẩm Định Đơn Phúc Khảo
           </h2>
           <p style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
@@ -399,9 +399,9 @@ public class Solution {
               gap: '6px',
               padding: '8px 16px',
               borderRadius: '10px',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              color: '#ffffff',
+              backgroundColor: 'rgba(11, 18, 32, 0.05)',
+              border: '1px solid rgba(11, 18, 32, 0.08)',
+              color: 'var(--text-main)',
               fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
@@ -413,7 +413,7 @@ public class Solution {
       </div>
 
       {toastMessage && (
-        <div style={{ padding: '12px 18px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', fontSize: '14px', marginBottom: '20px', fontWeight: 600 }}>
+        <div style={{ padding: '12px 18px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.14)', color: 'var(--blue-300)', fontSize: '14px', marginBottom: '20px', fontWeight: 600 }}>
           {toastMessage}
         </div>
       )}
@@ -427,9 +427,9 @@ public class Solution {
             style={{
               padding: '8px 16px',
               borderRadius: '10px',
-              border: statusFilter === tab ? '1px solid #818cf8' : '1px solid rgba(255, 255, 255, 0.1)',
-              backgroundColor: statusFilter === tab ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-              color: statusFilter === tab ? '#ffffff' : 'var(--text-muted)',
+              border: statusFilter === tab ? '1px solid #2563eb' : '1px solid rgba(11, 18, 32, 0.06)',
+              backgroundColor: statusFilter === tab ? 'rgba(59, 130, 246, 0.12)' : 'rgba(11, 18, 32, 0.03)',
+              color: statusFilter === tab ? 'var(--text-main)' : 'var(--text-muted)',
               fontSize: '13px',
               fontWeight: 700,
               cursor: 'pointer',
@@ -444,16 +444,16 @@ public class Solution {
       </div>
 
       {/* Table */}
-      <div className="glass-panel" style={{ padding: '0', overflow: 'hidden', borderRadius: '16px' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+      <div className="glass-panel table-scroll" style={{ padding: '0', borderRadius: '12px' }}>
+        <table style={{ width: '100%', minWidth: '820px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
           <thead>
-            <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-              <th style={{ padding: '16px 20px', color: '#94a3b8', fontWeight: 700 }}>MÃ ĐƠN</th>
-              <th style={{ padding: '16px 20px', color: '#94a3b8', fontWeight: 700 }}>SINH VIÊN</th>
-              <th style={{ padding: '16px 20px', color: '#94a3b8', fontWeight: 700 }}>BÀI NỘP</th>
-              <th style={{ padding: '16px 20px', color: '#94a3b8', fontWeight: 700 }}>LÝ DO KHIẾU NẠI</th>
-              <th style={{ padding: '16px 20px', color: '#94a3b8', fontWeight: 700 }}>TRẠNG THÁI</th>
-              <th style={{ padding: '16px 20px', color: '#94a3b8', fontWeight: 700 }}>THẨM ĐỊNH &amp; XỬ LÝ</th>
+            <tr style={{ backgroundColor: 'rgba(11, 18, 32, 0.035)', borderBottom: '1px solid rgba(11, 18, 32, 0.06)' }}>
+              <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>MÃ ĐƠN</th>
+              <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>SINH VIÊN</th>
+              <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>BÀI NỘP</th>
+              <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>LÝ DO KHIẾU NẠI</th>
+              <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>TRẠNG THÁI</th>
+              <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>THẨM ĐỊNH &amp; XỬ LÝ</th>
             </tr>
           </thead>
           <tbody>
@@ -465,32 +465,32 @@ public class Solution {
               </tr>
             ) : (
               filteredAppeals.map((app) => (
-                <tr key={app.appealId} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.06)' }}>
-                  <td style={{ padding: '16px 20px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: '#818cf8' }}>
+                <tr key={app.appealId} style={{ borderBottom: '1px solid rgba(11, 18, 32, 0.04)' }}>
+                  <td style={{ padding: '16px 20px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--blue-300)' }}>
                     #{app.appealId}
                   </td>
-                  <td style={{ padding: '16px 20px', fontWeight: 600, color: '#ffffff' }}>
+                  <td style={{ padding: '16px 20px', fontWeight: 600, color: 'var(--text-main)' }}>
                     {app.studentId}
                   </td>
-                  <td style={{ padding: '16px 20px', color: '#a5b4fc', fontFamily: 'var(--font-mono)' }}>
+                  <td style={{ padding: '16px 20px', color: 'var(--blue-200)', fontFamily: 'var(--font-mono)' }}>
                     {app.submissionId}
                   </td>
-                  <td style={{ padding: '16px 20px', maxWidth: '300px', color: '#cbd5e1' }}>
+                  <td style={{ padding: '16px 20px', maxWidth: '300px', color: '#33415a' }}>
                     <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={app.reason}>
                       {app.reason}
                     </div>
                   </td>
                   <td style={{ padding: '16px 20px' }}>
                     {app.status === 'ACCEPTED' ? (
-                      <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 700 }}>
+                      <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-300)', fontWeight: 700 }}>
                         ĐÃ DUYỆT ({app.adjustedScore}đ)
                       </span>
                     ) : app.status === 'REJECTED' ? (
-                      <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', fontWeight: 700 }}>
+                      <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontWeight: 700 }}>
                         TỪ CHỐI
                       </span>
                     ) : (
-                      <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', fontWeight: 700 }}>
+                      <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: '#1e40af', fontWeight: 700 }}>
                         CHỜ DUYỆT
                       </span>
                     )}
@@ -507,9 +507,9 @@ public class Solution {
                       style={{
                         padding: '8px 16px',
                         borderRadius: '8px',
-                        backgroundColor: app.status === 'PENDING' ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.06)',
-                        border: '1px solid rgba(99, 102, 241, 0.5)',
-                        color: '#a5b4fc',
+                        backgroundColor: app.status === 'PENDING' ? 'rgba(59, 130, 246, 0.16)' : 'rgba(11, 18, 32, 0.04)',
+                        border: '1px solid rgba(59, 130, 246, 0.38)',
+                        color: 'var(--blue-200)',
                         fontSize: '12.5px',
                         fontWeight: 700,
                         cursor: 'pointer',
@@ -537,7 +537,7 @@ public class Solution {
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(3, 7, 18, 0.85)',
+            backgroundColor: 'rgba(11, 18, 32, 0.45)',
             backdropFilter: 'blur(12px)',
             zIndex: 1100,
             display: 'flex',
@@ -554,11 +554,11 @@ public class Solution {
               maxWidth: '1080px',
               maxHeight: '92vh',
               overflowY: 'auto',
-              backgroundColor: '#0b1120',
-              borderRadius: '24px',
+              backgroundColor: '#f7f9fc',
+              borderRadius: '12px',
               padding: '28px 32px',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
-              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 50px rgba(99, 102, 241, 0.15)',
+              border: '1px solid rgba(11, 18, 32, 0.1)',
+              boxShadow: '0 24px 60px -24px rgba(0, 0, 0, 0.9)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -569,22 +569,22 @@ public class Solution {
                   <span
                     style={{
                       fontSize: '11px',
-                      fontWeight: 800,
+                      fontWeight: 600,
                       padding: '3px 10px',
                       borderRadius: '12px',
-                      backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                      color: '#a5b4fc',
-                      border: '1px solid rgba(99, 102, 241, 0.4)',
+                      backgroundColor: 'rgba(37, 99, 235, 0.10)',
+                      color: 'var(--blue-200)',
+                      border: '1px solid rgba(59, 130, 246, 0.28)',
                     }}
                   >
                     HỒ SƠ PHÚC KHẢO ĐIỆN TỬ
                   </span>
                   <span style={{ fontSize: '12px', color: '#64748b' }}>•</span>
-                  <span style={{ fontSize: '12.5px', color: '#94a3b8' }}>
+                  <span style={{ fontSize: '12.5px', color: '#4d5c76' }}>
                     Ngày gửi: {new Date(selectedAppeal.createdAt).toLocaleString('vi-VN')}
                   </span>
                 </div>
-                <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                <h3 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
                   Thẩm Định Đơn Phúc Khảo #{selectedAppeal.appealId}
                 </h3>
               </div>
@@ -593,10 +593,10 @@ public class Solution {
                 type="button"
                 onClick={() => setSelectedAppeal(null)}
                 style={{
-                  background: 'rgba(255, 255, 255, 0.06)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  background: 'rgba(11, 18, 32, 0.04)',
+                  border: '1px solid rgba(11, 18, 32, 0.07)',
                   borderRadius: '10px',
-                  color: '#94a3b8',
+                  color: '#4d5c76',
                   padding: '6px',
                   cursor: 'pointer',
                   display: 'flex',
@@ -611,42 +611,42 @@ public class Solution {
             {/* Thông tin tóm tắt & Lý do sinh viên */}
             <div
               style={{
-                backgroundColor: 'rgba(15, 23, 42, 0.75)',
-                border: '1px solid rgba(99, 102, 241, 0.25)',
-                borderRadius: '16px',
+                backgroundColor: '#f7f9fc',
+                border: '1px solid rgba(59, 130, 246, 0.16)',
+                borderRadius: '12px',
                 padding: '18px 20px',
                 marginBottom: '20px',
               }}
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(11, 18, 32, 0.05)' }}>
                 <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Sinh viên khiếu nại</span>
-                  <strong style={{ fontSize: '14px', color: '#ffffff' }}>{auditData.studentEmail}</strong>
+                  <span style={{ fontSize: '11px', color: '#4d5c76', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Sinh viên khiếu nại</span>
+                  <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>{auditData.studentEmail}</strong>
                 </div>
                 <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Mã bài nộp</span>
-                  <strong style={{ fontSize: '14px', color: '#a5b4fc', fontFamily: 'var(--font-mono)' }}>{auditData.submissionId}</strong>
+                  <span style={{ fontSize: '11px', color: '#4d5c76', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Mã bài nộp</span>
+                  <strong style={{ fontSize: '14px', color: 'var(--blue-200)', fontFamily: 'var(--font-mono)' }}>{auditData.submissionId}</strong>
                 </div>
                 <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Bài tập</span>
-                  <strong style={{ fontSize: '14px', color: '#cbd5e1' }}>{auditData.assignmentTitle}</strong>
+                  <span style={{ fontSize: '11px', color: '#4d5c76', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Bài tập</span>
+                  <strong style={{ fontSize: '14px', color: '#33415a' }}>{auditData.assignmentTitle}</strong>
                 </div>
                 <div>
-                  <span style={{ fontSize: '11px', color: '#94a3b8', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Điểm gốc ban đầu</span>
-                  <span style={{ fontSize: '15px', color: '#f59e0b', fontWeight: 800 }}>{auditData.originalScore} / 10.0</span>
+                  <span style={{ fontSize: '11px', color: '#4d5c76', textTransform: 'uppercase', display: 'block', fontWeight: 600 }}>Điểm gốc ban đầu</span>
+                  <span style={{ fontSize: '15px', color: 'var(--blue-200)', fontWeight: 600 }}>{auditData.originalScore} / 10.0</span>
                 </div>
               </div>
 
               {/* Hộp lý do của SV */}
               <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <div style={{ padding: '8px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', marginTop: '2px' }}>
+                <div style={{ padding: '8px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.10)', color: 'var(--blue-300)', marginTop: '2px' }}>
                   <MessageSquare size={16} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <span style={{ fontSize: '12px', color: '#a5b4fc', fontWeight: 700, display: 'block', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--blue-200)', fontWeight: 700, display: 'block', marginBottom: '2px' }}>
                     LÝ DO &amp; NGUYỆN VỌNG CỦA SINH VIÊN:
                   </span>
-                  <p style={{ fontSize: '13.5px', color: '#f1f5f9', margin: 0, lineHeight: 1.5, fontStyle: 'italic' }}>
+                  <p style={{ fontSize: '13.5px', color: '#0b1220', margin: 0, lineHeight: 1.5, fontStyle: 'italic' }}>
                     "{selectedAppeal.reason}"
                   </p>
                 </div>
@@ -654,16 +654,16 @@ public class Solution {
             </div>
 
             {/* 4 Tabs Thẩm Định Chuyên Sâu */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '10px' }}>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', borderBottom: '1px solid rgba(11, 18, 32, 0.06)', paddingBottom: '10px' }}>
               <button
                 type="button"
                 onClick={() => setActiveModalTab('CODE')}
                 style={{
                   padding: '9px 18px',
                   borderRadius: '10px',
-                  border: activeModalTab === 'CODE' ? '1px solid #6366f1' : '1px solid rgba(255, 255, 255, 0.1)',
-                  backgroundColor: activeModalTab === 'CODE' ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.04)',
-                  color: activeModalTab === 'CODE' ? '#ffffff' : '#94a3b8',
+                  border: activeModalTab === 'CODE' ? '1px solid #3b82f6' : '1px solid rgba(11, 18, 32, 0.06)',
+                  backgroundColor: activeModalTab === 'CODE' ? 'rgba(59, 130, 246, 0.16)' : 'rgba(11, 18, 32, 0.03)',
+                  color: activeModalTab === 'CODE' ? 'var(--text-main)' : '#4d5c76',
                   fontSize: '13px',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -672,7 +672,7 @@ public class Solution {
                   gap: '8px',
                 }}
               >
-                <Code size={16} color={activeModalTab === 'CODE' ? '#818cf8' : '#94a3b8'} />
+                <Code size={16} color={activeModalTab === 'CODE' ? '#2563eb' : '#4d5c76'} />
                 1. Mã Nguồn Đã Nộp
               </button>
 
@@ -682,9 +682,9 @@ public class Solution {
                 style={{
                   padding: '9px 18px',
                   borderRadius: '10px',
-                  border: activeModalTab === 'TESTCASES' ? '1px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
-                  backgroundColor: activeModalTab === 'TESTCASES' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                  color: activeModalTab === 'TESTCASES' ? '#ffffff' : '#94a3b8',
+                  border: activeModalTab === 'TESTCASES' ? '1px solid #2563eb' : '1px solid rgba(11, 18, 32, 0.06)',
+                  backgroundColor: activeModalTab === 'TESTCASES' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(11, 18, 32, 0.03)',
+                  color: activeModalTab === 'TESTCASES' ? 'var(--text-main)' : '#4d5c76',
                   fontSize: '13px',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -693,7 +693,7 @@ public class Solution {
                   gap: '8px',
                 }}
               >
-                <Terminal size={16} color={activeModalTab === 'TESTCASES' ? '#10b981' : '#94a3b8'} />
+                <Terminal size={16} color={activeModalTab === 'TESTCASES' ? '#2563eb' : '#4d5c76'} />
                 2. Test Cases &amp; Sandbox ({auditData.passedTestcases}/{auditData.totalTestcases})
               </button>
 
@@ -703,9 +703,9 @@ public class Solution {
                 style={{
                   padding: '9px 18px',
                   borderRadius: '10px',
-                  border: activeModalTab === 'AI_REVIEW' ? '1px solid #f59e0b' : '1px solid rgba(255, 255, 255, 0.1)',
-                  backgroundColor: activeModalTab === 'AI_REVIEW' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                  color: activeModalTab === 'AI_REVIEW' ? '#ffffff' : '#94a3b8',
+                  border: activeModalTab === 'AI_REVIEW' ? '1px solid #1d4ed8' : '1px solid rgba(11, 18, 32, 0.06)',
+                  backgroundColor: activeModalTab === 'AI_REVIEW' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(11, 18, 32, 0.03)',
+                  color: activeModalTab === 'AI_REVIEW' ? 'var(--text-main)' : '#4d5c76',
                   fontSize: '13px',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -714,7 +714,7 @@ public class Solution {
                   gap: '8px',
                 }}
               >
-                <Sparkles size={16} color={activeModalTab === 'AI_REVIEW' ? '#f59e0b' : '#94a3b8'} />
+                <Sparkles size={16} color={activeModalTab === 'AI_REVIEW' ? '#1d4ed8' : '#4d5c76'} />
                 3. AI Đánh Giá &amp; SOLID
               </button>
 
@@ -724,9 +724,9 @@ public class Solution {
                 style={{
                   padding: '9px 18px',
                   borderRadius: '10px',
-                  border: activeModalTab === 'PLAGIARISM' ? '1px solid #ec4899' : '1px solid rgba(255, 255, 255, 0.1)',
-                  backgroundColor: activeModalTab === 'PLAGIARISM' ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                  color: activeModalTab === 'PLAGIARISM' ? '#ffffff' : '#94a3b8',
+                  border: activeModalTab === 'PLAGIARISM' ? '1px solid #2563eb' : '1px solid rgba(11, 18, 32, 0.06)',
+                  backgroundColor: activeModalTab === 'PLAGIARISM' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(11, 18, 32, 0.03)',
+                  color: activeModalTab === 'PLAGIARISM' ? 'var(--text-main)' : '#4d5c76',
                   fontSize: '13px',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -735,7 +735,7 @@ public class Solution {
                   gap: '8px',
                 }}
               >
-                <ShieldCheck size={16} color={activeModalTab === 'PLAGIARISM' ? '#ec4899' : '#94a3b8'} />
+                <ShieldCheck size={16} color={activeModalTab === 'PLAGIARISM' ? '#2563eb' : '#4d5c76'} />
                 4. Kiểm Tra Đạo Văn (Moss/AST)
               </button>
             </div>
@@ -748,19 +748,19 @@ public class Solution {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    backgroundColor: 'rgba(30, 41, 59, 0.8)',
+                    backgroundColor: '#f7f9fc',
                     padding: '10px 16px',
                     borderRadius: '12px 12px 0 0',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    border: '1px solid rgba(11, 18, 32, 0.06)',
                     borderBottom: 'none',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <FileCode size={16} color="#818cf8" />
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', fontFamily: 'var(--font-mono)' }}>
+                    <FileCode size={16} color="#2563eb" />
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>
                       Solution.java
                     </span>
-                    <span style={{ fontSize: '11px', color: '#94a3b8', padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+                    <span style={{ fontSize: '11px', color: '#4d5c76', padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(0,0,0,0.3)' }}>
                       Java 17 (UTF-8)
                     </span>
                   </div>
@@ -775,9 +775,9 @@ public class Solution {
                         gap: '6px',
                         padding: '6px 12px',
                         borderRadius: '6px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                        color: copiedCode ? '#34d399' : '#e2e8f0',
+                        backgroundColor: 'rgba(11, 18, 32, 0.05)',
+                        border: '1px solid rgba(11, 18, 32, 0.08)',
+                        color: copiedCode ? '#1d4ed8' : '#0b1220',
                         fontSize: '12px',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -797,9 +797,9 @@ public class Solution {
                         gap: '6px',
                         padding: '6px 12px',
                         borderRadius: '6px',
-                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                        border: '1px solid rgba(99, 102, 241, 0.4)',
-                        color: '#a5b4fc',
+                        backgroundColor: 'rgba(37, 99, 235, 0.10)',
+                        border: '1px solid rgba(59, 130, 246, 0.28)',
+                        color: 'var(--blue-200)',
                         fontSize: '12px',
                         fontWeight: 600,
                         textDecoration: 'none',
@@ -814,8 +814,8 @@ public class Solution {
                 {/* Editor Container */}
                 <div
                   style={{
-                    backgroundColor: '#030712',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    backgroundColor: '#ffffff',
+                    border: '1px solid rgba(11, 18, 32, 0.06)',
                     borderRadius: '0 0 12px 12px',
                     padding: '16px',
                     maxHeight: '340px',
@@ -823,7 +823,7 @@ public class Solution {
                     fontFamily: 'Consolas, Monaco, "Courier New", monospace',
                     fontSize: '12.5px',
                     lineHeight: '1.6',
-                    color: '#e2e8f0',
+                    color: '#0b1220',
                   }}
                 >
                   <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
@@ -845,27 +845,27 @@ public class Solution {
                     marginBottom: '16px',
                   }}
                 >
-                  <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>MÔI TRƯỜNG SANDBOX</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#38bdf8', marginTop: '2px' }}>
+                  <div style={{ backgroundColor: 'rgba(11, 18, 32, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
+                    <div style={{ fontSize: '11px', color: '#4d5c76' }}>MÔI TRƯỜNG SANDBOX</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-300)', marginTop: '2px' }}>
                       Docker (cgroups v2)
                     </div>
                   </div>
-                  <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>QUOTA BỘ NHỚ RAM</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#e2e8f0', marginTop: '2px' }}>
+                  <div style={{ backgroundColor: 'rgba(11, 18, 32, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
+                    <div style={{ fontSize: '11px', color: '#4d5c76' }}>QUOTA BỘ NHỚ RAM</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0b1220', marginTop: '2px' }}>
                       {auditData.sandbox.memoryLimit}
                     </div>
                   </div>
-                  <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>WATCHDOG TIMEOUT</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#e2e8f0', marginTop: '2px' }}>
+                  <div style={{ backgroundColor: 'rgba(11, 18, 32, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
+                    <div style={{ fontSize: '11px', color: '#4d5c76' }}>WATCHDOG TIMEOUT</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0b1220', marginTop: '2px' }}>
                       {auditData.sandbox.watchdogSec} (SIGKILL)
                     </div>
                   </div>
-                  <div style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
-                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>BẢO MẬT &amp; SECCOMP</div>
-                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#34d399', marginTop: '2px' }}>
+                  <div style={{ backgroundColor: 'rgba(11, 18, 32, 0.03)', padding: '12px 14px', borderRadius: '10px', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
+                    <div style={{ fontSize: '11px', color: '#4d5c76' }}>BẢO MẬT &amp; SECCOMP</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-200)', marginTop: '2px' }}>
                       PidsLimit=64, Net=None
                     </div>
                   </div>
@@ -877,31 +877,31 @@ public class Solution {
                     <div
                       key={tc.id}
                       style={{
-                        backgroundColor: 'rgba(15, 23, 42, 0.65)',
-                        border: tc.status === 'PASSED' ? '1px solid rgba(52, 211, 153, 0.35)' : '1px solid rgba(244, 63, 94, 0.35)',
+                        backgroundColor: '#eef2f8',
+                        border: tc.status === 'PASSED' ? '1px solid rgba(37, 99, 235, 0.16)' : '1px solid rgba(11, 18, 32, 0.108)',
                         borderRadius: '12px',
                         padding: '16px',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 800, padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.08)', color: '#a5b4fc', fontFamily: 'var(--font-mono)' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 600, padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(11, 18, 32, 0.05)', color: 'var(--blue-200)', fontFamily: 'var(--font-mono)' }}>
                             {tc.id}
                           </span>
-                          <strong style={{ fontSize: '13.5px', color: '#ffffff' }}>{tc.title}</strong>
+                          <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>{tc.title}</strong>
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>Thời gian: <strong style={{ color: '#fff' }}>{tc.timeMs}ms</strong></span>
-                          <span style={{ fontSize: '12px', color: '#94a3b8' }}>RAM: <strong style={{ color: '#fff' }}>{tc.memoryMb}MB</strong></span>
+                          <span style={{ fontSize: '12px', color: '#4d5c76' }}>Thời gian: <strong style={{ color: 'var(--text-main)' }}>{tc.timeMs}ms</strong></span>
+                          <span style={{ fontSize: '12px', color: '#4d5c76' }}>RAM: <strong style={{ color: 'var(--text-main)' }}>{tc.memoryMb}MB</strong></span>
                           <span
                             style={{
                               fontSize: '11.5px',
-                              fontWeight: 800,
+                              fontWeight: 600,
                               padding: '3px 10px',
                               borderRadius: '12px',
-                              backgroundColor: tc.status === 'PASSED' ? 'rgba(52, 211, 153, 0.2)' : 'rgba(244, 63, 94, 0.2)',
-                              color: tc.status === 'PASSED' ? '#34d399' : '#f43f5e',
+                              backgroundColor: tc.status === 'PASSED' ? 'var(--state-ok-bg)' : 'var(--state-bad-bg)',
+                              color: tc.status === 'PASSED' ? 'var(--state-ok)' : 'var(--state-bad)',
                             }}
                           >
                             {tc.status === 'PASSED' ? `PASSED (+${tc.score}đ)` : 'FAILED (0.0đ)'}
@@ -911,13 +911,13 @@ public class Solution {
 
                       {/* Chi tiết I/O */}
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '12px' }}>
-                        <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <span style={{ color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Dữ liệu đầu vào (Input):</span>
-                          <code style={{ color: '#38bdf8', fontFamily: 'var(--font-mono)' }}>{tc.input}</code>
+                        <div style={{ backgroundColor: 'rgba(11, 18, 32, 0.05)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
+                          <span style={{ color: '#4d5c76', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Dữ liệu đầu vào (Input):</span>
+                          <code style={{ color: 'var(--blue-300)', fontFamily: 'var(--font-mono)' }}>{tc.input}</code>
                         </div>
-                        <div style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
-                          <span style={{ color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Kết quả thực tế (Actual Output):</span>
-                          <code style={{ color: tc.status === 'PASSED' ? '#4ade80' : '#f87171', fontFamily: 'var(--font-mono)' }}>{tc.actual}</code>
+                        <div style={{ backgroundColor: 'rgba(11, 18, 32, 0.05)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
+                          <span style={{ color: '#4d5c76', display: 'block', marginBottom: '4px', fontWeight: 600 }}>Kết quả thực tế (Actual Output):</span>
+                          <code style={{ color: tc.status === 'PASSED' ? 'var(--state-ok)' : 'var(--state-bad)', fontFamily: 'var(--font-mono)' }}>{tc.actual}</code>
                         </div>
                       </div>
                     </div>
@@ -933,21 +933,21 @@ public class Solution {
                   {/* Cột trái: Điểm số */}
                   <div
                     style={{
-                      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                      backgroundColor: '#f7f9fc',
                       padding: '18px',
-                      borderRadius: '14px',
-                      border: '1px solid rgba(245, 158, 11, 0.3)',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(37, 99, 235, 0.14)',
                       textAlign: 'center',
                     }}
                   >
-                    <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>ĐIỂM CLEAN CODE</span>
-                    <div style={{ fontSize: '38px', fontWeight: 900, color: '#f59e0b', margin: '4px 0' }}>
+                    <span style={{ fontSize: '12px', color: '#4d5c76', fontWeight: 600 }}>ĐIỂM CLEAN CODE</span>
+                    <div style={{ fontSize: '38px', fontWeight: 900, color: 'var(--blue-200)', margin: '4px 0' }}>
                       {auditData.aiRating.cleanCodeScore}
-                      <span style={{ fontSize: '18px', color: '#94a3b8', fontWeight: 500 }}>/10</span>
+                      <span style={{ fontSize: '18px', color: '#4d5c76', fontWeight: 500 }}>/10</span>
                     </div>
 
                     <div style={{ marginTop: '16px', textAlign: 'left' }}>
-                      <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 700, display: 'block', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '11px', color: '#4d5c76', fontWeight: 700, display: 'block', marginBottom: '8px' }}>
                         ĐÁNH GIÁ 5 NGUYÊN LÝ SOLID:
                       </span>
                       {[
@@ -958,12 +958,12 @@ public class Solution {
                         { label: 'D - Dependency Inversion', val: auditData.aiRating.solidScore.d },
                       ].map((s) => (
                         <div key={s.label} style={{ marginBottom: '6px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#cbd5e1', marginBottom: '2px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#33415a', marginBottom: '2px' }}>
                             <span>{s.label}</span>
-                            <strong style={{ color: '#f59e0b' }}>{s.val}/10</strong>
+                            <strong style={{ color: 'var(--blue-200)' }}>{s.val}/10</strong>
                           </div>
-                          <div style={{ width: '100%', height: '5px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ width: `${s.val * 10}%`, height: '100%', backgroundColor: s.val >= 8 ? '#10b981' : '#f59e0b' }} />
+                          <div style={{ width: '100%', height: '5px', backgroundColor: 'rgba(11, 18, 32, 0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                            <div style={{ width: `${s.val * 10}%`, height: '100%', backgroundColor: s.val >= 8 ? '#2563eb' : '#1d4ed8' }} />
                           </div>
                         </div>
                       ))}
@@ -972,28 +972,28 @@ public class Solution {
 
                   {/* Cột phải: Lời nhận xét sư phạm từ AI & Code Smells */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
+                    <div style={{ backgroundColor: '#f7f9fc', padding: '16px', borderRadius: '12px', border: '1px solid rgba(11, 18, 32, 0.06)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e40af', fontSize: '13px', fontWeight: 700, marginBottom: '6px' }}>
                         <Sparkles size={16} />
                         Nhận xét sư phạm từ Trí tuệ nhân tạo (GenAI Hub):
                       </div>
-                      <p style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.6, margin: 0 }}>
+                      <p style={{ fontSize: '13px', color: '#0b1220', lineHeight: 1.6, margin: 0 }}>
                         {auditData.aiRating.explanation}
                       </p>
                     </div>
 
-                    <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f87171', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
+                    <div style={{ backgroundColor: '#f7f9fc', padding: '16px', borderRadius: '12px', border: '1px solid rgba(11, 18, 32, 0.06)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>
                         <AlertTriangle size={16} />
                         Các điểm cần cải tiến (Code Smells phát hiện qua AST):
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         {auditData.aiRating.codeSmells.map((smell: any, i: number) => (
-                          <div key={i} style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.25)', fontSize: '12px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fca5a5', fontWeight: 700, marginBottom: '2px' }}>
+                          <div key={i} style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(11, 18, 32, 0.05)', border: '1px solid rgba(11, 18, 32, 0.09)', fontSize: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-main)', fontWeight: 700, marginBottom: '2px' }}>
                               <span>Dòng {smell.line}: {smell.rule}</span>
                             </div>
-                            <div style={{ color: '#e2e8f0' }}>{smell.description}</div>
+                            <div style={{ color: '#0b1220' }}>{smell.description}</div>
                           </div>
                         ))}
                       </div>
@@ -1007,45 +1007,45 @@ public class Solution {
             {activeModalTab === 'PLAGIARISM' && (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '18px' }}>
-                  <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(52, 211, 153, 0.3)' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>TỈ LỆ TƯƠNG ĐỒNG AST TỔNG THỂ</span>
-                    <div style={{ fontSize: '32px', fontWeight: 900, color: auditData.plagiarism.similarityRate > 40 ? '#f43f5e' : '#34d399', margin: '4px 0' }}>
+                  <div style={{ backgroundColor: '#f7f9fc', padding: '16px', borderRadius: '12px', border: '1px solid rgba(37, 99, 235, 0.14)' }}>
+                    <span style={{ fontSize: '11px', color: '#4d5c76', fontWeight: 600 }}>TỈ LỆ TƯƠNG ĐỒNG AST TỔNG THỂ</span>
+                    <div style={{ fontSize: '32px', fontWeight: 900, color: auditData.plagiarism.similarityRate > 40 ? 'var(--state-bad)' : 'var(--state-ok)', margin: '4px 0' }}>
                       {auditData.plagiarism.similarityRate}%
                     </div>
-                    <span style={{ fontSize: '11.5px', color: '#a7f3d0', fontWeight: 700 }}>
-                      {auditData.plagiarism.similarityRate > 40 ? '🔴 Cảnh Báo Trùng Lặp Cao' : '🟢 An Toàn - Không Vi Phạm'}
+                    <span style={{ fontSize: '11.5px', color: '#1e40af', fontWeight: 700 }}>
+                      {auditData.plagiarism.similarityRate > 40 ? 'Cảnh Báo Trùng Lặp Cao' : 'An Toàn - Không Vi Phạm'}
                     </span>
                   </div>
 
-                  <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>AST CÂY CÚ PHÁP TRỪU TƯỢNG</span>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: '#38bdf8', margin: '4px 0' }}>
+                  <div style={{ backgroundColor: '#f7f9fc', padding: '16px', borderRadius: '12px', border: '1px solid rgba(11, 18, 32, 0.06)' }}>
+                    <span style={{ fontSize: '11px', color: '#4d5c76', fontWeight: 600 }}>AST CÂY CÚ PHÁP TRỪU TƯỢNG</span>
+                    <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--blue-300)', margin: '4px 0' }}>
                       {auditData.plagiarism.astStructuralSimilarity}%
                     </div>
-                    <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>So khớp node giải thuật</span>
+                    <span style={{ fontSize: '11.5px', color: '#4d5c76' }}>So khớp node giải thuật</span>
                   </div>
 
-                  <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>WINNOWING TOKEN CONTAINMENT</span>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: '#a5b4fc', margin: '4px 0' }}>
+                  <div style={{ backgroundColor: '#f7f9fc', padding: '16px', borderRadius: '12px', border: '1px solid rgba(11, 18, 32, 0.06)' }}>
+                    <span style={{ fontSize: '11px', color: '#4d5c76', fontWeight: 600 }}>WINNOWING TOKEN CONTAINMENT</span>
+                    <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--blue-200)', margin: '4px 0' }}>
                       {auditData.plagiarism.winnowingContainment}%
                     </div>
-                    <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>Jaccard index n-gram</span>
+                    <span style={{ fontSize: '11.5px', color: '#4d5c76' }}>Jaccard index n-gram</span>
                   </div>
 
-                  <div style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', padding: '16px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600 }}>QUY MÔ ĐỐI CHIẾU</span>
-                    <div style={{ fontSize: '24px', fontWeight: 800, color: '#f59e0b', margin: '4px 0' }}>
+                  <div style={{ backgroundColor: '#f7f9fc', padding: '16px', borderRadius: '12px', border: '1px solid rgba(11, 18, 32, 0.06)' }}>
+                    <span style={{ fontSize: '11px', color: '#4d5c76', fontWeight: 600 }}>QUY MÔ ĐỐI CHIẾU</span>
+                    <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--blue-200)', margin: '4px 0' }}>
                       {auditData.plagiarism.comparedSubmissionsCount} bài
                     </div>
-                    <span style={{ fontSize: '11.5px', color: '#94a3b8' }}>Toàn bộ lớp CRS-SWP391</span>
+                    <span style={{ fontSize: '11.5px', color: '#4d5c76' }}>Toàn bộ lớp CRS-SWP391</span>
                   </div>
                 </div>
 
                 <div
                   style={{
-                    backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                    border: '1px solid rgba(16, 185, 129, 0.35)',
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                    border: '1px solid rgba(37, 99, 235, 0.16)',
                     borderRadius: '12px',
                     padding: '16px 20px',
                     display: 'flex',
@@ -1053,12 +1053,12 @@ public class Solution {
                     gap: '14px',
                   }}
                 >
-                  <ShieldCheck size={28} color="#34d399" style={{ flexShrink: 0 }} />
+                  <ShieldCheck size={28} color="#1d4ed8" style={{ flexShrink: 0 }} />
                   <div>
-                    <strong style={{ fontSize: '14px', color: '#6ee7b7', display: 'block', marginBottom: '2px' }}>
+                    <strong style={{ fontSize: '14px', color: 'var(--blue-200)', display: 'block', marginBottom: '2px' }}>
                       KẾT LUẬN LIÊM CHÍNH HỌC THUẬT:
                     </strong>
-                    <div style={{ fontSize: '13px', color: '#e2e8f0', lineHeight: 1.5 }}>
+                    <div style={{ fontSize: '13px', color: '#0b1220', lineHeight: 1.5 }}>
                       {auditData.plagiarism.verdict} Đối tượng có điểm tương đồng gần nhất: <strong>{auditData.plagiarism.matchedStudentName} ({auditData.plagiarism.matchedStudentId})</strong> với tỉ lệ {auditData.plagiarism.similarityRate}% (dưới ngưỡng cảnh báo 40%).
                     </div>
                   </div>
@@ -1073,11 +1073,11 @@ public class Solution {
               style={{
                 marginTop: '24px',
                 paddingTop: '20px',
-                borderTop: '1px solid rgba(255, 255, 255, 0.12)',
+                borderTop: '1px solid rgba(11, 18, 32, 0.07)',
               }}
             >
-              <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Scale size={18} color="#818cf8" />
+              <h4 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Scale size={18} color="#2563eb" />
                 Quyết Định Xử Lý Của Giảng Viên:
               </h4>
 
@@ -1091,10 +1091,10 @@ public class Solution {
                       flex: 1,
                       padding: '14px',
                       borderRadius: '12px',
-                      border: resolveStatus === 'ACCEPTED' ? '2px solid #10b981' : '1px solid rgba(255, 255, 255, 0.1)',
-                      backgroundColor: resolveStatus === 'ACCEPTED' ? 'rgba(16, 185, 129, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-                      color: resolveStatus === 'ACCEPTED' ? '#34d399' : '#94a3b8',
-                      fontWeight: 800,
+                      border: resolveStatus === 'ACCEPTED' ? '2px solid #2563eb' : '1px solid rgba(11, 18, 32, 0.06)',
+                      backgroundColor: resolveStatus === 'ACCEPTED' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(11, 18, 32, 0.03)',
+                      color: resolveStatus === 'ACCEPTED' ? '#1d4ed8' : '#4d5c76',
+                      fontWeight: 600,
                       fontSize: '14px',
                       cursor: 'pointer',
                       display: 'flex',
@@ -1115,10 +1115,10 @@ public class Solution {
                       flex: 1,
                       padding: '14px',
                       borderRadius: '12px',
-                      border: resolveStatus === 'REJECTED' ? '2px solid #f43f5e' : '1px solid rgba(255, 255, 255, 0.1)',
-                      backgroundColor: resolveStatus === 'REJECTED' ? 'rgba(244, 63, 94, 0.18)' : 'rgba(255, 255, 255, 0.04)',
-                      color: resolveStatus === 'REJECTED' ? '#f43f5e' : '#94a3b8',
-                      fontWeight: 800,
+                      border: resolveStatus === 'REJECTED' ? '2px solid #ffffff' : '1px solid rgba(11, 18, 32, 0.06)',
+                      backgroundColor: resolveStatus === 'REJECTED' ? 'rgba(11, 18, 32, 0.07)' : 'rgba(11, 18, 32, 0.03)',
+                      color: resolveStatus === 'REJECTED' ? 'var(--text-main)' : '#4d5c76',
+                      fontWeight: 600,
                       fontSize: '14px',
                       cursor: 'pointer',
                       display: 'flex',
@@ -1140,17 +1140,17 @@ public class Solution {
                       marginBottom: '16px',
                       padding: '16px',
                       borderRadius: '12px',
-                      backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                      border: '1px solid rgba(16, 185, 129, 0.25)',
+                      backgroundColor: 'rgba(37, 99, 235, 0.06)',
+                      border: '1px solid rgba(37, 99, 235, 0.12)',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <label style={{ fontSize: '13.5px', fontWeight: 700, color: '#34d399' }}>
+                      <label style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--blue-200)' }}>
                         Điểm số điều chỉnh sau phúc khảo (Thang điểm 0.0 - 10.0):
                       </label>
-                      <span style={{ fontSize: '12.5px', color: '#a7f3d0' }}>
-                        Điểm gốc: <strong style={{ color: '#fff' }}>{auditData.originalScore}</strong> ➔ Điểm mới:{' '}
-                        <strong style={{ color: '#34d399' }}>{adjustedScore}</strong>{' '}
+                      <span style={{ fontSize: '12.5px', color: '#1e40af' }}>
+                        Điểm gốc: <strong style={{ color: 'var(--text-main)' }}>{auditData.originalScore}</strong> Điểm mới:{' '}
+                        <strong style={{ color: 'var(--blue-200)' }}>{adjustedScore}</strong>{' '}
                         ({adjustedScore >= auditData.originalScore ? `+${(adjustedScore - auditData.originalScore).toFixed(1)}` : (adjustedScore - auditData.originalScore).toFixed(1)} đ)
                       </span>
                     </div>
@@ -1166,11 +1166,11 @@ public class Solution {
                         width: '100%',
                         padding: '10px 14px',
                         borderRadius: '8px',
-                        backgroundColor: '#030712',
-                        border: '1px solid rgba(52, 211, 153, 0.4)',
-                        color: '#34d399',
+                        backgroundColor: '#ffffff',
+                        border: '1px solid rgba(37, 99, 235, 0.18)',
+                        color: 'var(--blue-200)',
                         fontSize: '16px',
-                        fontWeight: 800,
+                        fontWeight: 600,
                         outline: 'none',
                         boxSizing: 'border-box',
                       }}
@@ -1180,7 +1180,7 @@ public class Solution {
 
                 {/* Ô phản hồi sư phạm */}
                 <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#ffffff', marginBottom: '6px' }}>
+                  <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
                     Phản hồi sư phạm / Căn cứ giải quyết (Gửi trực tiếp đến sinh viên):
                   </label>
                   <textarea
@@ -1192,9 +1192,9 @@ public class Solution {
                       width: '100%',
                       padding: '12px 14px',
                       borderRadius: '10px',
-                      backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                      border: '1px solid rgba(255, 255, 255, 0.2)',
-                      color: '#ffffff',
+                      backgroundColor: '#f7f9fc',
+                      border: '1px solid rgba(11, 18, 32, 0.1)',
+                      color: 'var(--text-main)',
                       fontSize: '13.5px',
                       resize: 'vertical',
                       outline: 'none',
@@ -1212,9 +1212,9 @@ public class Solution {
                     style={{
                       padding: '11px 20px',
                       borderRadius: '10px',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                      color: '#cbd5e1',
+                      border: '1px solid rgba(11, 18, 32, 0.08)',
+                      backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                      color: '#33415a',
                       fontWeight: 600,
                       fontSize: '13.5px',
                       cursor: 'pointer',
@@ -1230,16 +1230,16 @@ public class Solution {
                       padding: '11px 24px',
                       borderRadius: '10px',
                       border: 'none',
-                      backgroundColor: resolveStatus === 'ACCEPTED' ? '#10b981' : '#f43f5e',
-                      color: '#ffffff',
-                      fontWeight: 800,
+                      backgroundColor: resolveStatus === 'ACCEPTED' ? '#2563eb' : 'var(--text-main)',
+                      color: 'var(--text-main)',
+                      fontWeight: 600,
                       fontSize: '13.5px',
                       cursor: submitting ? 'not-allowed' : 'pointer',
                       opacity: submitting ? 0.7 : 1,
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '8px',
-                      boxShadow: resolveStatus === 'ACCEPTED' ? '0 4px 20px rgba(16, 185, 129, 0.35)' : '0 4px 20px rgba(244, 63, 94, 0.35)',
+                      boxShadow: resolveStatus === 'ACCEPTED' ? '0 4px 20px rgba(37, 99, 235, 0.16)' : '0 4px 20px rgba(11, 18, 32, 0.108)',
                     }}
                   >
                     <CheckCircle2 size={16} />

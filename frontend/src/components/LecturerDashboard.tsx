@@ -31,10 +31,11 @@ import {
   Scale,
   Download,
   RefreshCw,
-  Users,
+  Activity,
 } from 'lucide-react';
 import { RblBenchmarkView } from './RblBenchmarkView';
 import { LecturerAppealsManager } from './LecturerAppealsManager';
+import { FileTypeIcon } from './FileTypeIcon';
 import type { PlagiarismMatch } from '../types';
 
 import { GeminiAIService, type RubricCriterion } from '../services/gemini-ai.service';
@@ -568,7 +569,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         setReferenceSolution(result.referenceSolution);
       }
 
-      const badgeText = `✨ Google Gemini AI (${result.modelUsed}) đã sinh đề & barem thành công trong ${result.latencyMs}ms!`;
+      const badgeText = `Google Gemini AI (${result.modelUsed}) đã sinh đề & barem thành công trong ${result.latencyMs}ms!`;
       setAiSuccessBadge(badgeText);
       setCreateSuccessMsg(
         `Đã tạo đề bài "${result.title}" kèm ${result.testCases.length} testcases và ${result.rubric.length} tiêu chí barem chấm điểm.`
@@ -630,7 +631,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       )
     );
 
-    const toastMsg = `🎉 ĐÃ XUẤT BẢN THÀNH CÔNG: Bài tập "${assignmentTitle}" (${testCases.length} testcases) đã giao cho lớp ${courseCode} (${courseName})!`;
+    const toastMsg = `Đã xuất bản thành công: Bài tập "${assignmentTitle}" (${testCases.length} testcases) đã giao cho lớp ${courseCode} (${courseName})!`;
     setPublishSuccessToast(toastMsg);
     setCreateSuccessMsg(toastMsg);
 
@@ -684,10 +685,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   // State cho việc nạp Roster Excel vào lớp
   const [targetCourseId, setTargetCourseId] = useState<string>('CRS-SWP391');
-  const [courseStudents, setCourseStudents] = useState<Array<{ userId: string; studentCode: string; fullName: string; email: string }>>([]);
-  const [showCourseStudents, setShowCourseStudents] = useState<boolean>(false);
-  const [loadingCourseStudents, setLoadingCourseStudents] = useState<boolean>(false);
-
 
   // Tải danh sách khóa học thực tế từ API Gateway (PostgreSQL 15)
   const fetchLiveCourses = async () => {
@@ -771,7 +768,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       });
       setTargetCourseId(generatedId);
       setIsCreateCourseModalOpen(false);
-      setPublishSuccessToast(`🎉 Đã tạo thành công khóa học mới [${newCourseCode}] và lưu bền vững vào PostgreSQL 15!`);
+      setPublishSuccessToast(`Đã tạo thành công khóa học mới [${newCourseCode}] và lưu bền vững vào PostgreSQL 15!`);
       window.dispatchEvent(new Event('aita_courses_updated'));
     } catch (err: any) {
       alert(`Lỗi tạo khóa học: ${err.message}`);
@@ -828,51 +825,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       alert('Không thể xuất danh sách sinh viên: ' + err.message);
     }
   };
-
-  // 3. Tải danh sách sinh viên hiện tại trong lớp để quản lý
-  const handleLoadCourseStudents = async (cId?: string) => {
-    const courseIdToFetch = cId || targetCourseId || 'CRS-SWP391';
-    setLoadingCourseStudents(true);
-    try {
-      const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToFetch}/students`);
-      if (res.ok) {
-        const json = await res.json();
-        setCourseStudents(json.data || json || []);
-        setShowCourseStudents(true);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoadingCourseStudents(false);
-    }
-  };
-
-  // 4. Xóa sinh viên khỏi lớp học phần (Gỡ khỏi class_members trong PostgreSQL 15)
-  const handleRemoveStudentFromCourse = async (studentId: string, studentName: string) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa sinh viên ${studentName} (${studentId}) khỏi lớp học phần này?`)) return;
-    try {
-      const courseIdToFetch = targetCourseId || 'CRS-SWP391';
-      const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToFetch}/students/${studentId}`, {
-        method: 'DELETE',
-      });
-      if (res.ok) {
-        setCourseStudents((prev) => prev.filter((s) => s.studentCode !== studentId && s.userId !== studentId));
-        setCourses((prev) =>
-          prev.map((c) =>
-            c.courseId === courseIdToFetch ? { ...c, studentCount: Math.max(0, c.studentCount - 1) } : c
-          )
-        );
-        alert(`Đã xóa sinh viên ${studentName} khỏi lớp ${courseIdToFetch} thành công!`);
-        window.dispatchEvent(new Event('aita_courses_updated'));
-      } else {
-        const err = await res.json().catch(() => ({}));
-        alert(`Không thể xóa sinh viên: ${err.message || 'Lỗi máy chủ'}`);
-      }
-    } catch (err: any) {
-      alert(`Lỗi khi xóa sinh viên: ${err.message}`);
-    }
-  };
-
 
   const handleCsvFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1013,7 +965,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     const studentsToImport = customStudents || parsedCsvStudents;
     if (!studentsToImport || studentsToImport.length === 0) {
       setExcelLoading(false);
-      setExcelStatus('⚠️ Vui lòng chọn file Excel (.xlsx) hoặc CSV hợp lệ chứa danh sách sinh viên trước khi bấm Import!');
+      setExcelStatus('Vui lòng chọn file Excel (.xlsx) hoặc CSV hợp lệ chứa danh sách sinh viên trước khi bấm Import!');
       return;
     }
 
@@ -1032,7 +984,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       setSimulatedRollback(false);
       setExcelStatus(
-        `✅ GIAO DỊCH SQL THÀNH CÔNG (100% COMMIT): Đã nạp và ghi danh thành công ${studentsToImport.length} sinh viên vào lớp [${courseIdToUse}] trong PostgreSQL 15! Sinh viên đăng nhập vào sẽ thấy môn học ngay.`
+        `GIAO DỊCH SQL THÀNH CÔNG (100% COMMIT): Đã nạp và ghi danh thành công ${studentsToImport.length} sinh viên vào lớp [${courseIdToUse}] trong PostgreSQL 15! Sinh viên đăng nhập vào sẽ thấy môn học ngay.`
       );
       setCourses((prev) =>
         prev.map((c) =>
@@ -1048,7 +1000,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     } catch (err: any) {
       setSimulatedRollback(true);
       setExcelStatus(
-        `❌ GIAO DỊCH SQL THẤT BẠI: ${err.message}. Hệ thống đã tự động kích hoạt 100% SQL TRANSACTION ROLLBACK (R06) bảo toàn dữ liệu PostgreSQL, không có bất kỳ bản ghi mồ côi nào!`
+        `GIAO DỊCH SQL THẤT BẠI: ${err.message}. Hệ thống đã tự động kích hoạt 100% SQL TRANSACTION ROLLBACK (R06) bảo toàn dữ liệu PostgreSQL, không có bất kỳ bản ghi mồ côi nào!`
       );
     } finally {
       setExcelLoading(false);
@@ -1056,187 +1008,84 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   };
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Tiêu đề Dashboard Giảng Viên */}
-      <div className="glass-panel" style={{ padding: '24px 28px', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{ marginBottom: '22px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '14px' }}>
         <div>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-            Bảng Quản Trị Giảng Viên • Vai Trò: INSTRUCTOR
-          </span>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
-            Cổng Điều Hành Học Phần & Khảo Thí Lập Trình
+          <p className="eyebrow" style={{ marginBottom: '3px' }}>Cổng giảng viên</p>
+          <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+            Học phần &amp; khảo thí lập trình
           </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '2px' }}>
-            Quản lý đề bài, phân công lớp học, tích hợp AI soạn đề tự động và kiểm định đạo văn AST
+          <p style={{ color: 'var(--text-dim)', fontSize: '12.5px', marginTop: '3px' }}>
+            Quản lý đề bài, lớp học, soạn barem bằng AI và kiểm định đạo văn AST.
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
           <button
             type="button"
+            className="btn btn-secondary btn-sm"
             onClick={() => {
               setTempApiKey(geminiApiKey);
               setIsConfigModalOpen(true);
             }}
-            style={{
-              padding: '9px 14px',
-              borderRadius: '10px',
-              border: `1px solid ${geminiApiKey ? 'rgba(16, 185, 129, 0.4)' : 'rgba(234, 179, 8, 0.4)'}`,
-              backgroundColor: geminiApiKey ? 'rgba(16, 185, 129, 0.12)' : 'rgba(234, 179, 8, 0.12)',
-              color: geminiApiKey ? '#34d399' : '#fbbf24',
-              fontSize: '13px',
-              fontWeight: 700,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-            }}
           >
-            <Key size={15} />
-            {geminiApiKey ? 'Đã Cấu Hình Gemini AI Key' : '⚙️ Nhập Gemini AI Key'}
+            <Key size={13} />
+            {geminiApiKey ? 'Đã cấu hình AI key' : 'Nhập Gemini AI key'}
           </button>
 
           <button
             type="button"
+            className="btn btn-primary btn-sm"
             onClick={() => setActiveTab('CREATE_ASSIGNMENT')}
-            className="btn-primary"
-            style={{
-              padding: '10px 18px',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px',
-              fontWeight: 700,
-              cursor: 'pointer',
-            }}
           >
-            <PlusCircle size={18} /> Tạo Đề Bài Mới
+            <PlusCircle size={14} /> Tạo đề bài
           </button>
         </div>
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px', overflowX: 'auto' }}>
-        <button
-          type="button"
-          onClick={() => setActiveTab('COURSES')}
-          style={{
-            padding: '10px 18px',
-            borderRadius: '8px',
-            background: activeTab === 'COURSES' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-            border: `1px solid ${activeTab === 'COURSES' ? 'var(--accent-primary)' : 'transparent'}`,
-            color: activeTab === 'COURSES' ? '#ffffff' : 'var(--text-muted)',
-            fontWeight: 700,
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <BookOpen size={16} /> 1. Khóa Học & Lớp Học Phần
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('CREATE_ASSIGNMENT')}
-          style={{
-            padding: '10px 18px',
-            borderRadius: '8px',
-            background: activeTab === 'CREATE_ASSIGNMENT' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-            border: `1px solid ${activeTab === 'CREATE_ASSIGNMENT' ? 'var(--accent-primary)' : 'transparent'}`,
-            color: activeTab === 'CREATE_ASSIGNMENT' ? '#ffffff' : 'var(--text-muted)',
-            fontWeight: 700,
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Sparkles size={16} color="var(--accent-cyan)" /> 2. Soạn Đề & Barem AI (UC-08)
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('EXCEL_IMPORT')}
-          style={{
-            padding: '10px 18px',
-            borderRadius: '8px',
-            background: activeTab === 'EXCEL_IMPORT' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-            border: `1px solid ${activeTab === 'EXCEL_IMPORT' ? 'var(--accent-primary)' : 'transparent'}`,
-            color: activeTab === 'EXCEL_IMPORT' ? '#ffffff' : 'var(--text-muted)',
-            fontWeight: 700,
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <FileSpreadsheet size={16} color="#10b981" /> 3. Nhập Roster Excel (ACID Rollback)
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('SUBMISSIONS')}
-          style={{
-            padding: '10px 18px',
-            borderRadius: '8px',
-            background: activeTab === 'SUBMISSIONS' ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-            border: `1px solid ${activeTab === 'SUBMISSIONS' ? 'var(--accent-primary)' : 'transparent'}`,
-            color: activeTab === 'SUBMISSIONS' ? '#ffffff' : 'var(--text-muted)',
-            fontWeight: 700,
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Award size={16} /> 4. Sổ Điểm & Bài Nộp
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('RBL_LAB')}
-          style={{
-            padding: '10px 18px',
-            borderRadius: '8px',
-            background: activeTab === 'RBL_LAB' ? 'rgba(6, 182, 212, 0.2)' : 'transparent',
-            border: `1px solid ${activeTab === 'RBL_LAB' ? 'var(--accent-cyan)' : 'transparent'}`,
-            color: activeTab === 'RBL_LAB' ? 'var(--accent-cyan)' : 'var(--text-muted)',
-            fontWeight: 700,
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Sparkles size={16} /> 5. RBL Lab (Nghiên Cứu)
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab('APPEALS')}
-          style={{
-            padding: '10px 18px',
-            borderRadius: '8px',
-            background: activeTab === 'APPEALS' ? 'rgba(245, 158, 11, 0.2)' : 'transparent',
-            border: `1px solid ${activeTab === 'APPEALS' ? '#f59e0b' : 'transparent'}`,
-            color: activeTab === 'APPEALS' ? '#fbbf24' : 'var(--text-muted)',
-            fontWeight: 700,
-            fontSize: '14px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Scale size={16} color="#fbbf24" /> 6. Phúc Khảo Điểm (UC-06)
-        </button>
+      <div
+        role="tablist"
+        style={{ display: 'flex', gap: '2px', marginBottom: '22px', borderBottom: '1px solid var(--border-color)', overflowX: 'auto' }}
+      >
+        {([
+          { key: 'COURSES', label: 'Khóa học', icon: <BookOpen size={14} /> },
+          { key: 'CREATE_ASSIGNMENT', label: 'Soạn đề & barem', icon: <Sparkles size={14} /> },
+          { key: 'EXCEL_IMPORT', label: 'Nhập roster', icon: <FileSpreadsheet size={14} /> },
+          { key: 'SUBMISSIONS', label: 'Sổ điểm', icon: <Award size={14} /> },
+          { key: 'RBL_LAB', label: 'RBL Lab', icon: <Activity size={14} /> },
+          { key: 'APPEALS', label: 'Phúc khảo', icon: <Scale size={14} /> },
+        ] as const).map((tab) => {
+          const active = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveTab(tab.key as any)}
+              style={{
+                padding: '9px 13px',
+                border: 'none',
+                borderBottom: `2px solid ${active ? 'var(--blue-500)' : 'transparent'}`,
+                marginBottom: '-1px',
+                background: 'transparent',
+                color: active ? 'var(--blue-300)' : 'var(--text-muted)',
+                fontWeight: active ? 600 : 500,
+                fontSize: '12.5px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '7px',
+                whiteSpace: 'nowrap',
+                transition: 'color .15s ease, border-color .15s ease',
+              }}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          );
+        })}
       </div>
 
 
@@ -1258,25 +1107,25 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     style={{
                       padding: '16px 20px',
                       borderRadius: '12px',
-                      backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                      border: '1.5px solid rgba(16, 185, 129, 0.4)',
-                      color: '#34d399',
+                      backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                      border: '1.5px solid rgba(37, 99, 235, 0.18)',
+                      color: 'var(--blue-200)',
                       fontSize: '14px',
                       fontWeight: 700,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      boxShadow: '0 4px 15px rgba(16, 185, 129, 0.2)',
+                      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <CheckCircle2 size={20} color="#10b981" />
+                      <CheckCircle2 size={20} color="#2563eb" />
                       <span>{publishSuccessToast}</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setPublishSuccessToast(null)}
-                      style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '18px', fontWeight: 700 }}
+                      style={{ background: 'none', border: 'none', color: 'var(--blue-200)', cursor: 'pointer', fontSize: '18px', fontWeight: 700 }}
                     >
                       ×
                     </button>
@@ -1284,7 +1133,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 )}
 
                 {/* Header Thông Tin Môn Học */}
-                <div className="glass-panel" style={{ padding: '24px 28px', borderRadius: '16px' }}>
+                <div className="glass-panel" style={{ padding: '24px 28px', borderRadius: '12px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                     <button
                       type="button"
@@ -1292,9 +1141,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       style={{
                         padding: '8px 14px',
                         borderRadius: '8px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                        border: '1px solid rgba(255, 255, 255, 0.15)',
-                        color: '#ffffff',
+                        backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                        border: '1px solid rgba(11, 18, 32, 0.08)',
+                        color: 'var(--text-main)',
                         fontSize: '13px',
                         fontWeight: 600,
                         cursor: 'pointer',
@@ -1334,9 +1183,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         style={{
                           padding: '9px 16px',
                           borderRadius: '8px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.15)',
-                          color: '#ffffff',
+                          backgroundColor: 'rgba(11, 18, 32, 0.035)',
+                          border: '1px solid rgba(11, 18, 32, 0.08)',
+                          color: 'var(--text-main)',
                           fontSize: '13px',
                           fontWeight: 600,
                           cursor: 'pointer',
@@ -1351,27 +1200,27 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '13px', padding: '4px 10px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.25)', color: 'var(--accent-primary)', fontWeight: 800 }}>
+                    <span style={{ fontSize: '13px', padding: '4px 10px', borderRadius: '6px', backgroundColor: 'rgba(59, 130, 246, 0.16)', color: 'var(--blue-200)', fontWeight: 600 }}>
                       {courseCode}
                     </span>
-                    <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>
+                    <h2 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-main)' }}>
                       {courseName}
                     </h2>
                   </div>
 
                   <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
-                    Giảng viên: <strong>{currentCourse?.instructorName}</strong> • {currentCourse?.semester} • Sĩ số: <strong style={{ color: '#ffffff' }}>{currentCourse?.studentCount}</strong> sinh viên
+                    Giảng viên: <strong>{currentCourse?.instructorName}</strong> • {currentCourse?.semester} • Sĩ số: <strong style={{ color: 'var(--text-main)' }}>{currentCourse?.studentCount}</strong> sinh viên
                   </p>
 
-                  <div style={{ display: 'flex', gap: '20px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '14px', fontSize: '13px', color: 'var(--text-muted)' }}>
-                    <span>Tổng số bài tập đã giao: <strong style={{ color: 'var(--accent-cyan)' }}>{courseAssignments.length}</strong> bài</span>
-                    <span>Đang mở nộp bài: <strong style={{ color: '#34d399' }}>{courseAssignments.filter((a) => a.status === 'PUBLISHED').length}</strong> bài</span>
+                  <div style={{ display: 'flex', gap: '20px', borderTop: '1px solid rgba(11, 18, 32, 0.05)', paddingTop: '14px', fontSize: '13px', color: 'var(--text-muted)' }}>
+                    <span>Tổng số bài tập đã giao: <strong style={{ color: 'var(--blue-200)' }}>{courseAssignments.length}</strong> bài</span>
+                    <span>Đang mở nộp bài: <strong style={{ color: 'var(--blue-200)' }}>{courseAssignments.filter((a) => a.status === 'PUBLISHED').length}</strong> bài</span>
                   </div>
                 </div>
 
                 {/* Tiêu đề Danh Sách Bài Tập */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <FolderKanban size={20} color="var(--accent-cyan)" /> Danh Sách Các Bài Tập Đã Giao Của Môn Học
                   </h3>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -1381,9 +1230,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
                 {/* Danh Sách Card Bài Tập Đã Giao */}
                 {courseAssignments.length === 0 ? (
-                  <div className="glass-panel" style={{ padding: '48px', borderRadius: '16px', textAlign: 'center' }}>
+                  <div className="glass-panel" style={{ padding: '48px', borderRadius: '12px', textAlign: 'center' }}>
                     <FileText size={44} color="var(--text-muted)" style={{ margin: '0 auto 12px' }} />
-                    <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', marginBottom: '6px' }}>
+                    <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
                       Chưa Có Bài Tập Nào Được Giao Cho Môn Học Này
                     </h4>
                     <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
@@ -1398,7 +1247,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       className="btn-primary"
                       style={{ padding: '10px 20px', borderRadius: '10px', fontSize: '14px', fontWeight: 700, cursor: 'pointer' }}
                     >
-                      ⚡ Soạn Đề Bài Tập Đầu Tiên Ngay
+                      Soạn đề bài tập đầu tiên
                     </button>
                   </div>
                 ) : (
@@ -1413,10 +1262,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           className="glass-panel"
                           style={{
                             padding: '22px 26px',
-                            borderRadius: '14px',
-                            border: asm.isNewlyCreated ? '1.5px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
-                            backgroundColor: asm.isNewlyCreated ? 'rgba(16, 185, 129, 0.04)' : undefined,
-                            boxShadow: asm.isNewlyCreated ? '0 4px 20px rgba(16, 185, 129, 0.15)' : undefined,
+                            borderRadius: '12px',
+                            border: asm.isNewlyCreated ? '1.5px solid rgba(37, 99, 235, 0.24)' : '1px solid rgba(11, 18, 32, 0.05)',
+                            backgroundColor: asm.isNewlyCreated ? 'rgba(37, 99, 235, 0.04)' : undefined,
+                            boxShadow: asm.isNewlyCreated ? '0 4px 20px rgba(37, 99, 235, 0.08)' : undefined,
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
@@ -1427,12 +1276,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                   padding: '3px 8px',
                                   borderRadius: '6px',
                                   fontWeight: 700,
-                                  backgroundColor: isPublished ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)',
-                                  color: isPublished ? '#34d399' : '#f43f5e',
-                                  border: `1px solid ${isPublished ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+                                  backgroundColor: isPublished ? 'rgba(37, 99, 235, 0.1)' : 'rgba(11, 18, 32, 0.07)',
+                                  color: isPublished ? '#1d4ed8' : 'var(--text-main)',
+                                  border: `1px solid ${isPublished ? 'rgba(37, 99, 235, 0.14)' : 'rgba(11, 18, 32, 0.1)'}`,
                                 }}
                               >
-                                {isPublished ? '🟢 ĐANG MỞ NỘP BÀI' : '🔴 ĐÃ ĐÓNG NỘP'}
+                                {isPublished ? 'ĐANG MỞ NỘP BÀI' : 'ĐÃ ĐÓNG NỘP'}
                               </span>
 
                               {asm.isNewlyCreated && (
@@ -1442,11 +1291,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                     padding: '3px 8px',
                                     borderRadius: '6px',
                                     fontWeight: 700,
-                                    background: 'linear-gradient(135deg, #10b981 0%, #06b6d4 100%)',
-                                    color: '#ffffff',
+                                    background: 'var(--blue-400)',
+                                    color: 'var(--on-blue)',
                                   }}
                                 >
-                                  ✨ MỚI XUẤT BẢN VỪA XONG
+                                  Mới xuất bản
                                 </span>
                               )}
 
@@ -1460,7 +1309,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             </div>
                           </div>
 
-                          <h4 style={{ fontSize: '17px', fontWeight: 800, color: '#ffffff', marginBottom: '8px' }}>
+                          <h4 style={{ fontSize: '17px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>
                             {asm.title}
                           </h4>
 
@@ -1470,25 +1319,25 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
                           {/* Chips Thông số kỹ thuật */}
                           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#c7d2fe' }}>
-                              🧪 {asm.testCases.length} Test Cases ({totalWeight.toFixed(1)}đ)
+                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(59, 130, 246, 0.09)', color: '#1e40af' }}>
+                              {asm.testCases.length} Test Cases ({totalWeight.toFixed(1)}đ)
                             </span>
-                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-cyan)' }}>
-                              ⚡ Thời gian: {asm.timeLimitMs}ms
+                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-200)' }}>
+                              Thời gian: {asm.timeLimitMs}ms
                             </span>
-                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
-                              💾 RAM: {asm.memoryLimitMb}MB
+                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(11, 18, 32, 0.035)', color: 'var(--text-muted)' }}>
+                              RAM: {asm.memoryLimitMb}MB
                             </span>
-                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)' }}>
-                              💻 {asm.allowedLanguages.join(', ').toUpperCase()}
+                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(11, 18, 32, 0.035)', color: 'var(--text-muted)' }}>
+                              {asm.allowedLanguages.join(', ').toUpperCase()}
                             </span>
-                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', fontWeight: 600 }}>
-                              👥 {asm.submissionCount}/38 Sinh viên đã nộp bài
+                            <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-200)', fontWeight: 600 }}>
+                              {asm.submissionCount}/38 Sinh viên đã nộp bài
                             </span>
                           </div>
 
                           {/* Các nút hành động cho bài tập */}
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(11, 18, 32, 0.04)', paddingTop: '12px', flexWrap: 'wrap', gap: '8px' }}>
                             <div style={{ display: 'flex', gap: '8px' }}>
                               <button
                                 type="button"
@@ -1496,9 +1345,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                 style={{
                                   padding: '7px 12px',
                                   borderRadius: '8px',
-                                  backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                                  backgroundColor: 'rgba(37, 99, 235, 0.10)',
                                   border: '1px solid var(--accent-primary)',
-                                  color: '#ffffff',
+                                  color: 'var(--text-main)',
                                   fontSize: '12px',
                                   fontWeight: 700,
                                   cursor: 'pointer',
@@ -1516,8 +1365,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                 style={{
                                   padding: '7px 12px',
                                   borderRadius: '8px',
-                                  backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                                  backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                                  border: '1px solid rgba(11, 18, 32, 0.07)',
                                   color: 'var(--text-muted)',
                                   fontSize: '12px',
                                   fontWeight: 600,
@@ -1539,8 +1388,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                   padding: '6px 12px',
                                   borderRadius: '6px',
                                   backgroundColor: 'transparent',
-                                  border: `1px solid ${isPublished ? 'rgba(244, 63, 94, 0.4)' : 'rgba(16, 185, 129, 0.4)'}`,
-                                  color: isPublished ? '#f43f5e' : '#34d399',
+                                  border: `1px solid ${isPublished ? 'rgba(11, 18, 32, 0.13)' : 'rgba(37, 99, 235, 0.18)'}`,
+                                  color: isPublished ? 'var(--text-main)' : '#1d4ed8',
                                   fontSize: '12px',
                                   fontWeight: 600,
                                   cursor: 'pointer',
@@ -1555,9 +1404,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                 style={{
                                   padding: '6px 10px',
                                   borderRadius: '6px',
-                                  backgroundColor: 'rgba(244, 63, 94, 0.1)',
-                                  border: '1px solid rgba(244, 63, 94, 0.25)',
-                                  color: '#f43f5e',
+                                  backgroundColor: 'rgba(11, 18, 32, 0.05)',
+                                  border: '1px solid rgba(11, 18, 32, 0.09)',
+                                  color: 'var(--text-main)',
                                   fontSize: '12px',
                                   fontWeight: 600,
                                   cursor: 'pointer',
@@ -1582,7 +1431,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)' }}>
                     Các Lớp Học Phần Đang Giảng Dạy ({courses.length} Môn)
                   </h3>
                   <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
@@ -1614,15 +1463,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   const assignedCount = publishedAssignments.filter((a) => a.courseId === course.courseId).length;
 
                   return (
-                    <div key={course.courseId} className="glass-panel" style={{ padding: '24px', borderRadius: '14px' }}>
+                    <div key={course.courseId} className="glass-panel" style={{ padding: '24px', borderRadius: '12px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                        <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.2)', color: 'var(--accent-primary)', fontWeight: 700 }}>
+                        <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.10)', color: 'var(--blue-200)', fontWeight: 700 }}>
                           {course.courseCode}
                         </span>
                         <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{course.semester}</span>
                       </div>
 
-                      <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', marginBottom: '8px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>
                         {course.courseName}
                       </h3>
 
@@ -1630,9 +1479,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         Giảng viên: {course.instructorName}
                       </p>
 
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '12px' }}>
-                        <span>Sĩ số: <strong style={{ color: '#ffffff' }}>{course.studentCount}</strong> sinh viên</span>
-                        <span>Đã giao: <strong style={{ color: 'var(--accent-cyan)' }}>{assignedCount}</strong> bài tập</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', color: 'var(--text-muted)', borderTop: '1px solid rgba(11, 18, 32, 0.04)', paddingTop: '12px' }}>
+                        <span>Sĩ số: <strong style={{ color: 'var(--text-main)' }}>{course.studentCount}</strong> sinh viên</span>
+                        <span>Đã giao: <strong style={{ color: 'var(--blue-200)' }}>{assignedCount}</strong> bài tập</span>
                       </div>
 
                       <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -1643,9 +1492,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             width: '100%',
                             padding: '9px 12px',
                             borderRadius: '8px',
-                            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(6, 182, 212, 0.2) 100%)',
-                            border: '1px solid rgba(99, 102, 241, 0.4)',
-                            color: '#ffffff',
+                            background: 'rgba(59, 130, 246, 0.1)',
+                            border: '1px solid rgba(59, 130, 246, 0.28)',
+                            color: 'var(--text-main)',
                             fontSize: '13px',
                             fontWeight: 700,
                             cursor: 'pointer',
@@ -1655,7 +1504,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             gap: '6px',
                           }}
                         >
-                          <FolderKanban size={15} color="var(--accent-cyan)" /> 📋 Xem Các Bài Tập Đã Giao ({assignedCount})
+                          <FolderKanban size={15} color="var(--accent-cyan)" /> Xem các bài tập đã giao ({assignedCount})
                         </button>
 
                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -1669,9 +1518,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                               flex: 1,
                               padding: '8px 10px',
                               borderRadius: '8px',
-                              backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                              border: '1px solid rgba(255, 255, 255, 0.12)',
-                              color: 'var(--accent-primary)',
+                              backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                              border: '1px solid rgba(11, 18, 32, 0.07)',
+                              color: 'var(--blue-200)',
                               fontSize: '12px',
                               fontWeight: 600,
                               cursor: 'pointer',
@@ -1686,8 +1535,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             style={{
                               padding: '8px 12px',
                               borderRadius: '8px',
-                              backgroundColor: 'rgba(255,255,255,0.04)',
-                              border: '1px solid rgba(255,255,255,0.1)',
+                              backgroundColor: 'rgba(11, 18, 32, 0.03)',
+                              border: '1px solid rgba(11, 18, 32, 0.06)',
                               color: 'var(--text-muted)',
                               fontSize: '12px',
                               fontWeight: 600,
@@ -1709,11 +1558,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       {/* TAB 2: TẠO ĐỀ BÀI TẬP & GOOGLE GEMINI AI GENERATOR (UC-08) */}
       {activeTab === 'CREATE_ASSIGNMENT' && (
-        <div className="glass-panel" style={{ padding: '32px', borderRadius: '16px' }}>
+        <div className="glass-panel" style={{ padding: '32px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>
+                <h2 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-main)' }}>
                   Soạn Thảo Đề Bài Tập & Sinh Barem Bằng Google Gemini AI Thật
                 </h2>
                 <span
@@ -1721,13 +1570,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     fontSize: '11px',
                     padding: '3px 8px',
                     borderRadius: '6px',
-                    backgroundColor: geminiApiKey ? 'rgba(16, 185, 129, 0.2)' : 'rgba(234, 179, 8, 0.2)',
-                    color: geminiApiKey ? '#34d399' : '#fbbf24',
+                    backgroundColor: geminiApiKey ? 'rgba(37, 99, 235, 0.1)' : 'rgba(37, 99, 235, 0.1)',
+                    color: geminiApiKey ? '#1d4ed8' : '#1e40af',
                     fontWeight: 700,
-                    border: `1px solid ${geminiApiKey ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
+                    border: `1px solid ${geminiApiKey ? 'rgba(37, 99, 235, 0.14)' : 'rgba(37, 99, 235, 0.14)'}`,
                   }}
                 >
-                  {geminiApiKey ? '🟢 AI Thật Đã Kích Hoạt' : '🟡 Chưa Cấu Hình Key'}
+                  {geminiApiKey ? 'AI Thật Đã Kích Hoạt' : 'Chưa Cấu Hình Key'}
                 </span>
               </div>
               <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
@@ -1745,9 +1594,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 style={{
                   padding: '10px 14px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  color: '#ffffff',
+                  border: '1px solid rgba(11, 18, 32, 0.08)',
+                  backgroundColor: 'rgba(11, 18, 32, 0.035)',
+                  color: 'var(--text-main)',
                   fontSize: '13px',
                   fontWeight: 600,
                   display: 'flex',
@@ -1766,7 +1615,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 style={{
                   padding: '10px 20px',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                  background: 'var(--blue-600)',
                   border: 'none',
                   color: '#ffffff',
                   fontWeight: 700,
@@ -1775,13 +1624,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   alignItems: 'center',
                   gap: '8px',
                   cursor: isAiGenerating ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 15px rgba(168, 85, 247, 0.35)',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
                 }}
               >
                 {isAiGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                 {isAiGenerating
                   ? `Đang tạo đề... (${aiTimerSeconds}s / tối đa 10s)`
-                  : '⚡ Dùng AI Sinh Đề & Barem'}
+                  : 'Dùng AI sinh đề & barem'}
               </button>
             </div>
           </div>
@@ -1791,20 +1640,20 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             style={{
               marginBottom: '24px',
               padding: '20px 24px',
-              borderRadius: '16px',
-              backgroundColor: 'rgba(99, 102, 241, 0.08)',
-              border: '1.5px solid rgba(99, 102, 241, 0.35)',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(59, 130, 246, 0.06)',
+              border: '1.5px solid rgba(59, 130, 246, 0.24)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sparkles size={20} color="var(--accent-cyan)" />
-                <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>
+                <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-main)' }}>
                   Yêu Cầu & Ý Tưởng Cụ Thể Của Giảng Viên (Prompt Dành Cho AI Soạn Đề)
                 </h3>
               </div>
-              <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(16, 185, 129, 0.2)', color: '#34d399', fontWeight: 700 }}>
-                ⚡ Tốc độ cao (Bảo vệ thời gian thực tối đa 10s)
+              <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.1)', color: 'var(--blue-200)', fontWeight: 700 }}>
+                Tốc độ cao (Bảo vệ thời gian thực tối đa 10s)
               </span>
             </div>
 
@@ -1826,9 +1675,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 width: '100%',
                 padding: '12px 16px',
                 borderRadius: '10px',
-                backgroundColor: 'rgba(10, 15, 29, 0.8)',
-                border: '1px solid rgba(99, 102, 241, 0.35)',
-                color: '#ffffff',
+                backgroundColor: 'rgba(255, 255, 255, 0.66)',
+                border: '1px solid rgba(59, 130, 246, 0.24)',
+                color: 'var(--text-main)',
                 fontSize: '14px',
                 lineHeight: '1.5',
                 outline: 'none',
@@ -1838,8 +1687,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             {/* Thanh Chọn Số Lượng Test Cases Mong Muốn */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '12px', color: '#e5e7eb', fontWeight: 700 }}>
-                🎯 Số lượng Test Cases AI cần sinh:
+              <span style={{ fontSize: '12px', color: '#0b1220', fontWeight: 700 }}>
+                Số lượng test case AI cần sinh:
               </span>
               {[3, 5, 7, 10].map((count) => {
                 const isSelected = desiredTestCount === count;
@@ -1850,23 +1699,22 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     onClick={() => setDesiredTestCount(count)}
                     style={{
                       padding: '4px 12px',
-                      borderRadius: '8px',
-                      backgroundColor: isSelected ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.06)',
-                      color: '#ffffff',
+                      borderRadius: '7px',
+                      backgroundColor: isSelected ? 'var(--blue-600)' : 'rgba(11, 18, 32, 0.035)',
+                      color: isSelected ? 'var(--on-blue)' : 'var(--text-main)',
                       fontSize: '12px',
-                      fontWeight: 700,
-                      border: isSelected ? '1px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.15)',
+                      fontWeight: isSelected ? 600 : 500,
+                      border: `1px solid ${isSelected ? 'var(--blue-500)' : 'var(--border-color)'}`,
                       cursor: 'pointer',
-                      boxShadow: isSelected ? '0 0 10px rgba(99, 102, 241, 0.4)' : 'none',
-                      transition: 'all 0.2s ease',
+                      transition: 'background-color .15s ease, border-color .15s ease',
                     }}
                   >
-                    {count} Test Cases {count === 5 ? '★ Chuẩn' : ''}
+                    {count} test case{count === 5 ? ' · chuẩn' : ''}
                   </button>
                 );
               })}
-              <span style={{ fontSize: '11px', color: 'var(--accent-cyan)', marginLeft: '4px' }}>
-                ✓ Hệ thống sẽ tạo đủ đúng {desiredTestCount} testcases kèm trọng số khác nhau
+              <span style={{ fontSize: '11px', color: 'var(--text-dim)', marginLeft: '4px' }}>
+                Hệ thống sinh đúng {desiredTestCount} test case kèm trọng số khác nhau
               </span>
             </div>
 
@@ -1891,9 +1739,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       fontSize: '11px',
                       padding: '4px 10px',
                       borderRadius: '6px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
-                      color: '#c7d2fe',
+                      backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                      border: '1px solid rgba(11, 18, 32, 0.07)',
+                      color: '#1e40af',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                     }}
@@ -1910,7 +1758,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 style={{
                   padding: '10px 22px',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                  background: 'var(--blue-600)',
                   border: 'none',
                   color: '#ffffff',
                   fontWeight: 700,
@@ -1919,18 +1767,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   alignItems: 'center',
                   gap: '8px',
                   cursor: isAiGenerating ? 'not-allowed' : 'pointer',
-                  boxShadow: '0 4px 15px rgba(168, 85, 247, 0.35)',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
                 }}
               >
                 {isAiGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
-                {isAiGenerating ? 'Đang tạo siêu tốc bằng Gemini...' : '⚡ Sinh Đề Bằng AI Theo Yêu Cầu Này'}
+                {isAiGenerating ? 'Đang tạo siêu tốc bằng Gemini...' : 'Sinh đề bằng AI theo yêu cầu này'}
               </button>
             </div>
           </div>
 
           {/* Thông báo lỗi AI nếu có */}
           {aiErrorMsg && (
-            <div style={{ marginBottom: '20px', padding: '14px 18px', borderRadius: '10px', backgroundColor: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.4)', color: '#f43f5e', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ marginBottom: '20px', padding: '14px 18px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.06)', border: '1px solid rgba(11, 18, 32, 0.13)', color: 'var(--text-main)', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <AlertCircle size={18} />
                 <span>{aiErrorMsg}</span>
@@ -1938,7 +1786,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <button
                 type="button"
                 onClick={() => setIsConfigModalOpen(true)}
-                style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #f43f5e', backgroundColor: 'transparent', color: '#f43f5e', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #ffffff', backgroundColor: 'transparent', color: 'var(--text-main)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
               >
                 Nhập Key Ngay
               </button>
@@ -1947,7 +1795,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
           {/* Badge thành công từ AI */}
           {aiSuccessBadge && (
-            <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.12)', border: '1px solid rgba(99, 102, 241, 0.3)', color: 'var(--accent-cyan)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ marginBottom: '16px', padding: '12px 16px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.09)', border: '1px solid rgba(59, 130, 246, 0.2)', color: 'var(--blue-200)', fontSize: '13px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <span>{aiSuccessBadge}</span>
               {(starterCode || referenceSolution) && (
                 <button
@@ -1956,9 +1804,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   style={{
                     padding: '4px 10px',
                     borderRadius: '6px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.25)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.16)',
                     border: '1px solid var(--accent-primary)',
-                    color: '#ffffff',
+                    color: 'var(--text-main)',
                     fontSize: '12px',
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -1974,7 +1822,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           )}
 
           {createSuccessMsg && (
-            <div style={{ marginBottom: '20px', padding: '14px 18px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#10b981', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ marginBottom: '20px', padding: '14px 18px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.14)', color: 'var(--blue-300)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <CheckCircle2 size={18} />
               <span>{createSuccessMsg}</span>
             </div>
@@ -1983,7 +1831,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           <form onSubmit={handleSaveAssignment} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#0b1220', marginBottom: '6px' }}>
                   Tiêu Đề Bài Tập *
                 </label>
                 <input
@@ -1996,16 +1844,16 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     width: '100%',
                     padding: '12px 16px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(18, 24, 36, 0.8)',
+                    backgroundColor: '#f7f9fc',
                     border: '1px solid var(--border-color)',
-                    color: '#ffffff',
+                    color: 'var(--text-main)',
                     fontSize: '14px',
                   }}
                 />
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#0b1220', marginBottom: '6px' }}>
                   Áp Dụng Cho Học Phần *
                 </label>
                 <select
@@ -2015,9 +1863,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     width: '100%',
                     padding: '12px 16px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(18, 24, 36, 0.8)',
+                    backgroundColor: '#f7f9fc',
                     border: '1px solid var(--border-color)',
-                    color: '#ffffff',
+                    color: 'var(--text-main)',
                     fontSize: '14px',
                   }}
                 >
@@ -2031,7 +1879,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#0b1220', marginBottom: '6px' }}>
                 Mô Tả Yêu Cầu & Ràng Buộc Thuật Toán *
               </label>
               <textarea
@@ -2043,9 +1891,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   width: '100%',
                   padding: '12px 16px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(18, 24, 36, 0.8)',
+                  backgroundColor: '#f7f9fc',
                   border: '1px solid var(--border-color)',
-                  color: '#ffffff',
+                  color: 'var(--text-main)',
                   fontSize: '14px',
                   lineHeight: '1.5',
                 }}
@@ -2053,8 +1901,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             </div>
 
             {/* Cấu hình hạn ngạch Sandbox */}
-            <div style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.02)', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
+              <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Cpu size={16} /> Cấu Hình Giới Hạn Tài Nguyên Docker Sandbox & Thời Gian Hạn Nộp
               </h4>
 
@@ -2071,9 +1919,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      backgroundColor: 'rgba(18, 24, 36, 0.8)',
+                      backgroundColor: '#f7f9fc',
                       border: '1px solid var(--border-color)',
-                      color: '#ffffff',
+                      color: 'var(--text-main)',
                       fontSize: '13px',
                     }}
                   />
@@ -2094,9 +1942,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      backgroundColor: 'rgba(18, 24, 36, 0.8)',
+                      backgroundColor: '#f7f9fc',
                       border: '1px solid var(--border-color)',
-                      color: '#ffffff',
+                      color: 'var(--text-main)',
                       fontSize: '13px',
                     }}
                   />
@@ -2117,9 +1965,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       width: '100%',
                       padding: '10px 14px',
                       borderRadius: '8px',
-                      backgroundColor: 'rgba(18, 24, 36, 0.8)',
+                      backgroundColor: '#f7f9fc',
                       border: '1px solid var(--border-color)',
-                      color: '#ffffff',
+                      color: 'var(--text-main)',
                       fontSize: '13px',
                     }}
                   />
@@ -2131,7 +1979,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   </label>
                   <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
                     {['java', 'python', 'cpp'].map((lang) => (
-                      <label key={lang} style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', color: '#e5e7eb', cursor: 'pointer' }}>
+                      <label key={lang} style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', color: '#0b1220', cursor: 'pointer' }}>
                         <input
                           type="checkbox"
                           checked={allowedLanguages.includes(lang)}
@@ -2152,7 +2000,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Layers size={16} color="var(--accent-primary)" /> Bộ Test Cases Tự Động (StdIn / StdOut) - Tổng {testCases.length} Test
                   </h4>
                   <span
@@ -2160,13 +2008,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       fontSize: '12px',
                       padding: '3px 8px',
                       borderRadius: '6px',
-                      backgroundColor: totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? 'rgba(16, 185, 129, 0.15)' : 'rgba(234, 179, 8, 0.15)',
-                      color: totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? '#34d399' : '#fbbf24',
+                      backgroundColor: totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? 'rgba(37, 99, 235, 0.08)' : 'rgba(37, 99, 235, 0.08)',
+                      color: totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? '#1d4ed8' : '#1e40af',
                       fontWeight: 700,
-                      border: `1px solid ${totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
+                      border: `1px solid ${totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? 'rgba(37, 99, 235, 0.14)' : 'rgba(37, 99, 235, 0.14)'}`,
                     }}
                   >
-                    Tổng Điểm TC: {totalTestcaseWeight.toFixed(1)}đ {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 ? '(Tùy chỉnh tỷ lệ)' : '✅ Chuẩn'}
+                    Tổng Điểm TC: {totalTestcaseWeight.toFixed(1)}đ {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 ? '(Tùy chỉnh tỷ lệ)' : 'Chuẩn'}
                   </span>
                 </div>
 
@@ -2178,16 +2026,16 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       style={{
                         padding: '4px 10px',
                         borderRadius: '6px',
-                        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.09)',
                         border: '1px solid var(--accent-primary)',
-                        color: '#ffffff',
+                        color: 'var(--text-main)',
                         fontSize: '11px',
                         fontWeight: 600,
                         cursor: 'pointer',
                       }}
                       title="Tự động chuẩn hóa chia lại tỷ lệ để tổng điểm các testcases đúng bằng 10.0đ"
                     >
-                      ⚡ Quy đổi về 10.0đ
+                      Quy đổi về 10.0đ
                     </button>
                   )}
                   {totalTestcaseWeight !== 7 && (
@@ -2197,16 +2045,16 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       style={{
                         padding: '4px 10px',
                         borderRadius: '6px',
-                        backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
                         border: '1px solid var(--accent-cyan)',
-                        color: 'var(--accent-cyan)',
+                        color: 'var(--blue-200)',
                         fontSize: '11px',
                         fontWeight: 600,
                         cursor: 'pointer',
                       }}
                       title="Quy đổi về 7.0đ (theo Barem chuẩn AITA: 7đ Testcase + 3đ Clean Code & SOLID)"
                     >
-                      ⚡ Quy đổi về 7.0đ (Barem)
+                      Quy đổi về 7.0đ (Barem)
                     </button>
                   )}
                   <button
@@ -2216,8 +2064,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       padding: '4px 10px',
                       borderRadius: '6px',
                       backgroundColor: 'transparent',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      color: 'var(--accent-primary)',
+                      border: '1px solid rgba(11, 18, 32, 0.08)',
+                      color: 'var(--blue-200)',
                       fontSize: '12px',
                       fontWeight: 700,
                       cursor: 'pointer',
@@ -2229,14 +2077,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               </div>
 
               {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 && (
-                <div style={{ marginBottom: '10px', padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(234, 179, 8, 0.08)', border: '1px solid rgba(234, 179, 8, 0.2)', fontSize: '12px', color: '#fbbf24' }}>
-                  💡 <strong>Tổng điểm các testcase hiện là {totalTestcaseWeight.toFixed(1)}đ (khác 10đ):</strong> Khi chấm bài, hệ thống tự động chuẩn hóa theo tỷ lệ: <code>Điểm đạt = (Tổng điểm TC Pass / {totalTestcaseWeight.toFixed(1)}) × Thang Điểm Barem</code>. Hoặc Giảng viên có thể bấm nút <em>"Quy đổi về 10.0đ"</em> hoặc <em>"7.0đ (Barem)"</em> ở trên để chuẩn hóa tự động.
+                <div style={{ marginBottom: '10px', padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.1)', fontSize: '12px', color: '#1e40af' }}>
+                  <strong>Tổng điểm các testcase hiện là {totalTestcaseWeight.toFixed(1)}đ (khác 10đ):</strong> Khi chấm bài, hệ thống tự động chuẩn hóa theo tỷ lệ: <code>Điểm đạt = (Tổng điểm TC Pass / {totalTestcaseWeight.toFixed(1)}) × Thang Điểm Barem</code>. Hoặc Giảng viên có thể bấm nút <em>"Quy đổi về 10.0đ"</em> hoặc <em>"7.0đ (Barem)"</em> ở trên để chuẩn hóa tự động.
                 </div>
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {testCases.map((tc, idx) => (
-                  <div key={idx} style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'rgba(18, 24, 36, 0.6)', border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 100px 90px auto', gap: '12px', alignItems: 'center' }}>
+                  <div key={idx} className="testcase-row" style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#eef2f8', border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 100px 90px auto', gap: '12px', alignItems: 'center' }}>
                     <div>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Input (StdIn #{idx + 1}):</span>
                       <input
@@ -2248,7 +2096,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           setTestCases(updated);
                         }}
                         placeholder="Dữ liệu đầu vào..."
-                        style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
+                        style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#ffffff', border: '1px solid rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
                       />
                     </div>
 
@@ -2263,7 +2111,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           setTestCases(updated);
                         }}
                         placeholder="Kết quả chuẩn..."
-                        style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
+                        style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#ffffff', border: '1px solid rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
                       />
                     </div>
 
@@ -2278,7 +2126,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           setTestCases(updated);
                         }}
                         step={0.5}
-                        style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px' }}
+                        style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#ffffff', border: '1px solid rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontSize: '12px' }}
                       />
                     </div>
 
@@ -2313,9 +2161,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             {/* Bảng Rubric Barem Chấm Điểm (Khi được AI sinh ra) */}
             {generatedRubrics.length > 0 && (
-              <div style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'rgba(99, 102, 241, 0.05)', border: '1px solid rgba(99, 102, 241, 0.2)' }}>
+              <div style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.12)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Award size={18} color="var(--accent-primary)" /> Barem Chấm Điểm Học Thuật Rubrics (Sinh Bởi Google Gemini AI)
                   </h4>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
@@ -2325,12 +2173,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {generatedRubrics.map((rubric, rIdx) => (
-                    <div key={rIdx} style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: 'rgba(18, 24, 36, 0.7)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                    <div key={rIdx} style={{ padding: '12px 16px', borderRadius: '8px', backgroundColor: '#f7f9fc', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)' }}>
                           {rIdx + 1}. {rubric.criterion}
                         </span>
-                        <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', fontWeight: 700 }}>
+                        <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.10)', color: 'var(--blue-300)', fontWeight: 700 }}>
                           Tối đa: {rubric.maxScore}đ
                         </span>
                       </div>
@@ -2340,7 +2188,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       {rubric.levels && rubric.levels.length > 0 && (
                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                           {rubric.levels.map((lvl, lIdx) => (
-                            <span key={lIdx} style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(255,255,255,0.04)', color: '#d1d5db', border: '1px solid rgba(255,255,255,0.08)' }}>
+                            <span key={lIdx} style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(11, 18, 32, 0.03)', color: '#33415a', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
                               <strong>{lvl.scorePercent}% điểm:</strong> {lvl.description}
                             </span>
                           ))}
@@ -2376,9 +2224,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       {/* TAB 3: IMPORT EXCEL (ACID TRANSACTION VERIFICATION) */}
       {activeTab === 'EXCEL_IMPORT' && (
-        <div className="glass-panel" style={{ padding: '32px', borderRadius: '16px' }}>
+        <div className="glass-panel" style={{ padding: '32px', borderRadius: '12px' }}>
           <div style={{ marginBottom: '24px' }}>
-            <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-main)' }}>
               Nhập Danh Sách Sinh Viên Hàng Loạt & Kiểm Định Giao Dịch ACID (UC-02)
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
@@ -2391,8 +2239,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             style={{
               padding: '20px 24px',
               borderRadius: '12px',
-              backgroundColor: 'rgba(255, 255, 255, 0.04)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backgroundColor: 'rgba(11, 18, 32, 0.03)',
+              border: '1px solid rgba(11, 18, 32, 0.06)',
               marginBottom: '24px',
               display: 'flex',
               alignItems: 'center',
@@ -2401,8 +2249,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               gap: '16px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
-              <label style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', minWidth: 0 }}>
+              <label style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)' }}>
                 1. Chọn Lớp Học Phần Cần Ghi Danh:
               </label>
               <select
@@ -2411,175 +2259,64 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 style={{
                   padding: '9px 16px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
+                  backgroundColor: '#f7f9fc',
+                  border: '1px solid rgba(11, 18, 32, 0.1)',
+                  color: 'var(--text-main)',
                   fontSize: '14px',
                   fontWeight: 600,
-                  minWidth: '260px',
+                  width: 'min(320px, 100%)',
+                  maxWidth: '100%',
                   outline: 'none',
                 }}
               >
                 {courses.map((c) => (
-                  <option key={c.courseId} value={c.courseId} style={{ backgroundColor: '#0f172a' }}>
+                  <option key={c.courseId} value={c.courseId} style={{ backgroundColor: '#f7f9fc' }}>
                     {c.courseCode} - {c.courseName}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  if (showCourseStudents) {
-                    setShowCourseStudents(false);
-                  } else {
-                    handleLoadCourseStudents();
-                  }
-                }}
-                style={{
-                  padding: '9px 16px',
-                  borderRadius: '8px',
-                  backgroundColor: showCourseStudents ? 'rgba(99, 102, 241, 0.25)' : 'rgba(99, 102, 241, 0.15)',
-                  border: '1px solid rgba(99, 102, 241, 0.4)',
-                  color: '#818cf8',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
-                <Users size={15} /> {showCourseStudents ? 'Ẩn Danh Sách Lớp' : '👥 Xem & Xóa Sinh Viên Trong Lớp'}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportCourseRoster}
-                style={{
-                  padding: '9px 16px',
-                  borderRadius: '8px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.15)',
-                  border: '1px solid rgba(16, 185, 129, 0.4)',
-                  color: '#34d399',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-                title="Tải về danh sách tất cả sinh viên hiện đang có trong lớp học phần này"
-              >
-                <Download size={15} /> 📥 Xuất Danh Sách (.csv)
-              </button>
-            </div>
-          </div>
-
-          {/* BẢNG QUẢN LÝ & XÓA SINH VIÊN HIỆN CÓ TRONG LỚP */}
-          {showCourseStudents && (
-            <div
+            <button
+              type="button"
+              onClick={handleExportCourseRoster}
               style={{
-                padding: '20px',
-                borderRadius: '12px',
-                backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                border: '1px solid rgba(99, 102, 241, 0.3)',
-                marginBottom: '24px',
+                padding: '9px 16px',
+                borderRadius: '8px',
+                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                border: '1px solid rgba(37, 99, 235, 0.18)',
+                color: 'var(--blue-200)',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
               }}
+              title="Tải về danh sách tất cả sinh viên hiện đang có trong lớp học phần này"
             >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: 800, color: '#ffffff', margin: 0 }}>
-                  👥 Danh Sách Sinh Viên Đang Học Lớp [{targetCourseId}] ({courseStudents.length} Sinh Viên)
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => handleLoadCourseStudents()}
-                  disabled={loadingCourseStudents}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '6px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {loadingCourseStudents ? 'Đang tải...' : '🔄 Làm mới'}
-                </button>
-              </div>
-
-              {courseStudents.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                  Lớp học phần này hiện chưa có sinh viên nào. Vui lòng tải file Excel phía dưới để import vào lớp.
-                </div>
-              ) : (
-                <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '8px' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
-                    <thead>
-                      <tr style={{ backgroundColor: 'rgba(255, 255, 255, 0.04)', borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                        <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>STT</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Mã Số SV</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Họ Và Tên</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Email</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'center', color: 'var(--text-muted)' }}>Hành Động</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {courseStudents.map((st, i) => (
-                        <tr key={st.studentCode || st.userId || i} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
-                          <td style={{ padding: '8px 12px', color: 'var(--text-dim)' }}>{i + 1}</td>
-                          <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--accent-primary)' }}>{st.studentCode || st.userId}</td>
-                          <td style={{ padding: '8px 12px', color: '#ffffff' }}>{st.fullName}</td>
-                          <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{st.email}</td>
-                          <td style={{ padding: '8px 12px', textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveStudentFromCourse(st.studentCode || st.userId, st.fullName)}
-                              style={{
-                                padding: '4px 10px',
-                                borderRadius: '6px',
-                                backgroundColor: 'rgba(244, 63, 94, 0.15)',
-                                border: '1px solid rgba(244, 63, 94, 0.3)',
-                                color: '#f43f5e',
-                                fontSize: '11.5px',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                              }}
-                            >
-                              Xóa khỏi lớp
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
+              <FileTypeIcon kind="csv" size={16} showExt={false} /> Xuất Danh Sách Sinh Viên Đã Có (.csv)
+            </button>
+          </div>
 
           {/* KHU VỰC CHỌN FILE CSV THỰC TẾ */}
           <div
             style={{
               padding: '24px',
-              borderRadius: '14px',
-              backgroundColor: 'rgba(15, 23, 42, 0.7)',
-              border: '1.5px dashed rgba(99, 102, 241, 0.4)',
+              borderRadius: '12px',
+              backgroundColor: '#f7f9fc',
+              border: '1.5px dashed rgba(59, 130, 246, 0.28)',
               marginBottom: '28px',
               textAlign: 'center',
             }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)' }}>
-                <FileSpreadsheet size={26} />
+              <div style={{ width: '48px', height: '48px', borderRadius: '12px', backgroundColor: 'rgba(33, 115, 70, 0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <FileTypeIcon kind="excel" size={30} />
               </div>
 
               <div>
-                <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#ffffff', marginBottom: '4px' }}>
+                <h3 style={{ fontSize: '17px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px' }}>
                   2. Tải Lên &amp; Nhập File Roster Sinh Viên (.xlsx, .csv)
                 </h3>
                 <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: 0 }}>
@@ -2601,9 +2338,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   style={{
                     padding: '10px 22px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                    backgroundColor: 'rgba(37, 99, 235, 0.10)',
                     border: '1px solid var(--accent-primary)',
-                    color: '#ffffff',
+                    color: 'var(--text-main)',
                     fontSize: '13px',
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -2623,8 +2360,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   style={{
                     padding: '10px 18px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    backgroundColor: 'rgba(11, 18, 32, 0.035)',
+                    border: '1px solid rgba(11, 18, 32, 0.08)',
                     color: 'var(--text-muted)',
                     fontSize: '13px',
                     fontWeight: 600,
@@ -2635,7 +2372,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   }}
                   title="Tải file mẫu trắng chỉ có tiêu đề cột để bạn tự điền danh sách sinh viên mới"
                 >
-                  <Download size={15} /> 📄 Tải File Mẫu Rỗng (.csv)
+                  <FileTypeIcon kind="csv" size={16} showExt={false} />
+                  Tải File Mẫu Rỗng (.csv)
                 </button>
 
                 {uploadedCsvFile && (
@@ -2649,8 +2387,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     style={{
                       padding: '10px 16px',
                       borderRadius: '8px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
+                      backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                      border: '1px solid rgba(11, 18, 32, 0.08)',
                       color: 'var(--text-muted)',
                       fontSize: '13px',
                       cursor: 'pointer',
@@ -2662,8 +2400,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               </div>
 
               {csvParseError && (
-                <div style={{ color: '#f43f5e', fontSize: '13px', fontWeight: 600, marginTop: '8px' }}>
-                  ❌ {csvParseError}
+                <div style={{ color: 'var(--text-main)', fontSize: '13px', fontWeight: 600, marginTop: '8px' }}>
+                  {csvParseError}
                 </div>
               )}
 
@@ -2671,18 +2409,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               {parsedCsvStudents.length > 0 && (
                 <div style={{ width: '100%', marginTop: '16px', textAlign: 'left' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)' }}>
-                      📋 Đã nhận diện {parsedCsvStudents.length} sinh viên từ file [{uploadedCsvFile?.name}]:
+                    <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-200)' }}>
+                      Đã nhận diện {parsedCsvStudents.length} sinh viên từ file [{uploadedCsvFile?.name}]:
                     </span>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                       Dung lượng: {Math.round((uploadedCsvFile?.size || 0) / 1024 * 10) / 10} KB
                     </span>
                   </div>
 
-                  <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '8px', backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid rgba(11, 18, 32, 0.06)', borderRadius: '8px', backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                       <thead>
-                        <tr style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)', backgroundColor: 'rgba(255, 255, 255, 0.04)' }}>
+                        <tr style={{ borderBottom: '1px solid rgba(11, 18, 32, 0.06)', backgroundColor: 'rgba(11, 18, 32, 0.03)' }}>
                           <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>STT</th>
                           <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Mã Sinh Viên</th>
                           <th style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)' }}>Họ Và Tên</th>
@@ -2691,10 +2429,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       </thead>
                       <tbody>
                         {parsedCsvStudents.map((s, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                          <tr key={idx} style={{ borderBottom: '1px solid rgba(11, 18, 32, 0.035)' }}>
                             <td style={{ padding: '8px 12px', color: 'var(--text-dim)' }}>{idx + 1}</td>
-                            <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--accent-primary)' }}>{s.studentCode}</td>
-                            <td style={{ padding: '8px 12px', color: '#ffffff' }}>{s.fullName}</td>
+                            <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--blue-200)' }}>{s.studentCode}</td>
+                            <td style={{ padding: '8px 12px', color: 'var(--text-main)' }}>{s.fullName}</td>
                             <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{s.email}</td>
                           </tr>
                         ))}
@@ -2710,19 +2448,19 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       style={{
                         padding: '12px 28px',
                         borderRadius: '10px',
-                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        background: 'var(--blue-500)',
                         border: 'none',
-                        color: '#ffffff',
-                        fontWeight: 800,
+                        color: 'var(--on-blue)',
+                        fontWeight: 600,
                         fontSize: '14px',
                         cursor: excelLoading ? 'not-allowed' : 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '10px',
-                        boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
                       }}
                     >
-                      <Upload size={18} /> ⚡ Bắt Đầu Import {parsedCsvStudents.length} Sinh Viên Vào PostgreSQL 15 (SQL ACID)
+                      <Upload size={18} /> Bắt đầu import {parsedCsvStudents.length} Sinh Viên Vào PostgreSQL 15 (SQL ACID)
                     </button>
                   </div>
                 </div>
@@ -2733,7 +2471,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
 
           {excelLoading && (
-            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--accent-primary)', fontSize: '14px', fontWeight: 600 }}>
+            <div style={{ textAlign: 'center', padding: '20px', color: 'var(--blue-200)', fontSize: '14px', fontWeight: 600 }}>
               Đang phân tích cú pháp Excel và mở SQL Transaction...
             </div>
           )}
@@ -2743,9 +2481,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               style={{
                 padding: '16px 20px',
                 borderRadius: '12px',
-                backgroundColor: simulatedRollback ? 'rgba(244, 63, 94, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                border: `1.5px solid ${simulatedRollback ? 'rgba(244, 63, 94, 0.4)' : 'rgba(16, 185, 129, 0.4)'}`,
-                color: simulatedRollback ? '#f43f5e' : '#10b981',
+                backgroundColor: simulatedRollback ? 'rgba(11, 18, 32, 0.06)' : 'rgba(37, 99, 235, 0.08)',
+                border: `1.5px solid ${simulatedRollback ? 'rgba(11, 18, 32, 0.13)' : 'rgba(37, 99, 235, 0.18)'}`,
+                color: simulatedRollback ? 'var(--text-main)' : '#2563eb',
                 fontSize: '14px',
                 lineHeight: '1.6',
               }}
@@ -2758,10 +2496,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       {/* TAB 4: SỔ ĐIỂM & DANH SÁCH BÀI NỘP VỚI TÍNH NĂNG TẢI FILE ZIP */}
       {activeTab === 'SUBMISSIONS' && (
-        <div className="glass-panel" style={{ padding: '28px', borderRadius: '16px' }}>
+        <div className="glass-panel" style={{ padding: '28px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-main)' }}>
                 Sổ Theo Dõi Bài Nộp Lập Trình &amp; Giám Sát Liêm Chính Học Thuật
               </h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '2px' }}>
@@ -2778,9 +2516,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 gap: '6px',
                 padding: '8px 14px',
                 borderRadius: '8px',
-                backgroundColor: 'rgba(255, 255, 255, 0.06)',
+                backgroundColor: 'rgba(11, 18, 32, 0.04)',
                 border: '1px solid var(--border-color)',
-                color: '#ffffff',
+                color: 'var(--text-main)',
                 fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -2813,25 +2551,28 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   <tr
                     key={sub.id}
                     style={{
-                      borderBottom: '1px solid rgba(255,255,255,0.05)',
-                      backgroundColor: sub.plagiarismStatus === 'ĐẠO VĂN' ? 'rgba(244, 63, 94, 0.05)' : 'transparent',
+                      borderBottom: '1px solid rgba(11, 18, 32, 0.035)',
+                      backgroundColor: sub.plagiarismStatus === 'ĐẠO VĂN' ? 'rgba(11, 18, 32, 0.035)' : 'transparent',
                     }}
                   >
-                    <td style={{ padding: '14px 16px', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', fontWeight: 600 }}>
+                    <td style={{ padding: '14px 16px', fontFamily: 'var(--font-mono)', color: 'var(--blue-200)', fontWeight: 600 }}>
                       {sub.id}
                     </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <div style={{ fontWeight: 700, color: '#ffffff' }}>{sub.studentName}</div>
+                      <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{sub.studentName}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{sub.studentId}</div>
                     </td>
-                    <td style={{ padding: '14px 16px', color: '#c7d2fe', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
-                      📦 {sub.fileName}
+                    <td style={{ padding: '14px 16px', color: '#1e40af', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <FileTypeIcon fileName={sub.fileName} size={18} />
+                        {sub.fileName}
+                      </span>
                     </td>
                     <td style={{ padding: '14px 16px', color: 'var(--text-muted)' }}>{sub.submittedAt}</td>
-                    <td style={{ padding: '14px 16px', fontWeight: 600, color: '#34d399' }}>{sub.testcaseScore}/7.0</td>
-                    <td style={{ padding: '14px 16px', fontWeight: 600, color: '#38bdf8' }}>{sub.cleanCodeScore}/10</td>
-                    <td style={{ padding: '14px 16px', fontWeight: 600, color: '#a78bfa' }}>{sub.solidScore}/10</td>
-                    <td style={{ padding: '14px 16px', fontWeight: 800, fontSize: '14px', color: '#ffffff' }}>{sub.finalScore}</td>
+                    <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-200)' }}>{sub.testcaseScore}/7.0</td>
+                    <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-300)' }}>{sub.cleanCodeScore}/10</td>
+                    <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-300)' }}>{sub.solidScore}/10</td>
+                    <td style={{ padding: '14px 16px', fontWeight: 600, fontSize: '14px', color: 'var(--text-main)' }}>{sub.finalScore}</td>
                     <td style={{ padding: '14px 16px', fontWeight: 700, color: sub.similarityRate >= 70 ? 'var(--accent-rose)' : 'var(--text-muted)' }}>
                       {sub.similarityRate}%
                     </td>
@@ -2844,16 +2585,16 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           fontWeight: 700,
                           backgroundColor:
                             sub.plagiarismStatus === 'ĐẠO VĂN'
-                              ? 'rgba(244, 63, 94, 0.2)'
+                              ? 'rgba(11, 18, 32, 0.07)'
                               : sub.plagiarismStatus === 'NGHI VẤN'
-                              ? 'rgba(245, 158, 11, 0.2)'
-                              : 'rgba(16, 185, 129, 0.2)',
+                              ? 'rgba(37, 99, 235, 0.1)'
+                              : 'rgba(37, 99, 235, 0.1)',
                           color:
                             sub.plagiarismStatus === 'ĐẠO VĂN'
-                              ? '#f43f5e'
+                              ? 'var(--text-main)'
                               : sub.plagiarismStatus === 'NGHI VẤN'
-                              ? '#f59e0b'
-                              : '#10b981',
+                              ? 'var(--blue-200)'
+                              : 'var(--blue-200)',
                         }}
                       >
                         {sub.plagiarismStatus}
@@ -2870,14 +2611,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           gap: '6px',
                           padding: '6px 12px',
                           borderRadius: '8px',
-                          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                          background: 'var(--blue-600)',
                           border: 'none',
-                          color: '#ffffff',
+                          color: 'var(--on-blue)',
                           fontSize: '12px',
                           fontWeight: 700,
                           cursor: 'pointer',
                           marginRight: '8px',
-                          boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
+                          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
                           transition: 'all 0.15s ease',
                         }}
                       >
@@ -2895,9 +2636,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           gap: '6px',
                           padding: '6px 12px',
                           borderRadius: '8px',
-                          backgroundColor: 'rgba(6, 182, 212, 0.15)',
-                          border: '1px solid rgba(6, 182, 212, 0.4)',
-                          color: 'var(--accent-cyan)',
+                          backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                          border: '1px solid rgba(37, 99, 235, 0.18)',
+                          color: 'var(--blue-200)',
                           fontSize: '12px',
                           fontWeight: 700,
                           cursor: 'pointer',
@@ -2930,15 +2671,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       {/* MODAL CẤU HÌNH GOOGLE GEMINI AI KEY (DÙNG AI THẬT) */}
       {isConfigModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(5, 7, 13, 0.85)', backdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '580px', padding: '32px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(11, 18, 32, 0.45)', backdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '580px', padding: '32px', borderRadius: '12px', border: '1px solid rgba(11, 18, 32, 0.08)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--blue-200)' }}>
                   <Key size={22} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff' }}>Cấu Hình Trí Tuệ Nhân Tạo Thật (Google Gemini AI)</h3>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)' }}>Cấu Hình Trí Tuệ Nhân Tạo Thật (Google Gemini AI)</h3>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Kết nối trực tiếp tới Google Generative AI để sinh đề và testcases</p>
                 </div>
               </div>
@@ -2952,7 +2693,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             </div>
 
             <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#0b1220', marginBottom: '6px' }}>
                 Google Gemini API Key *
               </label>
               <input
@@ -2964,9 +2705,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   width: '100%',
                   padding: '12px 14px',
                   borderRadius: '10px',
-                  backgroundColor: 'rgba(18, 24, 36, 0.9)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#ffffff',
+                  backgroundColor: '#f7f9fc',
+                  border: '1px solid rgba(11, 18, 32, 0.08)',
+                  color: 'var(--text-main)',
                   fontSize: '14px',
                   fontFamily: 'var(--font-mono)',
                   outline: 'none',
@@ -2978,7 +2719,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   href="https://aistudio.google.com/app/apikey"
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: 'var(--accent-cyan)', textDecoration: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                  style={{ color: 'var(--blue-200)', textDecoration: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                 >
                   Google AI Studio <ExternalLink size={11} />
                 </a>
@@ -2986,7 +2727,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             </div>
 
             <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#e5e7eb', marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#0b1220', marginBottom: '6px' }}>
                 Lựa Chọn Mô Hình AI (Model)
               </label>
               <select
@@ -2996,13 +2737,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   width: '100%',
                   padding: '10px 14px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(18, 24, 36, 0.9)',
-                  border: '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#ffffff',
+                  backgroundColor: '#f7f9fc',
+                  border: '1px solid rgba(11, 18, 32, 0.08)',
+                  color: 'var(--text-main)',
                   fontSize: '13px',
                 }}
               >
-                <option value="auto">✨ Tự Động Chọn Mô Hình Flash Nhanh Nhất (Khuyên Dùng - Auto Detect)</option>
+                <option value="auto">Tự động chọn mô hình Flash Nhanh Nhất (Khuyên Dùng - Auto Detect)</option>
                 {availableModelList.length > 0 ? (
                   availableModelList.map((m) => (
                     <option key={m} value={m}>
@@ -3026,9 +2767,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   marginBottom: '18px',
                   padding: '10px 14px',
                   borderRadius: '8px',
-                  backgroundColor: pingStatus.success ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
-                  border: `1px solid ${pingStatus.success ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
-                  color: pingStatus.success ? '#10b981' : '#f43f5e',
+                  backgroundColor: pingStatus.success ? 'rgba(37, 99, 235, 0.08)' : 'rgba(11, 18, 32, 0.06)',
+                  border: `1px solid ${pingStatus.success ? 'rgba(37, 99, 235, 0.14)' : 'rgba(11, 18, 32, 0.1)'}`,
+                  color: pingStatus.success ? '#2563eb' : 'var(--text-main)',
                   fontSize: '13px',
                 }}
               >
@@ -3044,9 +2785,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 style={{
                   padding: '10px 16px',
                   borderRadius: '10px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  color: '#ffffff',
+                  border: '1px solid rgba(11, 18, 32, 0.1)',
+                  backgroundColor: 'rgba(11, 18, 32, 0.035)',
+                  color: 'var(--text-main)',
                   fontSize: '13px',
                   fontWeight: 600,
                   cursor: pingStatus.loading ? 'not-allowed' : 'pointer',
@@ -3080,10 +2821,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       {/* MODAL XEM MÃ NGUỒN KHỞI TẠO & LỜI GIẢI MẪU DO AI TẠO RA */}
       {showSolutionModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(5, 7, 13, 0.85)', backdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '800px', maxHeight: '85vh', overflowY: 'auto', padding: '28px', borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(11, 18, 32, 0.45)', backdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '800px', maxHeight: '85vh', overflowY: 'auto', padding: '28px', borderRadius: '12px', border: '1px solid rgba(11, 18, 32, 0.08)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileCode size={20} color="var(--accent-cyan)" /> Lời Giải Chuẩn & Khung Mã Nguồn (Tự Động Sinh Bởi Google Gemini AI)
               </h3>
               <button
@@ -3097,10 +2838,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             {starterCode && (
               <div style={{ marginBottom: '20px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#a5b4fc', marginBottom: '6px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', marginBottom: '6px' }}>
                   1. Khung Mã Khởi Tạo Cho Sinh Viên (Starter Code):
                 </h4>
-                <pre style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <pre style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#ffffff', color: '#0b1220', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
                   {starterCode}
                 </pre>
               </div>
@@ -3108,10 +2849,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             {referenceSolution && (
               <div>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#6ee7b7', marginBottom: '6px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', marginBottom: '6px' }}>
                   2. Lời Giải Tham Chiếu Chuẩn Xác (Reference Working Solution):
                 </h4>
-                <pre style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <pre style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#ffffff', color: '#0b1220', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
                   {referenceSolution}
                 </pre>
               </div>
@@ -3121,7 +2862,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <button
                 type="button"
                 onClick={() => setShowSolutionModal(false)}
-                style={{ padding: '8px 18px', borderRadius: '8px', backgroundColor: 'var(--accent-primary)', border: 'none', color: '#ffffff', fontWeight: 700, cursor: 'pointer' }}
+                style={{ padding: '8px 18px', borderRadius: '8px', backgroundColor: 'var(--blue-600)', border: 'none', color: 'var(--on-blue)', fontWeight: 700, cursor: 'pointer' }}
               >
                 Đóng
               </button>
@@ -3136,7 +2877,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(5, 7, 13, 0.85)',
+            backgroundColor: 'rgba(11, 18, 32, 0.45)',
             backdropFilter: 'blur(8px)',
             zIndex: 1100,
             display: 'flex',
@@ -3153,15 +2894,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               maxHeight: '90vh',
               overflowY: 'auto',
               padding: '28px',
-              borderRadius: '20px',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '12px',
+              border: '1px solid rgba(11, 18, 32, 0.08)',
               display: 'flex',
               flexDirection: 'column',
               gap: '20px',
             }}
           >
             {/* Header Modal */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid rgba(11, 18, 32, 0.05)', paddingBottom: '16px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                   <span
@@ -3170,18 +2911,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       padding: '3px 8px',
                       borderRadius: '6px',
                       fontWeight: 700,
-                      backgroundColor: previewAssignment.status === 'PUBLISHED' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)',
-                      color: previewAssignment.status === 'PUBLISHED' ? '#34d399' : '#f43f5e',
-                      border: `1px solid ${previewAssignment.status === 'PUBLISHED' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+                      backgroundColor: previewAssignment.status === 'PUBLISHED' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(11, 18, 32, 0.07)',
+                      color: previewAssignment.status === 'PUBLISHED' ? '#1d4ed8' : 'var(--text-main)',
+                      border: `1px solid ${previewAssignment.status === 'PUBLISHED' ? 'rgba(37, 99, 235, 0.14)' : 'rgba(11, 18, 32, 0.1)'}`,
                     }}
                   >
-                    {previewAssignment.status === 'PUBLISHED' ? '🟢 ĐANG MỞ NỘP BÀI' : '🔴 ĐÃ ĐÓNG NỘP'}
+                    {previewAssignment.status === 'PUBLISHED' ? 'ĐANG MỞ NỘP BÀI' : 'ĐÃ ĐÓNG NỘP'}
                   </span>
                   <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                    Mã đề: <strong style={{ color: '#fff' }}>{previewAssignment.id}</strong> • Tạo ngày: {previewAssignment.createdAt}
+                    Mã đề: <strong style={{ color: 'var(--text-main)' }}>{previewAssignment.id}</strong> • Tạo ngày: {previewAssignment.createdAt}
                   </span>
                 </div>
-                <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-main)' }}>
                   {previewAssignment.title}
                 </h3>
               </div>
@@ -3196,30 +2937,30 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
             {/* Thông số kỹ thuật */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
-              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.03)', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Hạn chót nộp bài:</span>
                 <strong style={{ fontSize: '13px', color: 'var(--accent-amber)' }}>{new Date(previewAssignment.deadline).toLocaleString('vi-VN')}</strong>
               </div>
-              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.03)', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Thời gian thực thi tối đa:</span>
-                <strong style={{ fontSize: '13px', color: 'var(--accent-cyan)' }}>{previewAssignment.timeLimitMs} ms</strong>
+                <strong style={{ fontSize: '13px', color: 'var(--blue-200)' }}>{previewAssignment.timeLimitMs} ms</strong>
               </div>
-              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.03)', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Bộ nhớ RAM tối đa:</span>
-                <strong style={{ fontSize: '13px', color: '#ffffff' }}>{previewAssignment.memoryLimitMb} MB</strong>
+                <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{previewAssignment.memoryLimitMb} MB</strong>
               </div>
-              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.03)', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Ngôn ngữ lập trình:</span>
-                <strong style={{ fontSize: '13px', color: 'var(--accent-primary)' }}>{previewAssignment.allowedLanguages.join(', ').toUpperCase()}</strong>
+                <strong style={{ fontSize: '13px', color: 'var(--blue-200)' }}>{previewAssignment.allowedLanguages.join(', ').toUpperCase()}</strong>
               </div>
             </div>
 
             {/* Mô tả đề bài */}
             <div>
-              <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#e5e7eb', marginBottom: '8px' }}>
-                📖 Mô Tả Yêu Cầu & Ràng Buộc:
+              <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#0b1220', marginBottom: '8px' }}>
+                Mô Tả Yêu Cầu & Ràng Buộc:
               </h4>
-              <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', whiteSpace: 'pre-wrap', backgroundColor: 'rgba(0,0,0,0.25)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', margin: 0 }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', whiteSpace: 'pre-wrap', backgroundColor: 'rgba(0,0,0,0.25)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(11, 18, 32, 0.04)', margin: 0 }}>
                 {previewAssignment.description}
               </p>
             </div>
@@ -3227,7 +2968,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             {/* Danh sách Test Cases */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Cpu size={16} /> Danh Sách Test Cases ({previewAssignment.testCases.length} Bộ Test, Tổng Trọng Số: {previewAssignment.testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0).toFixed(1)}đ):
                 </h4>
               </div>
@@ -3238,15 +2979,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     style={{
                       padding: '14px 16px',
                       borderRadius: '10px',
-                      backgroundColor: 'rgba(18, 24, 36, 0.7)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      backgroundColor: '#f7f9fc',
+                      border: '1px solid rgba(11, 18, 32, 0.05)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '8px',
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
                         Test Case #{tcIdx + 1}
                       </span>
                       <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -3255,14 +2996,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             fontSize: '11px',
                             padding: '2px 8px',
                             borderRadius: '4px',
-                            backgroundColor: tc.isHidden ? 'rgba(245, 158, 11, 0.15)' : 'rgba(6, 182, 212, 0.15)',
+                            backgroundColor: tc.isHidden ? 'rgba(37, 99, 235, 0.08)' : 'rgba(37, 99, 235, 0.08)',
                             color: tc.isHidden ? 'var(--accent-amber)' : 'var(--accent-cyan)',
                             fontWeight: 600,
                           }}
                         >
-                          {tc.isHidden ? '🔒 Test Ẩn' : '🌐 Test Công Khai'}
+                          {tc.isHidden ? 'Test ẩn' : 'Test công khai'}
                         </span>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#34d399', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--blue-200)', backgroundColor: 'rgba(37, 99, 235, 0.08)', padding: '2px 8px', borderRadius: '4px' }}>
                           Trọng số: {tc.weight}đ
                         </span>
                       </div>
@@ -3270,13 +3011,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Đầu vào (Input / StdIn):</span>
-                        <pre style={{ margin: 0, padding: '8px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', border: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto' }}>
+                        <pre style={{ margin: 0, padding: '8px 10px', borderRadius: '6px', backgroundColor: '#ffffff', color: '#0b1220', fontSize: '12px', fontFamily: 'var(--font-mono)', border: '1px solid rgba(11, 18, 32, 0.04)', overflowX: 'auto' }}>
                           {tc.input}
                         </pre>
                       </div>
                       <div>
                         <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '3px' }}>Đầu ra kỳ vọng (Expected Output / StdOut):</span>
-                        <pre style={{ margin: 0, padding: '8px 10px', borderRadius: '6px', backgroundColor: '#0a0d14', color: '#34d399', fontSize: '12px', fontFamily: 'var(--font-mono)', border: '1px solid rgba(255,255,255,0.06)', overflowX: 'auto' }}>
+                        <pre style={{ margin: 0, padding: '8px 10px', borderRadius: '6px', backgroundColor: '#ffffff', color: 'var(--blue-200)', fontSize: '12px', fontFamily: 'var(--font-mono)', border: '1px solid rgba(11, 18, 32, 0.04)', overflowX: 'auto' }}>
                           {tc.output}
                         </pre>
                       </div>
@@ -3289,15 +3030,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             {/* Barem Rubrics */}
             {previewAssignment.rubrics && previewAssignment.rubrics.length > 0 && (
               <div>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#a5b4fc', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Award size={16} /> Barem Chấm Điểm Học Thuật (Rubrics):
                 </h4>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {previewAssignment.rubrics.map((r, rIdx) => (
-                    <div key={rIdx} style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.15)' }}>
+                    <div key={rIdx} style={{ padding: '10px 14px', borderRadius: '8px', backgroundColor: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.09)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>{rIdx + 1}. {r.criterion}</span>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#818cf8' }}>{r.maxScore}đ</span>
+                        <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>{rIdx + 1}. {r.criterion}</span>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--blue-300)' }}>{r.maxScore}đ</span>
                       </div>
                       <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>{r.description}</p>
                     </div>
@@ -3309,17 +3050,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             {/* Starter Code hoặc Reference Solution nếu có */}
             {previewAssignment.starterCode && (
               <div>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#a5b4fc', marginBottom: '6px' }}>
+                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', marginBottom: '6px' }}>
                   Khung Mã Nguồn Khởi Tạo (Starter Code):
                 </h4>
-                <pre style={{ margin: 0, padding: '12px', borderRadius: '8px', backgroundColor: '#0a0d14', color: '#e5e7eb', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(255,255,255,0.06)' }}>
+                <pre style={{ margin: 0, padding: '12px', borderRadius: '8px', backgroundColor: '#ffffff', color: '#0b1220', fontSize: '12px', fontFamily: 'var(--font-mono)', overflowX: 'auto', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                   {previewAssignment.starterCode}
                 </pre>
               </div>
             )}
 
             {/* Footer Modal Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(11, 18, 32, 0.05)', paddingTop: '16px', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   type="button"
@@ -3330,9 +3071,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   style={{
                     padding: '8px 16px',
                     borderRadius: '8px',
-                    backgroundColor: previewAssignment.status === 'PUBLISHED' ? 'rgba(244, 63, 94, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                    border: `1px solid ${previewAssignment.status === 'PUBLISHED' ? 'rgba(244, 63, 94, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
-                    color: previewAssignment.status === 'PUBLISHED' ? '#f43f5e' : '#34d399',
+                    backgroundColor: previewAssignment.status === 'PUBLISHED' ? 'rgba(11, 18, 32, 0.06)' : 'rgba(37, 99, 235, 0.08)',
+                    border: `1px solid ${previewAssignment.status === 'PUBLISHED' ? 'rgba(11, 18, 32, 0.1)' : 'rgba(37, 99, 235, 0.14)'}`,
+                    color: previewAssignment.status === 'PUBLISHED' ? 'var(--text-main)' : '#1d4ed8',
                     fontSize: '13px',
                     fontWeight: 700,
                     cursor: 'pointer',
@@ -3350,9 +3091,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   style={{
                     padding: '8px 16px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
+                    backgroundColor: 'rgba(11, 18, 32, 0.05)',
+                    border: '1px solid rgba(11, 18, 32, 0.08)',
+                    color: 'var(--text-main)',
                     fontSize: '13px',
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -3384,7 +3125,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           style={{
             position: 'fixed',
             inset: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.75)',
+            backgroundColor: 'rgba(11, 18, 32, 0.45)',
             backdropFilter: 'blur(8px)',
             display: 'flex',
             alignItems: 'center',
@@ -3398,17 +3139,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             style={{
               width: '100%',
               maxWidth: '560px',
-              backgroundColor: '#0f172a',
-              border: '1.5px solid rgba(99, 102, 241, 0.4)',
-              borderRadius: '20px',
+              backgroundColor: '#f7f9fc',
+              border: '1.5px solid rgba(59, 130, 246, 0.28)',
+              borderRadius: '12px',
               padding: '28px 32px',
-              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(99, 102, 241, 0.2)',
+              boxShadow: '0 24px 60px -24px rgba(0, 0, 0, 0.9)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <BookOpen size={24} color="var(--accent-primary)" />
-                <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff' }}>
+                <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-main)' }}>
                   Tạo Lớp Học Phần Mới (PostgreSQL 15)
                 </h2>
               </div>
@@ -3436,9 +3177,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
+                    backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                    border: '1px solid rgba(11, 18, 32, 0.08)',
+                    color: 'var(--text-main)',
                     fontSize: '14px',
                     fontWeight: 700,
                   }}
@@ -3459,9 +3200,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
+                    backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                    border: '1px solid rgba(11, 18, 32, 0.08)',
+                    color: 'var(--text-main)',
                     fontSize: '14px',
                   }}
                 />
@@ -3480,9 +3221,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
+                    backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                    border: '1px solid rgba(11, 18, 32, 0.08)',
+                    color: 'var(--text-main)',
                     fontSize: '14px',
                   }}
                 />
@@ -3500,9 +3241,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     width: '100%',
                     padding: '10px 14px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
+                    backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                    border: '1px solid rgba(11, 18, 32, 0.08)',
+                    color: 'var(--text-main)',
                     fontSize: '13px',
                     resize: 'none',
                   }}
@@ -3516,9 +3257,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   style={{
                     padding: '10px 18px',
                     borderRadius: '8px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.15)',
-                    color: '#ffffff',
+                    backgroundColor: 'rgba(11, 18, 32, 0.05)',
+                    border: '1px solid rgba(11, 18, 32, 0.08)',
+                    color: 'var(--text-main)',
                     fontSize: '13px',
                     cursor: 'pointer',
                   }}

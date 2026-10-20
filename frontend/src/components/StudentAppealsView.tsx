@@ -56,19 +56,19 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
     switch (status) {
       case 'ACCEPTED':
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '12px', fontWeight: 700 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-300)', fontSize: '12px', fontWeight: 700 }}>
             <CheckCircle size={14} /> ĐÃ CHẤP THUẬN
           </span>
         );
       case 'REJECTED':
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', fontSize: '12px', fontWeight: 700 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontSize: '12px', fontWeight: 700 }}>
             <XCircle size={14} /> ĐÃ TỪ CHỐI
           </span>
         );
       default:
         return (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontSize: '12px', fontWeight: 700 }}>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-200)', fontSize: '12px', fontWeight: 700 }}>
             <Clock size={14} /> ĐANG CHỜ DUYỆT
           </span>
         );
@@ -81,10 +81,10 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
       <div className="glass-panel" style={{ padding: '28px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-200)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               USE CASE 06 &amp; QUY TẮC BR-05
             </span>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, marginTop: '4px', marginBottom: '8px', color: '#ffffff' }}>
+            <h1 style={{ fontSize: '26px', fontWeight: 600, marginTop: '4px', marginBottom: '8px', color: 'var(--text-main)' }}>
               Theo Dõi Khiếu Nại &amp; Phúc Khảo Điểm (Appeals)
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
@@ -100,9 +100,9 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
                 gap: '6px',
                 padding: '10px 16px',
                 borderRadius: '10px',
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: '#ffffff',
+                backgroundColor: 'rgba(11, 18, 32, 0.05)',
+                border: '1px solid rgba(11, 18, 32, 0.08)',
+                color: 'var(--text-main)',
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -118,13 +118,13 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
                 gap: '8px',
                 padding: '10px 18px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                background: 'var(--blue-600)',
                 border: 'none',
-                color: '#ffffff',
+                color: 'var(--on-blue)',
                 fontSize: '14px',
                 fontWeight: 700,
                 cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)',
+                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
               }}
             >
               <PlusCircle size={16} /> Tạo Đơn Phúc Khảo Mới
@@ -135,8 +135,8 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
 
       {/* Danh sách đơn phúc khảo */}
       <div className="glass-panel" style={{ padding: '28px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Scale size={20} color="#818cf8" /> Danh Sách Đơn Phúc Khảo Của Bạn ({appeals.length})
+        <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Scale size={20} color="#2563eb" /> Danh Sách Đơn Phúc Khảo Của Bạn ({appeals.length})
         </h2>
 
         {appeals.length === 0 ? (
@@ -152,9 +152,9 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
                 key={app.appealId || idx}
                 style={{
                   padding: '20px',
-                  borderRadius: '14px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(11, 18, 32, 0.025)',
+                  border: '1px solid rgba(11, 18, 32, 0.05)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '12px',
@@ -162,28 +162,28 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: 'rgba(99, 102, 241, 0.2)', color: '#818cf8', fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700 }}>
+                    <span style={{ padding: '4px 8px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.10)', color: 'var(--blue-300)', fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 700 }}>
                       #{app.appealId}
                     </span>
-                    <span style={{ fontSize: '14px', color: '#e2e8f0', fontWeight: 600 }}>
-                      Mã bài nộp: <code style={{ color: '#a5b4fc' }}>{app.submissionId}</code>
+                    <span style={{ fontSize: '14px', color: '#0b1220', fontWeight: 600 }}>
+                      Mã bài nộp: <code style={{ color: 'var(--blue-200)' }}>{app.submissionId}</code>
                     </span>
                   </div>
                   <div>{getStatusBadge(app.status)}</div>
                 </div>
 
-                <div style={{ fontSize: '14px', color: '#cbd5e1', lineHeight: 1.5, backgroundColor: 'rgba(0, 0, 0, 0.2)', padding: '12px', borderRadius: '10px' }}>
+                <div style={{ fontSize: '14px', color: '#33415a', lineHeight: 1.5, backgroundColor: 'rgba(11, 18, 32, 0.03)', padding: '12px', borderRadius: '10px' }}>
                   <strong>Lý do khiếu nại:</strong> {app.reason}
                 </div>
 
                 {app.resolutionNote && (
-                  <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.2)', fontSize: '13px', color: '#c7d2fe' }}>
-                    <div style={{ fontWeight: 700, marginBottom: '4px', color: '#818cf8' }}>
+                  <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.12)', fontSize: '13px', color: '#1e40af' }}>
+                    <div style={{ fontWeight: 700, marginBottom: '4px', color: 'var(--blue-300)' }}>
                       Phản hồi từ Giảng viên ({app.reviewerId || 'Giảng viên phụ trách'}):
                     </div>
                     <div>{app.resolutionNote}</div>
                     {app.adjustedScore !== undefined && (
-                      <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontWeight: 800 }}>
+                      <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-300)', fontWeight: 600 }}>
                         <Award size={16} /> Điểm số chính thức sau phúc khảo: {app.adjustedScore} / 10.0
                       </div>
                     )}

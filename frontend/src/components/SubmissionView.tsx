@@ -1,4 +1,4 @@
-﻿import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
+import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
 ﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   UploadCloud, FileArchive, X, Send, ShieldCheck, Clock,
@@ -709,9 +709,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     if (diff <= 0) {
       return {
         status: 'EXPIRED',
-        color: '#f43f5e',
-        bgColor: 'rgba(244, 63, 94, 0.15)',
-        borderColor: 'rgba(244, 63, 94, 0.4)',
+        color: 'var(--text-main)',
+        bgColor: 'rgba(11, 18, 32, 0.06)',
+        borderColor: 'rgba(11, 18, 32, 0.13)',
         label: 'Đã hết hạn nộp',
         isUrgent: false,
         diffHours: 0,
@@ -726,9 +726,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
       // Dưới 24h: Rất gấp (Đỏ nhấp nháy)
       return {
         status: 'URGENT',
-        color: '#fb7185',
-        bgColor: 'rgba(244, 63, 94, 0.22)',
-        borderColor: 'rgba(244, 63, 94, 0.55)',
+        color: 'var(--text-main)',
+        bgColor: 'rgba(11, 18, 32, 0.08)',
+        borderColor: 'rgba(11, 18, 32, 0.189)',
         label: `Gấp: Còn ${hours}h ${minutes}m`,
         isUrgent: true,
         diffHours: hours,
@@ -739,9 +739,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
       // Dưới 3 ngày: Sắp hết hạn (Vàng cam)
       return {
         status: 'ENDING_SOON',
-        color: '#f59e0b',
-        bgColor: 'rgba(245, 158, 11, 0.18)',
-        borderColor: 'rgba(245, 158, 11, 0.45)',
+        color: 'var(--blue-200)',
+        bgColor: 'rgba(37, 99, 235, 0.1)',
+        borderColor: 'rgba(37, 99, 235, 0.2)',
         label: `Sắp đến hạn: Còn ${days}d ${hours}h`,
         isUrgent: true,
         diffHours: days * 24 + hours,
@@ -751,9 +751,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     // Trên 3 ngày: Bình thường (Xanh ngọc)
     return {
       status: 'ACTIVE',
-      color: '#38bdf8',
-      bgColor: 'rgba(56, 189, 248, 0.14)',
-      borderColor: 'rgba(56, 189, 248, 0.35)',
+      color: 'var(--blue-300)',
+      bgColor: 'rgba(37, 99, 235, 0.09)',
+      borderColor: 'rgba(37, 99, 235, 0.16)',
       label: `Còn ${days} ngày ${hours}h`,
       isUrgent: false,
       diffHours: days * 24 + hours,
@@ -1003,9 +1003,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               gap: '8px',
               padding: '8px 16px',
               borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              color: '#e5e7eb',
+              border: '1px solid rgba(11, 18, 32, 0.08)',
+              backgroundColor: 'rgba(11, 18, 32, 0.035)',
+              color: '#0b1220',
               fontSize: '13px',
               fontWeight: 700,
               cursor: 'pointer',
@@ -1021,8 +1021,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           style={{
             padding: '12px 18px',
             borderRadius: '12px',
-            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-            border: '1px solid rgba(245, 158, 11, 0.3)',
+            backgroundColor: 'rgba(37, 99, 235, 0.07)',
+            border: '1px solid rgba(37, 99, 235, 0.14)',
             marginBottom: '20px',
             display: 'flex',
             alignItems: 'center',
@@ -1031,7 +1031,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             gap: '10px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13px', fontWeight: 700 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e40af', fontSize: '13px', fontWeight: 700 }}>
             <Bug size={16} />
             <span>Kịch bản Demo Đường Ngoại Lệ (Milestone 2 Defense):</span>
           </div>
@@ -1042,9 +1042,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               style={{
                 padding: '6px 12px',
                 borderRadius: '8px',
-                backgroundColor: exceptionType === 'OVERSIZE' ? 'rgba(244, 63, 94, 0.3)' : 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(244, 63, 94, 0.4)',
-                color: '#f43f5e',
+                backgroundColor: exceptionType === 'OVERSIZE' ? 'rgba(11, 18, 32, 0.1)' : 'rgba(11, 18, 32, 0.05)',
+                border: '1px solid rgba(11, 18, 32, 0.13)',
+                color: 'var(--text-main)',
                 fontSize: '12px',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -1053,7 +1053,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 gap: '4px',
               }}
             >
-              🔴 Demo File &gt; 10MB
+              Demo File &gt; 10MB
             </button>
             <button
               type="button"
@@ -1061,9 +1061,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               style={{
                 padding: '6px 12px',
                 borderRadius: '8px',
-                backgroundColor: isDeadlineSimulatedExpired ? 'rgba(244, 63, 94, 0.3)' : 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(244, 63, 94, 0.4)',
-                color: '#f43f5e',
+                backgroundColor: isDeadlineSimulatedExpired ? 'rgba(11, 18, 32, 0.1)' : 'rgba(11, 18, 32, 0.05)',
+                border: '1px solid rgba(11, 18, 32, 0.13)',
+                color: 'var(--text-main)',
                 fontSize: '12px',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -1073,50 +1073,29 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               }}
             >
               {isDeadlineSimulatedExpired ? <RefreshCw size={12} /> : <Lock size={12} />}
-              {isDeadlineSimulatedExpired ? 'Khôi phục Deadline' : '🔴 Demo Quá Deadline (BR-02)'}
+              {isDeadlineSimulatedExpired ? 'Khôi phục Deadline' : 'Demo Quá Deadline (BR-02)'}
             </button>
           </div>
         </div>
 
         {/* Khung Thông Tin Bài Tập & Đếm Ngược Deadline */}
-        <div className="glass-panel" style={{ padding: '28px', marginBottom: '24px' }}>
+        <div className="glass-panel" style={{ padding: '24px', marginBottom: '20px' }}>
           {/* Hàng 1: Tiêu Đề, Mã Môn & Đồng Hồ Đếm Ngược */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '18px' }}>
             <div style={{ flex: 1, minWidth: '300px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 800,
-                    padding: '3px 10px',
-                    borderRadius: '6px',
-                    backgroundColor: 'rgba(99, 102, 241, 0.25)',
-                    color: 'var(--accent-cyan)',
-                    border: '1px solid rgba(99, 102, 241, 0.4)',
-                    textTransform: 'uppercase',
-                  }}
-                >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '9px', flexWrap: 'wrap' }}>
+                <span className="chip chip-blue chip-mono" style={{ textTransform: 'uppercase' }}>
                   {selectedTask.courseCode || 'SWP391'}
                 </span>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  Mã bài tập: <strong>{selectedTask.id}</strong>
+                <span style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+                  {selectedTask.id}
                 </span>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    backgroundColor: submissionHistory[selectedTask.id] ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
-                    color: submissionHistory[selectedTask.id] ? '#34d399' : '#fbbf24',
-                    border: `1px solid ${submissionHistory[selectedTask.id] ? 'rgba(16, 185, 129, 0.4)' : 'rgba(245, 158, 11, 0.4)'}`,
-                  }}
-                >
-                  {submissionHistory[selectedTask.id] ? '✓ ĐÃ NỘP BÀI' : '⏳ CHƯA HOÀN THÀNH'}
+                <span className={`chip ${submissionHistory[selectedTask.id] ? 'chip-blue' : 'chip-outline'}`}>
+                  {submissionHistory[selectedTask.id] ? 'Đã nộp bài' : 'Chưa nộp'}
                 </span>
               </div>
 
-              <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', lineHeight: '1.3', marginBottom: '8px' }}>
+              <h1 style={{ fontSize: '21px', fontWeight: 600, color: 'var(--text-main)', lineHeight: 1.35, letterSpacing: '-0.02em', marginBottom: '10px' }}>
                 {selectedTask.title}
               </h1>
 
@@ -1137,9 +1116,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             {/* Đồng hồ đếm ngược thời gian thực */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', minWidth: '220px' }}>
               <CountdownTimer deadline={isDeadlineSimulatedExpired ? new Date(Date.now() - 3600000).toISOString() : selectedTask.deadline} />
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Clock size={13} color="var(--accent-cyan)" />
-                <span>Hạn nộp: <strong>{new Date(selectedTask.deadline).toLocaleString('vi-VN')}</strong></span>
+              <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Clock size={12} color="var(--blue-400)" />
+                <span>Hạn nộp: <strong style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{new Date(selectedTask.deadline).toLocaleString('vi-VN')}</strong></span>
               </div>
             </div>
           </div>
@@ -1148,54 +1127,44 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: '12px',
-              padding: '16px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(10, 15, 29, 0.75)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              marginBottom: '24px',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
+              gap: '0',
+              padding: '0',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(11, 18, 32, 0.02)',
+              border: '1px solid var(--border-color)',
+              marginBottom: '18px',
+              overflow: 'hidden',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Cpu size={18} color="var(--accent-cyan)" />
-              <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>CPU Time Limit</div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
-                  {selectedTask.timeLimitMs || 2000} ms
+            {[
+              { icon: Cpu, label: 'CPU time limit', value: `${selectedTask.timeLimitMs || 2000} ms` },
+              { icon: HardDrive, label: 'RAM sandbox', value: `${selectedTask.memoryLimitMb || 512} MB` },
+              { icon: Code, label: 'Ngôn ngữ', value: (selectedTask.allowedLanguages || ['java', 'python', 'cpp']).join(', ').toUpperCase() },
+              { icon: Layers, label: 'Bộ testcase', value: `${selectedTask.testCasesCount || 5} test` },
+            ].map((metric, i) => {
+              const Icon = metric.icon;
+              return (
+                <div
+                  key={metric.label}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '12px 15px',
+                    borderLeft: i === 0 ? 'none' : '1px solid var(--border-soft)',
+                  }}
+                >
+                  <Icon size={15} color="var(--text-dim)" strokeWidth={2} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-dim)', letterSpacing: '0.03em' }}>{metric.label}</div>
+                    <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {metric.value}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <HardDrive size={18} color="var(--accent-emerald)" />
-              <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>RAM Sandbox Limit</div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
-                  {selectedTask.memoryLimitMb || 512} MB
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Code size={18} color="var(--accent-primary)" />
-              <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Ngôn ngữ hợp lệ</div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff', textTransform: 'uppercase' }}>
-                  {(selectedTask.allowedLanguages || ['java', 'python', 'cpp']).join(', ')}
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Layers size={18} color="var(--accent-amber)" />
-              <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>Bộ Testcases</div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
-                  {selectedTask.testCasesCount || 5} testcases
-                </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
 
           {/* Hàng 3: THANH ĐIỀU HƯỚNG TAB CHI TIẾT (4 TABS) */}
@@ -1203,17 +1172,17 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             style={{
               display: 'flex',
               gap: '8px',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              borderBottom: '1px solid rgba(11, 18, 32, 0.06)',
               paddingBottom: '12px',
               marginBottom: '20px',
               overflowX: 'auto',
             }}
           >
             {[
-              { key: 'SPEC', label: 'Yêu Cầu Kỹ Thuật & Đề Bài', icon: <FileText size={15} /> },
-              { key: 'SAMPLES', label: 'Testcase Mẫu & Ví Dụ', icon: <Code size={15} />, badge: `${getEffectiveSampleTestCases(selectedTask).length} Mẫu` },
-              { key: 'RUBRICS', label: 'Barem Điểm & SOLID', icon: <Award size={15} />, badge: 'Thang 10đ' },
-              { key: 'GUIDE', label: 'Cấu Trúc File & Sandbox', icon: <Layers size={15} /> },
+              { key: 'SPEC', label: 'Đề bài & yêu cầu', icon: <FileText size={14} /> },
+              { key: 'SAMPLES', label: 'Testcase mẫu', icon: <Code size={14} />, badge: `${getEffectiveSampleTestCases(selectedTask).length}` },
+              { key: 'RUBRICS', label: 'Barem điểm', icon: <Award size={14} />, badge: '10đ' },
+              { key: 'GUIDE', label: 'Cấu trúc file', icon: <Layers size={14} /> },
             ].map((tab) => {
               const active = activeDetailTab === tab.key;
               return (
@@ -1224,16 +1193,16 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '8px',
-                    padding: '9px 16px',
-                    borderRadius: '10px',
-                    border: active ? '1.5px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.08)',
-                    backgroundColor: active ? 'rgba(99, 102, 241, 0.22)' : 'rgba(255, 255, 255, 0.03)',
-                    color: active ? '#ffffff' : 'var(--text-muted)',
-                    fontSize: '13px',
-                    fontWeight: active ? 700 : 500,
+                    gap: '7px',
+                    padding: '7px 12px',
+                    borderRadius: '7px',
+                    border: active ? '1px solid var(--border-highlight)' : '1px solid transparent',
+                    backgroundColor: active ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                    color: active ? 'var(--text-main)' : 'var(--text-muted)',
+                    fontSize: '12.5px',
+                    fontWeight: active ? 600 : 500,
                     cursor: 'pointer',
-                    transition: 'all 0.2s ease',
+                    transition: 'color .15s ease, background-color .15s ease, border-color .15s ease',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -1243,11 +1212,12 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     <span
                       style={{
                         fontSize: '10px',
-                        padding: '2px 6px',
+                        padding: '1px 5px',
                         borderRadius: '4px',
-                        backgroundColor: active ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)',
-                        color: '#ffffff',
-                        fontWeight: 700,
+                        backgroundColor: active ? 'rgba(59, 130, 246, 0.25)' : 'rgba(11, 18, 32, 0.05)',
+                        color: active ? 'var(--blue-200)' : 'var(--text-dim)',
+                        fontWeight: 600,
+                        fontFamily: 'var(--font-mono)',
                       }}
                     >
                       {tab.badge}
@@ -1291,16 +1261,16 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       style={{
                         padding: '18px',
                         borderRadius: '12px',
-                        backgroundColor: 'rgba(15, 23, 42, 0.8)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        backgroundColor: '#f7f9fc',
+                        border: '1px solid rgba(11, 18, 32, 0.06)',
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#ffffff', fontWeight: 700, fontSize: '14px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)', fontWeight: 700, fontSize: '14px' }}>
                           <Code size={16} color="var(--accent-cyan)" />
                           <span>{tc.name}</span>
                         </div>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', backgroundColor: 'rgba(255, 255, 255, 0.08)', padding: '2px 8px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)', backgroundColor: 'rgba(11, 18, 32, 0.05)', padding: '2px 8px', borderRadius: '4px' }}>
                           Mẫu #{idx + 1}
                         </span>
                       </div>
@@ -1309,7 +1279,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         {/* Đầu vào mẫu */}
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#38bdf8' }}>ĐẦU VÀO (STDIN):</span>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--blue-300)' }}>ĐẦU VÀO (STDIN):</span>
                             <button
                               type="button"
                               onClick={() => handleCopyCode(tc.input, `input-${idx}`)}
@@ -1318,15 +1288,15 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                                 alignItems: 'center',
                                 gap: '4px',
                                 fontSize: '11px',
-                                color: '#e5e7eb',
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                color: '#0b1220',
+                                backgroundColor: 'rgba(11, 18, 32, 0.05)',
                                 border: 'none',
                                 padding: '2px 8px',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
                               }}
                             >
-                              {copiedSnippet === `input-${idx}` ? <Check size={11} color="#34d399" /> : <Copy size={11} />}
+                              {copiedSnippet === `input-${idx}` ? <Check size={11} color="#1d4ed8" /> : <Copy size={11} />}
                               <span>{copiedSnippet === `input-${idx}` ? 'Đã chép!' : 'Sao chép'}</span>
                             </button>
                           </div>
@@ -1335,9 +1305,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                               margin: 0,
                               padding: '12px',
                               borderRadius: '8px',
-                              backgroundColor: '#0a0f1d',
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                              color: '#f8fafc',
+                              backgroundColor: '#fbfcfe',
+                              border: '1px solid rgba(11, 18, 32, 0.06)',
+                              color: 'var(--text-main)',
                               fontSize: '12.5px',
                               fontFamily: 'Consolas, Monaco, monospace',
                               whiteSpace: 'pre-wrap',
@@ -1351,7 +1321,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         {/* Đầu ra mong đợi */}
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#34d399' }}>ĐẦU RA MONG ĐỢI (STDOUT):</span>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--blue-200)' }}>ĐẦU RA MONG ĐỢI (STDOUT):</span>
                             <button
                               type="button"
                               onClick={() => handleCopyCode(tc.expectedOutput, `output-${idx}`)}
@@ -1360,15 +1330,15 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                                 alignItems: 'center',
                                 gap: '4px',
                                 fontSize: '11px',
-                                color: '#e5e7eb',
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                color: '#0b1220',
+                                backgroundColor: 'rgba(11, 18, 32, 0.05)',
                                 border: 'none',
                                 padding: '2px 8px',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
                               }}
                             >
-                              {copiedSnippet === `output-${idx}` ? <Check size={11} color="#34d399" /> : <Copy size={11} />}
+                              {copiedSnippet === `output-${idx}` ? <Check size={11} color="#1d4ed8" /> : <Copy size={11} />}
                               <span>{copiedSnippet === `output-${idx}` ? 'Đã chép!' : 'Sao chép'}</span>
                             </button>
                           </div>
@@ -1377,9 +1347,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                               margin: 0,
                               padding: '12px',
                               borderRadius: '8px',
-                              backgroundColor: '#0a0f1d',
-                              border: '1px solid rgba(52, 211, 153, 0.25)',
-                              color: '#34d399',
+                              backgroundColor: '#fbfcfe',
+                              border: '1px solid rgba(37, 99, 235, 0.12)',
+                              color: 'var(--blue-200)',
                               fontSize: '12.5px',
                               fontFamily: 'Consolas, Monaco, monospace',
                               whiteSpace: 'pre-wrap',
@@ -1396,13 +1366,13 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         style={{
                           padding: '10px 14px',
                           borderRadius: '8px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                          backgroundColor: 'rgba(11, 18, 32, 0.03)',
                           fontSize: '12.5px',
-                          color: '#d1d5db',
+                          color: '#33415a',
                           lineHeight: '1.5',
                         }}
                       >
-                        <strong style={{ color: '#fbbf24' }}>💡 Giải thích bước chạy: </strong>
+                        <strong style={{ color: '#1e40af' }}>Giải thích bước chạy: </strong>
                         {tc.explanation}
                       </div>
                     </div>
@@ -1434,8 +1404,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         style={{
                           padding: '16px',
                           borderRadius: '12px',
-                          backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          backgroundColor: 'rgba(11, 18, 32, 0.025)',
+                          border: '1px solid rgba(11, 18, 32, 0.05)',
                           display: 'flex',
                           flexDirection: 'column',
                           justifyContent: 'space-between',
@@ -1444,16 +1414,16 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       >
                         <div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '13px', fontWeight: 800, color: '#ffffff' }}>{r.criterion}</span>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>{r.criterion}</span>
                             <span
                               style={{
                                 fontSize: '13px',
-                                fontWeight: 800,
+                                fontWeight: 600,
                                 padding: '2px 8px',
                                 borderRadius: '6px',
-                                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                backgroundColor: 'rgba(37, 99, 235, 0.1)',
                                 color: 'var(--accent-emerald)',
-                                border: '1px solid rgba(16, 185, 129, 0.4)',
+                                border: '1px solid rgba(37, 99, 235, 0.18)',
                               }}
                             >
                               +{r.maxScore}đ
@@ -1462,7 +1432,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                           <div style={{ fontSize: '12px', color: 'var(--text-muted)', lineHeight: '1.5' }}>{r.description}</div>
                         </div>
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--accent-cyan)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--blue-200)' }}>
                           <CheckCircle size={12} /> Tự động đánh giá bởi AITA Autograding Engine
                         </div>
                       </div>
@@ -1474,16 +1444,16 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     style={{
                       padding: '14px 18px',
                       borderRadius: '10px',
-                      backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                      border: '1px solid rgba(16, 185, 129, 0.25)',
+                      backgroundColor: 'rgba(37, 99, 235, 0.06)',
+                      border: '1px solid rgba(37, 99, 235, 0.12)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
                     }}
                   >
-                    <ShieldCheck size={24} color="#34d399" />
-                    <div style={{ fontSize: '12.5px', color: '#d1d5db', lineHeight: '1.5' }}>
-                      <strong style={{ color: '#ffffff' }}>Giám sát Liêm chính học thuật AST: </strong>
+                    <ShieldCheck size={24} color="#1d4ed8" />
+                    <div style={{ fontSize: '12.5px', color: '#33415a', lineHeight: '1.5' }}>
+                      <strong style={{ color: 'var(--text-main)' }}>Giám sát Liêm chính học thuật AST: </strong>
                       Mọi bài nộp sẽ được tạo chữ ký k-gram thông qua giải thuật Winnowing AST. Nếu độ tương đồng vượt quá 70%, bài nộp sẽ bị tự động đánh dấu nghi vấn gian lận và chuyển tới hội đồng giảng viên xem xét.
                     </div>
                   </div>
@@ -1500,14 +1470,14 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       style={{
                         padding: '18px',
                         borderRadius: '12px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        backgroundColor: 'rgba(11, 18, 32, 0.025)',
+                        border: '1px solid rgba(11, 18, 32, 0.05)',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--blue-300)', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
                         <FileArchive size={16} /> Cấu Trúc File Nén .ZIP Hợp Lệ
                       </div>
-                      <p style={{ fontSize: '12.5px', color: '#d1d5db', marginBottom: '10px' }}>
+                      <p style={{ fontSize: '12.5px', color: '#33415a', marginBottom: '10px' }}>
                         Nén trực tiếp các file mã nguồn vào thư mục gốc của tệp <code>.zip</code>:
                       </p>
                       <pre
@@ -1515,9 +1485,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                           margin: 0,
                           padding: '12px',
                           borderRadius: '8px',
-                          backgroundColor: '#0a0f1d',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          color: '#f8fafc',
+                          backgroundColor: '#fbfcfe',
+                          border: '1px solid rgba(11, 18, 32, 0.06)',
+                          color: 'var(--text-main)',
                           fontSize: '12px',
                           fontFamily: 'Consolas, Monaco, monospace',
                           lineHeight: '1.6',
@@ -1535,14 +1505,14 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       style={{
                         padding: '18px',
                         borderRadius: '12px',
-                        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        backgroundColor: 'rgba(11, 18, 32, 0.025)',
+                        border: '1px solid rgba(11, 18, 32, 0.05)',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e40af', fontSize: '13.5px', fontWeight: 700, marginBottom: '10px' }}>
                         <Lock size={16} /> Quy Định An Toàn Docker Sandbox
                       </div>
-                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px', color: '#d1d5db', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px', color: '#33415a', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <li>File nén chỉ chứa mã nguồn (.java, .py, .cpp, .cs). Không đính kèm file .class, .exe hoặc file rác.</li>
                         <li>Dung lượng file tối đa: <strong>10 MB</strong>. Vượt quá sẽ bị chặn theo chuẩn <em>BR-01</em>.</li>
                         <li>Nghiêm cấm: Gọi <code>System.exit()</code>, mở kết nối mạng Socket/HTTP, truy xuất file hệ thống.</li>
@@ -1565,14 +1535,14 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             className="glass-panel"
             style={{
               padding: '22px 26px',
-              borderRadius: '16px',
-              backgroundColor: 'rgba(15, 23, 42, 0.85)',
-              border: '1px solid rgba(99, 102, 241, 0.35)',
+              borderRadius: '12px',
+              backgroundColor: '#f7f9fc',
+              border: '1px solid rgba(59, 130, 246, 0.24)',
               marginBottom: '24px',
               display: 'flex',
               flexDirection: 'column',
               gap: '16px',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
+              boxShadow: '0 8px 24px rgba(11, 18, 32, 0.05)',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
@@ -1582,36 +1552,36 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     width: '42px',
                     height: '42px',
                     borderRadius: '12px',
-                    backgroundColor: ((prevSubmission?.score ?? taskSubmissions[0]?.score ?? 0) >= 5) ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
-                    border: `1px solid ${((prevSubmission?.score ?? taskSubmissions[0]?.score ?? 0) >= 5) ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)'}`,
+                    backgroundColor: ((prevSubmission?.score ?? taskSubmissions[0]?.score ?? 0) >= 5) ? 'rgba(37, 99, 235, 0.08)' : 'rgba(11, 18, 32, 0.06)',
+                    border: `1px solid ${((prevSubmission?.score ?? taskSubmissions[0]?.score ?? 0) >= 5) ? 'rgba(37, 99, 235, 0.16)' : 'rgba(11, 18, 32, 0.108)'}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                   }}
                 >
-                  <CheckCircle size={22} color="#10b981" />
+                  <CheckCircle size={22} color="#2563eb" />
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                    <span style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>
+                    <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-main)' }}>
                       Lịch Sử Bài Nộp Gần Nhất Của Bạn
                     </span>
                     <span
                       style={{
                         fontSize: '11px',
-                        fontWeight: 800,
+                        fontWeight: 600,
                         padding: '3px 10px',
                         borderRadius: '6px',
-                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                        color: '#34d399',
-                        border: '1px solid rgba(16, 185, 129, 0.4)',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        color: 'var(--blue-200)',
+                        border: '1px solid rgba(37, 99, 235, 0.18)',
                       }}
                     >
                       ĐÃ CHẤM: {((prevSubmission?.score ?? taskSubmissions[0]?.score ?? 0)).toFixed(1)} / 10.0
                     </span>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '3px' }}>
-                    File: <strong style={{ color: '#ffffff' }}>{prevSubmission?.fileName || taskSubmissions[0]?.fileName || 'Solution.zip'}</strong> • Nộp lúc: {new Date(prevSubmission?.submittedAt || taskSubmissions[0]?.createdAt || Date.now()).toLocaleString('vi-VN')}
+                  <div style={{ fontSize: '12px', color: '#4d5c76', marginTop: '3px' }}>
+                    File: <strong style={{ color: 'var(--text-main)' }}>{prevSubmission?.fileName || taskSubmissions[0]?.fileName || 'Solution.zip'}</strong> • Nộp lúc: {new Date(prevSubmission?.submittedAt || taskSubmissions[0]?.createdAt || Date.now()).toLocaleString('vi-VN')}
                   </div>
                 </div>
               </div>
@@ -1626,18 +1596,18 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     gap: '8px',
                     padding: '10px 20px',
                     borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    background: 'var(--blue-600)',
                     border: 'none',
-                    color: '#ffffff',
+                    color: 'var(--on-blue)',
                     fontSize: '13px',
-                    fontWeight: 800,
+                    fontWeight: 600,
                     cursor: 'pointer',
-                    boxShadow: '0 4px 16px rgba(99, 102, 241, 0.4)',
+                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
                     transition: 'all 0.15s ease',
                   }}
                   title="Xem chi tiet ma nguon da nop, diem testcase, SOLID va nhan xet AI"
                 >
-                  <Sparkles size={16} /> 🔍 Xem Chi Tiết (Code, Testcases & AI)
+                  <Sparkles size={16} /> Xem chi tiết (Code, Testcases & AI)
                 </button>
               </div>
             </div>
@@ -1649,7 +1619,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 gap: '10px',
                 flexWrap: 'wrap',
                 paddingTop: '12px',
-                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                borderTop: '1px solid rgba(11, 18, 32, 0.05)',
               }}
             >
               <span
@@ -1658,9 +1628,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   fontWeight: 700,
                   padding: '6px 12px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                  color: '#6ee7b7',
-                  border: '1px solid rgba(16, 185, 129, 0.25)',
+                  backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                  color: 'var(--blue-200)',
+                  border: '1px solid rgba(37, 99, 235, 0.12)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
@@ -1675,9 +1645,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   fontWeight: 700,
                   padding: '6px 12px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(56, 189, 248, 0.12)',
-                  color: '#7dd3fc',
-                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                  color: 'var(--blue-200)',
+                  border: '1px solid rgba(37, 99, 235, 0.12)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
@@ -1692,9 +1662,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   fontWeight: 700,
                   padding: '6px 12px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(168, 85, 247, 0.12)',
-                  color: '#d8b4fe',
-                  border: '1px solid rgba(168, 85, 247, 0.25)',
+                  backgroundColor: 'rgba(59, 130, 246, 0.09)',
+                  color: '#1e40af',
+                  border: '1px solid rgba(59, 130, 246, 0.16)',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
@@ -1714,8 +1684,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   fontWeight: 600,
                   padding: '6px 12px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  color: '#94a3b8',
+                  backgroundColor: 'rgba(11, 18, 32, 0.035)',
+                  color: '#4d5c76',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
@@ -1727,8 +1697,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
             {/* Neu nop nhieu lan: danh sach cac lan nop */}
             {taskSubmissions.length > 1 && (
-              <div style={{ marginTop: '4px', paddingTop: '10px', borderTop: '1px dashed rgba(255, 255, 255, 0.08)' }}>
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#a5b4fc', marginBottom: '8px' }}>
+              <div style={{ marginTop: '4px', paddingTop: '10px', borderTop: '1px dashed rgba(11, 18, 32, 0.05)' }}>
+                <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--blue-200)', marginBottom: '8px' }}>
                   Tất cả các lần nộp của bài này ({taskSubmissions.length} lần):
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -1742,15 +1712,15 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         padding: '8px 12px',
                         borderRadius: '8px',
                         backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        border: '1px solid rgba(11, 18, 32, 0.04)',
                         fontSize: '12px',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontWeight: 800, color: '#818cf8' }}>Lần {taskSubmissions.length - idx}:</span>
+                        <span style={{ fontWeight: 600, color: 'var(--blue-300)' }}>Lần {taskSubmissions.length - idx}:</span>
                         <code>{subItem.submissionId}</code>
-                        <span style={{ color: '#94a3b8' }}>({new Date(subItem.createdAt).toLocaleString('vi-VN')})</span>
-                        <span style={{ fontWeight: 700, color: (subItem.score ?? 0) >= 5 ? '#34d399' : '#f87171' }}>
+                        <span style={{ color: '#4d5c76' }}>({new Date(subItem.createdAt).toLocaleString('vi-VN')})</span>
+                        <span style={{ fontWeight: 700, color: (subItem.score ?? 0) >= 5 ? '#1d4ed8' : 'var(--text-main)' }}>
                           {(subItem.score ?? 0).toFixed(1)}/10đ
                         </span>
                       </div>
@@ -1760,15 +1730,15 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         style={{
                           padding: '4px 10px',
                           borderRadius: '6px',
-                          backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                          border: '1px solid rgba(99, 102, 241, 0.4)',
-                          color: '#a5b4fc',
+                          backgroundColor: 'rgba(37, 99, 235, 0.10)',
+                          border: '1px solid rgba(59, 130, 246, 0.28)',
+                          color: 'var(--blue-200)',
                           fontSize: '11px',
                           fontWeight: 700,
                           cursor: 'pointer',
                         }}
                       >
-                        🔍 Xem chi tiết
+                        Xem chi tiết
                       </button>
                     </div>
                   ))}
@@ -1780,7 +1750,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
         {/* VÙNG KÉO THẢ NỘP FILE .ZIP */}
         <div className="glass-panel" style={{ padding: '32px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px', color: '#ffffff', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <UploadCloud size={20} color="var(--accent-cyan)" /> Tải Lên Mã Nguồn Bài Làm (.zip)
           </h2>
           <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
@@ -1794,12 +1764,12 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
             style={{
-              border: `2px dashed ${dragActive ? 'var(--accent-primary)' : selectedFile ? 'var(--accent-emerald)' : 'rgba(99, 102, 241, 0.35)'}`,
-              borderRadius: '16px',
+              border: `2px dashed ${dragActive ? 'var(--accent-primary)' : selectedFile ? 'var(--accent-emerald)' : 'rgba(59, 130, 246, 0.24)'}`,
+              borderRadius: '12px',
               padding: '40px 24px',
               textAlign: 'center',
               cursor: 'pointer',
-              backgroundColor: dragActive ? 'rgba(99, 102, 241, 0.12)' : 'rgba(18, 24, 36, 0.6)',
+              backgroundColor: dragActive ? 'rgba(59, 130, 246, 0.09)' : '#eef2f8',
               transition: 'all 0.2s ease-in-out',
               display: 'flex',
               flexDirection: 'column',
@@ -1822,7 +1792,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     width: '64px',
                     height: '64px',
                     borderRadius: '50%',
-                    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1832,12 +1802,12 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   <FileArchive size={36} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>{selectedFile.name}</h4>
+                  <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>{selectedFile.name}</h4>
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
                     Kích thước: {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
                   </p>
                   {isHashing && (
-                    <p style={{ fontSize: '12px', color: 'var(--accent-primary)', marginTop: '4px' }}>
+                    <p style={{ fontSize: '12px', color: 'var(--blue-200)', marginTop: '4px' }}>
                       Đang tính toán mã băm SHA-256 xác thực...
                     </p>
                   )}
@@ -1850,14 +1820,14 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         gap: '6px',
                         padding: '6px 14px',
                         borderRadius: '8px',
-                        backgroundColor: 'rgba(99, 102, 241, 0.15)',
-                        border: '1px solid rgba(99, 102, 241, 0.3)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.09)',
+                        border: '1px solid rgba(59, 130, 246, 0.2)',
                         fontSize: '12px',
-                        color: 'var(--accent-cyan)',
+                        color: 'var(--blue-200)',
                         fontFamily: 'var(--font-mono)',
                       }}
                     >
-                      <ShieldCheck size={14} color="#10b981" />
+                      <ShieldCheck size={14} color="#2563eb" />
                       <span>SHA-256: {sha256Checksum.substring(0, 16)}...{sha256Checksum.substring(sha256Checksum.length - 8)}</span>
                     </div>
                   )}
@@ -1892,21 +1862,21 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     width: '64px',
                     height: '64px',
                     borderRadius: '50%',
-                    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'var(--accent-primary)',
+                    color: 'var(--blue-200)',
                   }}
                 >
                   <UploadCloud size={32} />
                 </div>
                 <div>
-                  <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)' }}>
                     Kéo và thả file bài làm .zip vào đây
                   </h4>
                   <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
-                    hoặc <span style={{ color: 'var(--accent-cyan)', textDecoration: 'underline', fontWeight: 600 }}>bấm để chọn file từ máy tính</span>
+                    hoặc <span style={{ color: 'var(--blue-200)', textDecoration: 'underline', fontWeight: 600 }}>bấm để chọn file từ máy tính</span>
                   </p>
                 </div>
                 <span
@@ -1915,7 +1885,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     color: 'var(--text-dim)',
                     padding: '4px 10px',
                     borderRadius: '6px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+                    backgroundColor: 'rgba(11, 18, 32, 0.03)',
                   }}
                 >
                   Chấp nhận: .zip (Tối đa {selectedTask.maxSizeMb || 10}MB)
@@ -1930,9 +1900,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 marginTop: '16px',
                 padding: '14px 18px',
                 borderRadius: '12px',
-                backgroundColor: 'rgba(244, 63, 94, 0.12)',
-                border: '1px solid rgba(244, 63, 94, 0.35)',
-                color: '#f43f5e',
+                backgroundColor: 'rgba(11, 18, 32, 0.06)',
+                border: '1px solid rgba(11, 18, 32, 0.108)',
+                color: 'var(--text-main)',
                 fontSize: '14px',
                 display: 'flex',
                 alignItems: 'flex-start',
@@ -1962,9 +1932,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               style={{
                 padding: '12px 20px',
                 borderRadius: '10px',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                border: '1px solid rgba(11, 18, 32, 0.08)',
                 backgroundColor: 'transparent',
-                color: '#e5e7eb',
+                color: '#0b1220',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -1982,18 +1952,18 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 borderRadius: '10px',
                 border: 'none',
                 background: isExpired
-                  ? 'rgba(255, 255, 255, 0.05)'
+                  ? 'rgba(11, 18, 32, 0.035)'
                   : selectedFile && !isHashing
-                  ? 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)'
-                  : 'rgba(255, 255, 255, 0.1)',
-                color: isExpired ? '#f43f5e' : '#ffffff',
+                  ? 'var(--blue-500)'
+                  : 'rgba(11, 18, 32, 0.06)',
+                color: isExpired ? 'var(--text-main)' : 'var(--on-blue)',
                 fontSize: '14px',
                 fontWeight: 700,
                 cursor: selectedFile && !isHashing && !isExpired ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: selectedFile && !isHashing && !isExpired ? '0 4px 15px rgba(99, 102, 241, 0.4)' : 'none',
+                boxShadow: selectedFile && !isHashing && !isExpired ? '0 4px 15px rgba(59, 130, 246, 0.28)' : 'none',
                 transition: 'all 0.2s ease',
               }}
             >
@@ -2025,8 +1995,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         style={{
           padding: '24px 28px',
           marginBottom: '24px',
-          background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.12) 0%, rgba(6, 182, 212, 0.08) 100%)',
-          border: '1px solid rgba(99, 102, 241, 0.3)',
+          background: 'rgba(59, 130, 246, 0.06)',
+          border: '1px solid rgba(59, 130, 246, 0.2)',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
@@ -2035,12 +2005,12 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               <span
                 style={{
                   fontSize: '11px',
-                  fontWeight: 800,
+                  fontWeight: 600,
                   padding: '3px 10px',
                   borderRadius: '6px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                  color: '#6ee7b7',
-                  border: '1px solid rgba(16, 185, 129, 0.4)',
+                  backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                  color: 'var(--blue-200)',
+                  border: '1px solid rgba(37, 99, 235, 0.18)',
                 }}
               >
                 CỔNG SINH VIÊN
@@ -2050,7 +2020,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               </span>
             </div>
 
-            <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
               Danh Sách Bài Tập & Giám Sát Deadline Nộp Bài
             </h1>
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginTop: '4px' }}>
@@ -2065,9 +2035,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             style={{
               padding: '8px 14px',
               borderRadius: '8px',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              backgroundColor: 'rgba(255, 255, 255, 0.06)',
-              color: '#e5e7eb',
+              border: '1px solid rgba(11, 18, 32, 0.08)',
+              backgroundColor: 'rgba(11, 18, 32, 0.04)',
+              color: '#0b1220',
               fontSize: '12px',
               fontWeight: 600,
               cursor: 'pointer',
@@ -2093,48 +2063,48 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             style={{
               padding: '14px 18px',
               borderRadius: '12px',
-              backgroundColor: 'rgba(10, 15, 29, 0.6)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              backgroundColor: '#f7f9fc',
+              border: '1px solid rgba(11, 18, 32, 0.05)',
             }}
           >
             <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 600 }}>TỔNG BÀI ĐƯỢC GIAO</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>{stats.total}</div>
+            <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-main)', marginTop: '4px' }}>{stats.total}</div>
           </div>
 
           <div
             style={{
               padding: '14px 18px',
               borderRadius: '12px',
-              backgroundColor: 'rgba(10, 15, 29, 0.6)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
+              backgroundColor: '#f7f9fc',
+              border: '1px solid rgba(37, 99, 235, 0.14)',
             }}
           >
-            <div style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 600 }}>CẦN NỘP (CHƯA NỘP)</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#fbbf24', marginTop: '4px' }}>{stats.pending}</div>
+            <div style={{ fontSize: '11px', color: 'var(--blue-200)', fontWeight: 600 }}>CẦN NỘP (CHƯA NỘP)</div>
+            <div style={{ fontSize: '24px', fontWeight: 600, color: '#1e40af', marginTop: '4px' }}>{stats.pending}</div>
           </div>
 
           <div
             style={{
               padding: '14px 18px',
               borderRadius: '12px',
-              backgroundColor: 'rgba(10, 15, 29, 0.6)',
-              border: '1px solid rgba(244, 63, 94, 0.35)',
+              backgroundColor: '#f7f9fc',
+              border: '1px solid rgba(11, 18, 32, 0.108)',
             }}
           >
-            <div style={{ fontSize: '11px', color: '#fb7185', fontWeight: 600 }}>SẮP HẾT HẠN (&lt; 48H)</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#f43f5e', marginTop: '4px' }}>{stats.urgent}</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-main)', fontWeight: 600 }}>SẮP HẾT HẠN (&lt; 48H)</div>
+            <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-main)', marginTop: '4px' }}>{stats.urgent}</div>
           </div>
 
           <div
             style={{
               padding: '14px 18px',
               borderRadius: '12px',
-              backgroundColor: 'rgba(10, 15, 29, 0.6)',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
+              backgroundColor: '#f7f9fc',
+              border: '1px solid rgba(37, 99, 235, 0.14)',
             }}
           >
-            <div style={{ fontSize: '11px', color: '#34d399', fontWeight: 600 }}>ĐÃ HOÀN THÀNH NỘP</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>{stats.submitted}</div>
+            <div style={{ fontSize: '11px', color: 'var(--blue-200)', fontWeight: 600 }}>ĐÃ HOÀN THÀNH NỘP</div>
+            <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--blue-300)', marginTop: '4px' }}>{stats.submitted}</div>
           </div>
         </div>
       </div>
@@ -2162,9 +2132,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               width: '100%',
               padding: '10px 16px 10px 40px',
               borderRadius: '10px',
-              backgroundColor: 'rgba(18, 24, 36, 0.8)',
+              backgroundColor: '#f7f9fc',
               border: '1px solid var(--border-color)',
-              color: '#ffffff',
+              color: 'var(--text-main)',
               fontSize: '13px',
               outline: 'none',
             }}
@@ -2180,9 +2150,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             style={{
               padding: '10px 14px',
               borderRadius: '10px',
-              backgroundColor: 'rgba(18, 24, 36, 0.8)',
+              backgroundColor: '#f7f9fc',
               border: '1px solid var(--border-color)',
-              color: '#ffffff',
+              color: 'var(--text-main)',
               fontSize: '13px',
               outline: 'none',
             }}
@@ -2213,9 +2183,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 style={{
                   padding: '8px 14px',
                   borderRadius: '8px',
-                  border: active ? '1px solid var(--accent-primary)' : '1px solid rgba(255, 255, 255, 0.1)',
-                  backgroundColor: active ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.04)',
-                  color: active ? '#818cf8' : 'var(--text-muted)',
+                  border: active ? '1px solid var(--accent-primary)' : '1px solid rgba(11, 18, 32, 0.06)',
+                  backgroundColor: active ? 'rgba(59, 130, 246, 0.12)' : 'rgba(11, 18, 32, 0.03)',
+                  color: active ? '#2563eb' : 'var(--text-muted)',
                   fontSize: '12px',
                   fontWeight: active ? 700 : 500,
                   cursor: 'pointer',
@@ -2240,7 +2210,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           }}
         >
           <BookOpen size={40} color="var(--text-dim)" style={{ margin: '0 auto 12px' }} />
-          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', marginBottom: '6px' }}>
+          <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
             Không tìm thấy bài tập nào phù hợp
           </h3>
           <p style={{ fontSize: '13px' }}>
@@ -2263,8 +2233,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   padding: '20px 24px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  border: meta.isUrgent && !isSubmitted ? '1px solid rgba(244, 63, 94, 0.45)' : '1px solid var(--border-color)',
-                  backgroundColor: 'rgba(18, 24, 36, 0.75)',
+                  border: meta.isUrgent && !isSubmitted ? '1px solid rgba(11, 18, 32, 0.144)' : '1px solid var(--border-color)',
+                  backgroundColor: '#f7f9fc',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -2274,11 +2244,11 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = 'translateY(-2px)';
                   e.currentTarget.style.borderColor = 'var(--accent-primary)';
-                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(99, 102, 241, 0.15)';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(59, 130, 246, 0.09)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = meta.isUrgent && !isSubmitted ? 'rgba(244, 63, 94, 0.45)' : 'var(--border-color)';
+                  e.currentTarget.style.borderColor = meta.isUrgent && !isSubmitted ? 'rgba(11, 18, 32, 0.144)' : 'var(--border-color)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
               >
@@ -2290,10 +2260,10 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         padding: '3px 10px',
                         borderRadius: '6px',
                         fontSize: '11px',
-                        fontWeight: 800,
-                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
-                        color: 'var(--accent-cyan)',
-                        border: '1px solid rgba(99, 102, 241, 0.35)',
+                        fontWeight: 600,
+                        backgroundColor: 'rgba(37, 99, 235, 0.10)',
+                        color: 'var(--blue-200)',
+                        border: '1px solid rgba(59, 130, 246, 0.24)',
                       }}
                     >
                       {assignment.courseCode || 'SWP391'}
@@ -2313,9 +2283,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                           borderRadius: '6px',
                           fontSize: '11px',
                           fontWeight: 700,
-                          backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                          color: '#34d399',
-                          border: '1px solid rgba(16, 185, 129, 0.4)',
+                          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                          color: 'var(--blue-200)',
+                          border: '1px solid rgba(37, 99, 235, 0.18)',
                         }}
                       >
                         <CheckCircle size={12} /> Đã nộp ({submissionRecord?.score}/10)
@@ -2327,9 +2297,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                           borderRadius: '6px',
                           fontSize: '11px',
                           fontWeight: 700,
-                          backgroundColor: 'rgba(245, 158, 11, 0.18)',
-                          color: '#f59e0b',
-                          border: '1px solid rgba(245, 158, 11, 0.35)',
+                          backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                          color: 'var(--blue-200)',
+                          border: '1px solid rgba(37, 99, 235, 0.16)',
                         }}
                       >
                         Chưa nộp
@@ -2337,7 +2307,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     )}
                   </div>
 
-                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', marginBottom: '6px', lineHeight: '1.3' }}>
+                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '6px', lineHeight: '1.3' }}>
                     {assignment.title}
                   </h3>
 
@@ -2358,10 +2328,10 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
                   {/* Thông tin phụ: RAM, CPU, Ngôn ngữ */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', color: 'var(--text-dim)', flexWrap: 'wrap' }}>
-                    <span>⏱ {assignment.timeLimitMs || 2000}ms</span>
-                    <span>💾 {assignment.memoryLimitMb || 512}MB</span>
-                    <span>🧩 {assignment.testCasesCount || 5} testcases</span>
-                    <span>💻 {(assignment.allowedLanguages || ['java', 'python', 'cpp']).join(', ').toUpperCase()}</span>
+                    <span>{assignment.timeLimitMs || 2000}ms</span>
+                    <span>{assignment.memoryLimitMb || 512}MB</span>
+                    <span>{assignment.testCasesCount || 5} testcases</span>
+                    <span>{(assignment.allowedLanguages || ['java', 'python', 'cpp']).join(', ').toUpperCase()}</span>
                   </div>
                 </div>
 
@@ -2374,7 +2344,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       alignItems: 'center',
                       gap: '6px',
                       padding: '6px 14px',
-                      borderRadius: '20px',
+                      borderRadius: '12px',
                       fontSize: '12px',
                       fontWeight: 700,
                       backgroundColor: meta.bgColor,
@@ -2398,24 +2368,21 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       setSelectedTask(assignment);
                     }}
                     style={{
-                      padding: '9px 20px',
+                      padding: '8px 16px',
                       borderRadius: '8px',
-                      border: 'none',
-                      background: isSubmitted
-                        ? 'rgba(255, 255, 255, 0.08)'
-                        : 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)',
-                      color: isSubmitted ? '#e5e7eb' : '#ffffff',
-                      fontSize: '13px',
-                      fontWeight: 700,
+                      border: isSubmitted ? '1px solid var(--border-color)' : '1px solid var(--blue-500)',
+                      background: isSubmitted ? 'rgba(11, 18, 32, 0.035)' : 'var(--blue-600)',
+                      color: isSubmitted ? 'var(--text-soft)' : 'var(--on-blue)',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: isSubmitted ? 'none' : '0 4px 12px rgba(99, 102, 241, 0.3)',
-                      transition: 'all 0.2s ease',
+                      gap: '5px',
+                      transition: 'background-color .15s ease, border-color .15s ease',
                     }}
                   >
-                    {isSubmitted ? 'Nộp Lại Bài' : 'Nộp Bài Ngay'} <ChevronRight size={15} />
+                    {isSubmitted ? 'Nộp lại' : 'Nộp bài'} <ChevronRight size={14} />
                   </button>
                 </div>
               </div>

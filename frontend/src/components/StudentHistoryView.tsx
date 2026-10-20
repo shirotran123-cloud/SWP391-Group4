@@ -6,6 +6,7 @@ import {
   AlertCircle, Sparkles, ExternalLink, ArrowRight, MessageSquare
 } from 'lucide-react';
 import { AppealModal } from './AppealModal';
+import { FileTypeIcon } from './FileTypeIcon';
 import type { Appeal } from '../types';
 
 export interface SubmissionItem {
@@ -240,10 +241,10 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
       <div className="glass-panel" style={{ padding: '28px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-cyan)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-200)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               USE CASE 04 &amp; 06 • SINH VIÊN
             </span>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, marginTop: '4px', marginBottom: '8px', color: '#ffffff' }}>
+            <h1 style={{ fontSize: '26px', fontWeight: 600, marginTop: '4px', marginBottom: '8px', color: 'var(--text-main)' }}>
               Lịch Sử Bài Nộp &amp; Điểm Số
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
@@ -261,9 +262,9 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 gap: '8px',
                 padding: '10px 18px',
                 borderRadius: '10px',
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: '#ffffff',
+                backgroundColor: 'rgba(11, 18, 32, 0.05)',
+                border: '1px solid rgba(11, 18, 32, 0.08)',
+                color: 'var(--text-main)',
                 fontSize: '13px',
                 fontWeight: 600,
                 cursor: loading ? 'not-allowed' : 'pointer',
@@ -282,13 +283,13 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                   gap: '8px',
                   padding: '10px 20px',
                   borderRadius: '10px',
-                  background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                  background: 'var(--blue-600)',
                   border: 'none',
-                  color: '#ffffff',
+                  color: 'var(--on-blue)',
                   fontSize: '14px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  boxShadow: '0 4px 15px rgba(99, 102, 241, 0.3)',
+                  boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
                 }}
               >
                 <FileCode size={16} /> Nộp Bài Tập Mới
@@ -299,23 +300,23 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
 
         {/* Thống kê nhanh */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginTop: '24px' }}>
-          <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+          <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>TỔNG BÀI ĐÃ NỘP</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
+            <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-main)', marginTop: '4px' }}>
               {totalSubmissions} <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-dim)' }}>bài</span>
             </div>
           </div>
 
-          <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+          <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>BÀI ĐẠT YÊU CẦU</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#6366f1', marginTop: '4px' }}>
+            <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--blue-200)', marginTop: '4px' }}>
               {passedCount} <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-dim)' }}>/ {totalSubmissions} bài</span>
             </div>
           </div>
 
-          <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+          <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>QUY TẮC PHÚC KHẢO BR-05</div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#fbbf24', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e40af', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Scale size={16} /> 2 lượt độc lập / mỗi bài tập
             </div>
           </div>
@@ -335,9 +336,9 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
               width: '100%',
               padding: '10px 14px 10px 38px',
               borderRadius: '8px',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: '#ffffff',
+              backgroundColor: 'rgba(11, 18, 32, 0.035)',
+              border: '1px solid rgba(11, 18, 32, 0.07)',
+              color: 'var(--text-main)',
               fontSize: '13px',
               outline: 'none',
               boxSizing: 'border-box',
@@ -362,11 +363,11 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                   padding: '8px 14px',
                   borderRadius: '8px',
                   border: 'none',
-                  backgroundColor: active ? 'rgba(99, 102, 241, 0.25)' : 'rgba(255, 255, 255, 0.05)',
+                  backgroundColor: active ? 'rgba(59, 130, 246, 0.16)' : 'rgba(11, 18, 32, 0.035)',
                   borderWidth: '1px',
                   borderStyle: 'solid',
-                  borderColor: active ? '#6366f1' : 'transparent',
-                  color: active ? '#ffffff' : 'var(--text-muted)',
+                  borderColor: active ? '#3b82f6' : 'transparent',
+                  color: active ? 'var(--text-main)' : 'var(--text-muted)',
                   fontSize: '12px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -383,8 +384,8 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
       {/* Danh sách bài nộp */}
       {filteredSubmissions.length === 0 ? (
         <div className="glass-panel" style={{ padding: '60px 24px', textAlign: 'center' }}>
-          <FileCode size={48} color="#6366f1" style={{ margin: '0 auto 16px', opacity: 0.6 }} />
-          <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#ffffff', marginBottom: '8px' }}>
+          <FileCode size={48} color="#3b82f6" style={{ margin: '0 auto 16px', opacity: 0.6 }} />
+          <h3 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>
             {searchTerm ? 'Không tìm thấy bài nộp nào phù hợp bộ lọc' : 'Bạn chưa có bài nộp nào'}
           </h3>
           <p style={{ color: 'var(--text-muted)', fontSize: '14px', maxWidth: '480px', margin: '0 auto 24px' }}>
@@ -399,9 +400,9 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 gap: '8px',
                 padding: '12px 24px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                background: 'var(--blue-600)',
                 border: 'none',
-                color: '#ffffff',
+                color: 'var(--on-blue)',
                 fontSize: '14px',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -442,10 +443,10 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 className="glass-panel"
                 style={{
                   padding: '22px 24px',
-                  borderRadius: '16px',
+                  borderRadius: '12px',
                   border: acceptedAppealWithScore
-                    ? '1px solid rgba(16, 185, 129, 0.4)'
-                    : '1px solid rgba(255, 255, 255, 0.08)',
+                    ? '1px solid rgba(37, 99, 235, 0.18)'
+                    : '1px solid rgba(11, 18, 32, 0.05)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '16px',
@@ -457,15 +458,15 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                     {/* Badge trạng thái */}
                     {sub.status === 'QUEUED' || sub.status === 'IN_PROGRESS' ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#f59e0b', fontSize: '12px', fontWeight: 700 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'var(--state-info-bg)', color: 'var(--state-info)', fontSize: '12px', fontWeight: 700 }}>
                         <Clock size={14} /> ĐANG CHẤM
                       </span>
                     ) : isPassed ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '12px', fontWeight: 700 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'var(--state-ok-bg)', color: 'var(--state-ok)', fontSize: '12px', fontWeight: 700 }}>
                         <CheckCircle size={14} /> ĐẠT ({displayScore !== undefined ? `${displayScore.toFixed(1)}/10` : 'PASS'})
                       </span>
                     ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', fontSize: '12px', fontWeight: 700 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'var(--state-bad-bg)', color: 'var(--state-bad)', fontSize: '12px', fontWeight: 700 }}>
                         <XCircle size={14} /> CHƯA ĐẠT ({displayScore !== undefined ? `${displayScore.toFixed(1)}/10` : 'FAIL'})
                       </span>
                     )}
@@ -473,7 +474,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                     {/* Mã bài nộp */}
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                       <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Mã bài nộp:</span>
-                      <code style={{ fontSize: '13px', fontWeight: 700, color: '#818cf8', fontFamily: 'var(--font-mono)', backgroundColor: 'rgba(129, 140, 248, 0.1)', padding: '2px 8px', borderRadius: '6px' }}>
+                      <code style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-300)', fontFamily: 'var(--font-mono)', backgroundColor: 'rgba(37, 99, 235, 0.07)', padding: '2px 8px', borderRadius: '6px' }}>
                         {sub.submissionId}
                       </code>
                       <button
@@ -483,7 +484,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                         style={{
                           background: 'none',
                           border: 'none',
-                          color: copiedId === sub.submissionId ? '#10b981' : 'var(--text-muted)',
+                          color: copiedId === sub.submissionId ? '#2563eb' : 'var(--text-muted)',
                           cursor: 'pointer',
                           padding: '4px',
                           display: 'inline-flex',
@@ -495,7 +496,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                     </div>
 
                     {/* Ngôn ngữ */}
-                    <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(255, 255, 255, 0.06)', color: 'var(--text-dim)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
+                    <span style={{ padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(11, 18, 32, 0.04)', color: 'var(--text-dim)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' }}>
                       {sub.language}
                     </span>
 
@@ -505,8 +506,8 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                         style={{
                           padding: '3px 8px',
                           borderRadius: '6px',
-                          backgroundColor: isMaxAppeals ? 'rgba(239, 68, 68, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-                          color: isMaxAppeals ? '#f87171' : '#fbbf24',
+                          backgroundColor: isMaxAppeals ? 'rgba(11, 18, 32, 0.06)' : 'rgba(37, 99, 235, 0.08)',
+                          color: isMaxAppeals ? 'var(--text-main)' : '#1e40af',
                           fontSize: '11px',
                           fontWeight: 700,
                           display: 'inline-flex',
@@ -525,7 +526,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                       <div
                         style={{
                           fontSize: '11px',
-                          color: acceptedAppealWithScore ? '#10b981' : 'var(--text-muted)',
+                          color: acceptedAppealWithScore ? '#2563eb' : 'var(--text-muted)',
                           textTransform: 'uppercase',
                           fontWeight: 700,
                           display: 'flex',
@@ -537,7 +538,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                         {acceptedAppealWithScore && <Sparkles size={12} />}
                         {acceptedAppealWithScore ? 'Điểm Sau Phúc Khảo' : 'Điểm Tổng Hợp'}
                       </div>
-                      <div style={{ fontSize: '24px', fontWeight: 900, color: displayScore !== undefined && displayScore >= 5.0 ? '#10b981' : '#f43f5e' }}>
+                      <div style={{ fontSize: '24px', fontWeight: 900, color: displayScore !== undefined && displayScore >= 5.0 ? '#2563eb' : 'var(--text-main)' }}>
                         {displayScore !== undefined ? `${displayScore.toFixed(1)} / 10.0` : 'Chờ chấm'}
                       </div>
                       {acceptedAppealWithScore && originalScore !== undefined && (
@@ -550,18 +551,18 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 </div>
 
                 {/* Dòng 2: Tên đề bài & thông tin file */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', backgroundColor: 'rgba(255, 255, 255, 0.02)', padding: '14px 16px', borderRadius: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', backgroundColor: 'rgba(11, 18, 32, 0.02)', padding: '14px 16px', borderRadius: '12px' }}>
                   <div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Đề bài / Assignment</div>
-                    <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff', marginTop: '2px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
                       {sub.assignmentId || 'SWP391 - Đồ Án Chuyên Ngành'}
                     </div>
                   </div>
 
                   <div>
                     <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Tên file nộp gốc</div>
-                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#c7d2fe', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <FileCode size={14} /> {sub.fileName || `${sub.submissionId}.zip`}
+                    <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e40af', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <FileTypeIcon fileName={sub.fileName || `${sub.submissionId}.zip`} size={18} /> {sub.fileName || `${sub.submissionId}.zip`}
                       {sub.fileSizeBytes && (
                         <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
                           ({(sub.fileSizeBytes / 1024).toFixed(1)} KB)
@@ -581,19 +582,19 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 {/* Dòng 3: Chi tiết điểm (Testcase, Clean Code, SOLID) */}
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                   {testcaseText && (
-                    <div style={{ padding: '8px 14px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.2)', fontSize: '12px', color: '#6ee7b7' }}>
+                    <div style={{ padding: '8px 14px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.1)', fontSize: '12px', color: 'var(--blue-200)' }}>
                       <strong>Testcases:</strong> {testcaseText} (70% trọng số)
                     </div>
                   )}
 
                   {cleanCodeScore !== undefined && (
-                    <div style={{ padding: '8px 14px', borderRadius: '8px', backgroundColor: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.2)', fontSize: '12px', color: '#c7d2fe' }}>
+                    <div style={{ padding: '8px 14px', borderRadius: '8px', backgroundColor: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.12)', fontSize: '12px', color: '#1e40af' }}>
                       <strong>Clean Code:</strong> {cleanCodeScore.toFixed(1)} / 10.0
                     </div>
                   )}
 
                   {sub.details?.aiRating?.solidScore && (
-                    <div style={{ padding: '8px 14px', borderRadius: '8px', backgroundColor: 'rgba(6, 182, 212, 0.08)', border: '1px solid rgba(6, 182, 212, 0.2)', fontSize: '12px', color: '#67e8f9' }}>
+                    <div style={{ padding: '8px 14px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.1)', fontSize: '12px', color: 'var(--blue-200)' }}>
                       <strong>SOLID:</strong> S:{sub.details.aiRating.solidScore.s} O:{sub.details.aiRating.solidScore.o} L:{sub.details.aiRating.solidScore.l} I:{sub.details.aiRating.solidScore.i} D:{sub.details.aiRating.solidScore.d}
                     </div>
                   )}
@@ -601,7 +602,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
 
                 {/* Nhận xét AI ngắn nếu có */}
                 {sub.details?.aiRating?.explanation && (
-                  <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', backgroundColor: 'rgba(0,0,0,0.2)', padding: '10px 14px', borderRadius: '8px', borderLeft: '3px solid #6366f1' }}>
+                  <div style={{ fontSize: '12px', color: '#4d5c76', fontStyle: 'italic', backgroundColor: 'rgba(11, 18, 32, 0.03)', padding: '10px 14px', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
                     &ldquo;{sub.details.aiRating.explanation}&rdquo;
                   </div>
                 )}
@@ -612,8 +613,8 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                     style={{
                       padding: '16px 18px',
                       borderRadius: '12px',
-                      backgroundColor: 'rgba(99, 102, 241, 0.06)',
-                      border: '1px solid rgba(99, 102, 241, 0.3)',
+                      backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                      border: '1px solid rgba(59, 130, 246, 0.2)',
                       display: 'flex',
                       flexDirection: 'column',
                       gap: '12px',
@@ -622,8 +623,8 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                     {/* Header thông tin phúc khảo */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Scale size={18} color="#818cf8" />
-                        <span style={{ fontSize: '14px', fontWeight: 800, color: '#e0e7ff' }}>
+                        <Scale size={18} color="#2563eb" />
+                        <span style={{ fontSize: '14px', fontWeight: 600, color: '#1e40af' }}>
                           Thông Tin Phúc Khảo Bài Nộp (Đã sử dụng: {appealsCount}/2 lượt của bài này)
                         </span>
                         <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontStyle: 'italic' }}>
@@ -633,17 +634,17 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
 
                       <div>
                         {latestAppeal?.status === 'ACCEPTED' && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '12px', fontWeight: 700 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'var(--state-ok-bg)', color: 'var(--state-ok)', fontSize: '12px', fontWeight: 700 }}>
                             <CheckCircle size={14} /> ĐÃ CHẤP THUẬN CẬP NHẬT ĐIỂM
                           </span>
                         )}
                         {latestAppeal?.status === 'REJECTED' && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: '#f43f5e', fontSize: '12px', fontWeight: 700 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'var(--state-bad-bg)', color: 'var(--state-bad)', fontSize: '12px', fontWeight: 700 }}>
                             <XCircle size={14} /> ĐÃ TỪ CHỐI KHIẾU NẠI
                           </span>
                         )}
                         {(latestAppeal?.status === 'PENDING' || latestAppeal?.status === 'IN_REVIEW') && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', fontSize: '12px', fontWeight: 700 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: '#1e40af', fontSize: '12px', fontWeight: 700 }}>
                             <Clock size={14} /> ĐANG CHỜ GIẢNG VIÊN XEM XÉT
                           </span>
                         )}
@@ -659,7 +660,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                             padding: '12px 14px',
                             borderRadius: '10px',
                             backgroundColor: 'rgba(0, 0, 0, 0.25)',
-                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                            border: '1px solid rgba(11, 18, 32, 0.05)',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '8px',
@@ -667,35 +668,35 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <span style={{ fontSize: '12px', fontWeight: 800, color: '#a5b4fc', backgroundColor: 'rgba(99, 102, 241, 0.18)', padding: '2px 8px', borderRadius: '6px' }}>
+                              <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--blue-200)', backgroundColor: 'rgba(37, 99, 235, 0.10)', padding: '2px 8px', borderRadius: '6px' }}>
                                 Lần {appIdx + 1}/2
                               </span>
-                              <code style={{ fontSize: '12px', color: '#cbd5e1' }}>{app.appealId}</code>
+                              <code style={{ fontSize: '12px', color: '#33415a' }}>{app.appealId}</code>
                               <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
                                 ({new Date(app.createdAt).toLocaleString('vi-VN')})
                               </span>
                             </div>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: app.status === 'ACCEPTED' ? '#10b981' : app.status === 'REJECTED' ? '#f43f5e' : '#fbbf24' }}>
-                              {app.status === 'ACCEPTED' ? '✓ Đã chấp thuận' : app.status === 'REJECTED' ? '✕ Đã từ chối' : '⏳ Chờ xem xét'}
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: app.status === 'ACCEPTED' ? '#2563eb' : app.status === 'REJECTED' ? 'var(--text-main)' : '#1e40af' }}>
+                              {app.status === 'ACCEPTED' ? '✓Đã chấp thuận' : app.status === 'REJECTED' ? '✕Đã từ chối' : '⏳ Chờ xem xét'}
                             </span>
                           </div>
 
                           {/* Lý do sinh viên gửi */}
-                          <div style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: 1.5 }}>
-                            <strong style={{ color: '#94a3b8' }}>Lý do bạn khiếu nại: </strong>
+                          <div style={{ fontSize: '13px', color: '#33415a', lineHeight: 1.5 }}>
+                            <strong style={{ color: '#4d5c76' }}>Lý do bạn khiếu nại: </strong>
                             &ldquo;{app.reason}&rdquo;
                           </div>
 
                           {/* Kết quả phản hồi của Giảng viên */}
                           {app.status === 'ACCEPTED' && (
-                            <div style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)', fontSize: '12px', color: '#6ee7b7' }}>
-                              <div style={{ fontWeight: 700, color: '#34d399', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.07)', border: '1px solid rgba(37, 99, 235, 0.12)', fontSize: '12px', color: 'var(--blue-200)' }}>
+                              <div style={{ fontWeight: 700, color: 'var(--blue-200)', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                 <Award size={14} /> Phản hồi từ Giảng viên ({app.reviewerId || 'Giảng viên phụ trách'}):
                               </div>
                               <div>{app.resolutionNote || 'Đã đồng ý điều chỉnh điểm theo khiếu nại.'}</div>
                               {app.adjustedScore !== undefined && (
-                                <div style={{ marginTop: '5px', fontWeight: 800, color: '#10b981', fontSize: '13px' }}>
-                                  ➔ Điểm số điều chỉnh chính thức: {app.adjustedScore} / 10.0
+                                <div style={{ marginTop: '5px', fontWeight: 600, color: 'var(--blue-300)', fontSize: '13px' }}>
+                                  Điểm số điều chỉnh chính thức: {app.adjustedScore} / 10.0
                                   {app.resolvedAt && (
                                     <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 400, marginLeft: '8px' }}>
                                       (Duyệt ngày: {new Date(app.resolvedAt).toLocaleString('vi-VN')})
@@ -707,9 +708,9 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                           )}
 
                           {app.status === 'REJECTED' && (
-                            <div style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(244, 63, 94, 0.1)', border: '1px solid rgba(244, 63, 94, 0.25)', fontSize: '12px', color: '#fda4af' }}>
-                              <div style={{ fontWeight: 700, color: '#fb7185', marginBottom: '3px' }}>
-                                ✕ Phản hồi từ Giảng viên ({app.reviewerId || 'Giảng viên phụ trách'}):
+                            <div style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(11, 18, 32, 0.05)', border: '1px solid rgba(11, 18, 32, 0.09)', fontSize: '12px', color: 'var(--text-main)' }}>
+                              <div style={{ fontWeight: 700, color: 'var(--text-main)', marginBottom: '3px' }}>
+                                ✕Phản hồi từ Giảng viên ({app.reviewerId || 'Giảng viên phụ trách'}):
                               </div>
                               <div>{app.resolutionNote || 'Không chấp thuận khiếu nại. Điểm số giữ nguyên theo kết quả ban đầu.'}</div>
                               {app.resolvedAt && (
@@ -721,7 +722,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                           )}
 
                           {(app.status === 'PENDING' || app.status === 'IN_REVIEW') && (
-                            <div style={{ fontSize: '11px', color: '#fbbf24', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <div style={{ fontSize: '11px', color: '#1e40af', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '5px' }}>
                               <Clock size={12} /> Đơn đang trong danh sách chờ Giảng viên phúc tra. Kết quả sẽ được cập nhật tự động tại đây.
                             </div>
                           )}
@@ -732,11 +733,11 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 )}
 
                 {/* Dòng 4: CÁC NÚT HÀNH ĐỘNG (Tải lại file zip & Phúc khảo) */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', paddingTop: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', borderTop: '1px solid rgba(11, 18, 32, 0.04)', paddingTop: '14px' }}>
                   <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <ShieldCheck size={14} color="#10b981" />
+                    <ShieldCheck size={14} color="#2563eb" />
                     <span>Mã băm SHA-256: </span>
-                    <code style={{ fontSize: '11px', color: '#94a3b8' }}>
+                    <code style={{ fontSize: '11px', color: '#4d5c76' }}>
                       {sub.sha256Hash ? `${sub.sha256Hash.substring(0, 16)}...` : 'Đã kiểm định'}
                     </code>
                   </div>
@@ -752,13 +753,13 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                         gap: '7px',
                         padding: '9px 18px',
                         borderRadius: '9px',
-                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        background: 'var(--blue-600)',
                         border: 'none',
-                        color: '#ffffff',
+                        color: 'var(--on-blue)',
                         fontSize: '13px',
                         fontWeight: 700,
                         cursor: 'pointer',
-                        boxShadow: '0 4px 14px rgba(99, 102, 241, 0.3)',
+                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
                         transition: 'all 0.15s ease',
                       }}
                       title="Xem toan bo ma nguon da nop, chi tiet testcase va danh gia AI"
@@ -776,9 +777,9 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                         gap: '7px',
                         padding: '9px 16px',
                         borderRadius: '9px',
-                        backgroundColor: 'rgba(56, 189, 248, 0.12)',
-                        border: '1px solid rgba(56, 189, 248, 0.35)',
-                        color: '#38bdf8',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        border: '1px solid rgba(37, 99, 235, 0.16)',
+                        color: 'var(--blue-300)',
                         fontSize: '13px',
                         fontWeight: 700,
                         cursor: downloadingId === sub.submissionId ? 'not-allowed' : 'pointer',
@@ -802,14 +803,14 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                         padding: '9px 16px',
                         borderRadius: '9px',
                         backgroundColor: isMaxAppeals
-                          ? 'rgba(255, 255, 255, 0.04)'
+                          ? 'rgba(11, 18, 32, 0.03)'
                           : appealsCount === 1
-                            ? 'rgba(245, 158, 11, 0.18)'
-                            : 'rgba(245, 158, 11, 0.12)',
+                            ? 'rgba(37, 99, 235, 0.1)'
+                            : 'rgba(37, 99, 235, 0.08)',
                         border: isMaxAppeals
-                          ? '1px dashed rgba(255, 255, 255, 0.2)'
-                          : '1px solid rgba(245, 158, 11, 0.4)',
-                        color: isMaxAppeals ? '#94a3b8' : '#fbbf24',
+                          ? '1px dashed rgba(11, 18, 32, 0.1)'
+                          : '1px solid rgba(37, 99, 235, 0.18)',
+                        color: isMaxAppeals ? '#4d5c76' : '#1e40af',
                         fontSize: '13px',
                         fontWeight: 700,
                         opacity: isMaxAppeals ? 0.45 : 1,

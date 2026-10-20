@@ -35,11 +35,11 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
     <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px' }}>
       <div className="glass-panel" style={{ padding: '28px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(6, 182, 212, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-cyan)' }}>
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: 'rgba(37, 99, 235, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--blue-200)' }}>
             <Cpu size={24} />
           </div>
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#ffffff' }}>
+            <h1 style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-main)' }}>
               Phòng Thí Nghiệm Nghiên Cứu AST & Thuật Toán Winnowing (RBL Core)
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
@@ -49,14 +49,14 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
         </div>
 
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '16px', fontSize: '13px' }}>
-          <span style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)', fontWeight: 600 }}>
-            ⚡ Thuật toán: Winnowing K-gram (k=15, w=10)
+          <span style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(59, 130, 246, 0.09)', color: 'var(--blue-200)', fontWeight: 600 }}>
+            Thuật toán: Winnowing K-gram (k=15, w=10)
           </span>
-          <span style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(6, 182, 212, 0.15)', color: 'var(--accent-cyan)', fontWeight: 600 }}>
-            🌲 Chuẩn hóa AST: Tree-sitter Canonical Tokenizer
+          <span style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-200)', fontWeight: 600 }}>
+            Chuẩn hóa AST: Tree-sitter Canonical Tokenizer
           </span>
-          <span style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(244, 63, 94, 0.15)', color: 'var(--accent-rose)', fontWeight: 600 }}>
-            🚨 Ngưỡng cảnh báo gian lận: ≥ 70.0%
+          <span style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(11, 18, 32, 0.06)', color: 'var(--accent-rose)', fontWeight: 600 }}>
+            Ngưỡng cảnh báo gian lận: ≥ 70.0%
           </span>
         </div>
       </div>
@@ -72,14 +72,14 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
               style={{
                 padding: '18px',
                 cursor: 'pointer',
-                borderRadius: '14px',
-                border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.08)'}`,
-                backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.12)' : 'rgba(24, 32, 48, 0.6)',
+                borderRadius: '12px',
+                border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'rgba(11, 18, 32, 0.05)'}`,
+                backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.09)' : 'rgba(11, 18, 32, 0.025)',
                 transition: 'all 0.2s ease',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '10px' }}>
-                <span style={{ fontSize: '13px', fontWeight: 800, color: isSelected ? 'var(--accent-cyan)' : '#e5e7eb' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: isSelected ? 'var(--accent-cyan)' : '#0b1220' }}>
                   Cặp Bài #{pair.pairId.toString().padStart(2, '0')}
                 </span>
                 <span
@@ -88,25 +88,25 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
                     padding: '3px 8px',
                     borderRadius: '6px',
                     fontWeight: 700,
-                    backgroundColor: pair.expectedIsPlagiarized ? 'rgba(244, 63, 94, 0.18)' : 'rgba(16, 185, 129, 0.18)',
-                    color: pair.expectedIsPlagiarized ? '#f43f5e' : '#10b981',
-                    border: `1px solid ${pair.expectedIsPlagiarized ? 'rgba(244, 63, 94, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                    backgroundColor: pair.expectedIsPlagiarized ? 'var(--state-bad-bg)' : 'var(--state-ok-bg)',
+                    color: pair.expectedIsPlagiarized ? 'var(--state-bad)' : 'var(--state-ok)',
+                    border: `1px solid ${pair.expectedIsPlagiarized ? 'var(--state-bad-border)' : 'var(--state-ok-border)'}`,
                   }}
                 >
                   {pair.expectedIsPlagiarized ? 'CÓ ĐẠO VĂN' : 'AN TOÀN'}
                 </span>
               </div>
 
-              <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff', marginBottom: '6px' }}>
+              <h4 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
                 {pair.title}
               </h4>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: '1.4' }}>
                 Kịch bản kiểm định ngụy trang: {pair.obfuscationType}
               </p>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid rgba(11, 18, 32, 0.04)', fontSize: '12px' }}>
                 <span style={{ color: 'var(--text-dim)' }}>Thủ thuật ngụy trang:</span>
-                <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>{pair.obfuscationType}</span>
+                <span style={{ color: 'var(--blue-200)', fontWeight: 600 }}>{pair.obfuscationType}</span>
               </div>
             </div>
           );
@@ -117,10 +117,10 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
       <div className="glass-panel" style={{ padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
           <div>
-            <span style={{ fontSize: '12px', color: 'var(--accent-cyan)', fontWeight: 700, textTransform: 'uppercase' }}>
+            <span style={{ fontSize: '12px', color: 'var(--blue-200)', fontWeight: 700, textTransform: 'uppercase' }}>
               Chi Tiết Đang Chọn: Cặp #{selectedPair.pairId.toString().padStart(2, '0')}
             </span>
-            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', marginTop: '2px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', marginTop: '2px' }}>
               {selectedPair.title}
             </h3>
           </div>
@@ -153,16 +153,16 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
         </div>
 
         {evaluationResult ? (
-          <div style={{ backgroundColor: 'rgba(18, 24, 36, 0.7)', borderRadius: '12px', padding: '20px', border: '1px solid var(--border-color)' }}>
+          <div style={{ backgroundColor: '#f7f9fc', borderRadius: '12px', padding: '20px', border: '1px solid var(--border-color)' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
-              <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Tỷ Lệ Trùng Khớp (Jaccard):</span>
-                <div style={{ fontSize: '26px', fontWeight: 800, color: evaluationResult.similarityRate >= 70 ? 'var(--accent-rose)' : 'var(--accent-emerald)', marginTop: '4px' }}>
+                <div style={{ fontSize: '26px', fontWeight: 600, color: evaluationResult.similarityRate >= 70 ? 'var(--accent-rose)' : 'var(--accent-emerald)', marginTop: '4px' }}>
                   {evaluationResult.similarityRate.toFixed(1)}%
                 </div>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Kết Luận Thuật Toán:</span>
                 <div style={{ fontSize: '16px', fontWeight: 700, color: evaluationResult.isFlagged ? 'var(--accent-rose)' : 'var(--accent-emerald)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {evaluationResult.isFlagged ? (
@@ -177,16 +177,16 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
                 </div>
               </div>
 
-              <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Thời Gian Xử Lý:</span>
-                <div style={{ fontSize: '22px', fontWeight: 800, color: 'var(--accent-cyan)', marginTop: '4px' }}>
+                <div style={{ fontSize: '22px', fontWeight: 600, color: 'var(--blue-200)', marginTop: '4px' }}>
                   {evaluationResult.executionTimeMs || 12} ms
                 </div>
               </div>
             </div>
 
             <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-              💡 <strong>Nhận định chuyên môn:</strong> Thuật toán Winnowing đã tiến hành bóc tách toàn bộ định danh biến và hàm, xóa bỏ cấu trúc bình luận, và thực hiện băm trượt trên Cây Cú Pháp Trừu Tượng. Kết quả cho thấy các kỹ thuật ngụy trang ({selectedPair.obfuscationType}) hoàn toàn bị vô hiệu hóa bởi bộ chuẩn hóa AST.
+              <strong>Nhận định chuyên môn:</strong> Thuật toán Winnowing đã tiến hành bóc tách toàn bộ định danh biến và hàm, xóa bỏ cấu trúc bình luận, và thực hiện băm trượt trên Cây Cú Pháp Trừu Tượng. Kết quả cho thấy các kỹ thuật ngụy trang ({selectedPair.obfuscationType}) hoàn toàn bị vô hiệu hóa bởi bộ chuẩn hóa AST.
             </p>
 
             {onOpenDiffViewer && (
@@ -197,9 +197,9 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
                   marginTop: '16px',
                   padding: '10px 18px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                  backgroundColor: 'rgba(37, 99, 235, 0.10)',
                   border: '1px solid var(--accent-primary)',
-                  color: '#ffffff',
+                  color: 'var(--text-main)',
                   fontSize: '13px',
                   fontWeight: 600,
                   display: 'flex',
@@ -214,7 +214,7 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
-            <Sparkles size={32} style={{ margin: '0 auto 12px', color: 'var(--accent-primary)' }} />
+            <Sparkles size={32} style={{ margin: '0 auto 12px', color: 'var(--blue-200)' }} />
             <p>Bấm nút <strong>"Chạy Kiểm Tra Đối Soát Cặp Này"</strong> để bắt đầu quá trình trích xuất AST và băm Winnowing.</p>
           </div>
         )}

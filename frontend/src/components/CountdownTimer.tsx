@@ -37,7 +37,7 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ deadline }) => {
 
   if (timeLeft.expired) {
     return (
-      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', backgroundColor: 'rgba(244, 63, 94, 0.15)', border: '1px solid rgba(244, 63, 94, 0.4)', color: '#f43f5e', fontSize: '13px', fontWeight: 700 }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.06)', border: '1px solid rgba(11, 18, 32, 0.13)', color: 'var(--text-main)', fontSize: '13px', fontWeight: 700 }}>
         <AlertCircle size={15} /> Quá hạn nộp bài
       </div>
     );
@@ -51,17 +51,17 @@ export const CountdownTimer: React.FC<CountdownTimerProps> = ({ deadline }) => {
       alignItems: 'center',
       gap: '8px',
       padding: '7px 15px',
-      borderRadius: '20px',
-      backgroundColor: isUrgent ? 'rgba(244, 63, 94, 0.16)' : 'rgba(99, 102, 241, 0.14)',
-      border: `1px solid ${isUrgent ? 'rgba(244, 63, 94, 0.45)' : 'rgba(99, 102, 241, 0.35)'}`,
-      color: isUrgent ? '#fb7185' : '#818cf8',
+      borderRadius: '12px',
+      backgroundColor: isUrgent ? 'rgba(11, 18, 32, 0.05)' : 'rgba(59, 130, 246, 0.1)',
+      border: `1px solid ${isUrgent ? 'rgba(11, 18, 32, 0.144)' : 'rgba(59, 130, 246, 0.24)'}`,
+      color: isUrgent ? 'var(--text-main)' : '#2563eb',
       fontWeight: 600,
       fontSize: '13px',
-      boxShadow: isUrgent ? '0 0 12px rgba(244, 63, 94, 0.25)' : 'none',
+      boxShadow: isUrgent ? '0 0 12px rgba(11, 18, 32, 0.09)' : 'none',
     }}>
       <Clock size={15} className="pulse-animation" />
       <span>Thời gian còn lại:</span>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', color: '#ffffff', fontWeight: 800 }}>
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: '15px', color: 'var(--text-main)', fontWeight: 600 }}>
         {timeLeft.days > 0 ? `${timeLeft.days} ngày ` : ''}
         {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
       </span>

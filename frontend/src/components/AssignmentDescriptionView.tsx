@@ -88,7 +88,7 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {/* Tóm tắt nghiệp vụ 1-2 câu */}
-        <p style={{ color: '#cbd5e1', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
+        <p style={{ color: '#33415a', fontSize: '14px', lineHeight: '1.6', margin: 0 }}>
           {isExpanded ? overview : parsedSpec.shortSummary}
         </p>
 
@@ -101,7 +101,7 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
               style={{
                 background: 'none',
                 border: 'none',
-                color: 'var(--accent-cyan)',
+                color: 'var(--blue-200)',
                 fontSize: '12px',
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -128,30 +128,30 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
         {parsedSpec.tags.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '2px' }}>
             {parsedSpec.tags.map((tag, idx) => {
-              let bg = 'rgba(99, 102, 241, 0.15)';
-              let color = '#818cf8';
-              let border = 'rgba(99, 102, 241, 0.35)';
+              let bg = 'rgba(59, 130, 246, 0.09)';
+              let color = '#2563eb';
+              let border = 'rgba(59, 130, 246, 0.24)';
 
               if (tag.includes('Dijkstra') || tag.includes('QuickSort') || tag.includes('AVL') || tag.includes('BST')) {
-                bg = 'rgba(56, 189, 248, 0.15)';
-                color = '#38bdf8';
-                border = 'rgba(56, 189, 248, 0.4)';
+                bg = 'rgba(37, 99, 235, 0.08)';
+                color = '#2563eb';
+                border = 'rgba(37, 99, 235, 0.18)';
               } else if (tag.includes('PriorityQueue') || tag.includes('Heap')) {
-                bg = 'rgba(16, 185, 129, 0.15)';
-                color = '#34d399';
-                border = 'rgba(16, 185, 129, 0.4)';
+                bg = 'rgba(37, 99, 235, 0.08)';
+                color = '#1d4ed8';
+                border = 'rgba(37, 99, 235, 0.18)';
               } else if (tag.includes('O(')) {
-                bg = 'rgba(245, 158, 11, 0.15)';
-                color = '#fbbf24';
-                border = 'rgba(245, 158, 11, 0.4)';
+                bg = 'rgba(37, 99, 235, 0.08)';
+                color = '#1e40af';
+                border = 'rgba(37, 99, 235, 0.18)';
               } else if (tag.includes('SOLID') || tag.includes('SRP')) {
-                bg = 'rgba(168, 85, 247, 0.15)';
-                color = '#c084fc';
-                border = 'rgba(168, 85, 247, 0.4)';
+                bg = 'rgba(59, 130, 246, 0.09)';
+                color = '#2563eb';
+                border = 'rgba(59, 130, 246, 0.28)';
               } else if (tag.includes('64-bit')) {
-                bg = 'rgba(236, 72, 153, 0.15)';
-                color = '#f472b6';
-                border = 'rgba(236, 72, 153, 0.4)';
+                bg = 'rgba(37, 99, 235, 0.08)';
+                color = '#2563eb';
+                border = 'rgba(37, 99, 235, 0.18)';
               }
 
               return (
@@ -189,17 +189,17 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
       <div
         style={{
           padding: '20px 22px',
-          borderRadius: '14px',
-          backgroundColor: 'rgba(99, 102, 241, 0.07)',
-          border: '1px solid rgba(99, 102, 241, 0.25)',
+          borderRadius: '12px',
+          backgroundColor: 'rgba(59, 130, 246, 0.06)',
+          border: '1px solid rgba(59, 130, 246, 0.16)',
           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-cyan)', fontSize: '14px', fontWeight: 800, marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--blue-200)', fontSize: '14px', fontWeight: 600, marginBottom: '10px' }}>
           <BookOpen size={18} />
           <span>BỐI CẢNH BÀI TOÁN &amp; NGHIỆP VỤ THỰC TẾ</span>
         </div>
-        <p style={{ fontSize: '14px', color: '#e2e8f0', lineHeight: '1.7', margin: 0 }}>
+        <p style={{ fontSize: '14px', color: '#0b1220', lineHeight: '1.7', margin: 0 }}>
           {overview}
         </p>
       </div>
@@ -209,12 +209,12 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
         <div
           style={{
             padding: '20px 22px',
-            borderRadius: '14px',
-            backgroundColor: 'rgba(15, 23, 42, 0.7)',
-            border: '1px solid rgba(56, 189, 248, 0.25)',
+            borderRadius: '12px',
+            backgroundColor: '#f7f9fc',
+            border: '1px solid rgba(37, 99, 235, 0.12)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8', fontSize: '14px', fontWeight: 800, marginBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--blue-300)', fontSize: '14px', fontWeight: 600, marginBottom: '14px' }}>
             <Zap size={18} />
             <span>YÊU CẦU KỸ THUẬT &amp; GIẢI THUẬT TRỌNG TÂM</span>
             <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 500 }}>(Bắt buộc tuân thủ)</span>
@@ -230,8 +230,8 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
                   gap: '12px',
                   padding: '12px 14px',
                   borderRadius: '10px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.07)',
+                  backgroundColor: 'rgba(11, 18, 32, 0.025)',
+                  border: '1px solid rgba(11, 18, 32, 0.05)',
                 }}
               >
                 <span
@@ -242,16 +242,16 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
                     minWidth: '22px',
                     height: '22px',
                     borderRadius: '6px',
-                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                    color: '#38bdf8',
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                    color: 'var(--blue-300)',
                     fontSize: '11px',
-                    fontWeight: 800,
+                    fontWeight: 600,
                     marginTop: '2px',
                   }}
                 >
                   0{idx + 1}
                 </span>
-                <span style={{ fontSize: '13.5px', color: '#e2e8f0', lineHeight: '1.6' }}>
+                <span style={{ fontSize: '13.5px', color: '#0b1220', lineHeight: '1.6' }}>
                   {req}
                 </span>
               </div>
@@ -266,28 +266,28 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
         <div
           style={{
             padding: '18px 20px',
-            borderRadius: '14px',
-            backgroundColor: 'rgba(10, 15, 29, 0.85)',
-            border: '1px solid rgba(56, 189, 248, 0.25)',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(255, 255, 255, 0.72)',
+            border: '1px solid rgba(37, 99, 235, 0.12)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8', fontSize: '13.5px', fontWeight: 800, marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--blue-300)', fontSize: '13.5px', fontWeight: 600, marginBottom: '12px' }}>
             <Terminal size={16} />
             <span>ĐỊNH DẠNG ĐẦU VÀO (STDIN)</span>
           </div>
 
           {inputFormat.length > 0 ? (
-            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#cbd5e1', lineHeight: '1.65', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#33415a', lineHeight: '1.65', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {inputFormat.map((line, idx) => (
                 <li key={idx}>
-                  <code style={{ color: '#93c5fd', fontFamily: 'Consolas, monospace', backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: '2px 6px', borderRadius: '4px' }}>
+                  <code style={{ color: 'var(--blue-200)', fontFamily: 'Consolas, monospace', backgroundColor: 'rgba(11, 18, 32, 0.035)', padding: '2px 6px', borderRadius: '4px' }}>
                     {line}
                   </code>
                 </li>
               ))}
             </ul>
           ) : (
-            <div style={{ fontSize: '13px', color: '#94a3b8' }}>
+            <div style={{ fontSize: '13px', color: '#4d5c76' }}>
               Đọc dữ liệu từ luồng chuẩn STDIN (Scanner trong Java, sys.stdin trong Python, cin trong C++).
             </div>
           )}
@@ -297,28 +297,28 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
         <div
           style={{
             padding: '18px 20px',
-            borderRadius: '14px',
-            backgroundColor: 'rgba(10, 15, 29, 0.85)',
-            border: '1px solid rgba(52, 211, 153, 0.25)',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(255, 255, 255, 0.72)',
+            border: '1px solid rgba(37, 99, 235, 0.12)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#34d399', fontSize: '13.5px', fontWeight: 800, marginBottom: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--blue-200)', fontSize: '13.5px', fontWeight: 600, marginBottom: '12px' }}>
             <Code size={16} />
             <span>ĐỊNH DẠNG ĐẦU RA (STDOUT)</span>
           </div>
 
           {outputFormat.length > 0 ? (
-            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#cbd5e1', lineHeight: '1.65', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#33415a', lineHeight: '1.65', display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {outputFormat.map((line, idx) => (
                 <li key={idx}>
-                  <code style={{ color: '#6ee7b7', fontFamily: 'Consolas, monospace', backgroundColor: 'rgba(255, 255, 255, 0.05)', padding: '2px 6px', borderRadius: '4px' }}>
+                  <code style={{ color: 'var(--blue-200)', fontFamily: 'Consolas, monospace', backgroundColor: 'rgba(11, 18, 32, 0.035)', padding: '2px 6px', borderRadius: '4px' }}>
                     {line}
                   </code>
                 </li>
               ))}
             </ul>
           ) : (
-            <div style={{ fontSize: '13px', color: '#94a3b8' }}>
+            <div style={{ fontSize: '13px', color: '#4d5c76' }}>
               In kết quả ra luồng chuẩn STDOUT. Không in các chuỗi thông báo thừa như &ldquo;Nhập N:&rdquo;.
             </div>
           )}
@@ -329,12 +329,12 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
       <div
         style={{
           padding: '18px 20px',
-          borderRadius: '14px',
-          backgroundColor: 'rgba(245, 158, 11, 0.06)',
-          border: '1px solid rgba(245, 158, 11, 0.25)',
+          borderRadius: '12px',
+          backgroundColor: 'rgba(37, 99, 235, 0.05)',
+          border: '1px solid rgba(37, 99, 235, 0.12)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#fbbf24', fontSize: '13.5px', fontWeight: 800, marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e40af', fontSize: '13.5px', fontWeight: 600, marginBottom: '12px' }}>
           <AlertTriangle size={16} />
           <span>RÀNG BUỘC KỸ THUẬT &amp; GIỚI HẠN DỮ LIỆU (CONSTRAINTS)</span>
         </div>
@@ -348,8 +348,8 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
                   padding: '6px 12px',
                   borderRadius: '8px',
                   backgroundColor: 'rgba(0, 0, 0, 0.35)',
-                  border: '1px solid rgba(245, 158, 11, 0.3)',
-                  color: '#fef3c7',
+                  border: '1px solid rgba(37, 99, 235, 0.14)',
+                  color: '#1e40af',
                   fontSize: '12.5px',
                   fontFamily: 'Consolas, monospace',
                   display: 'flex',
@@ -362,7 +362,7 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
               </div>
             ))
           ) : (
-            <div style={{ fontSize: '13px', color: '#d1d5db' }}>
+            <div style={{ fontSize: '13px', color: '#33415a' }}>
               Thời gian tối đa: {timeLimitMs}ms | RAM tối đa: {memoryLimitMb}MB | Tránh thuật toán suy biến O(N²).
             </div>
           )}
@@ -373,17 +373,17 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
         <div
           style={{
             padding: '20px 22px',
-            borderRadius: '14px',
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            border: '1px solid rgba(129, 140, 248, 0.35)',
+            borderRadius: '12px',
+            backgroundColor: '#f7f9fc',
+            border: '1px solid rgba(37, 99, 235, 0.16)',
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25)',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#a5b4fc', fontSize: '14px', fontWeight: 800 }}>
-              <Code size={18} color="#818cf8" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--blue-200)', fontSize: '14px', fontWeight: 600 }}>
+              <Code size={18} color="#2563eb" />
               <span>KHUNG MÃ NGUỒN KHỞI TẠO (STARTER CODE)</span>
-              <span style={{ fontSize: '11px', color: '#34d399', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(16, 185, 129, 0.3)', fontWeight: 700 }}>
+              <span style={{ fontSize: '11px', color: 'var(--blue-200)', backgroundColor: 'rgba(37, 99, 235, 0.08)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(37, 99, 235, 0.14)', fontWeight: 700 }}>
                 Chuẩn SRP &amp; Kiến Trúc
               </span>
             </div>
@@ -405,22 +405,22 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
                 gap: '6px',
                 padding: '6px 14px',
                 borderRadius: '8px',
-                backgroundColor: copiedId === 'starter-code-spec' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(99, 102, 241, 0.22)',
-                border: copiedId === 'starter-code-spec' ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid rgba(99, 102, 241, 0.45)',
-                color: copiedId === 'starter-code-spec' ? '#34d399' : '#ffffff',
+                backgroundColor: copiedId === 'starter-code-spec' ? 'rgba(37, 99, 235, 0.12)' : 'rgba(59, 130, 246, 0.14)',
+                border: copiedId === 'starter-code-spec' ? '1px solid rgba(37, 99, 235, 0.24)' : '1px solid rgba(59, 130, 246, 0.32)',
+                color: copiedId === 'starter-code-spec' ? '#1d4ed8' : 'var(--text-main)',
                 fontSize: '12px',
                 fontWeight: 700,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
               }}
             >
-              {copiedId === 'starter-code-spec' ? <Check size={13} color="#34d399" /> : <Copy size={13} />}
+              {copiedId === 'starter-code-spec' ? <Check size={13} color="#1d4ed8" /> : <Copy size={13} />}
               <span>{copiedId === 'starter-code-spec' ? 'Đã sao chép vào Clipboard!' : 'Sao Chép Khung Code'}</span>
             </button>
           </div>
 
           <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', margin: '0 0 12px 0', lineHeight: '1.5' }}>
-            💡 <strong>Hướng dẫn sinh viên:</strong> Hãy sao chép khung mã nguồn này vào file <code>Solution.java</code>, hoàn thiện các phương thức nghiệp vụ đánh dấu <code>// TODO</code> tuân thủ nguyên lý <strong>Single Responsibility Principle (SRP)</strong> và nén thành file <code>.zip</code> để nộp.
+            <strong>Hướng dẫn sinh viên:</strong> Hãy sao chép khung mã nguồn này vào file <code>Solution.java</code>, hoàn thiện các phương thức nghiệp vụ đánh dấu <code>// TODO</code> tuân thủ nguyên lý <strong>Single Responsibility Principle (SRP)</strong> và nén thành file <code>.zip</code> để nộp.
           </p>
 
           <pre
@@ -428,9 +428,9 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
               margin: 0,
               padding: '16px',
               borderRadius: '10px',
-              backgroundColor: '#070a13',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              color: '#f8fafc',
+              backgroundColor: '#ffffff',
+              border: '1px solid rgba(11, 18, 32, 0.06)',
+              color: 'var(--text-main)',
               fontSize: '12.5px',
               fontFamily: 'Consolas, Monaco, monospace',
               whiteSpace: 'pre-wrap',

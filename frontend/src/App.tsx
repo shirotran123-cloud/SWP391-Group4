@@ -10,7 +10,7 @@ import { StudentAppealsView } from './components/StudentAppealsView';
 import { StudentHistoryView } from './components/StudentHistoryView';
 import type { Task, GradingStep, AIRating, PlagiarismMatch, User, ScoreBreakdown } from './types';
 import { isLecturerRole } from './types';
-import { Terminal, Shield, LogOut, FileCode, Sparkles, Upload, BookOpen, LayoutDashboard, Scale, ArrowLeftRight, Clock } from 'lucide-react';
+import { Terminal, Shield, LogOut, FileCode, Upload, BookOpen, LayoutDashboard, Scale, ArrowLeftRight, Clock, GraduationCap, Check } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
 import { PlagiarismService } from './services/plagiarism.service';
@@ -558,64 +558,103 @@ export function App() {
       ]
     : [];
 
+  const roleBadge =
+    currentUser.role === 'ADMIN'
+      ? { text: 'Quản trị viên', icon: <Shield size={11} /> }
+      : isLecturerRole(currentUser.role)
+        ? { text: 'Giảng viên', icon: <BookOpen size={11} /> }
+        : { text: 'Sinh viên', icon: <GraduationCap size={11} /> };
+
+  const socketStatus = {
+    color: isSocketConnected ? 'var(--blue-300)' : 'var(--text-dim)',
+    label: isSocketConnected ? 'Trực tuyến' : 'Đang kết nối',
+  };
+
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* THANH ĐIỀU HƯỚNG TRÊN CÙNG (NAVBAR) */}
       <nav
-        className="glass-panel"
         style={{
-          borderRadius: '0',
-          borderLeft: 'none',
-          borderRight: 'none',
-          borderTop: 'none',
-          padding: '14px 28px',
-          backgroundColor: 'rgba(10, 15, 29, 0.85)',
+          padding: '0 24px',
+          height: '60px',
+          backgroundColor: 'rgba(255, 255, 255, 0.92)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          borderBottom: '1px solid var(--border-color)',
           position: 'sticky',
           top: 0,
           zIndex: 100,
+          display: 'flex',
+          alignItems: 'center',
         }}
       >
-        <div style={{ maxWidth: '1300px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="nav-inner" style={{ maxWidth: '1320px', width: '100%', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
           {/* Logo & Tên hệ thống */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0 }}>
             <div
               style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: 'linear-gradient(135deg, #6366f1 0%, #06b6d4 100%)',
+                width: '32px',
+                height: '32px',
+                borderRadius: '9px',
+                background: 'var(--blue-600)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#ffffff',
-                boxShadow: '0 4px 15px rgba(99, 102, 241, 0.35)',
+                color: 'var(--on-blue)',
+                flexShrink: 0,
               }}
             >
-              <Terminal size={22} />
+              <Terminal size={17} strokeWidth={2.2} />
             </div>
-            <div>
-              <span className="gradient-text" style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.3px' }}>
-                AITA-INTELLIGENT
-              </span>
-              <span style={{ fontSize: '11px', display: 'block', color: 'var(--text-muted)' }}>
-                Hệ Thống Đánh Giá Mã Nguồn & Giám Sát Liêm Chính Học Thuật Tự Động
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '14.5px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-main)' }}>
+                  AITA
+                </span>
+                <span
+                  className="nav-version"
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: 600,
+                    letterSpacing: '0.06em',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-strong)',
+                    color: 'var(--text-muted)',
+                  }}
+                >
+                  v2.0
+                </span>
+              </div>
+              <span
+                className="nav-subtitle"
+                style={{
+                  fontSize: '11px',
+                  display: 'block',
+                  color: 'var(--text-dim)',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                }}
+              >
+                Đánh giá mã nguồn &amp; liêm chính học thuật
               </span>
             </div>
           </div>
 
           {/* Center nav tabs (role-based) */}
           {navTabs.length > 1 && (
-            <div style={{ display: 'flex', gap: 4, background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: 4, border: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', gap: 2, background: 'rgba(11, 18, 32, 0.03)', borderRadius: 9, padding: 3, border: '1px solid var(--border-color)' }}>
               {navTabs.map(tab => (
                 <button key={tab.key}
                   onClick={() => setActiveView(tab.key as any)}
                   style={{
-                    padding: '7px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                    background: activeView === tab.key ? 'rgba(99,102,241,0.25)' : 'transparent',
-                    color: activeView === tab.key ? '#818cf8' : 'var(--text-muted)',
-                    fontWeight: activeView === tab.key ? 700 : 500,
-                    fontSize: 13, display: 'flex', alignItems: 'center', gap: 6,
-                    transition: 'all 0.2s',
+                    padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer',
+                    background: activeView === tab.key ? 'rgba(11, 18, 32, 0.05)' : 'transparent',
+                    color: activeView === tab.key ? 'var(--text-main)' : 'var(--text-muted)',
+                    fontWeight: activeView === tab.key ? 600 : 500,
+                    fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6,
+                    transition: 'background-color .15s ease, color .15s ease',
                   }}>
                   {tab.icon} {tab.label}
                 </button>
@@ -624,65 +663,53 @@ export function App() {
           )}
 
           {/* Vùng Thông tin Người dùng, Phân quyền & Hành động */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            {/* Huy hiệu vai trò */}
-            <span
-              style={{
-                padding: '4px 10px',
-                borderRadius: '8px',
-                fontSize: '11px',
-                fontWeight: 800,
-                backgroundColor:
-                  currentUser.role === 'ADMIN'
-                    ? 'rgba(245, 158, 11, 0.2)'
-                    : isLecturerRole(currentUser.role)
-                    ? 'rgba(99, 102, 241, 0.2)'
-                    : 'rgba(16, 185, 129, 0.2)',
-                color:
-                  currentUser.role === 'ADMIN'
-                    ? '#f59e0b'
-                    : isLecturerRole(currentUser.role)
-                    ? '#a5b4fc'
-                    : '#6ee7b7',
-                border: `1px solid ${
-                  currentUser.role === 'ADMIN'
-                    ? 'rgba(245, 158, 11, 0.4)'
-                    : isLecturerRole(currentUser.role)
-                    ? 'rgba(99, 102, 241, 0.4)'
-                    : 'rgba(16, 185, 129, 0.4)'
-                }`,
-              }}
-            >
-              {currentUser.role === 'ADMIN'
-                ? '⚙️ ADMIN'
-                : isLecturerRole(currentUser.role)
-                ? '👨‍🏫 GIẢNG VIÊN'
-                : '👨‍🎓 SINH VIÊN'}
-            </span>
-
-            {/* Thông tin tên & email */}
-            <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'right' }}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>{currentUser.fullName}</span>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{currentUser.email}</span>
-            </div>
-
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             {/* Trạng thái WebSocket */}
             <div
+              title={isSocketConnected ? 'Kết nối tới API Gateway đang hoạt động' : 'Đang thiết lập kết nối realtime'}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '7px',
                 fontSize: '11px',
-                fontWeight: 600,
-                padding: '5px 10px',
-                borderRadius: '16px',
-                backgroundColor: isSocketConnected ? 'rgba(16, 185, 129, 0.15)' : 'rgba(234, 179, 8, 0.15)',
-                color: isSocketConnected ? 'var(--accent-emerald)' : '#eab308',
-                border: `1px solid ${isSocketConnected ? 'rgba(16, 185, 129, 0.3)' : 'rgba(234, 179, 8, 0.3)'}`,
+                fontWeight: 500,
+                color: socketStatus.color,
+                flexShrink: 0,
               }}
             >
-              <Shield size={12} />
-              <span>{isSocketConnected ? 'Cổng Dịch Vụ Sẵn Sàng' : 'Đang Kết Nối Cổng...'}</span>
+              <span className="dot-live" style={{ opacity: isSocketConnected ? 1 : 0.4 }} />
+              <span className="nav-status-label" style={{ whiteSpace: 'nowrap' }}>{socketStatus.label}</span>
+            </div>
+
+            <span className="nav-divider" style={{ width: 1, height: 22, background: 'var(--border-color)', flexShrink: 0 }} />
+
+            {/* Huy hiệu vai trò + thông tin người dùng */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
+              <span
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: 'rgba(11, 18, 32, 0.05)',
+                  border: '1px solid var(--border-strong)',
+                  color: 'var(--text-main)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  flexShrink: 0,
+                }}
+              >
+                {currentUser.fullName.charAt(0).toUpperCase()}
+              </span>
+              <div className="nav-user-name" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
+                <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>{currentUser.fullName}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {roleBadge.icon}
+                  {roleBadge.text}
+                </span>
+              </div>
             </div>
 
             {/* Nút Đăng Xuất */}
@@ -690,21 +717,11 @@ export function App() {
               type="button"
               onClick={handleLogout}
               title="Đăng xuất khỏi tài khoản hiện tại"
-              style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                border: '1px solid rgba(239, 68, 68, 0.3)',
-                color: '#f87171',
-                borderRadius: '8px',
-                padding: '6px 12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 700,
-              }}
+              className="btn btn-secondary btn-sm"
+              style={{ color: 'var(--text-soft)', flexShrink: 0 }}
             >
-              <LogOut size={14} /> Đăng Xuất
+              <LogOut size={13} />
+              <span className="nav-logout-text">Đăng xuất</span>
             </button>
           </div>
         </div>
@@ -717,7 +734,7 @@ export function App() {
           <AdminDashboard token={localStorage.getItem('aita_token') || ''} />
         )}
 
-        {/* LECTURER VIEW: Dành riêng cho Giảng viên (INSTRUCTOR / LECTURER) */}
+        {/* LECTURER VIEW: Dành riêng cho Giảng viên (INSTRUCTOR) */}
         {(isLecturerRole(currentUser.role) || (activeView === 'lecturer' && currentUser.role === 'ADMIN')) && (
           <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
             <LecturerDashboard
@@ -733,36 +750,30 @@ export function App() {
 
         {/* STUDENT VIEW: Dành riêng cho Sinh viên (STUDENT) */}
         {!isLecturerRole(currentUser.role) && currentUser.role !== 'ADMIN' && (
-          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
             {/* KHỐI HIỂN THỊ CÁC MÔN HỌC ĐANG THEO HỌC (ENROLLED COURSES) */}
-            <div
-              className="glass-panel"
-              style={{
-                padding: '20px 24px',
-                borderRadius: '16px',
-                marginBottom: '20px',
-                border: '1.5px solid rgba(99, 102, 241, 0.3)',
-                backgroundColor: 'rgba(15, 23, 42, 0.6)',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <BookOpen size={20} color="var(--accent-primary)" />
-                  <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#ffffff' }}>
-                    Các Lớp Học Phần Bạn Đang Ghi Danh ({enrolledCourses.length} Môn)
-                  </h3>
+            <section style={{ marginBottom: '22px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <p className="eyebrow" style={{ marginBottom: '2px' }}>Học phần của tôi</p>
+                  <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-main)' }}>
+                    {enrolledCourses.length} lớp học phần đang ghi danh
+                  </h2>
                 </div>
-                <span style={{ fontSize: '12px', color: '#10b981', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  ● Đồng bộ thời gian thực từ PostgreSQL (class_members)
+                <span style={{ fontSize: '11.5px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span className="dot-live" />
+                  Đồng bộ từ class_members
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '10px' }}>
                 {enrolledCourses.map((c) => {
                   const isSelected = selectedStudentCourseId === c.courseId || selectedStudentCourseId === c.courseCode;
                   return (
-                    <div
+                    <button
                       key={c.courseId}
+                      type="button"
+                      aria-pressed={isSelected}
                       onClick={() => {
                         const targetId = c.courseCode || c.courseId;
                         if (selectedStudentCourseId === targetId || selectedStudentCourseId === c.courseId) {
@@ -772,146 +783,95 @@ export function App() {
                         }
                       }}
                       style={{
-                        padding: '14px 18px',
-                        borderRadius: '12px',
+                        textAlign: 'left',
+                        padding: '13px 15px',
+                        borderRadius: '10px',
                         cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        backgroundColor: isSelected ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.03)',
-                        border: `1.5px solid ${isSelected ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.08)'}`,
-                        boxShadow: isSelected ? '0 4px 15px rgba(99, 102, 241, 0.25)' : 'none',
+                        transition: 'background-color .15s ease, border-color .15s ease',
+                        backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'rgba(11, 18, 32, 0.025)',
+                        border: `1px solid ${isSelected ? 'var(--border-highlight)' : 'var(--border-color)'}`,
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>
                         <span
                           style={{
-                            fontSize: '11px',
-                            fontWeight: 800,
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            backgroundColor: isSelected ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.1)',
-                            color: '#ffffff',
+                            fontSize: '10.5px',
+                            fontWeight: 700,
+                            letterSpacing: '0.05em',
+                            fontFamily: 'var(--font-mono)',
+                            padding: '2px 6px',
+                            borderRadius: '4px',
+                            backgroundColor: isSelected ? 'var(--blue-600)' : 'rgba(11, 18, 32, 0.05)',
+                            color: isSelected ? 'var(--on-blue)' : 'var(--text-soft)',
                           }}
                         >
                           {c.courseCode}
                         </span>
-                        <span style={{ fontSize: '11px', color: '#10b981', fontWeight: 700 }}>
-                          ✓ Đang Học (Active)
-                        </span>
+                        {isSelected ? (
+                          <span style={{ fontSize: '10.5px', color: 'var(--blue-300)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Check size={11} strokeWidth={3} /> Đang chọn
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '10.5px', color: 'var(--text-dim)' }}>Đang học</span>
+                        )}
                       </div>
-                      <h4 style={{ fontSize: '14px', fontWeight: 700, color: isSelected ? '#ffffff' : 'var(--text-muted)', marginBottom: '4px' }}>
+                      <h4 style={{ fontSize: '13px', fontWeight: 600, color: isSelected ? 'var(--text-main)' : 'var(--text-soft)', marginBottom: '3px', lineHeight: 1.4 }}>
                         {c.courseName}
                       </h4>
-                      <p style={{ fontSize: '12px', color: 'var(--text-dim)' }}>
-                        {c.semester} • Giảng viên AITA
-                      </p>
-                    </div>
+                      <p style={{ fontSize: '11.5px', color: 'var(--text-dim)' }}>{c.semester}</p>
+                    </button>
                   );
                 })}
               </div>
-            </div>
+            </section>
 
-            {/* Thanh Tab chuyển đổi giữa Nộp bài & Benchmark Dataset */}
+            {/* Thanh Tab chuyển đổi giữa các khu vực chức năng */}
             <div
+              role="tablist"
               style={{
                 display: 'flex',
-                gap: '12px',
+                gap: '2px',
                 marginBottom: '20px',
                 borderBottom: '1px solid var(--border-color)',
-                paddingBottom: '12px',
+                overflowX: 'auto',
               }}
             >
-              <button
-                type="button"
-                onClick={() => setStudentActiveTab('submission')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 18px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  backgroundColor: studentActiveTab === 'submission' ? 'var(--accent-primary)' : 'rgba(255, 255, 255, 0.05)',
-                  color: studentActiveTab === 'submission' ? '#ffffff' : 'var(--text-muted)',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <FileCode size={16} /> Nộp Bài Tập Lập Trình (.zip)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setStudentActiveTab('history')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 18px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  backgroundColor: studentActiveTab === 'history' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                  color: studentActiveTab === 'history' ? '#10b981' : 'var(--text-muted)',
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: studentActiveTab === 'history' ? '#10b981' : 'transparent',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <Clock size={16} /> Lịch Sử Nộp &amp; Điểm Số
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setStudentActiveTab('benchmark')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 18px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  backgroundColor: studentActiveTab === 'benchmark' ? 'rgba(6, 182, 212, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                  color: studentActiveTab === 'benchmark' ? 'var(--accent-cyan)' : 'var(--text-muted)',
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: studentActiveTab === 'benchmark' ? 'var(--accent-cyan)' : 'transparent',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <ArrowLeftRight size={16} /> Đối Soát Đạo Văn (AST Winnowing)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setStudentActiveTab('appeals')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '10px 18px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  backgroundColor: studentActiveTab === 'appeals' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                  color: studentActiveTab === 'appeals' ? '#fbbf24' : 'var(--text-muted)',
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: studentActiveTab === 'appeals' ? '#f59e0b' : 'transparent',
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                <Scale size={16} /> Phúc Khảo &amp; Khiếu Nại (UC-06)
-              </button>
+              {([
+                { key: 'submission', label: 'Nộp bài', icon: <FileCode size={14} /> },
+                { key: 'history', label: 'Lịch sử & điểm', icon: <Clock size={14} /> },
+                { key: 'benchmark', label: 'Đối soát đạo văn', icon: <ArrowLeftRight size={14} /> },
+                { key: 'appeals', label: 'Phúc khảo', icon: <Scale size={14} /> },
+              ] as const).map((tab) => {
+                const active = studentActiveTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setStudentActiveTab(tab.key)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      padding: '9px 14px',
+                      border: 'none',
+                      borderBottom: `2px solid ${active ? 'var(--blue-500)' : 'transparent'}`,
+                      marginBottom: '-1px',
+                      background: 'transparent',
+                      color: active ? 'var(--blue-300)' : 'var(--text-muted)',
+                      fontSize: '13px',
+                      fontWeight: active ? 600 : 500,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'color .15s ease, border-color .15s ease',
+                    }}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
 
             {studentActiveTab === 'submission' ? (
@@ -978,14 +938,26 @@ export function App() {
       <footer
         style={{
           borderTop: '1px solid var(--border-color)',
-          padding: '20px 24px',
-          textAlign: 'center',
-          fontSize: '13px',
-          color: 'var(--text-dim)',
-          backgroundColor: 'rgba(10, 15, 29, 0.95)',
+          padding: '18px 24px',
+          backgroundColor: 'var(--ink-900)',
         }}
       >
-        Hệ Thống Đánh Giá Mã Nguồn & Giám Sát Liêm Chính Học Thuật AITA © 2026 • Bộ Môn Kỹ Thuật Phần Mềm - Trường Đại Học FPT.
+        <div
+          style={{
+            maxWidth: '1320px',
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px',
+            fontSize: '11.5px',
+            color: 'var(--text-dim)',
+          }}
+        >
+          <span>AITA — Hệ thống đánh giá mã nguồn &amp; giám sát liêm chính học thuật</span>
+          <span>Bộ môn Kỹ thuật Phần mềm · Đại học FPT · 2026</span>
+        </div>
       </footer>
     </div>
   );

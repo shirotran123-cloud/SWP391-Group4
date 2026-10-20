@@ -142,7 +142,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.82)',
+        backgroundColor: '#f7f9fc',
         backdropFilter: 'blur(8px)',
         zIndex: 9999,
         display: 'flex',
@@ -160,9 +160,9 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
-          borderRadius: '20px',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          backgroundColor: '#0f172a',
+          borderRadius: '12px',
+          border: '1px solid rgba(11, 18, 32, 0.08)',
+          backgroundColor: '#f7f9fc',
           boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)',
           overflow: 'hidden',
         }}
@@ -171,11 +171,11 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         <div
           style={{
             padding: '20px 24px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: '1px solid rgba(11, 18, 32, 0.06)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(15, 23, 42, 0.95) 100%)',
+            background: 'rgba(11, 18, 32, 0.025)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -184,18 +184,18 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 width: '44px',
                 height: '44px',
                 borderRadius: '12px',
-                backgroundColor: isPassed ? 'rgba(16, 185, 129, 0.15)' : 'rgba(244, 63, 94, 0.15)',
-                border: `1px solid ${isPassed ? 'rgba(16, 185, 129, 0.3)' : 'rgba(244, 63, 94, 0.3)'}`,
+                backgroundColor: isPassed ? 'var(--state-ok-bg)' : 'var(--state-bad-bg)',
+                border: `1px solid ${isPassed ? 'var(--state-ok-border)' : 'var(--state-bad-border)'}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              {isPassed ? <CheckCircle size={24} color="#10b981" /> : <XCircle size={24} color="#f43f5e" />}
+              {isPassed ? <CheckCircle size={24} color="var(--state-ok)" /> : <XCircle size={24} color="var(--state-bad)" />}
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#ffffff', margin: 0 }}>
+                <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
                   Chi Tiết Bài Nộp & Kết Quả Chấm AI
                 </h2>
                 <span
@@ -203,22 +203,22 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     padding: '3px 10px',
                     borderRadius: '8px',
                     fontSize: '12px',
-                    fontWeight: 800,
-                    backgroundColor: isPassed ? 'rgba(16, 185, 129, 0.2)' : 'rgba(244, 63, 94, 0.2)',
-                    color: isPassed ? '#34d399' : '#fb7185',
-                    border: `1px solid ${isPassed ? 'rgba(16, 185, 129, 0.4)' : 'rgba(244, 63, 94, 0.4)'}`,
+                    fontWeight: 600,
+                    backgroundColor: isPassed ? 'var(--state-ok-bg)' : 'var(--state-bad-bg)',
+                    color: isPassed ? 'var(--state-ok)' : 'var(--state-bad)',
+                    border: `1px solid ${isPassed ? 'var(--state-ok-border)' : 'var(--state-bad-border)'}`,
                   }}
                 >
                   {isPassed ? 'ĐẠT' : 'CHƯA ĐẠT'} • {displayScore.toFixed(1)} / 10.0
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px', fontSize: '12px', color: '#94a3b8' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px', fontSize: '12px', color: '#4d5c76' }}>
                 <span>Mã bài nộp:</span>
                 <code
                   style={{
-                    color: '#818cf8',
+                    color: 'var(--blue-300)',
                     fontFamily: 'var(--font-mono)',
-                    backgroundColor: 'rgba(129, 140, 248, 0.12)',
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
                     padding: '2px 6px',
                     borderRadius: '4px',
                   }}
@@ -229,7 +229,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   type="button"
                   onClick={handleCopyId}
                   title="Sao chép mã bài nộp"
-                  style={{ background: 'none', border: 'none', color: copiedId ? '#10b981' : '#94a3b8', cursor: 'pointer', padding: 0 }}
+                  style={{ background: 'none', border: 'none', color: copiedId ? '#2563eb' : '#4d5c76', cursor: 'pointer', padding: 0 }}
                 >
                   {copiedId ? <Check size={13} /> : <Copy size={13} />}
                 </button>
@@ -245,11 +245,11 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             type="button"
             onClick={onClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'rgba(11, 18, 32, 0.035)',
+              border: '1px solid rgba(11, 18, 32, 0.06)',
               borderRadius: '8px',
               padding: '6px',
-              color: '#94a3b8',
+              color: '#4d5c76',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -266,8 +266,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             display: 'flex',
             gap: '8px',
             padding: '12px 24px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+            borderBottom: '1px solid rgba(11, 18, 32, 0.05)',
+            backgroundColor: 'rgba(11, 18, 32, 0.03)',
           }}
         >
           <button
@@ -277,8 +277,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               padding: '8px 16px',
               borderRadius: '8px',
               border: 'none',
-              backgroundColor: activeTab === 'overview' ? 'var(--accent-primary)' : 'transparent',
-              color: activeTab === 'overview' ? '#ffffff' : 'var(--text-muted)',
+              backgroundColor: activeTab === 'overview' ? 'var(--blue-600)' : 'transparent',
+              color: activeTab === 'overview' ? 'var(--on-blue)' : 'var(--text-muted)',
               fontSize: '13px',
               fontWeight: 700,
               cursor: 'pointer',
@@ -298,8 +298,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               padding: '8px 16px',
               borderRadius: '8px',
               border: 'none',
-              backgroundColor: activeTab === 'ai' ? 'var(--accent-primary)' : 'transparent',
-              color: activeTab === 'ai' ? '#ffffff' : 'var(--text-muted)',
+              backgroundColor: activeTab === 'ai' ? 'var(--blue-600)' : 'transparent',
+              color: activeTab === 'ai' ? 'var(--on-blue)' : 'var(--text-muted)',
               fontSize: '13px',
               fontWeight: 700,
               cursor: 'pointer',
@@ -319,8 +319,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               padding: '8px 16px',
               borderRadius: '8px',
               border: 'none',
-              backgroundColor: activeTab === 'code' ? 'var(--accent-primary)' : 'transparent',
-              color: activeTab === 'code' ? '#ffffff' : 'var(--text-muted)',
+              backgroundColor: activeTab === 'code' ? 'var(--blue-600)' : 'transparent',
+              color: activeTab === 'code' ? 'var(--on-blue)' : 'var(--text-muted)',
               fontSize: '13px',
               fontWeight: 700,
               cursor: 'pointer',
@@ -341,47 +341,47 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* 4 Cards Thống kê điểm số */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
-                <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.25)' }}>
-                  <div style={{ fontSize: '11px', color: '#a5b4fc', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.16)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--blue-200)', fontWeight: 700, textTransform: 'uppercase' }}>
                     Tổng Điểm Đạt Được
                   </div>
-                  <div style={{ fontSize: '26px', fontWeight: 900, color: '#ffffff', marginTop: '4px' }}>
-                    {displayScore.toFixed(1)} <span style={{ fontSize: '14px', fontWeight: 500, color: '#94a3b8' }}>/ 10.0</span>
+                  <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--text-main)', marginTop: '4px' }}>
+                    {displayScore.toFixed(1)} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>/ 10.0</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#818cf8', marginTop: '4px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--blue-300)', marginTop: '4px' }}>
                     Trọng số: 70% TC + 15% CC + 15% SOLID
                   </div>
                 </div>
 
-                <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.25)' }}>
-                  <div style={{ fontSize: '11px', color: '#6ee7b7', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(37, 99, 235, 0.07)', border: '1px solid rgba(37, 99, 235, 0.12)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--blue-200)', fontWeight: 700, textTransform: 'uppercase' }}>
                     Kết Quả Testcases
                   </div>
-                  <div style={{ fontSize: '26px', fontWeight: 900, color: '#34d399', marginTop: '4px' }}>
-                    {passedTC}/{totalTC} <span style={{ fontSize: '14px', fontWeight: 500, color: '#94a3b8' }}>Passed</span>
+                  <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--blue-200)', marginTop: '4px' }}>
+                    {passedTC}/{totalTC} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>Passed</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--blue-300)', marginTop: '4px' }}>
                     {totalTC > 0 ? ((passedTC / totalTC) * 100).toFixed(0) : 100}% độ chính xác thuật toán
                   </div>
                 </div>
 
-                <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(56, 189, 248, 0.1)', border: '1px solid rgba(56, 189, 248, 0.25)' }}>
-                  <div style={{ fontSize: '11px', color: '#7dd3fc', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(37, 99, 235, 0.07)', border: '1px solid rgba(37, 99, 235, 0.12)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--blue-200)', fontWeight: 700, textTransform: 'uppercase' }}>
                     Clean Code Score
                   </div>
-                  <div style={{ fontSize: '26px', fontWeight: 900, color: '#38bdf8', marginTop: '4px' }}>
-                    {aiRating.cleanCodeScore} <span style={{ fontSize: '14px', fontWeight: 500, color: '#94a3b8' }}>/ 10.0</span>
+                  <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--blue-300)', marginTop: '4px' }}>
+                    {aiRating.cleanCodeScore} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>/ 10.0</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#0284c7', marginTop: '4px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--blue-300)', marginTop: '4px' }}>
                     {aiRating.codeSmells.length} Cảnh báo mùi mã nguồn
                   </div>
                 </div>
 
-                <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.25)' }}>
-                  <div style={{ fontSize: '11px', color: '#d8b4fe', fontWeight: 700, textTransform: 'uppercase' }}>
+                <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.16)' }}>
+                  <div style={{ fontSize: '11px', color: '#1e40af', fontWeight: 700, textTransform: 'uppercase' }}>
                     Điểm Kiến Trúc SOLID
                   </div>
-                  <div style={{ fontSize: '26px', fontWeight: 900, color: '#c084fc', marginTop: '4px' }}>
+                  <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--blue-300)', marginTop: '4px' }}>
                     {(
                       (aiRating.solidScore.s +
                         aiRating.solidScore.o +
@@ -390,31 +390,31 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                         aiRating.solidScore.d) /
                       5
                     ).toFixed(1)}{' '}
-                    <span style={{ fontSize: '14px', fontWeight: 500, color: '#94a3b8' }}>/ 10.0</span>
+                    <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>/ 10.0</span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#9333ea', marginTop: '4px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--blue-300)', marginTop: '4px' }}>
                     Đánh giá theo 5 nguyên lý thiết kế
                   </div>
                 </div>
               </div>
 
               {/* Chi tiết Testcases trong Docker Sandbox */}
-              <div style={{ padding: '20px', borderRadius: '14px', backgroundColor: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+              <div style={{ padding: '20px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Terminal size={18} color="var(--accent-cyan)" />
-                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
                       Môi Trường Docker Sandbox & Chi Tiết Chạy Testcase
                     </h3>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: '#94a3b8' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: '#4d5c76' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock size={13} color="#38bdf8" /> Thời gian thực thi: <strong>{executionMs} ms</strong>
+                      <Clock size={13} color="#2563eb" /> Thời gian thực thi: <strong>{executionMs} ms</strong>
                     </span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Cpu size={13} color="#a855f7" /> Giới hạn RAM: <strong>512 MB</strong>
+                      <Cpu size={13} color="#3b82f6" /> Giới hạn RAM: <strong>512 MB</strong>
                     </span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#10b981' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--blue-300)' }}>
                       <ShieldCheck size={13} /> Strict Sandbox Isolation
                     </span>
                   </div>
@@ -426,27 +426,27 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     style={{
                       padding: '12px 16px',
                       borderRadius: '10px',
-                      backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                      border: '1px solid rgba(16, 185, 129, 0.2)',
+                      backgroundColor: 'rgba(37, 99, 235, 0.06)',
+                      border: '1px solid rgba(37, 99, 235, 0.1)',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <CheckCircle size={16} color="#10b981" />
+                      <CheckCircle size={16} color="#2563eb" />
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
                           Test Case 01: Chuẩn hóa dữ liệu đầu vào (Standard Input / Output)
                         </div>
-                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '11px', color: '#4d5c76' }}>
                           Kiểm tra logic thuật toán với tập dữ liệu quy mô nhỏ và trung bình
                         </div>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981' }}>PASSED</span>
-                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>45ms • 14MB</div>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--blue-300)' }}>PASSED</span>
+                      <div style={{ fontSize: '11px', color: '#4d5c76' }}>45ms • 14MB</div>
                     </div>
                   </div>
 
@@ -454,37 +454,37 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     style={{
                       padding: '12px 16px',
                       borderRadius: '10px',
-                      backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                      border: '1px solid rgba(16, 185, 129, 0.2)',
+                      backgroundColor: 'rgba(37, 99, 235, 0.06)',
+                      border: '1px solid rgba(37, 99, 235, 0.1)',
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <CheckCircle size={16} color="#10b981" />
+                      <CheckCircle size={16} color="#2563eb" />
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
                           Test Case 02: Trường hợp biên & Tải lớn (Boundary & Edge Cases)
                         </div>
-                        <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                        <div style={{ fontSize: '11px', color: '#4d5c76' }}>
                           Kiểm tra giá trị cực đại, tràn số 64-bit và xử lý tối ưu bộ nhớ
                         </div>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#10b981' }}>PASSED</span>
-                      <div style={{ fontSize: '11px', color: '#94a3b8' }}>62ms • 18MB</div>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--blue-300)' }}>PASSED</span>
+                      <div style={{ fontSize: '11px', color: '#4d5c76' }}>62ms • 18MB</div>
                     </div>
                   </div>
                 </div>
 
                 {/* Mã SHA-256 */}
                 {submission.sha256 && (
-                  <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#94a3b8' }}>
-                    <ShieldCheck size={14} color="#10b981" />
+                  <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(11, 18, 32, 0.04)', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#4d5c76' }}>
+                    <ShieldCheck size={14} color="#2563eb" />
                     <span>Mã băm toàn vẹn SHA-256:</span>
-                    <code style={{ fontSize: '11px', color: '#818cf8', fontFamily: 'var(--font-mono)' }}>
+                    <code style={{ fontSize: '11px', color: 'var(--blue-300)', fontFamily: 'var(--font-mono)' }}>
                       {submission.sha256}
                     </code>
                   </div>
@@ -501,7 +501,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', alignSelf: 'flex-start' }}>
                     <Award size={18} color="var(--accent-primary)" />
-                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
                       Biểu Đồ Radar 5 Trục SOLID
                     </h3>
                   </div>
@@ -512,22 +512,22 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                     <Sparkles size={18} color="var(--accent-cyan)" />
-                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#ffffff', margin: 0 }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
                       Nhận Xét & Đánh Giá Từ Trợ Lý AI
                     </h3>
                   </div>
 
-                  <p style={{ fontSize: '13px', color: '#cbd5e1', lineHeight: '1.6', marginBottom: '16px', fontStyle: 'italic', backgroundColor: 'rgba(0, 0, 0, 0.25)', padding: '12px 14px', borderRadius: '8px', borderLeft: '3px solid #6366f1' }}>
+                  <p style={{ fontSize: '13px', color: '#33415a', lineHeight: '1.6', marginBottom: '16px', fontStyle: 'italic', backgroundColor: 'rgba(0, 0, 0, 0.25)', padding: '12px 14px', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
                     &ldquo;{aiRating.explanation}&rdquo;
                   </p>
 
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff', marginBottom: '8px' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>
                     Cảnh báo Mùi Mã Nguồn ({aiRating.codeSmells.length}):
                   </h4>
 
                   {aiRating.codeSmells.length === 0 ? (
-                    <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.2)', fontSize: '12px', color: '#a7f3d0' }}>
-                      ✅ <strong>Mã nguồn hoàn hảo:</strong> Không phát hiện Code Smell nào. Cấu trúc hàm gọn gàng, không có tham số dư thừa hay magic numbers.
+                    <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.07)', border: '1px solid rgba(37, 99, 235, 0.1)', fontSize: '12px', color: '#1e40af' }}>
+                      <strong>Mã nguồn hoàn hảo:</strong> Không phát hiện Code Smell nào. Cấu trúc hàm gọn gàng, không có tham số dư thừa hay magic numbers.
                     </div>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto' }}>
@@ -537,8 +537,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                           style={{
                             padding: '8px 10px',
                             borderRadius: '6px',
-                            backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                            border: '1px solid rgba(245, 158, 11, 0.2)',
+                            backgroundColor: 'rgba(37, 99, 235, 0.07)',
+                            border: '1px solid rgba(37, 99, 235, 0.1)',
                             fontSize: '12px',
                             display: 'flex',
                             gap: '8px',
@@ -547,7 +547,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                           <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-amber)', fontWeight: 600 }}>
                             L{smell.line || 15}:
                           </span>
-                          <span style={{ color: '#d1d5db' }}>{smell.description}</span>
+                          <span style={{ color: '#33415a' }}>{smell.description}</span>
                         </div>
                       ))}
                     </div>
@@ -560,8 +560,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 style={{
                   padding: '16px',
                   borderRadius: '12px',
-                  backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                  border: '1px solid rgba(99, 102, 241, 0.25)',
+                  backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                  border: '1px solid rgba(59, 130, 246, 0.16)',
                   display: 'flex',
                   gap: '12px',
                   alignItems: 'flex-start',
@@ -569,10 +569,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               >
                 <Sparkles size={20} color="var(--accent-primary)" style={{ marginTop: '2px', flexShrink: 0 }} />
                 <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent-cyan)', marginBottom: '4px', margin: 0 }}>
-                    💡 Gợi Ý Sư Phạm AI (Định Hướng Kiến Trúc & SOLID)
+                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', marginBottom: '4px', margin: 0 }}>
+                    Gợi ý sư phạm (Định Hướng Kiến Trúc & SOLID)
                   </h4>
-                  <p style={{ fontSize: '13px', color: '#d1d5db', lineHeight: '1.5', margin: '4px 0 0 0' }}>
+                  <p style={{ fontSize: '13px', color: '#33415a', lineHeight: '1.5', margin: '4px 0 0 0' }}>
                     {aiRating.codeSmells && aiRating.codeSmells.length > 0 ? (
                       <span>
                         <strong>Phát hiện vi phạm: </strong>
@@ -580,7 +580,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       </span>
                     ) : (
                       <span>
-                        ✨ <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện Code Smells nào, phân tách trách nhiệm giữa các class/module rõ ràng và tuân thủ tốt nguyên lý <strong>Single Responsibility Principle (SRP)</strong>.
+                        <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện Code Smells nào, phân tách trách nhiệm giữa các class/module rõ ràng và tuân thủ tốt nguyên lý <strong>Single Responsibility Principle (SRP)</strong>.
                       </span>
                     )}
                   </p>
@@ -594,10 +594,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             <div>
               <div
                 style={{
-                  backgroundColor: '#1e293b',
+                  backgroundColor: '#eef2f8',
                   padding: '10px 16px',
                   borderRadius: '10px 10px 0 0',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(11, 18, 32, 0.06)',
                   borderBottom: 'none',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -606,7 +606,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <FileCode size={16} color="var(--accent-cyan)" />
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff' }}>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
                     {submission.fileName} (Syntax Highlighting)
                   </span>
                 </div>
@@ -620,9 +620,9 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       gap: '6px',
                       padding: '5px 12px',
                       borderRadius: '6px',
-                      backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                      border: '1px solid rgba(255, 255, 255, 0.15)',
-                      color: copiedCode ? '#10b981' : '#e2e8f0',
+                      backgroundColor: 'rgba(11, 18, 32, 0.05)',
+                      border: '1px solid rgba(11, 18, 32, 0.08)',
+                      color: copiedCode ? '#2563eb' : '#0b1220',
                       fontSize: '12px',
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -641,9 +641,9 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       gap: '6px',
                       padding: '5px 12px',
                       borderRadius: '6px',
-                      backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                      border: '1px solid rgba(56, 189, 248, 0.3)',
-                      color: '#38bdf8',
+                      backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                      border: '1px solid rgba(37, 99, 235, 0.14)',
+                      color: 'var(--blue-300)',
                       fontSize: '12px',
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -658,11 +658,11 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 style={{
                   borderRadius: '0 0 10px 10px',
                   overflow: 'hidden',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(11, 18, 32, 0.06)',
                 }}
               >
                 {loadingCode ? (
-                  <div style={{ height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1e1e1e', color: '#94a3b8' }}>
+                  <div style={{ height: '420px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#ffffff', color: '#4d5c76' }}>
                     Đang tải mã nguồn từ máy chủ...
                   </div>
                 ) : (
@@ -691,11 +691,11 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         <div
           style={{
             padding: '16px 24px',
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+            borderTop: '1px solid rgba(11, 18, 32, 0.06)',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            backgroundColor: '#f7f9fc',
           }}
         >
           <div style={{ display: 'flex', gap: '10px' }}>
@@ -708,9 +708,9 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 gap: '8px',
                 padding: '9px 16px',
                 borderRadius: '8px',
-                backgroundColor: 'rgba(56, 189, 248, 0.12)',
-                border: '1px solid rgba(56, 189, 248, 0.35)',
-                color: '#38bdf8',
+                backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                border: '1px solid rgba(37, 99, 235, 0.16)',
+                color: 'var(--blue-300)',
                 fontSize: '13px',
                 fontWeight: 700,
                 cursor: 'pointer',
@@ -729,9 +729,9 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   gap: '8px',
                   padding: '9px 16px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(245, 158, 11, 0.15)',
-                  border: '1px solid rgba(245, 158, 11, 0.35)',
-                  color: '#fbbf24',
+                  backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                  border: '1px solid rgba(37, 99, 235, 0.16)',
+                  color: '#1e40af',
                   fontSize: '13px',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -749,8 +749,8 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               padding: '9px 20px',
               borderRadius: '8px',
               border: 'none',
-              background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-              color: '#ffffff',
+              background: 'var(--blue-600)',
+              color: 'var(--on-blue)',
               fontSize: '13px',
               fontWeight: 700,
               cursor: 'pointer',
