@@ -474,8 +474,8 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       if (match) {
         plagiarismMatch = match;
         similarityRate = match.similarityRate;
-        // Containment ≥ 70% → ĐẠO VĂN, ≥ 40% → NGHI VẤN
-        plagiarismStatus = similarityRate >= 70 ? 'ĐẠO VĂN' : similarityRate >= 40 ? 'NGHI VẤN' : 'AN TOÀN';
+        // Containment ≥ 65% → ĐẠO VĂN, ≥ 40% → NGHI VẤN
+        plagiarismStatus = similarityRate >= 65 ? 'ĐẠO VĂN' : similarityRate >= 40 ? 'NGHI VẤN' : 'AN TOÀN';
 
         this.gradingGateway.emitGradingProgress({
           submissionId,
@@ -532,7 +532,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     let overallResult: 'PASSED' | 'FAILED' = passedCount === totalTestcases ? 'PASSED' : 'FAILED';
 
     // Bảo toàn đầy đủ 100% điểm số cho sinh viên, chỉ lưu cờ đạo văn cho Giảng viên:
-    if (similarityRate >= 70) {
+    if (similarityRate >= 65) {
       this.logger.warn(
         `[Pipeline:Plagiarism] ${submissionId} trùng lặp AST ${similarityRate}% với ${plagiarismMatch?.matchedStudentId}! Điểm số sinh viên hiển thị bình thường (${finalScore}/10). Giảng viên nhận cảnh báo đỏ.`,
       );
@@ -542,11 +542,11 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // ĐỒNG BỘ CẢNH BÁO ĐẠO VĂN TRUY HỒI CHO BÀI ĐỐI CHIẾU (BÀI A)
     // Cập nhật cờ đỏ ĐẠO VĂN cho bài A nhưng VẪN BẢO TOÀN ĐIỂM SỐ GỐC
     // ═══════════════════════════════════════════════════════════════════════════
-    if (similarityRate >= 70 && plagiarismMatch?.matchedSubmissionId) {
+    if (similarityRate >= 65 && plagiarismMatch?.matchedSubmissionId) {
       try {
         const matchedSub = await this.submissionRepo.findById(plagiarismMatch.matchedSubmissionId);
         if (matchedSub) {
-          const reverseStatus = similarityRate >= 70 ? 'ĐẠO VĂN' : 'NGHI VẤN';
+          const reverseStatus = similarityRate >= 65 ? 'ĐẠO VĂN' : 'NGHI VẤN';
           const reverseDetails: any = {
             ...(matchedSub.details || {}),
             plagiarismStatus: reverseStatus,

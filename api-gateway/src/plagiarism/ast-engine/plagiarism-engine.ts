@@ -83,8 +83,8 @@ export interface ClassPlagiarismMatrixReport {
 }
 
 export class ASTPlagiarismEngine {
-  /** Ngưỡng đánh dấu đạo văn chắc chắn (BR-03) */
-  public static readonly PLAGIARISM_THRESHOLD = 70.0;
+  /** Ngưỡng đánh dấu đạo văn chắc chắn (BR-03, UC-11) */
+  public static readonly PLAGIARISM_THRESHOLD = 65.0;
 
   /**
    * So sánh 2 bài nộp, trả về PairwisePlagiarismResult.
