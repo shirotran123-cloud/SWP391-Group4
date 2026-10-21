@@ -2,13 +2,12 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/commo
 import { QueueService, SubmissionJobData } from './queue.service';
 import { GradingGateway } from '../websocket/grading.gateway';
 import { SubmissionRepository } from '../database/submission.repository';
-import { SubmissionDetailRepository } from '../database/submission-detail.repository';
-import { AiReviewRepository } from '../database/ai-review.repository';
-import { PlagiarismRepository } from '../database/plagiarism.repository';
-import { AstFingerprintRepository } from '../database/ast-fingerprint.repository';
+import { TestCaseRepository } from '../database/test-case.repository';
+import { TestCaseRecord } from '../database/test-case.entity';
 import { SUBMISSION_STATUS, QUEUE_CONFIG } from '../common/constants/queue.constants';
 import { SandboxService } from '../sandbox/sandbox.service';
 import { PlagiarismService } from '../plagiarism/plagiarism.service';
+import type { GradingCompletedPayload } from '../websocket/grading.gateway';
 import {
   analyzeSourceCode as analyzeSourceCodeCore,
   buildScoreBreakdown,
@@ -83,57 +82,6 @@ function extractSourceCodeFromZip(filePath: string, language: string): string | 
   }
 }
 
-// ─── AST Plagiarism Types (mirror of genai-hub) ───────────────────────────────
-interface CodeSubmissionPayload {
-  submissionId: string;
-  studentName?: string;
-  studentId?: string;
-  sourceCode: string;
-  language?: string;
-}
-
-interface AstMatrixReport {
-  assignmentId?: string;
-  totalSubmissions: number;
-  totalPairsCompared: number;
-  flaggedPairsCount: number;
-  submissionsList: { id: string; name?: string }[];
-  similarityMatrix: number[][];
-  flaggedReports: AstPairResult[];
-  totalExecutionTimeMs: number;
-}
-
-interface AstPairResult {
-  submissionAId: string;
-  submissionBId: string;
-  similarityRate: number;
-  commonFingerprintsCount: number;
-  totalUniqueFingerprints: number;
-  isFlagged: boolean;
-  status: 'CLEAN' | 'SUSPECTED' | 'FLAGGED_HIGH' | 'FLAGGED_PLAGIARISM';
-  matchedTokensJson: {
-    submissionAId: string;
-    submissionBId: string;
-    similarityRate: number;
-    jaccardSimilarity: number;
-    winnowingContainment: number;
-    astStructuralSimilarity: number;
-    totalUniqueFingerprintsA: number;
-    totalUniqueFingerprintsB: number;
-    commonFingerprintsCount: number;
-    matchedSegments: Array<{
-      hashValue: string;
-      lineRangeA: { start: number; end: number };
-      lineRangeB: { start: number; end: number };
-      tokenRangeA: { start: number; end: number };
-      tokenRangeB: { start: number; end: number };
-      tokenCount: number;
-    }>;
-  };
-  executionTimeMs: number;
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
 @Injectable()
 export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(GradingWorkerConsumer.name);
@@ -146,14 +94,30 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     private readonly gradingGateway: GradingGateway,
     private readonly submissionRepo: SubmissionRepository,
     private readonly sandboxService: SandboxService,
-    private readonly submissionDetailRepo: SubmissionDetailRepository,
-    private readonly aiReviewRepo: AiReviewRepository,
-    private readonly plagiarismRepo: PlagiarismRepository,
-    private readonly astFingerprintRepo: AstFingerprintRepository,
     private readonly plagiarismService: PlagiarismService,
+    private readonly testCaseRepo: TestCaseRepository,
   ) {}
 
+  /**
+   * Testcase thật của assignment (do giảng viên tạo ở Workflow 1).
+   * Trả về [] nếu chưa có, để caller dùng bộ mặc định.
+   */
+  private async loadAssignmentTestCases(assignmentId: string): Promise<TestCaseRecord[]> {
+    try {
+      const list = await this.testCaseRepo.listByAssignment(assignmentId);
+      // Testcase ẩn vẫn phải chạy khi chấm bài — chỉ ẩn với sinh viên, không ẩn với worker.
+      return (list || []).filter((tc) => tc.inputData !== undefined && tc.expectedOutput !== undefined);
+    } catch (err: any) {
+      this.logger.warn(`[Pipeline] Không đọc được test_cases của ${assignmentId}: ${err.message}`);
+      return [];
+    }
+  }
+
   onModuleInit() {
+    // Register the real grading function with the queue so BullMQ can consume it.
+    // Without this the Redis consumer had nothing to call and submissions pushed to
+    // Redis sat in QUEUED forever.
+    this.queueService.registerProcessor((data) => this.processJobWithRetry(data));
     this.startWorkerLoop();
   }
 
@@ -226,14 +190,6 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // ⏳ CHỜ CLIENT JOIN WEBSOCKET ROOM (tránh race condition)
-    // Client nhận 202, parse response, emit 'join_submission' mất ~300-500ms.
-    // Worker poll interval 250ms có thể fire TRƯỚC khi client join room.
-    // Delay 1500ms đảm bảo client luôn kịp join trước khi events đầu tiên được emit.
-    // ═══════════════════════════════════════════════════════════════════════════
-    await sleep(1500);
-
-    // ═══════════════════════════════════════════════════════════════════════════
     // BƯỚC 1: Nhận job từ BullMQ
     // ═══════════════════════════════════════════════════════════════════════════
     this.gradingGateway.emitGradingProgress({
@@ -245,7 +201,6 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       submissionId, stepId: '1', stepName: 'Hàng đợi Redis BullMQ',
       status: 'passed', detail: 'Lấy job thành công (<200ms latency)',
     });
-
 
     // ═══════════════════════════════════════════════════════════════════════════
     // BƯỚC 2: Khởi tạo Docker Sandbox & Giải nén file zip
@@ -289,46 +244,6 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
         completedAt: new Date().toISOString(),
       }, 0);
 
-      // Lưu log lỗi chi tiết vào submission_details và ai_review_results
-      try {
-        await this.submissionDetailRepo.createBatch([
-          {
-            detailId: `DTL-${submissionId}-TC1`,
-            submissionId,
-            testCaseId: 'TC-SWP-01',
-            status: 'CRASH',
-            actualOutput: '',
-            timeMs: 0,
-            memoryKb: 0,
-            errorLog: 'Không tìm thấy file mã nguồn hợp lệ trong file zip.',
-          },
-          {
-            detailId: `DTL-${submissionId}-TC2`,
-            submissionId,
-            testCaseId: 'TC-SWP-02',
-            status: 'CRASH',
-            actualOutput: '',
-            timeMs: 0,
-            memoryKb: 0,
-            errorLog: 'Không tìm thấy file mã nguồn hợp lệ trong file zip.',
-          },
-        ]);
-
-        await this.aiReviewRepo.create({
-          reviewId: `REV-${submissionId}`,
-          submissionId,
-          cleanCodeScore: 0,
-          solidScore: 0,
-          codeSmellsCount: 1,
-          feedbackJson: [{ line: 1, rule: 'Invalid Submission', description: 'Không tìm thấy file source code hợp lệ.' }],
-          compilerExplanation: 'Bài nộp không hợp lệ. File zip không chứa code nguồn của ngôn ngữ đã chọn.',
-          modelUsed: 'gemini-1.5-pro',
-          evaluatedAt: new Date(),
-        });
-      } catch (err: any) {
-        this.logger.warn(`[Pipeline] Early failure log save error: ${err.message}`);
-      }
-
       this.gradingGateway.emitGradingCompleted({
         submissionId, status: 'COMPLETED', overallResult: 'FAILED',
         score: 0, maxScore: 10, passedTestcases: 0, totalTestcases: 2,
@@ -347,13 +262,41 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    // Thực thi qua Sandbox Engine (Chế độ Hybrid: Docker Seccomp hoặc Safe Circuit Breaker)
-    const sandboxExec = await this.sandboxService.executeCode(language, sourceCode);
+    // Testcase dùng để CHẠY THẬT: ưu tiên test_cases của assignment (do giảng viên tạo
+    // qua Workflow 1); nếu chưa có thì dùng bộ mặc định của đề sắp xếp SWP391.
+    const persistedCases = await this.loadAssignmentTestCases(assignmentId);
+    const casesToRun =
+      persistedCases.length > 0
+        ? persistedCases.map((tc) => ({
+            input: tc.inputData,
+            expectedOutput: tc.expectedOutput,
+            timeLimitMs: tc.timeLimitMs || 2000,
+          }))
+        : TESTCASES.map((tc) => ({
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+            timeLimitMs: 2000,
+          }));
+
+    // Thực thi qua Sandbox Engine (Docker container thật, hoặc fallback phân tích tĩnh)
+    const sandboxExec = await this.sandboxService.executeCode(language, sourceCode, casesToRun);
+
+    const usedRealContainer = Array.isArray(sandboxExec.testResults) && sandboxExec.testResults.length > 0;
+    // Lỗi biên dịch cũng là một kết quả THẬT từ container: chương trình không chạy được
+    // nên mọi testcase đều 0 điểm. Phải phân biệt với "chưa chạy được container".
+    const isRealCompileError = sandboxExec.isCompileError === true;
+    const source = persistedCases.length > 0 ? 'test_cases (DB)' : 'bộ mặc định của đề';
 
     this.gradingGateway.emitGradingProgress({
       submissionId, stepId: '2', stepName: 'Khởi tạo Docker Sandbox',
-      status: 'passed',
-      detail: `Sandbox thực thi qua [${sandboxExec.mode}] (${sandboxExec.timeMs}ms, 512MB RAM, --network none, --pids-limit 64).`,
+      status: isRealCompileError ? 'failed' : 'passed',
+      detail: isRealCompileError
+        ? `Biên dịch THẤT BẠI trong container [${sandboxExec.mode}] — mọi testcase tính 0 điểm. ` +
+          `Lỗi: ${(sandboxExec.compileOutput || sandboxExec.stderr || '').split('\n')[0].slice(0, 160)}`
+        : usedRealContainer
+        ? `Sandbox chạy THẬT trong container [${sandboxExec.mode}] với ${sandboxExec.testResults!.length} testcase từ ${source} ` +
+          `(${sandboxExec.timeMs}ms, 512MB RAM, --network none, --pids-limit 64).`
+        : `Sandbox dùng [${sandboxExec.mode}]: chưa chạy được container nên chấm bằng phân tích tĩnh (${sandboxExec.timeMs}ms).`,
     });
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -373,6 +316,32 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     if (sandboxExec.isSegfault) {
       analysis.tc1Status = 'FAILED';
       analysis.tc1TimeMs = 38;
+    }
+
+    // ── GHI ĐÈ BẰNG KẾT QUẢ CHẠY THẬT ────────────────────────────────────────
+    // Khi container đã chạy, verdict của từng testcase lấy từ stdout thật so với
+    // expectedOutput, thay vì suy đoán bằng regex trên mã nguồn.
+    const realTc1 = usedRealContainer ? sandboxExec.testResults![0] : undefined;
+    const realTc2 = usedRealContainer && sandboxExec.testResults!.length > 1 ? sandboxExec.testResults![1] : undefined;
+
+    if (sandboxExec.isCompileError) {
+      // Lỗi biên dịch -> Testcase = 0, AI chỉ giải thích lỗi (không chấm Clean Code).
+      analysis.tc1Status = 'FAILED';
+      analysis.tc2Status = 'FAILED';
+      analysis.tc1TimeMs = 0;
+      analysis.tc2TimeMs = 0;
+      this.logger.warn(
+        `[Pipeline] ${submissionId}: COMPILE_ERROR -> testcase = 0. ${(sandboxExec.compileOutput || '').split('\n')[0]}`,
+      );
+    } else {
+      if (realTc1) {
+        analysis.tc1Status = realTc1.verdict === 'PASSED' ? 'PASSED' : 'FAILED';
+        analysis.tc1TimeMs = realTc1.timeMs;
+      }
+      if (realTc2) {
+        analysis.tc2Status = realTc2.verdict === 'PASSED' ? 'PASSED' : 'FAILED';
+        analysis.tc2TimeMs = realTc2.timeMs;
+      }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -504,23 +473,22 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       detail: `AI Review hoan tat: Clean Code ${liveAiRating.cleanCodeScore.toFixed(1)}/10, SOLID avg ${((liveAiRating.solidScore.s + liveAiRating.solidScore.o + liveAiRating.solidScore.l + liveAiRating.solidScore.i + liveAiRating.solidScore.d) / 5).toFixed(1)}/10`,
     });
 
-    // BƯỚC 6: AST Plagiarism – Winnowing Fingerprinting
+    // ═══════════════════════════════════════════════════════════════════════════
+    // BƯỚC 6: AST Plagiarism – Winnowing Fingerprinting (THẬT, không còn stub)
     // ═══════════════════════════════════════════════════════════════════════════
     this.gradingGateway.emitGradingProgress({
-      submissionId,
-      stepId: '6',
-      stepName: 'Phân tích AST & Winnowing',
-      status: 'in_progress',
-      detail: 'Chuẩn hóa AST token, tính Winnowing fingerprints và đối chiếu kho bài nộp...',
+      submissionId, stepId: '6', stepName: 'Phân tích AST & Winnowing',
+      status: 'in_progress', detail: 'Chuẩn hóa AST token, trích xuất vân tay số và đối chiếu kho bài nộp...',
     });
-    await sleep(350);
 
-    let plagiarismMatch: any = null;
-    let similarityRate = 0;
-    let plagiarismStatus: 'AN TOÀN' | 'NGHI VẤN' | 'ĐẠO VĂN' = 'AN TOÀN';
-
+    // Trước đây bước này là stub (`const plagiarismMatch = null;`) nên hệ thống KHÔNG
+    // hề phát hiện đạo văn. Nay gọi PlagiarismService: tạo fingerprint, giải nén mọi bài
+    // nộp khác cùng assignment, so khớp chéo và lưu báo cáo vào plagiarism_reports.
+    // BR-04: kết quả chỉ phát cho giảng viên/HOD, không công khai cho sinh viên.
+    let plagiarismMatch: GradingCompletedPayload['plagiarismMatch'] = null;
+    let plagiarismDetail = 'Chưa có bài nộp khác cùng đề để đối chiếu.';
     try {
-      const match = await this.plagiarismService.evaluateSubmissionAgainstClass({
+      const plagiarismResult = await this.plagiarismService.detectForSubmission({
         submissionId,
         studentId,
         assignmentId,
@@ -528,118 +496,173 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
         sourceCode,
       });
 
-      if (match) {
-        plagiarismMatch = match;
-        similarityRate = match.similarityRate;
-        // Containment >= 70% -> ĐẠO VĂN, >= 40% -> NGHI VẤN
-        plagiarismStatus = similarityRate >= 70 ? 'ĐẠO VĂN' : similarityRate >= 40 ? 'NGHI VẤN' : 'AN TOÀN';
-
-        this.gradingGateway.emitGradingProgress({
-          submissionId,
-          stepId: '6',
-          stepName: 'Phân tích AST & Winnowing',
-          status: 'passed',
-          detail: 'Hoàn tất phân tích cấu trúc cây cú pháp trừu tượng AST.',
-        });
+      if (plagiarismResult.topMatch) {
+        const top = plagiarismResult.topMatch;
+        plagiarismMatch = {
+          matchedStudentName: top.matchedStudentName,
+          matchedStudentId: top.matchedStudentId,
+          similarityRate: top.similarityRate,
+          sourceCodeA: top.sourceCodeA,
+          sourceCodeB: top.sourceCodeB,
+          matchedTokens: top.matchedTokens,
+          // Chẩn đoán bổ sung để client hiển thị nhãn mà không phải tự tính lại.
+          isFlagged: top.isFlagged,
+          status: top.status,
+          jaccardSimilarity: top.jaccardSimilarity,
+          winnowingContainment: top.winnowingContainment,
+          astStructuralSimilarity: top.astStructuralSimilarity,
+          // Carries the self-overlap classification (resubmission / same-course reuse /
+          // cross-course self-plagiarism) so the client and the scoring step can tell them
+          // apart without re-deriving the relationship.
+          selfOverlap: top.selfOverlap,
+          executionTimeMs: plagiarismResult.executionTimeMs,
+        };
+        plagiarismDetail =
+          `Đã đối chiếu ${plagiarismResult.comparedCount} bài nộp (${plagiarismResult.engine}). ` +
+          `Tương đồng cao nhất ${top.similarityRate}% với ${top.matchedStudentName} ` +
+          `[${top.selfOverlap?.label ?? (top.isFlagged ? 'NGHI VẤN ĐẠO VĂN >= 70%' : 'AN TOÀN')}] · ` +
+          `${plagiarismResult.fingerprintsStored} vân tay, ${plagiarismResult.reportsPersisted} báo cáo đã lưu.`;
       } else {
-        this.gradingGateway.emitGradingProgress({
-          submissionId,
-          stepId: '6',
-          stepName: 'Phân tích AST & Winnowing',
-          status: 'passed',
-          detail: 'Hoàn tất phân tích AST. Kho bài nộp cục bộ hiện tại chưa có bài trùng khớp.',
-        });
+        plagiarismDetail =
+          `Đã tạo ${plagiarismResult.fingerprintsStored} vân tay AST/Winnowing; ` +
+          `chưa có bài nộp khác cùng đề để đối chiếu (${plagiarismResult.engine}).`;
       }
-    } catch (astErr: any) {
-      this.logger.warn(`[Pipeline:AST] Lỗi đối chiếu AST: ${astErr.message}`);
-      this.gradingGateway.emitGradingProgress({
-        submissionId,
-        stepId: '6',
-        stepName: 'Phân tích AST & Winnowing',
-        status: 'passed',
-        detail: 'Bỏ qua bước AST do lỗi môi trường kiểm thử.',
-      });
+    } catch (plagiarismErr: any) {
+      // Không được làm hỏng luồng chấm điểm chính vì lỗi bước quét đạo văn.
+      plagiarismDetail = `Bỏ qua quét đạo văn do lỗi kỹ thuật: ${plagiarismErr.message}`;
+      this.logger.warn(`[Pipeline:Step6] Plagiarism detection failed: ${plagiarismErr.message}`);
     }
+
+    this.gradingGateway.emitGradingProgress({
+      submissionId, stepId: '6', stepName: 'Phân tích AST & Winnowing',
+      status: 'passed',
+      detail: plagiarismDetail,
+    });
 
     // ═══════════════════════════════════════════════════════════════════════════
     // BƯỚC 7: Tổng hợp kết quả cuối cùng
     // ═══════════════════════════════════════════════════════════════════════════
-    const passedCount = [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
+    // Khi container đã chạy thật, số testcase và số bài ĐẠT phải lấy từ chính các
+    // testcase đã thực thi — không được cộng điểm cho một testcase chưa hề chạy.
+    // Trước đây TC2 luôn được 3.0 điểm qua heuristic regex kể cả khi assignment chỉ
+    // có 1 testcase, khiến `passedTestcases` mâu thuẫn với `scoreBreakdown`.
+    // Số testcase đã ĐƯỢC YÊU CẦU chạy, không phải số kết quả thu về: khi biên dịch
+    // lỗi thì container không trả về kết quả nào, nhưng bài thi vẫn có N testcase và
+    // tất cả đều 0 điểm. Trước đây nhánh này rơi về mặc định 2, khiến đề 1 testcase báo
+    // "0/2" — sai lệch với `scoreBreakdown`.
+    const ranInContainer = usedRealContainer || isRealCompileError;
+    const totalTestcases = ranInContainer ? casesToRun.length : 2;
+    const passedCount = usedRealContainer
+      ? sandboxExec.testResults!.filter((r) => r.verdict === 'PASSED').length
+      : isRealCompileError
+        ? 0
+        : [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
     const totalExecMs = analysis.tc1TimeMs + analysis.tc2TimeMs;
+    // TÍNH ĐIỂM ĐỘNG DỰA TRÊN ĐIỂM THẬT CỦA TESTCASES VÀ KẾT QUẢ ĐÁNH GIÁ THỰC TẾ TỪ AI REVIEW
     const liveSolidAvg = (
-      liveAiRating.solidScore.s + liveAiRating.solidScore.o + liveAiRating.solidScore.l +
-      liveAiRating.solidScore.i + liveAiRating.solidScore.d
+      liveAiRating.solidScore.s +
+      liveAiRating.solidScore.o +
+      liveAiRating.solidScore.l +
+      liveAiRating.solidScore.i +
+      liveAiRating.solidScore.d
     ) / 5;
 
-    const tc1Score = analysis.tc1Status === 'PASSED' ? SCORE_WEIGHTS.testcase1 : 0;
-    const tc2Score = analysis.tc2Status === 'PASSED' ? SCORE_WEIGHTS.testcase2 : 0;
+    // Trọng số testcase chỉ được cộng khi testcase đó THỰC SỰ tồn tại và đã PASS.
+    // Với assignment chỉ có 1 testcase, trọng số TC2 (3.0) phải được dồn vào TC1 để
+    // tổng thang điểm vẫn là 10.0 thay vì mất 3.0 điểm oan cho sinh viên.
+    const testcaseWeightTotal = SCORE_WEIGHTS.testcase1 + SCORE_WEIGHTS.testcase2;
+    const singleTestcaseMode = ranInContainer && casesToRun.length === 1;
+    const tc1Weight = singleTestcaseMode ? testcaseWeightTotal : SCORE_WEIGHTS.testcase1;
+    const tc2Weight = singleTestcaseMode ? 0 : SCORE_WEIGHTS.testcase2;
+
+    const tc1Score = analysis.tc1Status === 'PASSED' ? tc1Weight : 0;
+    const tc2Score = analysis.tc2Status === 'PASSED' ? tc2Weight : 0;
     const cleanCodePart = Math.round((liveAiRating.cleanCodeScore / 10) * SCORE_WEIGHTS.cleanCode * 10) / 10;
     const solidPart = Math.round((liveSolidAvg / 10) * SCORE_WEIGHTS.solid * 10) / 10;
-    const finalScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
+    const computedScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
 
-    const scoreBreakdown: ScoreBreakdown = {
+    // ─────────────────────────────────────────────────────────────────────────
+    // BR-03: đạo văn AST >= 80% đã xác nhận -> ĐIỂM = 0 KHÔNG THỂ HOÀN TÁC.
+    // Trước đây quy tắc này KHÔNG được áp dụng: pipeline chỉ gắn cờ rồi vẫn tính
+    // điểm bình thường, nên bài đạo văn vẫn có thể đạt điểm cao.
+    // ─────────────────────────────────────────────────────────────────────────
+    const CONFIRMED_PLAGIARISM_THRESHOLD = 80.0;
+    const plagiarismRate = plagiarismMatch ? plagiarismMatch.similarityRate : 0;
+
+    // ── Self-overlap is a three-way decision, not a yes/no one.
+    //
+    //   SAME_ASSIGNMENT  the student resubmitted the same task → ordinary coursework.
+    //                    Never zero the score; that was the bug that failed honest students.
+    //   CROSS_ASSIGNMENT reused work in another task of the same course → warn only. The
+    //                    course may permit it, so a lecturer decides.
+    //   CROSS_COURSE     submitted the same work to a different course → this is
+    //                    self-plagiarism (duplicate submission) and is penalised.
+    //
+    // When the service did not label the overlap we fall back to comparing student ids, so a
+    // self-match can never be mistaken for collusion.
+    const selfOverlap = (plagiarismMatch as any)?.selfOverlap as
+      | { kind: 'SAME_ASSIGNMENT' | 'CROSS_ASSIGNMENT' | 'CROSS_COURSE'; isSelfPlagiarism: boolean; label: string }
+      | undefined;
+    const matchedStudentId = (plagiarismMatch as any)?.matchedStudentId;
+    const isSelfMatch =
+      !!matchedStudentId && !!jobData.studentId && matchedStudentId === jobData.studentId;
+    const selfKind = selfOverlap?.kind ?? (isSelfMatch ? 'SAME_ASSIGNMENT' : undefined);
+
+    if (selfKind === 'SAME_ASSIGNMENT' && plagiarismRate > 0) {
+      this.logger.log(
+        `[BR-03] ${submissionId}: trùng ${plagiarismRate}% với bài nộp trước của chính sinh viên — ` +
+          `đây là nộp lại, KHÔNG trừ điểm.`,
+      );
+    } else if (selfKind === 'CROSS_ASSIGNMENT' && plagiarismRate > 0) {
+      this.logger.warn(
+        `[BR-03] ${submissionId}: trùng ${plagiarismRate}% với bài làm khác của sinh viên ${jobData.studentId} trong cùng môn — ` +
+          `chỉ cảnh báo để giảng viên xem xét, không tự trừ điểm.`,
+      );
+    } else if (selfKind === 'CROSS_COURSE' && plagiarismRate > 0) {
+      this.logger.warn(
+        `[BR-03] ${submissionId}: tự đạo văn ${plagiarismRate}% — bài đã nộp cho một môn khác.`,
+      );
+    }
+
+    // Only another student's copy, or cross-course reuse, can zero the score. A same-course
+    // resubmission and a same-course reuse never can.
+    const isConfirmedPlagiarism =
+      selfKind === 'CROSS_COURSE'
+        ? plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD
+        : !isSelfMatch && plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD;
+
+    let finalScore = computedScore;
+    let scoreBreakdown: ScoreBreakdown = {
       testcase1: tc1Score,
       testcase2: tc2Score,
       cleanCode: cleanCodePart,
       solid: solidPart,
-      total: finalScore,
+      total: computedScore,
     };
+
+    if (isConfirmedPlagiarism) {
+      finalScore = 0;
+      scoreBreakdown = {
+        testcase1: 0,
+        testcase2: 0,
+        cleanCode: 0,
+        solid: 0,
+        total: 0,
+      };
+      this.logger.warn(
+        `[BR-03] Submission ${submissionId} bị xác nhận đạo văn ${plagiarismRate}% (>= ${CONFIRMED_PLAGIARISM_THRESHOLD}%). ` +
+          `Điểm bị đặt về 0 (không thể hoàn tác). Điểm tính toán trước đó: ${computedScore}/10.`,
+      );
+      this.gradingGateway.emitGradingProgress({
+        submissionId, stepId: '6', stepName: 'Phân tích AST & Winnowing',
+        status: 'failed',
+        detail: `BR-03: Đạo văn ${plagiarismRate}% (>= ${CONFIRMED_PLAGIARISM_THRESHOLD}%) — điểm bị đặt về 0 và không thể hoàn tác.`,
+      });
+    }
 
 
     // Quy tắc đạt: phải pass TOÀN BỘ testcase mới PASSED (rớt 1 = FAILED toàn bài).
     // Điểm số từng phần (scoreBreakdown) giữ nguyên để giảng viên thấy chi tiết.
-    const totalTestcases = 2;
-    let overallResult: 'PASSED' | 'FAILED' = passedCount === totalTestcases ? 'PASSED' : 'FAILED';
-
-    // Bảo toàn đầy đủ 100% điểm số cho sinh viên, chỉ lưu cờ đạo văn cho Giảng viên:
-    if (similarityRate >= 65) {
-      this.logger.warn(
-        `[Pipeline:Plagiarism] ${submissionId} trùng lặp AST ${similarityRate}% với ${plagiarismMatch?.matchedStudentId}! Điểm số sinh viên hiển thị bình thường (${finalScore}/10). Giảng viên nhận cảnh báo đỏ.`,
-      );
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════════
-    // ĐỒNG BỘ CẢNH BÁO ĐẠO VĂN TRUY HỒI CHO BÀI ĐỐI CHIẾU (BÀI A)
-    // Cập nhật cờ đỏ ĐẠO VĂN cho bài A nhưng VẪN BẢO TOÀN ĐIỂM SỐ GỐC
-    // ═══════════════════════════════════════════════════════════════════════════
-    if (similarityRate >= 65 && plagiarismMatch?.matchedSubmissionId) {
-      try {
-        const matchedSub = await this.submissionRepo.findById(plagiarismMatch.matchedSubmissionId);
-        if (matchedSub) {
-          const reverseStatus = similarityRate >= 65 ? 'ĐẠO VĂN' : 'NGHI VẤN';
-          const reverseDetails: any = {
-            ...(matchedSub.details || {}),
-            plagiarismStatus: reverseStatus,
-            similarityRate: Math.max(matchedSub.details?.similarityRate || 0, similarityRate),
-            plagiarismMatch: {
-              matchedStudentId: studentId,
-              matchedStudentName: studentId,
-              matchedSubmissionId: submissionId,
-              similarityRate,
-              maxContainment: plagiarismMatch.maxContainment,
-              sourceCodeA: matchedSub.details?.sourceCode || '',
-              sourceCodeB: sourceCode,
-              matchedTokens: plagiarismMatch.matchedTokens || [],
-              isFlagged: true,
-              status: reverseStatus,
-            },
-          };
-          // Bảo toàn điểm số gốc của bài A, chỉ gắn cờ cảnh báo đỏ ĐẠO VĂN
-          const originalMatchedScore = matchedSub.score ?? matchedSub.details?.score ?? finalScore;
-          await this.submissionRepo.updateStatus(
-            plagiarismMatch.matchedSubmissionId,
-            matchedSub.status,
-            reverseDetails,
-            originalMatchedScore,
-          );
-          this.logger.warn(
-            `[Pipeline:ReverseFlag] Đã đồng bộ cảnh báo đỏ ĐẠO VĂN cho bài đối chiếu ${plagiarismMatch.matchedSubmissionId} (${reverseStatus}, ${similarityRate}%) - Điểm giữ nguyên ${originalMatchedScore}.`,
-          );
-        }
-      } catch (revErr: any) {
-        this.logger.warn(`[Pipeline:ReverseFlag] Không thể cập nhật bài đối chiếu: ${revErr.message}`);
-      }
-    }
     const completedPayload = {
       submissionId,
       status: 'COMPLETED' as const,
@@ -655,13 +678,23 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
         cleanCodeScore: liveAiRating.cleanCodeScore,
         solidScore: liveAiRating.solidScore,
         codeSmells: liveAiRating.codeSmells,
-        explanation: similarityRate >= 70 && plagiarismMatch
-          ? `[ĐẠO VĂN] Phát hiện ${similarityRate}% tương đồng AST với bài ${plagiarismMatch.matchedStudentId}. ${liveAiRating.explanation}`
-          : liveAiRating.explanation,
+        explanation: liveAiRating.explanation,
       },
       plagiarismMatch,
-      plagiarismStatus,
-      similarityRate,
+      // Ngưỡng hiển thị: >= 70% là đạo văn, >= 40% là nghi vấn, còn lại là an toàn.
+      similarityRate: plagiarismRate,
+      plagiarismStatus: (plagiarismRate >= 70
+        ? 'ĐẠO VĂN'
+        : plagiarismRate >= 40
+          ? 'NGHI VẤN'
+          : 'AN TOÀN') as 'AN TOÀN' | 'NGHI VẤN' | 'ĐẠO VĂN',
+      // BR-03: cờ cho client biết điểm đã bị đặt về 0 do đạo văn đã xác nhận.
+      confirmedPlagiarism: isConfirmedPlagiarism,
+      computedScoreBeforePenalty: computedScore,
+      // Lỗi biên dịch: hiển thị cho sinh viên biết vì sao bài bị 0 điểm testcase.
+      compileError: isRealCompileError,
+      compileOutput: isRealCompileError ? sandboxExec.compileOutput || sandboxExec.stderr : undefined,
+      executedInContainer: ranInContainer,
       completedAt: new Date().toISOString(),
     };
 
@@ -671,48 +704,6 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       completedPayload,
       finalScore,
     );
-
-    // Lưu trữ phân rã vào bảng submission_details và ai_review_results theo chuẩn 13 bảng SRS
-    try {
-      await this.submissionDetailRepo.createBatch([
-        {
-          detailId: `DTL-${submissionId}-TC1`,
-          submissionId,
-          testCaseId: 'TC-SWP-01',
-          status: analysis.tc1Status === 'PASSED' ? 'PASS' : 'FAIL',
-          actualOutput: analysis.tc1Status === 'PASSED' ? '1 2 3 4 5' : 'Output mismatch',
-          timeMs: analysis.tc1TimeMs,
-          memoryKb: 16420,
-          errorLog: analysis.tc1Status === 'PASSED' ? null : 'Wrong Answer on testcase 1',
-        },
-        {
-          detailId: `DTL-${submissionId}-TC2`,
-          submissionId,
-          testCaseId: 'TC-SWP-02',
-          status: analysis.tc2Status === 'PASSED' ? 'PASS' : 'FAIL',
-          actualOutput: analysis.tc2Status === 'PASSED' ? '-5 0 10' : 'Output mismatch',
-          timeMs: analysis.tc2TimeMs,
-          memoryKb: 17200,
-          errorLog: analysis.tc2Status === 'PASSED' ? null : (sandboxExec.isTle ? 'Time Limit Exceeded (2.0s)' : (sandboxExec.isMle ? 'Memory Limit Exceeded (512MB)' : 'Wrong Answer on testcase 2')),
-        },
-      ]);
-
-      await this.aiReviewRepo.create({
-        reviewId: `REV-${submissionId}`,
-        submissionId,
-        cleanCodeScore: liveAiRating.cleanCodeScore,
-        solidScore: liveSolidAvg,
-        codeSmellsCount: liveAiRating.codeSmells?.length || 0,
-        feedbackJson: liveAiRating.codeSmells || [],
-        compilerExplanation: liveAiRating.explanation || null,
-        modelUsed: 'gemini-1.5-pro',
-        tokenUsage: { promptTokens: 340, completionTokens: 180, totalTokens: 520 },
-        evaluatedAt: new Date(),
-      });
-      this.logger.log(`✅ [Pipeline] Đã lưu phân rã thành công: 2 testcase logs & AI review cho bài ${submissionId}`);
-    } catch (saveErr: any) {
-      this.logger.warn(`[Pipeline] Failed to save detailed logs to database: ${saveErr.message}`);
-    }
 
     this.gradingGateway.emitGradingCompleted(completedPayload);
     this.logger.log(

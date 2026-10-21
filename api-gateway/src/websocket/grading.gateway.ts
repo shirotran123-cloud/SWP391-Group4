@@ -56,6 +56,14 @@ export interface GradingCompletedPayload {
   overallResult: 'PASSED' | 'FAILED';
   score: number;
   maxScore: number;
+  /** Per-part score breakdown so the lecturer can see how the total was reached. */
+  scoreBreakdown?: {
+    testcase1: number;
+    testcase2: number;
+    cleanCode: number;
+    solid: number;
+    total: number;
+  };
   passedTestcases: number;
   totalTestcases: number;
   executionTimeMs: number;
@@ -79,7 +87,39 @@ export interface GradingCompletedPayload {
     sourceCodeA: string;
     sourceCodeB: string;
     matchedTokens: Array<{ lineA: [number, number]; lineB: [number, number] }>;
+    // Optional diagnostic fields surfaced so the client can label the match without
+    // recomputing it locally (isFlagged >= 70%, status per the plagiarism engine).
+    isFlagged?: boolean;
+    status?: string;
+    jaccardSimilarity?: number;
+    winnowingContainment?: number;
+    astStructuralSimilarity?: number;
+    /**
+     * Set when the matched submission belongs to the same student. Distinguishes a
+     * resubmission (never penalised) from reuse in another task (warn) and from
+     * cross-course self-plagiarism (penalised).
+     */
+    selfOverlap?: {
+      kind: 'SAME_ASSIGNMENT' | 'CROSS_ASSIGNMENT' | 'CROSS_COURSE';
+      isSelfPlagiarism: boolean;
+      label: string;
+    };
+    executionTimeMs?: number;
   };
+  /** BR-03: true when the score was forced to 0 because AST plagiarism was confirmed (>= 80%). */
+  confirmedPlagiarism?: boolean;
+  /** Score the pipeline computed before the BR-03 plagiarism penalty was applied. */
+  computedScoreBeforePenalty?: number;
+  /** True when compilation failed inside the container, so every testcase scored 0. */
+  compileError?: boolean;
+  /** Raw compiler diagnostics, surfaced so the student can fix the code. */
+  compileOutput?: string;
+  /** True when the submission was actually built and run in a Docker container. */
+  executedInContainer?: boolean;
+  /** Similarity rate of the top match, 0 when nothing matched. */
+  similarityRate?: number;
+  /** Display label for the top match. */
+  plagiarismStatus?: 'AN TOÀN' | 'NGHI VẤN' | 'ĐẠO VĂN';
   completedAt: string;
 }
 

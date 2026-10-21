@@ -1,7 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as http from 'http';
-import * as fs from 'fs';
-import * as path from 'path';
+import { getDockerSandboxRunner, TestCaseInput, TestCaseExecutionResult } from './docker-runner';
 
 export interface SandboxExecutionOutput {
   stdout: string;
@@ -12,6 +10,11 @@ export interface SandboxExecutionOutput {
   isTle: boolean;
   isMle: boolean;
   isSegfault: boolean;
+  /** Per-testcase verdicts when the code was executed in a real container. */
+  testResults?: TestCaseExecutionResult[];
+  /** True when the real container produced a compile error (BR-03: CE -> testcase = 0). */
+  isCompileError?: boolean;
+  compileOutput?: string;
 }
 
 @Injectable()
@@ -19,64 +22,108 @@ export class SandboxService {
   private readonly logger = new Logger(SandboxService.name);
 
   /**
-   * Kiểm tra nhanh Docker Daemon Socket có hoạt động không
+   * Kiểm tra Docker Daemon có hoạt động không.
+   *
+   * Trước đây hàm này CHỈ thử TCP cổng 2375, nhưng Docker Desktop trên Windows chỉ mở
+   * named pipe (`//./pipe/docker_engine`) — nên dù đã cài Docker, hệ thống vẫn luôn báo
+   * OFFLINE và rơi vào fallback. Nay uỷ quyền cho DockerSandboxRunner, dùng đúng endpoint
+   * mặc định của dockerode (named pipe trên Windows, unix socket trên Linux/macOS).
    */
   public async isDockerDaemonAvailable(): Promise<boolean> {
-    return new Promise((resolve) => {
-      // Thử ping socket HTTP nếu expose hoặc test pipe
-      const req = http.request(
-        {
-          host: 'localhost',
-          port: 2375,
-          path: '/_ping',
-          method: 'GET',
-          timeout: 400,
-        },
-        (res) => {
-          resolve(res.statusCode === 200);
-        },
-      );
-      req.on('error', () => resolve(false));
-      req.on('timeout', () => {
-        req.destroy();
-        resolve(false);
-      });
-      req.end();
-    });
+    return getDockerSandboxRunner().isAvailable();
   }
 
   /**
    * Bộ điều phối thực thi mã nguồn Sandbox:
-   * Chế độ 1: Docker Sandbox Container (Linux cgroups v2, 512MB RAM, Watchdog 2.0s, Seccomp)
+   * Chế độ 1: Docker Sandbox Container (cgroups v2, 512MB RAM, Watchdog 2.0s, Seccomp)
    * Chế độ 2: Resilient Circuit Breaker Fallback (Bảo toàn luồng chấm thi khi không có Docker daemon)
+   *
+   * `testCases` là tuỳ chọn: khi có, mã nguồn được CHẠY THẬT trong container với từng
+   * testcase và stdout được đối chiếu với expectedOutput.
    */
-  public async executeCode(language: string, codeContent: string): Promise<SandboxExecutionOutput> {
-    const isDockerUp = await this.isDockerDaemonAvailable();
+  public async executeCode(
+    language: string,
+    codeContent: string,
+    testCases?: TestCaseInput[],
+  ): Promise<SandboxExecutionOutput> {
+    const runner = getDockerSandboxRunner();
+    const isDockerUp = await runner.isAvailable();
 
     if (isDockerUp) {
       this.logger.log(`⚡ [SandboxService] Docker Daemon ONLINE -> Kích hoạt Container cô lập cho ${language}`);
-      return this.executeInDocker(language, codeContent);
-    } else {
-      this.logger.warn(
-        `⚠️ [SandboxService] Docker Daemon OFFLINE -> Kích hoạt Graceful Circuit Breaker Engine (Zero-Downtime)`,
-      );
-      return this.executeInCircuitBreaker(language, codeContent);
+      return this.executeInDocker(language, codeContent, testCases);
     }
+
+    this.logger.warn(
+      `⚠️ [SandboxService] Docker Daemon OFFLINE (${runner.getAvailabilityReason()}) -> Kích hoạt Graceful Circuit Breaker Engine (Zero-Downtime)`,
+    );
+    return this.executeInCircuitBreaker(language, codeContent);
   }
 
-  private async executeInDocker(language: string, codeContent: string): Promise<SandboxExecutionOutput> {
-    const startTime = Date.now();
-    // Khi Docker daemon chạy, thời gian thực thi đo đạc chuẩn xác
-    await new Promise((r) => setTimeout(r, 150));
+  /**
+   * CHẾ ĐỘ 1: chạy thật trong container.
+   *
+   * Trước đây hàm này là stub: nó KHÔNG khởi tạo container nào mà trả về stdout giả
+   * `'1 2 3 4 5\n'`, khiến pipeline chấm điểm bằng regex trên mã nguồn thay vì chạy
+   * bài. Nay nó gọi DockerSandboxRunner và trả về kết quả thật từng testcase.
+   */
+  private async executeInDocker(
+    language: string,
+    codeContent: string,
+    testCases?: TestCaseInput[],
+  ): Promise<SandboxExecutionOutput> {
+    const runner = getDockerSandboxRunner();
+
+    // Không có testcase -> chỉ cần biên dịch/chạy để phát hiện lỗi biên dịch.
+    const effectiveTestCases: TestCaseInput[] =
+      testCases && testCases.length > 0 ? testCases : [{ input: '', expectedOutput: '', timeLimitMs: 2000 }];
+
+    const outcome = await runner.runTestCases(language, codeContent, effectiveTestCases);
+
+    if (!outcome.available) {
+      // Docker bật nhưng image thiếu, hoặc ngôn ngữ chưa hỗ trợ -> fallback trung thực.
+      this.logger.warn(`⚠️ [SandboxService] Không chạy được container (${outcome.reason}) -> fallback phân tích tĩnh.`);
+      return this.executeInCircuitBreaker(language, codeContent);
+    }
+
+    if (outcome.compileError) {
+      this.logger.warn(`[SandboxService] Lỗi biên dịch: ${outcome.compileError.compileOutput?.slice(0, 200)}`);
+      return {
+        stdout: '',
+        stderr: outcome.compileError.compileOutput || outcome.compileError.stderr,
+        timeMs: outcome.compileError.timeMs,
+        exitCode: outcome.compileError.exitCode,
+        mode: 'DOCKER_SECCOMP',
+        isTle: false,
+        isMle: false,
+        isSegfault: false,
+        testResults: [],
+        isCompileError: true,
+        compileOutput: outcome.compileError.compileOutput,
+      };
+    }
+
+    const results = outcome.results;
+    const first = results[0];
+    const isTle = results.some((r) => r.verdict === 'TIME_LIMIT_EXCEEDED');
+    const isMle = results.some((r) => r.verdict === 'MEMORY_LIMIT_EXCEEDED');
+    const isSegfault = results.some((r) => r.verdict === 'RUNTIME_ERROR' && r.exitCode === 139);
+    // stdout của testcase đầu tiên giữ lại cho phần hiển thị/log tương thích API cũ.
+    const combinedStdout = results.map((r) => r.stdout).filter(Boolean).join('\n');
+    const combinedStderr = results.map((r) => r.stderr).filter(Boolean).join('\n');
+    const totalTimeMs = results.reduce((sum, r) => sum + r.timeMs, 0);
+
     return {
-      stdout: '1 2 3 4 5\n',
-      stderr: '',
-      timeMs: Date.now() - startTime,
-      exitCode: 0,
+      stdout: combinedStdout,
+      stderr: combinedStderr,
+      timeMs: totalTimeMs,
+      exitCode: first ? first.exitCode : -1,
       mode: 'DOCKER_SECCOMP',
-      isTle: false,
-      isMle: false,
-      isSegfault: false,
+      isTle,
+      isMle,
+      isSegfault,
+      testResults: results,
+      isCompileError: false,
     };
   }
 
