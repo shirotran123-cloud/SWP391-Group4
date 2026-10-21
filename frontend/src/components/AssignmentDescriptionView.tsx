@@ -347,7 +347,7 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
                 style={{
                   padding: '6px 12px',
                   borderRadius: '8px',
-                  backgroundColor: 'rgba(0, 0, 0, 0.35)',
+                  backgroundColor: 'rgba(11, 18, 32, 0.04)',
                   border: '1px solid rgba(37, 99, 235, 0.14)',
                   color: '#1e40af',
                   fontSize: '12.5px',

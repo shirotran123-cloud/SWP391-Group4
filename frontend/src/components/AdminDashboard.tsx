@@ -493,7 +493,7 @@ export function AdminDashboard({ token }: { token: string }) {
                     </div>
                   </div>
                   {expandedDLQ === job.dlqId && (
-                    <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(0,0,0,0.3)', borderRadius: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+                    <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(11, 18, 32, 0.04)', borderRadius: 8, fontSize: 12, color: 'var(--text-muted)' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
                         <Clock size={12} /> Tạo lúc: {job.createdAt ? new Date(job.createdAt).toLocaleString('vi-VN') : '—'}
                       </div>

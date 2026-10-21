@@ -1711,7 +1711,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         alignItems: 'center',
                         padding: '8px 12px',
                         borderRadius: '8px',
-                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        backgroundColor: 'rgba(11, 18, 32, 0.04)',
                         border: '1px solid rgba(11, 18, 32, 0.04)',
                         fontSize: '12px',
                       }}

@@ -659,8 +659,8 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                           style={{
                             padding: '12px 14px',
                             borderRadius: '10px',
-                            backgroundColor: 'rgba(0, 0, 0, 0.25)',
-                            border: '1px solid rgba(11, 18, 32, 0.05)',
+                            backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                            border: '1px solid var(--border-color)',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '8px',
@@ -698,7 +698,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                                 <div style={{ marginTop: '5px', fontWeight: 600, color: 'var(--blue-300)', fontSize: '13px' }}>
                                   Điểm số điều chỉnh chính thức: {app.adjustedScore} / 10.0
                                   {app.resolvedAt && (
-                                    <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 400, marginLeft: '8px' }}>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '8px' }}>
                                       (Duyệt ngày: {new Date(app.resolvedAt).toLocaleString('vi-VN')})
                                     </span>
                                   )}

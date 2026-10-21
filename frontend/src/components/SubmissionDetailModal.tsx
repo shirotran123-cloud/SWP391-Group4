@@ -517,7 +517,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     </h3>
                   </div>
 
-                  <p style={{ fontSize: '13px', color: '#33415a', lineHeight: '1.6', marginBottom: '16px', fontStyle: 'italic', backgroundColor: 'rgba(0, 0, 0, 0.25)', padding: '12px 14px', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
+                  <p style={{ fontSize: '13px', color: '#33415a', lineHeight: '1.6', marginBottom: '16px', fontStyle: 'italic', backgroundColor: 'rgba(11, 18, 32, 0.04)', padding: '12px 14px', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
                     &ldquo;{aiRating.explanation}&rdquo;
                   </p>
 

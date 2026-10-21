@@ -760,7 +760,7 @@ public class Solution {
                     <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>
                       Solution.java
                     </span>
-                    <span style={{ fontSize: '11px', color: '#4d5c76', padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(0,0,0,0.3)' }}>
+                    <span style={{ fontSize: '11px', color: '#4d5c76', padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(11, 18, 32, 0.04)' }}>
                       Java 17 (UTF-8)
                     </span>
                   </div>

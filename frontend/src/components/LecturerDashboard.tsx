@@ -2795,7 +2795,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     </span>
                   </div>
 
-                  <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid rgba(11, 18, 32, 0.06)', borderRadius: '8px', backgroundColor: 'rgba(0, 0, 0, 0.3)' }}>
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid rgba(11, 18, 32, 0.06)', borderRadius: '8px', backgroundColor: 'rgba(11, 18, 32, 0.04)' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' }}>
                       <thead>
                         <tr style={{ borderBottom: '1px solid rgba(11, 18, 32, 0.06)', backgroundColor: 'rgba(11, 18, 32, 0.03)' }}>
@@ -3776,7 +3776,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#0b1220', marginBottom: '8px' }}>
                 Mô Tả Yêu Cầu & Ràng Buộc:
               </h4>
-              <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', whiteSpace: 'pre-wrap', backgroundColor: 'rgba(0,0,0,0.25)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(11, 18, 32, 0.04)', margin: 0 }}>
+              <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', whiteSpace: 'pre-wrap', backgroundColor: 'rgba(11, 18, 32, 0.04)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(11, 18, 32, 0.04)', margin: 0 }}>
                 {previewAssignment.description}
               </p>
             </div>

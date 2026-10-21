@@ -790,8 +790,15 @@ export function App() {
                         borderRadius: '10px',
                         cursor: 'pointer',
                         transition: 'background-color .15s ease, border-color .15s ease',
-                        backgroundColor: isSelected ? 'rgba(59, 130, 246, 0.1)' : 'rgba(11, 18, 32, 0.025)',
+                        backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.09)' : '#ffffff',
                         border: `1px solid ${isSelected ? 'var(--border-highlight)' : 'var(--border-color)'}`,
+                        boxShadow: isSelected ? '0 6px 18px -10px rgba(37, 99, 235, 0.45)' : 'var(--shadow-sm)',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected) e.currentTarget.style.borderColor = 'var(--border-strong)';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected) e.currentTarget.style.borderColor = 'var(--border-color)';
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>

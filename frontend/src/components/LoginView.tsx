@@ -184,46 +184,33 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 460px)',
-        alignItems: 'center',
-        gap: '64px',
-        minHeight: '100vh',
-        width: '100%',
-        backgroundColor: 'var(--ink-900)',
-        padding: '48px 56px',
-        boxSizing: 'border-box',
-        fontFamily: 'var(--font-sans)',
-      }}
-      className="login-shell"
-    >
+    <div className="login-shell">
       {/* CỘT TRÁI: ĐỊNH VỊ SẢN PHẨM */}
-      <div style={{ maxWidth: '520px' }} className="login-brand">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '36px' }}>
+      <div className="login-brand">
+        <div className="login-logo-row" style={{ display: 'flex', alignItems: 'center', gap: '11px', marginBottom: '40px' }}>
           <div
             style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '8px',
+              width: '34px',
+              height: '34px',
+              borderRadius: '10px',
               background: 'var(--blue-600)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: 'var(--on-blue)',
+              boxShadow: '0 6px 16px -6px rgba(37, 99, 235, 0.55)',
             }}
           >
-            <ShieldCheck size={17} strokeWidth={2.2} />
+            <ShieldCheck size={19} strokeWidth={2.2} />
           </div>
-          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>AITA</span>
+          <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.01em' }}>AITA</span>
           <span
             style={{
               fontSize: '10px',
               fontWeight: 600,
               letterSpacing: '0.06em',
-              padding: '1px 6px',
-              borderRadius: '4px',
+              padding: '2px 7px',
+              borderRadius: '5px',
               border: '1px solid var(--border-strong)',
               color: 'var(--text-dim)',
             }}
@@ -234,75 +221,67 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
         <h1
           style={{
-            fontSize: 'clamp(28px, 3vw, 38px)',
+            fontSize: 'clamp(30px, 3.1vw, 42px)',
             fontWeight: 700,
-            lineHeight: 1.18,
-            letterSpacing: '-0.035em',
+            lineHeight: 1.14,
+            letterSpacing: '-0.038em',
             color: 'var(--text-main)',
             margin: 0,
+            maxWidth: '15ch',
           }}
         >
-          Chấm bài lập trình
-          <br />
+          Chấm bài lập trình{' '}
           <span style={{ color: 'var(--blue-200)' }}>minh bạch và tự động.</span>
         </h1>
 
-        <p style={{ marginTop: '18px', fontSize: '14px', lineHeight: 1.7, color: 'var(--text-muted)', maxWidth: '440px' }}>
-          Hệ thống thực thi mã nguồn trong sandbox, đối soát đạo văn trên cây cú pháp trừu tượng và đánh giá chất
-          lượng kiến trúc theo bộ tiêu chí SOLID.
+        <p style={{ marginTop: '20px', fontSize: '14.5px', lineHeight: 1.7, color: 'var(--text-muted)', maxWidth: '46ch' }}>
+          Hệ thống thực thi mã nguồn trong sandbox, đối soát đạo văn trên cây cú pháp trừu tượng và đánh giá
+          chất lượng kiến trúc theo bộ tiêu chí SOLID.
         </p>
 
-        <div style={{ marginTop: '34px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div className="login-features" style={{ marginTop: '34px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {[
             { icon: Terminal, title: 'Sandbox cách ly', desc: 'Chạy testcase trong Docker, giới hạn CPU và bộ nhớ.' },
             { icon: GitCompare, title: 'Đối soát AST', desc: 'Phát hiện đạo văn kể cả khi đã đổi tên biến, hàm.' },
             { icon: Scale, title: 'Khiếu nại có kiểm soát', desc: 'Mỗi bài nộp có quy trình phúc khảo minh bạch.' },
           ].map((f) => (
-            <div key={f.title} style={{ display: 'flex', gap: '11px', alignItems: 'flex-start' }}>
-              <span
-                style={{
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '7px',
-                  border: '1px solid var(--border-color)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  color: 'var(--blue-200)',
-                }}
-              >
-                <f.icon size={13} strokeWidth={2.2} />
+            <div key={f.title} className="login-feature">
+              <span className="login-feature-icon">
+                <f.icon size={14} strokeWidth={2.2} />
               </span>
-              <div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-soft)' }}>{f.title}</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--text-soft)' }}>{f.title}</div>
                 <div style={{ fontSize: '12.5px', color: 'var(--text-dim)', lineHeight: 1.5 }}>{f.desc}</div>
               </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="login-metric-row">
+          {[
+            { v: '7', l: 'bước chấm tự động' },
+            { v: '3', l: 'ngôn ngữ sandbox' },
+            { v: '2', l: 'lượt phúc khảo tối đa' },
+          ].map((m) => (
+            <div key={m.l} className="login-metric">
+              <span className="login-metric-value">{m.v}</span>
+              <span className="login-metric-label">{m.l}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* CỘT PHẢI: THẺ ĐĂNG NHẬP */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '460px',
-          background: 'var(--ink-800)',
-          borderRadius: '12px',
-          border: '1px solid var(--border-color)',
-          boxShadow: 'var(--shadow-lg)',
-          padding: '32px 28px',
-          color: 'var(--text-main)',
-          boxSizing: 'border-box',
-          justifySelf: 'end',
-        }}
-      >
-        <div style={{ marginBottom: '24px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.02em', margin: 0 }}>
+      <div className="login-card">
+        <div style={{ marginBottom: '22px' }}>
+          <span className="login-kicker">
+            <ShieldCheck size={11} strokeWidth={2.4} />
+            Nền tảng chấm bài
+          </span>
+          <h2 style={{ fontSize: '21px', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.025em', margin: '12px 0 0' }}>
             Đăng nhập
           </h2>
-          <p style={{ color: 'var(--text-dim)', fontSize: '12.5px', lineHeight: 1.55, marginTop: '5px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13px', lineHeight: 1.6, marginTop: '7px' }}>
             Dùng tài khoản Google đã được nhà trường cấp quyền.
           </p>
         </div>
@@ -313,21 +292,21 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             style={{
               display: 'flex',
               alignItems: 'flex-start',
-              gap: '12px',
-              padding: '14px 16px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(11, 18, 32, 0.03)',
-              border: '1px solid var(--border-strong)',
+              gap: '11px',
+              padding: '13px 14px',
+              borderRadius: '10px',
+              backgroundColor: 'var(--state-bad-bg)',
+              border: '1px solid var(--state-bad-border)',
               color: 'var(--text-soft)',
               fontSize: '12.5px',
-              marginBottom: '18px',
+              marginBottom: '16px',
               textAlign: 'left',
               lineHeight: '1.55',
             }}
           >
-            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px', color: 'var(--text-muted)' }} />
+            <AlertCircle size={16} style={{ flexShrink: 0, marginTop: '1px', color: 'var(--state-bad)' }} />
             <div>
-              <div style={{ fontWeight: 600, color: 'var(--text-main)', marginBottom: '4px', fontSize: '12.5px' }}>
+              <div style={{ fontWeight: 700, color: 'var(--state-bad)', marginBottom: '3px', fontSize: '12.5px' }}>
                 Tài khoản chưa được cấp quyền
               </div>
               <div>{errorMsg}</div>
@@ -348,13 +327,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               alignItems: 'center',
               gap: '10px',
               padding: '12px 14px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(37, 99, 235, 0.08)',
-              border: '1px solid rgba(37, 99, 235, 0.18)',
+              borderRadius: '10px',
+              backgroundColor: 'var(--state-info-bg)',
+              border: '1px solid var(--border-blue)',
               color: 'var(--blue-200)',
-              fontSize: '13px',
-              marginBottom: '20px',
+              fontSize: '12.5px',
+              marginBottom: '18px',
               textAlign: 'left',
+              lineHeight: 1.5,
             }}
           >
             <CheckCircle size={16} style={{ flexShrink: 0, color: 'var(--blue-300)' }} />
@@ -363,12 +343,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         )}
 
         {/* NÚT DUY NHẤT: ĐIỀU HƯỚNG SANG TRANG ĐĂNG NHẬP GOOGLE CHÍNH THỨC */}
-        <div style={{ marginBottom: '16px' }}>
+        <div style={{ marginBottom: '14px' }}>
           <GoogleSignInButton
             onClick={handleRedirectToGoogle}
             loading={loading}
             label="Sign in with Google"
-            height={44}
+            height={46}
           />
         </div>
 
@@ -385,7 +365,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         </p>
 
         {/* CÔNG CỤ TRÌNH DIỄN: KIỂM TRA TÀI KHOẢN TRONG CSDL */}
-        <div style={{ textAlign: 'center', marginBottom: '14px', display: 'flex', justifyContent: 'center', gap: '14px', borderTop: '1px solid var(--border-soft)', paddingTop: '14px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '14px', display: 'flex', justifyContent: 'center', gap: '16px', borderTop: '1px solid var(--border-soft)', paddingTop: '14px' }}>
           <button
             onClick={() => setShowTester(!showTester)}
             style={{
@@ -422,37 +402,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
         {/* Khung demo kiểm tra phản hồi từ Google và CSDL AITA */}
         {showTester && (
-          <div
-            style={{
-              background: '#f7f9fc',
-              padding: '14px',
-              borderRadius: '12px',
-              border: '1px solid rgba(37, 99, 235, 0.14)',
-              marginBottom: '18px',
-              textAlign: 'left',
-            }}
-          >
-            <div style={{ fontSize: '11.5px', color: '#1e40af', marginBottom: '8px', fontWeight: 600 }}>
-              Thử nghiệm luồng xác thực Google SSO & Kiểm tra CSDL:
+          <div className="login-panel" style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '11.5px', color: 'var(--blue-200)', marginBottom: '9px', fontWeight: 700 }}>
+              Thử nghiệm luồng xác thực Google SSO &amp; Kiểm tra CSDL:
             </div>
 
             {/* Ô nhập email bất kỳ để đăng nhập trực tiếp (Bypass redirect_uri_mismatch nếu Google Cloud chưa cập nhật) */}
-            <div style={{ marginBottom: '12px', display: 'flex', gap: '8px' }}>
+            <div style={{ marginBottom: '11px', display: 'flex', gap: '8px' }}>
               <input
                 type="email"
                 value={directEmailInput}
                 onChange={(e) => setDirectEmailInput(e.target.value)}
                 placeholder="Nhập email Google SSO..."
-                style={{
-                  flex: 1,
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  backgroundColor: 'rgba(11, 18, 32, 0.05)',
-                  border: '1px solid rgba(11, 18, 32, 0.1)',
-                  color: 'var(--text-main)',
-                  fontSize: '12px',
-                  outline: 'none',
-                }}
+                className="login-input"
               />
               <button
                 type="button"
@@ -461,193 +423,44 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                     verifyEmailWithBackend(directEmailInput.trim(), directEmailInput.split('@')[0]);
                   }
                 }}
-                style={{
-                  padding: '7px 12px',
-                  borderRadius: '6px',
-                  backgroundColor: '#2563eb',
-                  border: 'none',
-                  color: '#ffffff',
-                  fontSize: '11.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  whiteSpace: 'nowrap',
-                }}
+                className="login-btn-primary"
               >
                 Đăng nhập ngay
               </button>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('linhcampochia@gmail.com', 'Linh Campochia')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(37, 99, 235, 0.24)',
-                  background: 'rgba(37, 99, 235, 0.08)',
-                  color: 'var(--blue-200)',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 600,
-                }}
-              >
-                <UserCheck size={14} />
-                <span><strong>linhcampochia@gmail.com</strong> (Tài khoản của bạn • Student)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('phaithayj@gmail.com', 'Vinh Nguyễn Hoàng')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(37, 99, 235, 0.18)',
-                  background: 'rgba(37, 99, 235, 0.07)',
-                  color: 'var(--blue-200)',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <UserCheck size={14} />
-                <span><strong>phaithayj@gmail.com</strong> (Hợp lệ • Student)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('mochibunnyyy123@gmail.com', 'Viktor Wilson')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(37, 99, 235, 0.18)',
-                  background: 'rgba(37, 99, 235, 0.07)',
-                  color: 'var(--blue-200)',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <UserCheck size={14} />
-                <span><strong>mochibunnyyy123@gmail.com</strong> (Hợp lệ • Student)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('linhcampochia@gmail.com', 'Linh Cam Po Chia (Giảng Viên)')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(37, 99, 235, 0.24)',
-                  background: 'rgba(37, 99, 235, 0.08)',
-                  color: 'var(--blue-200)',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 600,
-                }}
-              >
-                <UserCheck size={14} />
-                <span><strong>linhcampochia@gmail.com</strong> (Đã cấp quyền • Giảng Viên)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('giangvien.edu@gmail.com', 'ThS. Giảng Viên AITA')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(37, 99, 235, 0.18)',
-                  background: 'rgba(37, 99, 235, 0.07)',
-                  color: '#1e40af',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <UserCheck size={14} />
-                <span><strong>giangvien.edu@gmail.com</strong> (Hợp lệ • Lecturer)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('admin@aita.fpt.edu.vn', 'Quản Trị Viên AITA')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(37, 99, 235, 0.24)',
-                  background: 'rgba(37, 99, 235, 0.08)',
-                  color: '#1e40af',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 600,
-                }}
-              >
-                <UserCheck size={14} />
-                <span><strong>admin@aita.fpt.edu.vn</strong> (Hợp lệ • Admin Quản Trị)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => verifyEmailWithBackend('admin.aita@gmail.com', 'Quản Trị Viên AITA (Gmail)')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(37, 99, 235, 0.24)',
-                  background: 'rgba(37, 99, 235, 0.08)',
-                  color: '#1e40af',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontWeight: 600,
-                }}
-              >
-                <UserCheck size={14} />
-                <span><strong>admin.aita@gmail.com</strong> (Hợp lệ • Admin Gmail)</span>
-              </button>
+              {[
+                { email: 'linhcampochia@gmail.com', name: 'Linh Campochia', note: 'Tài khoản của bạn • Student', strong: true },
+                { email: 'phaithayj@gmail.com', name: 'Vinh Nguyễn Hoàng', note: 'Hợp lệ • Student' },
+                { email: 'mochibunnyyy123@gmail.com', name: 'Viktor Wilson', note: 'Hợp lệ • Student' },
+                { email: 'linhcampochia@gmail.com', name: 'Linh Cam Po Chia', note: 'Đã cấp quyền • Giảng Viên', strong: true },
+                { email: 'giangvien.edu@gmail.com', name: 'ThS. Giảng Viên AITA', note: 'Hợp lệ • Lecturer' },
+                { email: 'admin@aita.fpt.edu.vn', name: 'Quản Trị Viên AITA', note: 'Hợp lệ • Admin Quản Trị', strong: true },
+                { email: 'admin.aita@gmail.com', name: 'Quản Trị Viên AITA (Gmail)', note: 'Hợp lệ • Admin Gmail', strong: true },
+              ].map((a, i) => (
+                <button
+                  key={a.email + i}
+                  type="button"
+                  onClick={() => verifyEmailWithBackend(a.email, a.name)}
+                  className={'login-demo-btn' + (a.strong ? ' login-demo-btn-strong' : '')}
+                >
+                  <UserCheck size={14} style={{ flexShrink: 0 }} />
+                  <span>
+                    <strong>{a.email}</strong> ({a.note})
+                  </span>
+                </button>
+              ))}
 
               <button
                 type="button"
                 onClick={() => verifyEmailWithBackend('chua_dang_ky@gmail.com', 'Người Lạ')}
-                style={{
-                  padding: '7px 10px',
-                  borderRadius: '6px',
-                  border: '1px solid rgba(11, 18, 32, 0.13)',
-                  background: 'rgba(11, 18, 32, 0.05)',
-                  color: 'var(--text-main)',
-                  fontSize: '11.5px',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
+                className="login-demo-btn login-demo-btn-muted"
               >
-                <UserX size={14} />
-                <span><strong>chua_dang_ky@gmail.com</strong> (Chưa có trong hệ thống • Bị chặn)</span>
+                <UserX size={14} style={{ flexShrink: 0 }} />
+                <span>
+                  <strong>chua_dang_ky@gmail.com</strong> (Chưa có trong hệ thống • Bị chặn)
+                </span>
               </button>
             </div>
           </div>
@@ -655,18 +468,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
 
         {/* Khung cấu hình Client ID & Redirect URI */}
         {showConfig && (
-          <div
-            style={{
-              background: '#f7f9fc',
-              padding: '16px',
-              borderRadius: '12px',
-              border: '1px solid rgba(11, 18, 32, 0.1)',
-              marginBottom: '18px',
-              textAlign: 'left',
-            }}
-          >
+          <div className="login-panel" style={{ marginBottom: '16px' }}>
             <div style={{ marginBottom: '10px' }}>
-              <label style={{ fontSize: '11px', color: '#4d5c76', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
                 Google OAuth 2.0 Client ID:
               </label>
               <input
@@ -674,21 +478,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 defaultValue={clientId}
                 id="config-client-id"
                 placeholder="788798423051-4c6pqis6sjcrnit4c74omft9kqrvp623.apps.googleusercontent.com"
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: '8px',
-                  background: 'rgba(11, 18, 32, 0.06)',
-                  border: '1px solid rgba(11, 18, 32, 0.1)',
-                  color: 'var(--text-main)',
-                  fontSize: '12px',
-                  boxSizing: 'border-box',
-                }}
+                className="login-input"
               />
             </div>
 
             <div style={{ marginBottom: '12px' }}>
-              <label style={{ fontSize: '11px', color: '#4d5c76', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
+              <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
                 OAuth Redirect URI (Phải trùng khớp 100% cấu hình trên Google Cloud Console):
               </label>
               <input
@@ -696,18 +491,9 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 defaultValue={redirectUriConfig}
                 id="config-redirect-uri"
                 placeholder="http://localhost:5173"
-                style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  borderRadius: '8px',
-                  background: 'rgba(11, 18, 32, 0.06)',
-                  border: '1px solid rgba(11, 18, 32, 0.1)',
-                  color: 'var(--text-main)',
-                  fontSize: '12px',
-                  boxSizing: 'border-box',
-                }}
+                className="login-input"
               />
-              <span style={{ fontSize: '10.5px', color: '#1e40af', marginTop: '4px', display: 'block' }}>
+              <span style={{ fontSize: '10.5px', color: 'var(--blue-200)', marginTop: '5px', display: 'block', lineHeight: 1.5 }}>
                 * Mẹo: Thử đổi giữa http://localhost:5173 hoặc http://localhost:5173/ nếu gặp lỗi redirect_uri_mismatch.
               </span>
             </div>
@@ -720,16 +506,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   handleSaveConfig(cIdInput.value, rUriInput.value);
                 }
               }}
-              style={{
-                padding: '7px 16px',
-                borderRadius: '6px',
-                border: 'none',
-                background: '#2563eb',
-                color: '#fff',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
+              className="login-btn-primary"
             >
               Lưu Cấu Hình
             </button>
@@ -739,7 +516,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         {/* Chân trang thông tin kỹ thuật */}
         <div
           style={{
-            paddingTop: '16px',
+            paddingTop: '15px',
             borderTop: '1px solid var(--border-soft)',
             fontSize: '11px',
             color: 'var(--text-dim)',
