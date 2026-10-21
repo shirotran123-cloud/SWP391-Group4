@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DiffEditor, type Monaco } from '@monaco-editor/react';
 import { X, GitCompare, AlertTriangle, ShieldAlert, CheckCircle2, Copy, Check, FileCode, Users } from 'lucide-react';
 import type { PlagiarismMatch } from '../types';
@@ -31,8 +31,8 @@ const defineTheme = (monaco: Monaco) => {
       'editorLineNumber.foreground': '#237893',
       'diffEditor.insertedTextBackground': '#9bbf3044',
       'diffEditor.removedTextBackground': '#ef444433',
-      'diffEditor.insertedLineBackground': '#f0fdf4',
-      'diffEditor.removedLineBackground': '#fef2f2',
+      'diffEditor.insertedLineBackground': '#f2fbf4',
+      'diffEditor.removedLineBackground': '#fdf4f4',
     },
   });
 };
@@ -44,8 +44,20 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
   studentAName = 'Bài Nộp A',
 }) => {
   const [copiedId, setCopiedId] = useState(false);
+  // Monaco báo lỗi khi model bị dispose trước lúc DiffEditor kịp reset. Giữ modal mounted
+  // thêm một nhịp sau khi đóng để Monaco tự dọn dẹp trọn vẹn.
+  const [mounted, setMounted] = useState(true);
 
-  if (!isOpen || !match) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      return;
+    }
+    const timer = setTimeout(() => setMounted(false), 300);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
+
+  if (!mounted || !match) return null;
 
   const similarity = match.similarityRate || 0;
   const isSeverePlagiarism = similarity >= 80;
@@ -62,35 +74,35 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
   const getStatusBadge = () => {
     if (isSeverePlagiarism) {
       return {
-        bg: '#fef2f2',
-        border: '#ef4444',
-        text: '#dc2626',
+        bg: 'var(--state-bad-bg)',
+        border: 'var(--state-bad-border)',
+        text: 'var(--state-bad)',
         label: 'ĐẠO VĂN NGHIÊM TRỌNG (≥80% - ĐỀ XUẤT ĐIỂM 0)',
         icon: ShieldAlert,
       };
     }
     if (isHighPlagiarism) {
       return {
-        bg: '#fff1f2',
-        border: '#f43f5e',
-        text: '#e11d48',
+        bg: 'var(--state-bad-bg)',
+        border: 'var(--state-bad-border)',
+        text: 'var(--state-bad)',
         label: `CẢNH BÁO ĐẠO VĂN (${similarity.toFixed(1)}% - CỜ GIAN LẬN)`,
         icon: AlertTriangle,
       };
     }
     if (isSuspected) {
       return {
-        bg: '#fffbeb',
-        border: '#f59e0b',
-        text: '#d97706',
+        bg: 'var(--state-warn-bg)',
+        border: 'var(--state-warn-border)',
+        text: 'var(--state-warn)',
         label: `NGHI VẤN TRÙNG LẶP (${similarity.toFixed(1)}% - CẦN ĐỐI SOÁT)`,
         icon: AlertTriangle,
       };
     }
     return {
-      bg: '#f0fdf4',
-      border: '#22c55e',
-      text: '#16a34a',
+      bg: 'var(--state-ok-bg)',
+      border: 'var(--state-ok-border)',
+      text: 'var(--state-ok)',
       label: `ĐỘ TRÙNG KHỚP THẤP (<40% - AN TOÀN)`,
       icon: CheckCircle2,
     };
@@ -100,7 +112,15 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
   const BadgeIcon = badge.icon;
 
   return (
-    <div className="modal-backdrop" style={{ zIndex: 9999 }}>
+    <div
+      className="modal-backdrop"
+      style={{
+        zIndex: 9999,
+        // Đang đóng: ẩn ngay để người dùng không thấy nháy, nhưng vẫn giữ Monaco mounted.
+        visibility: isOpen ? 'visible' : 'hidden',
+        pointerEvents: isOpen ? 'auto' : 'none',
+      }}
+    >
       <div
         className="modal-card fade-up"
         style={{
@@ -298,6 +318,10 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
             beforeMount={defineTheme}
             original={match.sourceCodeA || '// Không có mã nguồn bài A'}
             modified={match.sourceCodeB || '// Không có mã nguồn bài B'}
+            // Giữ model cũ lại khi nội dung đổi, tránh Monaco dispose model trước lúc
+            // DiffEditorWidget kịp reset → lỗi "TextModel got disposed before ... model got reset".
+            keepCurrentOriginalModel
+            keepCurrentModifiedModel
             options={{
               readOnly: true,
               automaticLayout: true,

@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   NotFoundException,
+  ForbiddenException,
   Res,
 } from '@nestjs/common';
 import { Response } from 'express';
@@ -18,6 +19,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SubmissionsService } from './submissions.service';
+import { GradebookService, AttemptPolicy } from './gradebook.service';
 import { CreateSubmissionDto } from './dto/create-submission.dto';
 import { GradingWorkerConsumer } from '../queue/grading-worker.consumer';
 import { SubmissionRecord } from '../database/submission.entity';
@@ -27,6 +29,7 @@ export class SubmissionsController {
   constructor(
     private readonly submissionsService: SubmissionsService,
     private readonly workerConsumer: GradingWorkerConsumer,
+    private readonly gradebookService: GradebookService,
   ) {}
 
   /**
@@ -77,6 +80,51 @@ export class SubmissionsController {
     return {
       statusCode: HttpStatus.OK,
       data: stats,
+    };
+  }
+
+  /**
+   * Gradebook with ONE row per student per assignment.
+   *
+   * A student may upload several times, but only one attempt becomes the mark of record. The
+   * policy decides which: `LAST` (default, the most recent graded attempt), `BEST` (highest
+   * score) or `FIRST` (earliest). Declared before `:id` so the literal path is matched first.
+   */
+  @Get('gradebook')
+  public async getGradebook(
+    @Query('assignmentId') assignmentId?: string,
+    @Query('studentId') studentId?: string,
+    @Query('policy') policy?: string,
+    @Query('requesterRole') requesterRole?: string,
+  ) {
+    // BR-04: bảng điểm chỉ dành cho giảng viên / HOD / quản trị viên.
+    const role = (requesterRole || '').toUpperCase();
+    if (role && !['LECTURER', 'HOD', 'ADMIN'].includes(role)) {
+      throw new ForbiddenException('Không có quyền xem bảng điểm chốt.');
+    }
+
+    const normalized = (policy || 'LAST').toUpperCase();
+    const allowed: AttemptPolicy[] = ['LAST', 'BEST', 'FIRST'];
+    const resolved: AttemptPolicy = allowed.includes(normalized as AttemptPolicy)
+      ? (normalized as AttemptPolicy)
+      : 'LAST';
+
+    const result = await this.gradebookService.buildGradebook({
+      assignmentId,
+      studentId,
+      policy: resolved,
+    });
+
+    return {
+      statusCode: HttpStatus.OK,
+      message:
+        result.policy === 'BEST'
+          ? `Bảng điểm chốt theo điểm cao nhất: ${result.totalRows} dòng từ ${result.totalSubmissionsConsidered} bài nộp.`
+          : result.policy === 'FIRST'
+            ? `Bảng điểm chốt theo lần nộp đầu: ${result.totalRows} dòng từ ${result.totalSubmissionsConsidered} bài nộp.`
+            : `Bảng điểm chốt theo bài nộp cuối: ${result.totalRows} dòng từ ${result.totalSubmissionsConsidered} bài nộp.`,
+      total: result.totalRows,
+      data: result,
     };
   }
 

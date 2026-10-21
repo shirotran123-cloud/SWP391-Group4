@@ -102,6 +102,10 @@ interface SubmissionRecord {
     status?: string;
   } | null;
   sourceCode?: string;
+  /** How many times the student submitted this assignment; 1 means a single attempt. */
+  attemptsCount?: number;
+  /** Explanation of why the counted attempt differs from the newest one. */
+  attemptNote?: string;
 }
 
 const initialCourses: CourseItem[] = [
@@ -303,12 +307,107 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setDetailModalOpen(true);
   };
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  /** Which attempt counts when a student submits the same assignment more than once. */
+  const [attemptPolicy, setAttemptPolicy] = useState<'LAST' | 'BEST' | 'FIRST'>('LAST');
+  /** One-line summary of how many attempts the gradebook collapsed. */
+  const [gradebookSummary, setGradebookSummary] = useState<string>('');
 
-  const fetchRealSubmissions = async () => {
+  /**
+   * Loads the gradebook: ONE row per student per assignment.
+   *
+   * A student may submit several times; `policy` decides which attempt is the mark of record
+   * (LAST / BEST / FIRST). The row still carries every attempt so the lecturer can see how the
+   * final mark was reached, and `attemptsCount` makes a resubmission visible at a glance.
+   *
+   * The gradebook endpoint only knows the counted attempt, so the plagiarism detail of that
+   * attempt is filled in afterwards from the plain submissions list.
+   */
+  const fetchRealSubmissions = async (policy: 'LAST' | 'BEST' | 'FIRST' = attemptPolicy) => {
     setLoadingSubmissions(true);
+    setAttemptPolicy(policy);
     try {
       const token = localStorage.getItem('aita_token') || '';
+      const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
       // requesterRole=LECTURER → API trả đầy đủ plagiarism data (BR-04)
+      const res = await fetch(
+        `http://localhost:3000/api/v1/submissions/gradebook?policy=${policy}&requesterRole=LECTURER`,
+        { headers: authHeaders },
+      );
+      if (res.ok) {
+        const json = await res.json();
+        const book = json.data || {};
+        const rows: any[] = Array.isArray(book.entries) ? book.entries : [];
+
+        // The gradebook holds one row per student+assignment; the plain list carries the
+        // plagiarism detail, so both are fetched and merged on the counted submission id.
+        let detailById = new Map<string, any>();
+        try {
+          const detailRes = await fetch(
+            'http://localhost:3000/api/v1/submissions?requesterRole=LECTURER',
+            { headers: authHeaders },
+          );
+          if (detailRes.ok) {
+            const detailJson = await detailRes.json();
+            const detailList = detailJson.data || detailJson || [];
+            if (Array.isArray(detailList)) {
+              for (const d of detailList) {
+                const key = d.submissionId || d.id;
+                if (key) detailById.set(key, d);
+              }
+            }
+          }
+        } catch {
+          // The gradebook still works without the plagiarism overlay.
+        }
+
+        const mapped: SubmissionRecord[] = rows.map((row: any) => {
+          const detail = detailById.get(row.countedSubmissionId) || {};
+          const sim = detail.similarityRate ?? detail.result?.similarityRate ?? 0;
+          const pStatus = detail.plagiarismStatus ||
+            (sim >= 70 ? 'ĐẠO VĂN' : sim >= 40 ? 'NGHI VẤN' : 'AN TOÀN');
+          const rawAssignId = row.assignmentId || row.assignmentTitle || '';
+          const matchedAssign = publishedAssignments.find(
+            (a) => a.id === rawAssignId || a.title === rawAssignId
+          );
+          return {
+            id: row.countedSubmissionId,
+            studentId: row.studentId || 'SE-N/A',
+            studentName: row.studentName || row.studentId || 'Sinh viên',
+            courseId: row.courseId || matchedAssign?.courseId || '',
+            assignmentId: row.assignmentId || rawAssignId,
+            assignmentTitle: row.assignmentTitle || matchedAssign?.title || rawAssignId || 'Bài nộp',
+            fileName: detail.fileName || `${row.countedSubmissionId}.zip`,
+            submittedAt: row.submittedAt ? new Date(row.submittedAt).toLocaleString('vi-VN') : 'Vừa xong',
+            testcaseScore: row.score !== null && row.score !== undefined
+              ? Math.round(row.score * 0.7 * 10) / 10
+              : 0,
+            cleanCodeScore: detail.result?.aiRating?.cleanCodeScore ?? 8.5,
+            solidScore: 8.0,
+            finalScore: row.score ?? 0,
+            plagiarismStatus: pStatus as any,
+            similarityRate: sim,
+            plagiarismMatch: detail.plagiarismMatch || detail.result?.plagiarismMatch || null,
+            sourceCode: detail.sourceCode || detail.result?.sourceCode,
+            // Extra fields the table uses to explain which attempt counts.
+            attemptsCount: row.attemptsCount ?? 1,
+            attemptNote: row.note as string | undefined,
+          };
+        });
+
+        setRealSubmissions(mapped);
+        setGradebookSummary(
+          `${book.totalRows ?? mapped.length} dòng điểm · ${book.totalSubmissionsConsidered ?? 0} lượt nộp · ` +
+            `${book.supersededCount ?? 0} lượt bị thay thế`,
+        );
+        return;
+      }
+    } catch {
+      // ignore
+    }
+
+    // ── Fallback: không có bảng điểm chốt thì dùng danh sách bài nộp thô ──────
+    try {
+      const token = localStorage.getItem('aita_token') || '';
       const res = await fetch('http://localhost:3000/api/v1/submissions?requesterRole=LECTURER', {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
@@ -2557,9 +2656,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                               style={{
                                 padding: '4px 10px',
                                 borderRadius: '6px',
-                                backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                                border: '1px solid rgba(239, 68, 68, 0.25)',
-                                color: '#dc2626',
+                                backgroundColor: 'var(--state-bad-bg)',
+                                border: '1px solid var(--state-bad-border)',
+                                color: 'var(--state-bad)',
                                 fontSize: '11.5px',
                                 fontWeight: 600,
                                 cursor: 'pointer',
@@ -2798,7 +2897,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   gap: '6px',
                   padding: '8px 16px',
                   borderRadius: '8px',
-                  background: scanningPlagiarism ? 'rgba(239,68,68,0.15)' : 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)',
+                  background: scanningPlagiarism ? 'var(--state-bad-bg)' : 'linear-gradient(135deg, #b42318 0%, #8f1d13 100%)',
                   border: 'none',
                   color: '#ffffff',
                   fontSize: '12px',
@@ -2956,32 +3055,86 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               </div>
             </div>
 
-            <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+            <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'var(--state-ok-bg)', border: '1px solid var(--state-ok-border)' }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                 Điểm Trung Bình
               </span>
-              <div style={{ fontSize: '20px', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--state-ok)', marginTop: '2px' }}>
                 {avgFilteredScore} / 10
               </div>
             </div>
 
-            <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.15)' }}>
+            <div style={{ padding: '12px 16px', borderRadius: '8px', background: 'var(--state-ok-bg)', border: '1px solid var(--state-ok-border)' }}>
               <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                 Liêm Chính An Toàn
               </span>
-              <div style={{ fontSize: '20px', fontWeight: 800, color: '#10b981', marginTop: '2px' }}>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--state-ok)', marginTop: '2px' }}>
                 {cleanFilteredCount} bài
               </div>
             </div>
 
-            <div style={{ padding: '12px 16px', borderRadius: '8px', background: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? 'rgba(239, 68, 68, 0.08)' : 'rgba(11, 18, 32, 0.03)', border: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid var(--border-soft)' }}>
-              <span style={{ fontSize: '11px', color: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? '#ef4444' : 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
+            <div style={{ padding: '12px 16px', borderRadius: '8px', background: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? 'var(--state-bad-bg)' : 'rgba(11, 18, 32, 0.03)', border: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? '1px solid var(--state-bad-border)' : '1px solid var(--border-soft)' }}>
+              <span style={{ fontSize: '11px', color: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? 'var(--state-bad)' : 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>
                 Cảnh Báo Đạo Văn
               </span>
-              <div style={{ fontSize: '20px', fontWeight: 800, color: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? '#ef4444' : 'var(--text-main)', marginTop: '2px' }}>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: (plagiarizedFilteredCount + suspectedFilteredCount) > 0 ? 'var(--state-bad)' : 'var(--text-main)', marginTop: '2px' }}>
                 {plagiarizedFilteredCount} đạo văn • {suspectedFilteredCount} nghi vấn
               </div>
             </div>
+          </div>
+
+          {/* CHÍNH SÁCH CHỐT ĐIỂM: một dòng điểm duy nhất cho mỗi sinh viên + bài tập */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              flexWrap: 'wrap',
+              padding: '12px 16px',
+              marginBottom: '16px',
+              borderRadius: '10px',
+              background: 'rgba(37, 99, 235, 0.05)',
+              border: '1px solid rgba(37, 99, 235, 0.16)',
+            }}
+          >
+            <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-main)' }}>
+              Chính sách chốt điểm
+            </span>
+            <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+              Khi sinh viên nộp nhiều lần, tính điểm theo:
+            </span>
+            {([
+              { key: 'LAST', label: 'Bài nộp cuối' },
+              { key: 'BEST', label: 'Điểm cao nhất' },
+              { key: 'FIRST', label: 'Bài nộp đầu' },
+            ] as const).map((opt) => (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => void fetchRealSubmissions(opt.key)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  border:
+                    attemptPolicy === opt.key
+                      ? '1px solid var(--blue-600)'
+                      : '1px solid var(--border-color)',
+                  background:
+                    attemptPolicy === opt.key ? 'rgba(37, 99, 235, 0.12)' : 'rgba(11, 18, 32, 0.03)',
+                  color: attemptPolicy === opt.key ? 'var(--blue-200)' : 'var(--text-muted)',
+                }}
+              >
+                {opt.label}
+              </button>
+            ))}
+            {gradebookSummary && (
+              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginLeft: 'auto' }}>
+                {gradebookSummary}
+              </span>
+            )}
           </div>
 
           {/* Bảng Kết Quả Quét Đạo Văn Toàn Lớp (hiện khi có kết quả) */}
@@ -2989,12 +3142,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <div style={{ marginBottom: '24px', padding: '20px', borderRadius: '12px', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.25)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                 <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#ef4444', marginBottom: '4px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 700, color: 'var(--state-bad)', marginBottom: '4px' }}>
                     ⚠️ Kết Quả Quét Đạo Văn AST Winnowing &mdash; {plagiarismScanResult.assignmentId}
                   </h3>
                   <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                     Đã phân tích {plagiarismScanResult.totalSubmissions} bài nộp • {plagiarismScanResult.totalPairsCompared} cặp so sánh •
-                    <span style={{ color: plagiarismScanResult.flaggedPairsCount > 0 ? '#ef4444' : '#10b981', fontWeight: 700 }}>
+                    <span style={{ color: plagiarismScanResult.flaggedPairsCount > 0 ? 'var(--state-bad)' : 'var(--state-ok)', fontWeight: 700 }}>
                       {' '}{plagiarismScanResult.flaggedPairsCount} cặp cảnh báo
                     </span>
                   </p>
@@ -3039,7 +3192,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         <span style={{
                           fontSize: '16px',
                           fontWeight: 800,
-                          color: report.similarityRate >= 80 ? '#ef4444' : '#f59e0b',
+                          color: report.similarityRate >= 80 ? 'var(--state-bad)' : 'var(--state-warn)',
                         }}>
                           {report.similarityRate.toFixed(1)}%
                         </span>
@@ -3048,8 +3201,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           fontWeight: 700,
                           padding: '3px 8px',
                           borderRadius: '6px',
-                          background: report.similarityRate >= 80 ? 'rgba(239,68,68,0.2)' : 'rgba(245,158,11,0.2)',
-                          color: report.similarityRate >= 80 ? '#ef4444' : '#f59e0b',
+                          background: report.similarityRate >= 80 ? 'var(--state-bad-bg)' : 'var(--state-warn-bg)',
+                          color: report.similarityRate >= 80 ? 'var(--state-bad)' : 'var(--state-warn)',
                         }}>
                           {report.status}
                         </span>
@@ -3071,7 +3224,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             style={{
                               padding: '4px 10px',
                               borderRadius: '6px',
-                              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                              background: 'linear-gradient(135deg, #2563eb, #1e40af)',
                               border: 'none',
                               color: '#fff',
                               fontSize: '11px',
@@ -3087,7 +3240,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   ))}
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: '20px', color: '#10b981', fontWeight: 600 }}>
+                <div style={{ textAlign: 'center', padding: '20px', color: 'var(--state-ok)', fontWeight: 600 }}>
                   ✅ Không phát hiện đạo văn. Tất cả cặp bài đều dưới ngưỡng cảnh báo 65%.
                 </div>
               )}
@@ -3100,6 +3253,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '12px 16px' }}>Mã Nộp</th>
                   <th style={{ padding: '12px 16px' }}>Sinh Viên</th>
+                  <th style={{ padding: '12px 16px' }}>Lượt Nộp</th>
                   <th style={{ padding: '12px 16px' }}>File Nén (.zip)</th>
                   <th style={{ padding: '12px 16px' }}>Thời Gian</th>
                   <th style={{ padding: '12px 16px' }}>Testcase</th>
@@ -3114,7 +3268,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <tbody>
                 {filteredSubmissions.length === 0 ? (
                   <tr>
-                    <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)', fontSize: '13px' }}>
+                    <td colSpan={12} style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)', fontSize: '13px' }}>
                       Không có bài nộp nào phù hợp với Lớp học phần hoặc Bài tập đang chọn.
                     </td>
                   </tr>
@@ -3130,7 +3284,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           ? '4px solid #f59e0b'
                           : '4px solid transparent',
                       backgroundColor: sub.plagiarismStatus === 'ĐẠO VĂN'
-                        ? 'rgba(239, 68, 68, 0.08)'
+                        ? 'var(--state-bad-bg)'
                         : sub.plagiarismStatus === 'NGHI VẤN'
                           ? 'rgba(245, 158, 11, 0.05)'
                           : 'transparent',
@@ -3142,6 +3296,29 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{sub.studentName}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{sub.studentId}</div>
+                    </td>
+                    <td style={{ padding: '14px 16px' }}>
+                      {/* How many times this student submitted the assignment. More than one
+                          means the row shows the attempt chosen by the policy, not the only one. */}
+                      <span
+                        style={{
+                          fontSize: '11.5px',
+                          fontWeight: 700,
+                          padding: '3px 9px',
+                          borderRadius: '8px',
+                          background:
+                            (sub.attemptsCount ?? 1) > 1 ? 'var(--state-warn-bg)' : 'rgba(11, 18, 32, 0.05)',
+                          color: (sub.attemptsCount ?? 1) > 1 ? 'var(--state-warn)' : 'var(--text-muted)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {(sub.attemptsCount ?? 1) > 1 ? `${sub.attemptsCount} lần` : '1 lần'}
+                      </span>
+                      {sub.attemptNote && (
+                        <div style={{ fontSize: '10.5px', color: 'var(--text-dim)', marginTop: '4px', maxWidth: '190px' }}>
+                          {sub.attemptNote}
+                        </div>
+                      )}
                     </td>
                     <td style={{ padding: '14px 16px', color: '#1e40af', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
@@ -3156,13 +3333,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     <td style={{ padding: '14px 16px', fontWeight: 700, fontSize: '14px', color: 'var(--text-main)' }}>
                       <div>{sub.finalScore} / 10</div>
                       {sub.plagiarismStatus === 'ĐẠO VĂN' && (
-                        <div style={{ fontSize: '10.5px', color: '#ef4444', fontWeight: 700, marginTop: '2px' }}>
+                        <div style={{ fontSize: '10.5px', color: 'var(--state-bad)', fontWeight: 700, marginTop: '2px' }}>
                           ⚠️ Trùng {sub.similarityRate}%
                         </div>
                       )}
                     </td>
                     {/* Cột Similarity Rate */}
-                    <td style={{ padding: '14px 16px', fontWeight: 800, color: sub.similarityRate >= 70 ? '#ef4444' : sub.similarityRate >= 40 ? '#f59e0b' : 'var(--text-muted)' }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 800, color: sub.similarityRate >= 70 ? 'var(--state-bad)' : sub.similarityRate >= 40 ? 'var(--state-warn)' : 'var(--text-muted)' }}>
                       {sub.similarityRate > 0 ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           {sub.similarityRate >= 70 && '⚠️'} {sub.similarityRate}%
@@ -3181,16 +3358,16 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           fontWeight: 800,
                           backgroundColor:
                             sub.plagiarismStatus === 'ĐẠO VĂN'
-                              ? '#ef4444'
+                              ? 'var(--state-bad)'
                               : sub.plagiarismStatus === 'NGHI VẤN'
-                              ? 'rgba(245, 158, 11, 0.15)'
-                              : 'rgba(16, 185, 129, 0.12)',
+                              ? 'var(--state-warn-bg)'
+                              : 'var(--state-ok-bg)',
                           color:
                             sub.plagiarismStatus === 'ĐẠO VĂN'
                               ? '#ffffff'
                               : sub.plagiarismStatus === 'NGHI VẤN'
-                              ? '#f59e0b'
-                              : '#10b981',
+                              ? 'var(--state-warn)'
+                              : 'var(--state-ok)',
                           boxShadow: sub.plagiarismStatus === 'ĐẠO VĂN' ? '0 1px 4px rgba(239,68,68,0.4)' : 'none',
                         }}
                       >
@@ -3246,8 +3423,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             padding: '6px 12px',
                             borderRadius: '8px',
                             background: sub.similarityRate >= 80
-                              ? 'linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)'
-                              : 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                              ? 'linear-gradient(135deg, #b42318 0%, #8f1d13 100%)'
+                              : 'linear-gradient(135deg, #7d4f00 0%, #5c3a00 100%)',
                             border: 'none',
                             color: '#ffffff',
                             fontSize: '12px',

@@ -205,6 +205,10 @@ export const MonacoDiffViewer: React.FC<MonacoDiffViewerProps> = ({
             beforeMount={defineTheme}
             original={plagiarismMatch?.sourceCodeA || sourceCode}
             modified={plagiarismMatch?.sourceCodeB || ''}
+            // Giữ model cũ lại khi nội dung đổi, tránh Monaco dispose model trước lúc
+            // DiffEditorWidget kịp reset → lỗi "TextModel got disposed before ... model got reset".
+            keepCurrentOriginalModel
+            keepCurrentModifiedModel
             options={
               {
                 ...editorOptions,
