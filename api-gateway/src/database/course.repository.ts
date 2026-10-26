@@ -434,23 +434,28 @@ export class CourseRepository implements OnModuleInit {
     }
 
     // 1. Kiểm tra validation sơ bộ trước giao dịch
-    const seenCodes = new Set<string>();
-    const seenEmails = new Set<string>();
+    const seenCodes = new Map<string, number>();
+    const seenEmails = new Map<string, number>();
 
     for (let i = 0; i < students.length; i++) {
       const s = students[i];
       const row = i + 1;
-      if (!s.studentCode || !s.email) {
-        throw new Error(`Dòng số ${row}: Thiếu Mã số sinh viên hoặc Email!`);
+      const code = (s.studentCode || '').trim();
+      const email = (s.email || '').trim().toLowerCase();
+
+      if (!code || !email) {
+        throw new Error(`Dòng số ${row}: Thiếu Mã số sinh viên hoặc Email bắt buộc!`);
       }
-      if (seenCodes.has(s.studentCode)) {
-        throw new Error(`Dòng số ${row}: Phát hiện MSSV trùng lặp [${s.studentCode}] trong file Excel!`);
+      if (seenCodes.has(code)) {
+        const firstRow = seenCodes.get(code);
+        throw new Error(`Dòng số ${row}: Mã số sinh viên [${code}] bị trùng lặp với dòng số ${firstRow} trong file tải lên!`);
       }
-      if (seenEmails.has(s.email.toLowerCase())) {
-        throw new Error(`Dòng số ${row}: Phát hiện Email trùng lặp [${s.email}] trong file Excel!`);
+      if (seenEmails.has(email)) {
+        const firstRow = seenEmails.get(email);
+        throw new Error(`Dòng số ${row}: Email [${s.email}] bị trùng lặp với dòng số ${firstRow} trong file tải lên!`);
       }
-      seenCodes.add(s.studentCode);
-      seenEmails.add(s.email.toLowerCase());
+      seenCodes.set(code, row);
+      seenEmails.set(email, row);
     }
 
     // 2. Mở SQL Transaction trong PostgreSQL 15
@@ -534,7 +539,18 @@ export class CourseRepository implements OnModuleInit {
         } catch (err: any) {
           await client.query('ROLLBACK');
           this.logger.error(`❌ [CourseRepository:ACID] SQL TRANSACTION ROLLBACK 100%: ${err.message}`);
-          throw new Error(`[GIAO DỊCH THẤT BẠI - ĐÃ ROLLBACK 100%]: ${err.message}`);
+
+          let specificReason = err.message || 'Lỗi không xác định trong phiên giao dịch SQL.';
+          if (err.code === '23505') {
+            if (err.detail?.includes('email') || err.message?.includes('users_email_key')) {
+              specificReason = `Xung đột dữ liệu: Email đã được liên kết với một tài khoản khác trong CSDL (${err.detail || 'users_email_key'}).`;
+            } else if (err.detail?.includes('student_code') || err.message?.includes('users_student_code_key')) {
+              specificReason = `Xung đột dữ liệu: Mã số sinh viên đã tồn tại trên hệ thống (${err.detail || 'users_student_code_key'}).`;
+            } else {
+              specificReason = `Xung đột ràng buộc dữ liệu duy nhất trong CSDL: ${err.detail || err.message}`;
+            }
+          }
+          throw new Error(specificReason);
         } finally {
           client.release();
         }

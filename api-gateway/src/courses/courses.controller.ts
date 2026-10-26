@@ -8,6 +8,7 @@ import {
   Body,
   HttpCode,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
@@ -65,11 +66,15 @@ export class CoursesController {
     @Body() body: any,
   ) {
     const list = Array.isArray(body) ? body : body?.students || [];
-    const result = await this.coursesService.bulkImportStudents(id, list);
-    return {
-      statusCode: HttpStatus.CREATED,
-      ...result,
-    };
+    try {
+      const result = await this.coursesService.bulkImportStudents(id, list);
+      return {
+        statusCode: HttpStatus.CREATED,
+        ...result,
+      };
+    } catch (err: any) {
+      throw new BadRequestException(err.message || 'Lỗi giao dịch SQL khi nhập danh sách sinh viên!');
+    }
   }
 
   @Get(':id')

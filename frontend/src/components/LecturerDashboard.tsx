@@ -650,7 +650,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   // Gemini AI Real State
   const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
-    return localStorage.getItem('aita_gemini_api_key') || '';
+    return (
+      (import.meta as any).env?.VITE_GEMINI_API_KEY ||
+      localStorage.getItem('aita_gemini_api_key') ||
+      ''
+    );
   });
   const [selectedAiModel, setSelectedAiModel] = useState<string>('auto');
   const [availableModelList, setAvailableModelList] = useState<string[]>([]);
@@ -1240,6 +1244,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
     try {
       const courseIdToUse = targetCourseId || 'CRS-SWP391';
+      const targetCourseObj = courses.find((c) => c.courseId === courseIdToUse);
+      const courseLabel = targetCourseObj ? `${targetCourseObj.courseCode} (${targetCourseObj.courseName})` : courseIdToUse;
+
       const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToUse}/bulk-import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1248,12 +1255,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.message || data.error || 'Lỗi giao dịch SQL!');
+        const rawMsg = Array.isArray(data.message) ? data.message.join('; ') : (data.message || data.error || 'Lỗi giao dịch SQL!');
+        throw new Error(rawMsg);
       }
 
       setSimulatedRollback(false);
       setExcelStatus(
-        `GIAO DỊCH SQL THÀNH CÔNG (100% COMMIT): Đã nạp và ghi danh thành công ${studentsToImport.length} sinh viên vào lớp [${courseIdToUse}] trong PostgreSQL 15! Sinh viên đăng nhập vào sẽ thấy môn học ngay.`
+        `IMPORT THÀNH CÔNG (100% COMMIT): Đã nạp và ghi danh thành công ${studentsToImport.length} sinh viên vào lớp [${courseLabel}] trong cơ sở dữ liệu PostgreSQL! Sinh viên có thể đăng nhập ngay để thấy môn học.`
       );
       setCourses((prev) =>
         prev.map((c) =>
@@ -1268,8 +1276,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       }
     } catch (err: any) {
       setSimulatedRollback(true);
+      const cleanReason = (err.message || 'Lỗi không xác định')
+        .replace(/^\[GIAO DỊCH THẤT BẠI - ĐÃ ROLLBACK 100%\]:\s*/i, '')
+        .replace(/^Internal server error/i, 'Không thể hoàn tất giao dịch do dữ liệu không hợp lệ hoặc máy chủ bận');
+
       setExcelStatus(
-        `GIAO DỊCH SQL THẤT BẠI: ${err.message}. Hệ thống đã tự động kích hoạt 100% SQL TRANSACTION ROLLBACK (R06) bảo toàn dữ liệu PostgreSQL, không có bất kỳ bản ghi mồ côi nào!`
+        `IMPORT THẤT BẠI: ${cleanReason}. Hệ thống đã tự động kích hoạt 100% SQL TRANSACTION ROLLBACK (R06) bảo toàn dữ liệu PostgreSQL, không có bất kỳ bản ghi mồ côi nào bị lưu!`
       );
     } finally {
       setExcelLoading(false);
@@ -2857,16 +2869,46 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           {excelStatus && (
             <div
               style={{
-                padding: '16px 20px',
+                marginTop: '20px',
+                padding: '18px 22px',
                 borderRadius: '12px',
-                backgroundColor: simulatedRollback ? 'rgba(11, 18, 32, 0.06)' : 'rgba(37, 99, 235, 0.08)',
-                border: `1.5px solid ${simulatedRollback ? 'rgba(11, 18, 32, 0.13)' : 'rgba(37, 99, 235, 0.18)'}`,
-                color: simulatedRollback ? 'var(--text-main)' : '#2563eb',
+                backgroundColor: simulatedRollback ? 'rgba(239, 68, 68, 0.06)' : 'rgba(16, 185, 129, 0.06)',
+                border: `1.5px solid ${simulatedRollback ? 'rgba(239, 68, 68, 0.35)' : 'rgba(16, 185, 129, 0.35)'}`,
+                color: simulatedRollback ? '#991b1b' : '#065f46',
                 fontSize: '14px',
                 lineHeight: '1.6',
+                boxShadow: simulatedRollback ? '0 2px 10px rgba(239, 68, 68, 0.08)' : '0 2px 10px rgba(16, 185, 129, 0.08)',
               }}
             >
-              {excelStatus}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <span style={{ fontSize: '22px', lineHeight: 1 }}>{simulatedRollback ? '❌' : '✅'}</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 700, fontSize: '15px', marginBottom: '8px', color: simulatedRollback ? '#b91c1c' : '#047857' }}>
+                    {simulatedRollback ? 'GIAO DỊCH SQL THẤT BẠI — ĐÃ KÍCH HOẠT ROLLBACK 100% (R06)' : 'GIAO DỊCH SQL THÀNH CÔNG — 100% COMMIT'}
+                  </div>
+
+                  {simulatedRollback ? (
+                    <div>
+                      <div style={{ marginBottom: '10px', padding: '12px 16px', backgroundColor: '#ffffff', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#7f1d1d' }}>
+                        <div style={{ fontWeight: 700, marginBottom: '4px', color: '#b91c1c' }}>🔍 Nguyên nhân thất bại:</div>
+                        <div style={{ fontWeight: 500, fontSize: '13.5px', color: '#991b1b' }}>
+                          {excelStatus.replace(/^IMPORT THẤT BẠI:\s*/i, '').replace(/\.\s*Hệ thống đã tự động kích hoạt.*$/i, '')}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '12.5px', color: '#991b1b', opacity: 0.95 }}>
+                        🛡️ <strong>Bảo toàn dữ liệu (R06 ACID):</strong> Toàn bộ thao tác ghi trước đó trong phiên đã được PostgreSQL Rollback 100%. Không có bất kỳ bản ghi mồ côi nào bị lưu lại. Vui lòng kiểm tra và sửa lại dòng bị lỗi trong file rồi import lại.
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ marginBottom: '6px' }}>{excelStatus.replace(/^IMPORT THÀNH CÔNG \([^)]*\):\s*/i, '')}</div>
+                      <div style={{ fontSize: '12.5px', color: '#047857', opacity: 0.95 }}>
+                        ✨ Dữ liệu sinh viên và danh sách thành viên lớp học đã được đồng bộ 100% vào hệ thống.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>
