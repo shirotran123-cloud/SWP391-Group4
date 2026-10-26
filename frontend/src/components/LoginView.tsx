@@ -36,7 +36,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [redirectUriConfig, setRedirectUriConfig] = useState<string>(() => {
     return localStorage.getItem('aita_google_redirect_uri') || window.location.origin;
   });
-  const [directEmailInput, setDirectEmailInput] = useState<string>('linhcampochia@gmail.com');
+  const [directEmailInput, setDirectEmailInput] = useState<string>('giangvien.edu@gmail.com');
   const [showConfig, setShowConfig] = useState(false);
   const [showTester, setShowTester] = useState(false);
 
@@ -423,37 +423,75 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '4px' }}>
+                Chọn nhanh tài khoản Demo (Đã cấp quyền trong hệ thống):
+              </div>
+
               {[
-                { email: 'linhcampochia@gmail.com', name: 'Linh Campochia', note: 'Tài khoản của bạn • Student', strong: true },
-                { email: 'phaithayj@gmail.com', name: 'Vinh Nguyễn Hoàng', note: 'Hợp lệ • Student' },
-                { email: 'mochibunnyyy123@gmail.com', name: 'Viktor Wilson', note: 'Hợp lệ • Student' },
-                { email: 'linhcampochia@gmail.com', name: 'Linh Cam Po Chia', note: 'Đã cấp quyền • Giảng Viên', strong: true },
-                { email: 'giangvien.edu@gmail.com', name: 'ThS. Giảng Viên AITA', note: 'Hợp lệ • Lecturer' },
-                { email: 'admin@aita.fpt.edu.vn', name: 'Quản Trị Viên AITA', note: 'Hợp lệ • Admin Quản Trị', strong: true },
-                { email: 'admin.aita@gmail.com', name: 'Quản Trị Viên AITA (Gmail)', note: 'Hợp lệ • Admin Gmail', strong: true },
+                { email: 'giangvien.edu@gmail.com', name: 'ThS. Giảng Viên AITA', role: 'INSTRUCTOR', note: '👨‍🏫 Giảng Viên • Đã cấu hình đề bài & rubric', strong: true },
+                { email: 'phaithayj@gmail.com', name: 'Nguyễn Hoàng Vinh', role: 'STUDENT', note: '🎓 Sinh Viên • Bài nộp sạch (Pass 100% testcase)', strong: true },
+                { email: 'linhcampochia@gmail.com', name: 'Linh Campochia', role: 'STUDENT', note: '🎓 Sinh Viên • Tài khoản thực nghiệm SE170002' },
+                { email: 'admin.aita@gmail.com', name: 'Quản Trị Viên AITA', role: 'ADMIN', note: '🛡️ Quản Trị Viên • Toàn quyền cấu hình & giám sát', strong: true },
+                { email: 'trungdt@fe.edu.vn', name: 'ThS. Đinh Thành Trung', role: 'INSTRUCTOR', note: '👨‍🏫 Giảng Viên Bộ môn SE' },
+                { email: 'mochibunnyyy123@gmail.com', name: 'Viktor Wilson', role: 'STUDENT', note: '🎓 Sinh Viên SE170003' },
               ].map((a, i) => (
                 <button
                   key={a.email + i}
                   type="button"
-                  onClick={() => verifyEmailWithBackend(a.email, a.name)}
+                  onClick={() => {
+                    setDirectEmailInput(a.email);
+                    verifyEmailWithBackend(a.email, a.name);
+                  }}
                   className={'login-demo-btn' + (a.strong ? ' login-demo-btn-strong' : '')}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    textAlign: 'left',
+                  }}
                 >
-                  <UserCheck size={14} style={{ flexShrink: 0 }} />
-                  <span>
-                    <strong>{a.email}</strong> ({a.note})
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                    <UserCheck size={14} style={{ flexShrink: 0, color: a.role === 'INSTRUCTOR' ? '#2563eb' : a.role === 'ADMIN' ? '#7c3aed' : '#059669' }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <strong>{a.email}</strong>
+                    </span>
+                  </div>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>
+                    {a.note}
                   </span>
                 </button>
               ))}
 
+              <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '6px' }}>
+                Thử nghiệm cơ chế bảo vệ danh tính (BR-01 Access Control):
+              </div>
+
               <button
                 type="button"
-                onClick={() => verifyEmailWithBackend('chua_dang_ky@gmail.com', 'Người Lạ')}
+                onClick={() => {
+                  setDirectEmailInput('chua_dang_ky@gmail.com');
+                  verifyEmailWithBackend('chua_dang_ky@gmail.com', 'Người Lạ');
+                }}
                 className="login-demo-btn login-demo-btn-muted"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  borderRadius: '8px',
+                }}
               >
-                <UserX size={14} style={{ flexShrink: 0 }} />
-                <span>
-                  <strong>chua_dang_ky@gmail.com</strong> (Chưa có trong hệ thống • Bị chặn)
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <UserX size={14} style={{ flexShrink: 0, color: '#dc2626' }} />
+                  <span>
+                    <strong>chua_dang_ky@gmail.com</strong>
+                  </span>
+                </div>
+                <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 600 }}>
+                  Chưa đăng ký • Sẽ bị chặn (401/403)
                 </span>
               </button>
             </div>

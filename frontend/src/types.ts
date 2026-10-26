@@ -6,6 +6,7 @@ export interface Task {
   maxSizeMb: number;
   allowedExtensions: string[];
   description: string;
+  allowedLanguages?: string[];
 }
 
 export type GradingStepStatus = 'pending' | 'in_progress' | 'passed' | 'failed';

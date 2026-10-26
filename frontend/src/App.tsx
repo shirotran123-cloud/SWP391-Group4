@@ -22,6 +22,72 @@ function generateFallbackSubId(): string {
   return 'SUB-' + Date.now().toString(36).toUpperCase();
 }
 
+/**
+ * Tự động nhận diện ngôn ngữ lập trình của bài nộp (Java, Python, C++, C# / .NET, C).
+ * Ưu tiên: phần mở rộng file trong zip -> signature mã nguồn -> danh sách allowedLanguages.
+ */
+function detectSubmissionLanguage(
+  file?: File,
+  extractedFilename?: string,
+  sourceCode?: string,
+  allowedLanguages?: string[],
+  explicitLanguage?: string
+): string {
+  // 1. Ưu tiên cao nhất: Lựa chọn ngôn ngữ rõ ràng của sinh viên từ dropdown
+  if (explicitLanguage && explicitLanguage !== 'auto') {
+    const norm = explicitLanguage.toLowerCase().trim();
+    if (norm === 'csharp' || norm === 'cs') return 'dotnet';
+    return norm;
+  }
+
+  const candidateName = (extractedFilename || file?.name || '').toLowerCase();
+  let detected = '';
+
+  if (/\.(py|python)$/i.test(candidateName)) {
+    detected = 'python';
+  } else if (/\.(java)$/i.test(candidateName)) {
+    detected = 'java';
+  } else if (/\.(cpp|cc|cxx|hpp|h)$/i.test(candidateName)) {
+    detected = 'cpp';
+  } else if (/\.(cs)$/i.test(candidateName)) {
+    detected = 'dotnet'; // Backend docker-runner dùng 'dotnet' cho mã nguồn C#
+  } else if (/\.(c)$/i.test(candidateName)) {
+    detected = 'c';
+  }
+
+  // 2. Phân tích signature nội dung mã nguồn nếu tên file chưa rõ ràng
+  if (!detected && sourceCode && sourceCode.trim().length > 0) {
+    const code = sourceCode;
+    if (code.includes('def ') || /import\s+sys|import\s+os|from\s+\w+\s+import|if\s+__name__\s*==|print\s*\(/.test(code)) {
+      detected = 'python';
+    } else if (/#include\s*<iostream>|std::cout|std::cin|cout\s*<<|cin\s*>>|using\s+namespace\s+std|#include\s*<vector>|#include\s*<algorithm>/.test(code)) {
+      detected = 'cpp';
+    } else if (/using\s+System|namespace\s+\w+|Console\.Write|public\s+class\s+Program/.test(code)) {
+      detected = 'dotnet';
+    } else if (/public\s+class|System\.out\.print|import\s+java\./.test(code)) {
+      detected = 'java';
+    } else if (/#include\s*<stdio\.h>|printf\s*\(|scanf\s*\(/.test(code)) {
+      detected = 'c';
+    }
+  }
+
+  // 3. Đối soát với allowedLanguages của Assignment
+  if (allowedLanguages && allowedLanguages.length > 0) {
+    const normalizedAllowed = allowedLanguages.map((l) => l.toLowerCase());
+    if (detected && normalizedAllowed.includes(detected)) {
+      return detected;
+    }
+    if (detected === 'dotnet' && (normalizedAllowed.includes('csharp') || normalizedAllowed.includes('cs'))) {
+      return 'dotnet';
+    }
+    if (!detected && normalizedAllowed.length === 1) {
+      return normalizedAllowed[0] === 'csharp' ? 'dotnet' : normalizedAllowed[0];
+    }
+  }
+
+  return detected || 'java';
+}
+
 const mockTask: Task = {
   id: 'ASM-SWP-01',
   title: 'Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị',
@@ -181,6 +247,7 @@ export function App() {
   const submissionIdRef = useRef('');
   const currentUserRef = useRef<User | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const lastSubmissionRef = useRef<{ file?: File; task?: Task; lang?: string } | null>(null);
   currentUserRef.current = currentUser;
 
   // Khởi tạo kết nối Socket.IO
@@ -338,9 +405,18 @@ export function App() {
     }
   };
 
-  const handleSubmission = async (file?: File, benchmarkPairId?: number, submittedTask?: Task) => {
+  const handleSubmission = async (
+    file?: File,
+    benchmarkPairId?: number,
+    submittedTask?: Task,
+    explicitLanguage?: string
+  ) => {
     const activeTask = submittedTask || mockTask;
     if (!currentUser) return;
+
+    if (file) {
+      lastSubmissionRef.current = { file, task: activeTask, lang: explicitLanguage };
+    }
 
     setSteps(initialSteps.map((s) => ({ ...s, status: 'pending' })));
     setIsCompleted(false);
@@ -355,6 +431,7 @@ export function App() {
 
     let codeToGrade = mockSourceCodeStudent;
     let computedPlagiarism: PlagiarismMatch | undefined = undefined;
+    let extractedInnerFileName = '';
 
     if (benchmarkPairId !== undefined) {
       const pair = PlagiarismService.getBenchmarkPairs().find((p) => p.pairId === benchmarkPairId);
@@ -370,12 +447,33 @@ export function App() {
           const candidateKeys = Object.keys(zip.files).filter(
             (k) => !zip.files[k].dir && !k.startsWith('__MACOSX') && !k.endsWith('.DS_Store')
           );
-          const bestKey =
-            candidateKeys.find((k) => k.toLowerCase().includes('solution.')) ||
-            candidateKeys.find((k) => /\.(java|cpp|c|py|cs|js|ts)$/i.test(k)) ||
-            candidateKeys[0];
+
+          // Ưu tiên tìm file theo ngôn ngữ chỉ định rõ ràng
+          let bestKey: string | undefined;
+          if (explicitLanguage && explicitLanguage !== 'auto') {
+            const lang = explicitLanguage.toLowerCase().trim();
+            if (lang === 'cpp') {
+              bestKey = candidateKeys.find((k) => /\.(cpp|cc|cxx)$/i.test(k));
+            } else if (lang === 'dotnet' || lang === 'cs' || lang === 'csharp') {
+              bestKey = candidateKeys.find((k) => /\.(cs)$/i.test(k));
+            } else if (lang === 'python') {
+              bestKey = candidateKeys.find((k) => /\.(py)$/i.test(k));
+            } else if (lang === 'java') {
+              bestKey = candidateKeys.find((k) => /\.(java)$/i.test(k));
+            } else if (lang === 'c') {
+              bestKey = candidateKeys.find((k) => /\.(c)$/i.test(k));
+            }
+          }
+
+          if (!bestKey) {
+            bestKey =
+              candidateKeys.find((k) => k.toLowerCase().includes('solution.')) ||
+              candidateKeys.find((k) => /\.(java|cpp|cc|cxx|c|py|cs|js|ts)$/i.test(k)) ||
+              candidateKeys[0];
+          }
 
           if (bestKey && zip.files[bestKey]) {
+            extractedInnerFileName = bestKey;
             const unzippedText = await zip.files[bestKey].async('text');
             if (unzippedText && unzippedText.trim().length > 0) {
               codeToGrade = unzippedText;
@@ -399,84 +497,192 @@ export function App() {
       computedPlagiarism = undefined;
     }
 
+    const detectedLanguage = detectSubmissionLanguage(
+      file,
+      extractedInnerFileName,
+      codeToGrade,
+      activeTask.allowedLanguages,
+      explicitLanguage
+    );
+
     const token = localStorage.getItem('aita_token');
     const headers: Record<string, string> = {};
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
-    try {
-      if (file) {
+    if (file) {
+      let response: Response | null = null;
+      let networkErrorDetail = '';
+
+      try {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('studentId', currentUser.userId);
         formData.append('assignmentId', activeTask.id);
-        formData.append('language', codeToGrade.includes('def ') ? 'python' : 'java');
+        formData.append('language', detectedLanguage);
 
-        const response = await fetch(`${API_BASE_URL}/api/v1/submissions`, {
+        response = await fetch(`${API_BASE_URL}/api/v1/submissions`, {
           method: 'POST',
           headers,
           body: formData,
         });
-
-        if (response.status === 202) {
-          const result = await response.json();
-          const subId = result.data.submissionId;
-          setSubmissionId(subId);
-          submissionIdRef.current = subId;
-
-          if (socketRef.current && socketRef.current.connected) {
-            socketRef.current.emit('join_submission', {
-              submissionId: subId,
-              studentId: currentUser.userId,
-              role: currentUser.role,
-            });
-
-            socketRef.current.off('grading:progress');
-            socketRef.current.on('grading:progress', (data: { stepId: string; stepName: string; status: any; detail?: string }) => {
-              setSteps((prev) =>
-                prev.map((s) => (s.id === data.stepId ? { ...s, status: data.status, detail: data.detail || s.detail } : s))
-              );
-            });
-
-            socketRef.current.off('grading:completed');
-            socketRef.current.on('grading:completed', (data: any) => {
-              if (data.aiRating) setAiRating(data.aiRating);
-              if (isLecturerRole(currentUser?.role)) {
-                setPlagiarismMatch(computedPlagiarism || data.plagiarismMatch);
-              } else {
-                setPlagiarismMatch(undefined);
-              }
-              if (data.score !== undefined) setScore(data.score);
-              if (data.scoreBreakdown) setScoreBreakdown(data.scoreBreakdown);
-              if (data.executionTimeMs !== undefined) setExecutionTimeMs(data.executionTimeMs);
-              if (data.sourceCode) setCurrentSourceCode(data.sourceCode);
-              persistGradingResult({
-                score: data.score,
-                scoreBreakdown: data.scoreBreakdown,
-                submissionId: data.submissionId,
-                sourceCode: data.sourceCode,
-                aiRating: data.aiRating,
-                passedTestcases: data.passedTestcases,
-                totalTestcases: data.totalTestcases,
-                executionTimeMs: data.executionTimeMs,
-              });
-              setSteps((prev) => prev.map((s) => ({ ...s, status: 'passed' })));
-              setIsCompleted(true);
-            });
-
-            return;
-          }
-        }
+      } catch (err: any) {
+        networkErrorDetail = err?.message || 'Không thể kết nối đến máy chủ API Gateway';
+        console.warn('[Gateway] API Gateway lỗi kết nối:', err);
       }
-    } catch (err) {
-      console.warn('[Gateway] API Gateway lỗi kết nối, kích hoạt cơ chế mô phỏng tự động chuẩn xác:', err);
+
+      if (response && response.status === 202) {
+        const result = await response.json();
+        const subId = result.data?.submissionId || result.submissionId;
+        setSubmissionId(subId);
+        submissionIdRef.current = subId;
+
+        // Ưu tiên 1: Lắng nghe realtime từ WebSocket nếu đang kết nối
+        if (socketRef.current && socketRef.current.connected) {
+          socketRef.current.emit('join_submission', {
+            submissionId: subId,
+            studentId: currentUser.userId,
+            role: currentUser.role,
+          });
+
+          socketRef.current.off('grading:progress');
+          socketRef.current.on('grading:progress', (data: { stepId: string; stepName: string; status: any; detail?: string }) => {
+            setSteps((prev) =>
+              prev.map((s) => (s.id === data.stepId ? { ...s, status: data.status, detail: data.detail || s.detail } : s))
+            );
+          });
+
+          socketRef.current.off('grading:completed');
+          socketRef.current.on('grading:completed', (data: any) => {
+            if (data.aiRating) setAiRating(data.aiRating);
+            if (isLecturerRole(currentUser?.role)) {
+              setPlagiarismMatch(computedPlagiarism || data.plagiarismMatch);
+            } else {
+              setPlagiarismMatch(undefined);
+            }
+            if (data.score !== undefined) setScore(data.score);
+            if (data.scoreBreakdown) setScoreBreakdown(data.scoreBreakdown);
+            if (data.executionTimeMs !== undefined) setExecutionTimeMs(data.executionTimeMs);
+            if (data.sourceCode) setCurrentSourceCode(data.sourceCode);
+            persistGradingResult({
+              score: data.score,
+              scoreBreakdown: data.scoreBreakdown,
+              submissionId: data.submissionId,
+              sourceCode: data.sourceCode,
+              aiRating: data.aiRating,
+              passedTestcases: data.passedTestcases,
+              totalTestcases: data.totalTestcases,
+              executionTimeMs: data.executionTimeMs,
+              fileName: file.name,
+            });
+            setSteps((prev) => prev.map((s) => ({ ...s, status: 'passed' })));
+            setIsCompleted(true);
+          });
+
+          return;
+        }
+
+        // Ưu tiên 2: Fallback qua Polling GET /api/v1/submissions/:id khi Socket mất kết nối
+        // Đảm bảo lấy điểm số & kết quả Docker Sandbox thật, KHÔNG mock điểm giả!
+        let attempts = 0;
+        const maxAttempts = 35;
+        const pollTimer = setInterval(async () => {
+          attempts++;
+          try {
+            const pollRes = await fetch(`${API_BASE_URL}/api/v1/submissions/${subId}`, { headers });
+            if (pollRes.ok) {
+              const pollData = await pollRes.json();
+              const sub = pollData.data || pollData;
+              if (sub.status === 'GRADED' || sub.status === 'FAILED') {
+                clearInterval(pollTimer);
+                if (sub.aiRating) setAiRating(sub.aiRating);
+                if (sub.score !== undefined) setScore(sub.score);
+                if (sub.scoreBreakdown) setScoreBreakdown(sub.scoreBreakdown);
+                if (sub.executionTimeMs !== undefined) setExecutionTimeMs(sub.executionTimeMs);
+                if (sub.sourceCode) setCurrentSourceCode(sub.sourceCode);
+                persistGradingResult({
+                  score: sub.score,
+                  scoreBreakdown: sub.scoreBreakdown,
+                  submissionId: subId,
+                  sourceCode: sub.sourceCode || codeToGrade,
+                  aiRating: sub.aiRating,
+                  passedTestcases: sub.passedTestcases,
+                  totalTestcases: sub.totalTestcases,
+                  executionTimeMs: sub.executionTimeMs,
+                  fileName: file.name,
+                });
+                setSteps((prev) =>
+                  prev.map((s) => ({
+                    ...s,
+                    status: sub.status === 'GRADED' ? 'passed' : 'failed',
+                    detail: sub.status === 'GRADED' ? 'Hoàn thành (Đạt)' : (sub.errorMessage || 'Thất bại'),
+                  }))
+                );
+                setIsCompleted(true);
+                return;
+              } else {
+                setSteps((prev) =>
+                  prev.map((s, idx) => {
+                    if (idx === 0) return { ...s, status: 'passed', detail: 'Hàng đợi Redis BullMQ đã tiếp nhận' };
+                    if (idx === 1) return { ...s, status: 'passed', detail: 'Container Sandbox đang thực thi cô lập' };
+                    if (idx === 2) return { ...s, status: 'in_progress', detail: 'Đang chạy bộ testcases kiểm định...' };
+                    return s;
+                  })
+                );
+              }
+            }
+          } catch (pollErr) {
+            console.warn('Lỗi Polling trạng thái bài nộp:', pollErr);
+          }
+
+          if (attempts >= maxAttempts) {
+            clearInterval(pollTimer);
+            setSteps((prev) =>
+              prev.map((s) =>
+                s.status === 'in_progress' ? { ...s, status: 'failed', detail: 'Timeout: Quá thời gian chờ Worker phản hồi' } : s
+              )
+            );
+            setIsCompleted(true);
+          }
+        }, 1500);
+
+        return;
+      }
+
+      // Nếu không gửi được bài (status !== 202 hoặc lỗi mạng): Hiển thị thông báo minh bạch, KHÔNG mock điểm giả
+      let errorDetail = networkErrorDetail || `Máy chủ từ chối yêu cầu (HTTP ${response?.status || 500})`;
+      if (response) {
+        try {
+          const errBody = await response.json();
+          if (errBody.message) errorDetail = errBody.message;
+        } catch {}
+      }
+
+      setSteps([
+        {
+          id: '1',
+          label: 'Hàng đợi Redis BullMQ & Gateway',
+          status: 'failed',
+          detail: `[Lỗi nộp bài] ${errorDetail}. Vui lòng kiểm tra Docker Desktop / API Gateway (cổng 3000) và bấm 'Đóng' rồi thử nộp lại.`,
+        },
+        { id: '2', label: 'Khởi tạo Docker Sandbox', status: 'pending', detail: 'Chưa thể thực thi' },
+        { id: '3', label: 'Chạy Testcase 1 (Dữ liệu cơ sở)', status: 'pending', detail: 'Chưa thể thực thi' },
+        { id: '4', label: 'Chạy Testcase 2 (Trường hợp biên)', status: 'pending', detail: 'Chưa thể thực thi' },
+        { id: '5', label: 'Đánh giá Clean Code & SOLID (GenAI)', status: 'pending', detail: 'Chưa thể thực thi' },
+        { id: '6', label: 'Kiểm định Đạo văn AST Winnowing', status: 'pending', detail: 'Chưa thể thực thi' },
+      ]);
+      setIsCompleted(true);
+      return;
     }
 
-    const subId = generateFallbackSubId();
-    setSubmissionId(subId);
-    submissionIdRef.current = subId;
-    simulateSocketGradingEvents(computedPlagiarism);
+    // Chỉ dùng fallback mô phỏng thuật toán trên cặp mã nguồn Benchmark mẫu tĩnh
+    if (benchmarkPairId !== undefined) {
+      const subId = generateFallbackSubId();
+      setSubmissionId(subId);
+      submissionIdRef.current = subId;
+      simulateSocketGradingEvents(computedPlagiarism);
+    }
   };
 
   const simulateSocketGradingEvents = (realPlagiarism?: PlagiarismMatch) => {
@@ -549,18 +755,69 @@ export function App() {
     });
   };
 
+  const switchDemoRole = (role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN') => {
+    let targetUser: User;
+    if (role === 'INSTRUCTOR') {
+      targetUser = {
+        userId: 'GV001',
+        email: 'giangvien.edu@gmail.com',
+        fullName: 'ThS. Giảng Viên AITA',
+        role: 'INSTRUCTOR',
+        token: 'dev_mock_jwt_GV001',
+      };
+      setActiveView('lecturer');
+    } else if (role === 'ADMIN') {
+      targetUser = {
+        userId: 'ADMIN002',
+        email: 'admin.aita@gmail.com',
+        fullName: 'Quản Trị Viên AITA',
+        role: 'ADMIN',
+        token: 'dev_mock_jwt_ADMIN002',
+      };
+      setActiveView('admin');
+    } else {
+      targetUser = {
+        userId: 'SE170002',
+        email: 'linhcampochia@gmail.com',
+        fullName: 'Linh Campochia',
+        role: 'STUDENT',
+        token: 'dev_mock_jwt_SE170002',
+      };
+      setActiveView('student');
+    }
+    setCurrentUser(targetUser);
+    try {
+      localStorage.setItem('aita_user', JSON.stringify(targetUser));
+      localStorage.setItem('aita_token', targetUser.token || '');
+    } catch (e) {
+      console.warn('Cannot store switched user:', e);
+    }
+  };
+
   // NẾU CHƯA ĐĂNG NHẬP: BẮT BUỘC HIỂN THỊ MÀN HÌNH ĐĂNG NHẬP ĐẦU TIÊN
   if (!currentUser) {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // Phân quyền màn hình: Giảng viên và Sinh viên hoàn toàn độc lập, không chuyển đổi qua lại
+  // Phân quyền màn hình: Giảng viên và Sinh viên hoàn toàn độc lập, Admin có thể xem toàn bộ
   const navTabs = currentUser.role === 'ADMIN'
     ? [
         { key: 'admin', label: 'Hệ thống Quản trị', icon: <LayoutDashboard size={14} /> },
         { key: 'lecturer', label: 'Cổng Giảng Viên', icon: <BookOpen size={14} /> },
+        { key: 'student', label: 'Giao diện Sinh viên', icon: <GraduationCap size={14} /> },
       ]
     : [];
+
+  const handleRetrySubmission = () => {
+    if (lastSubmissionRef.current?.file) {
+      void handleSubmission(
+        lastSubmissionRef.current.file,
+        undefined,
+        lastSubmissionRef.current.task,
+        lastSubmissionRef.current.lang
+      );
+    }
+  };
 
   const roleBadge =
     currentUser.role === 'ADMIN'
@@ -683,6 +940,39 @@ export function App() {
             >
               <span className="dot-live" style={{ opacity: isSocketConnected ? 1 : 0.4 }} />
               <span className="nav-status-label" style={{ whiteSpace: 'nowrap' }}>{socketStatus.label}</span>
+            </div>
+
+            <span className="nav-divider" style={{ width: 1, height: 22, background: 'var(--border-color)', flexShrink: 0 }} />
+
+            {/* Quick Demo Role Switcher cho buổi bảo vệ Hội đồng */}
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              title="Chuyển đổi vai trò nhanh để thuyết trình trước Hội đồng (không cần đăng xuất)"
+            >
+              <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                <ArrowLeftRight size={12} />
+                <span className="nav-status-label">Vai trò:</span>
+              </span>
+              <select
+                aria-label="Chuyển đổi vai trò demo"
+                value={currentUser.role === 'ADMIN' ? 'ADMIN' : isLecturerRole(currentUser.role) ? 'INSTRUCTOR' : 'STUDENT'}
+                onChange={(e) => switchDemoRole(e.target.value as any)}
+                style={{
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-strong)',
+                  background: 'rgba(11, 18, 32, 0.04)',
+                  color: 'var(--text-main)',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+              >
+                <option value="STUDENT">🎓 Sinh viên</option>
+                <option value="INSTRUCTOR">👨‍🏫 Giảng viên</option>
+                <option value="ADMIN">🛡️ Quản trị viên</option>
+              </select>
             </div>
 
             <span className="nav-divider" style={{ width: 1, height: 22, background: 'var(--border-color)', flexShrink: 0 }} />
@@ -888,7 +1178,7 @@ export function App() {
                 enrolledCourses={enrolledCourses}
                 selectedCourseId={selectedStudentCourseId}
                 onSelectCourse={(courseId) => setSelectedStudentCourseId(courseId)}
-                onSubmit={(file, taskItem) => handleSubmission(file, undefined, taskItem)}
+                onSubmit={(file, taskItem, lang) => handleSubmission(file, undefined, taskItem, lang)}
               />
             ) : studentActiveTab === 'history' ? (
               <StudentHistoryView
@@ -913,6 +1203,7 @@ export function App() {
       <LiveGradingModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
+        onRetry={handleRetrySubmission}
         submissionId={submissionId}
         studentName={currentUser.fullName}
         steps={steps}

@@ -87,7 +87,7 @@ interface SubmissionViewProps {
   apiBaseUrl?: string;
   onSelectCourse?: (courseId: string) => void;
   onOpenAppeal?: (submissionId: string, currentScore?: number) => void;
-  onSubmit: (file: File, task?: Task) => void;
+  onSubmit: (file: File, task?: Task, selectedLanguage?: string) => void;
 }
 
 const defaultAssignmentPool: StudentTaskItem[] = [
@@ -606,6 +606,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   const [exceptionType, setExceptionType] = useState<"OVERSIZE" | "EXPIRED" | null>(null);
   const [isDeadlineSimulatedExpired, setIsDeadlineSimulatedExpired] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('auto');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 1. Tải danh sách bài tập đã xuất bản (Đồng bộ thời gian thực 100% với Giảng viên)
@@ -974,7 +975,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         console.warn('Không thể lưu kết quả nộp bài:', e);
       }
 
-      onSubmit(selectedFile, currentTask);
+      onSubmit(selectedFile, currentTask, selectedLanguage);
     }
   };
 
@@ -1753,9 +1754,55 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           <h2 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <UploadCloud size={20} color="var(--accent-cyan)" /> Tải Lên Mã Nguồn Bài Làm (.zip)
           </h2>
-          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '20px' }}>
+          <p style={{ fontSize: '13px', color: 'var(--text-muted)', marginBottom: '16px' }}>
             Nén toàn bộ mã nguồn bài làm của bạn vào định dạng <code>.zip</code> (tối đa {selectedTask.maxSizeMb || 10}MB). Hệ thống sẽ tự động tính mã SHA-256 để chống chỉnh sửa và đối sánh đạo văn.
           </p>
+
+          {/* LỰA CHỌN NGÔN NGỮ LẬP TRÌNH (FIX BUG 1: HỖ TRỢ CHÍNH XÁC C++, C#, JAVA, PYTHON) */}
+          <div
+            style={{
+              marginBottom: '18px',
+              padding: '12px 16px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(11, 18, 32, 0.02)',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Code size={16} color="var(--blue-500)" />
+              <label htmlFor="submission-language-select" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
+                Ngôn ngữ mã nguồn nộp:
+              </label>
+            </div>
+            <select
+              id="submission-language-select"
+              value={selectedLanguage}
+              onChange={(e) => setSelectedLanguage(e.target.value)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: '#ffffff',
+                color: 'var(--text-main)',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              <option value="auto">⚡ Tự động nhận diện theo file (.zip)</option>
+              <option value="java">☕ Java (.java)</option>
+              <option value="python">🐍 Python (.py)</option>
+              <option value="cpp">⚡ C++ (.cpp, .cc, .cxx)</option>
+              <option value="dotnet">🔷 C# (.cs)</option>
+              <option value="c">🔧 C (.c)</option>
+            </select>
+          </div>
 
           <div
             onDragEnter={handleDrag}

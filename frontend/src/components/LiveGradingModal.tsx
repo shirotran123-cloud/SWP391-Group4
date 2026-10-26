@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Clock, Loader2, XCircle, Sparkles, Scale, Trophy, FlaskConical, CornerUpRight } from 'lucide-react';
+import { CheckCircle2, Clock, Loader2, XCircle, Sparkles, Scale, Trophy, FlaskConical, CornerUpRight, AlertTriangle, RefreshCw } from 'lucide-react';
 import type { GradingStep, AIRating, PlagiarismMatch, ScoreBreakdown } from '../types';
 import { SolidRadarChart } from './SolidRadarChart';
 import { MonacoDiffViewer } from './MonacoDiffViewer';
@@ -8,6 +8,7 @@ import { AppealModal } from './AppealModal';
 interface LiveGradingModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onRetry?: () => void;
   submissionId: string;
   studentName: string;
   steps: GradingStep[];
@@ -31,6 +32,7 @@ const breakdownItems = [
 export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
   isOpen,
   onClose,
+  onRetry,
   submissionId,
   studentName,
   steps,
@@ -64,6 +66,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
 
   const completedCount = steps.filter((s) => s.status === 'passed' || s.status === 'failed').length;
   const progressPercent = Math.round((completedCount / steps.length) * 100);
+  const hasFailedStep = steps.some((s) => s.status === 'failed');
 
   return (
     <div className="modal-backdrop">
@@ -81,26 +84,92 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
               </span>
             </div>
             <h2 style={{ fontSize: '19px', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
-              {isCompleted ? 'Kết quả đánh giá mã nguồn' : 'Đang chấm bài tự động'}
+              {isCompleted ? (hasFailedStep ? 'Sự cố thực thi & Kết quả chấm bài' : 'Kết quả đánh giá mã nguồn') : 'Đang chấm bài tự động'}
             </h2>
             <p style={{ fontSize: '12.5px', color: 'var(--text-dim)', marginTop: '3px' }}>
               {isCompleted
-                ? 'Tổng hợp từ sandbox thực thi, phân tích AST và đánh giá SOLID.'
-                : 'Kết quả từng bước được đẩy về trực tiếp qua Socket.IO.'}
+                ? (hasFailedStep ? 'Hệ thống minh bạch hiển thị lỗi thực tế từ Sandbox / Gateway, cam kết không sử dụng mock điểm số.' : 'Tổng hợp từ sandbox thực thi, phân tích AST và đánh giá SOLID.')
+                : 'Kết quả từng bước được đẩy về trực tiếp qua Socket.IO / Gateway.'}
             </p>
           </div>
 
           {isCompleted && (
             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsAppealModalOpen(true)}>
-                <Scale size={14} /> Khiếu nại
-              </button>
+              {hasFailedStep && onRetry && (
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={onRetry}
+                  style={{
+                    backgroundColor: 'var(--blue-600)',
+                    color: '#ffffff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    fontWeight: 600,
+                  }}
+                >
+                  <RefreshCw size={13} /> Thử lại
+                </button>
+              )}
+              {!hasFailedStep && (
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setIsAppealModalOpen(true)}>
+                  <Scale size={14} /> Khiếu nại
+                </button>
+              )}
               <button type="button" className="btn btn-invert btn-sm" onClick={onClose}>
                 Đóng
               </button>
             </div>
           )}
         </div>
+
+        {/* CẢNH BÁO MINH BẠCH LỖI MẠNG / THỰC THI (BUG 4 FIX: KHÔNG DÙNG MOCK ÂM THẦM) */}
+        {hasFailedStep && (
+          <div
+            style={{
+              padding: '14px 18px',
+              borderRadius: '10px',
+              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.22)',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#b91c1c', fontSize: '13px' }}>
+              <AlertTriangle size={18} style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ display: 'block', marginBottom: '2px' }}>Phát hiện lỗi tiến trình nộp / chấm bài</strong>
+                <span>Hệ thống từ chối chạy dữ liệu giả lập (No Mock) nhằm đảm bảo liêm chính và sự nhất quán với máy chủ Docker Sandbox.</span>
+              </div>
+            </div>
+            {onRetry && (
+              <button
+                type="button"
+                onClick={onRetry}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <RefreshCw size={12} /> Thử gửi lại
+              </button>
+            )}
+          </div>
+        )}
 
         {/* ĐIỂM TỔNG + BAREM */}
         {isCompleted && score !== undefined && (
