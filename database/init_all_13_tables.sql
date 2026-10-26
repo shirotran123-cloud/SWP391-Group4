@@ -338,8 +338,13 @@ ON CONFLICT (role_id) DO NOTHING;
 INSERT INTO users (user_id, role_id, email, full_name, student_code, role, password_hash, is_active)
 VALUES 
     ('ADMIN001', 'ADMIN', 'admin@aita.fpt.edu.vn', 'Hệ Thống Quản Trị AITA', NULL, 'ADMIN', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
-    ('GV001', 'LECTURER', 'trungdt.teacher@aita.fpt.edu.vn', 'ThS. Đinh Thành Trung (Giảng viên)', NULL, 'LECTURER', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
+    ('ADMIN002', 'ADMIN', 'admin.aita@gmail.com', 'Quản Trị Viên AITA (Gmail)', NULL, 'ADMIN', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
+    ('GV001', 'LECTURER', 'giangvien.edu@gmail.com', 'ThS. Giảng Viên AITA (Demo)', NULL, 'LECTURER', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
+    ('GV002', 'LECTURER', 'trungdt.teacher@aita.fpt.edu.vn', 'ThS. Đinh Thành Trung (Giảng viên)', NULL, 'LECTURER', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
     ('SE170000', 'STUDENT', 'trungdt.student@aita.fpt.edu.vn', 'Đinh Thành Trung (Sinh viên)', 'SE170000', 'STUDENT', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
+    ('SE170001', 'STUDENT', 'phaithayj@gmail.com', 'Nguyễn Hoàng Vinh', 'SE170001', 'STUDENT', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
+    ('SE170002', 'STUDENT', 'linhcampochia@gmail.com', 'Linh Campochia', 'SE170002', 'STUDENT', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
+    ('SE170003', 'STUDENT', 'mochibunnyyy123@gmail.com', 'Viktor Wilson', 'SE170003', 'STUDENT', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
     ('SE170123', 'STUDENT', 'nguyentt@aita.fpt.edu.vn', 'Trần Thanh Nguyên', 'SE170123', 'STUDENT', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
     ('SE170456', 'STUDENT', 'vinhtt@aita.fpt.edu.vn', 'Nguyễn Hoàng Vinh', 'SE170456', 'STUDENT', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE)
 ON CONFLICT (user_id) DO NOTHING;

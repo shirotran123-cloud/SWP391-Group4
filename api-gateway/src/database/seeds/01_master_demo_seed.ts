@@ -20,14 +20,22 @@ export async function seed(knex: Knex): Promise<void> {
 
   const staffUsers = [
     { userId: 'ADMIN001', roleId: 'ADMIN', role: 'ADMIN', email: 'admin@aita.fpt.edu.vn', fullName: 'Hệ Thống Quản Trị AITA' },
+    { userId: 'ADMIN002', roleId: 'ADMIN', role: 'ADMIN', email: 'admin.aita@gmail.com', fullName: 'Quản Trị Viên AITA (Demo Gmail)' },
     { userId: 'HOD001', roleId: 'HOD', role: 'HOD', email: 'truongbm@fe.edu.vn', fullName: 'TS. Nguyễn Văn Hùng (Trưởng Bộ Môn)' },
-    { userId: 'GV001', roleId: 'LECTURER', role: 'INSTRUCTOR', email: 'trungdt@fe.edu.vn', fullName: 'ThS. Đinh Thành Trung (Giảng viên)' },
-    { userId: 'GV002', roleId: 'LECTURER', role: 'INSTRUCTOR', email: 'namlh@fe.edu.vn', fullName: 'TS. Lê Hoàng Nam (Giảng viên)' },
-    { userId: 'GV003', roleId: 'LECTURER', role: 'INSTRUCTOR', email: 'huypq@fe.edu.vn', fullName: 'ThS. Phạm Quang Huy (Giảng viên)' },
-    { userId: 'GV004', roleId: 'LECTURER', role: 'INSTRUCTOR', email: 'phuongttb@fe.edu.vn', fullName: 'TS. Trần Thị Bích Phượng (Giảng viên)' },
+    { userId: 'GV001', roleId: 'LECTURER', role: 'INSTRUCTOR', email: 'giangvien.edu@gmail.com', fullName: 'ThS. Giảng Viên AITA (Demo Gmail)' },
+    { userId: 'GV002', roleId: 'LECTURER', role: 'INSTRUCTOR', email: 'trungdt@fe.edu.vn', fullName: 'ThS. Đinh Thành Trung (Giảng viên)' },
+    { userId: 'GV003', roleId: 'LECTURER', role: 'INSTRUCTOR', email: 'namlh@fe.edu.vn', fullName: 'TS. Lê Hoàng Nam (Giảng viên)' },
+    { userId: 'GV004', roleId: 'LECTURER', role: 'INSTRUCTOR', email: 'huypq@fe.edu.vn', fullName: 'ThS. Phạm Quang Huy (Giảng viên)' },
+    { userId: 'GV005', roleId: 'LECTURER', role: 'INSTRUCTOR', email: 'phuongttb@fe.edu.vn', fullName: 'TS. Trần Thị Bích Phượng (Giảng viên)' },
   ];
 
-  // 50 Sinh viên với tên tiếng Việt thực tế
+  // 50 Sinh viên với tên tiếng Việt thực tế (bảo toàn các tài khoản demo đã xác minh)
+  const specialStudents: Record<string, { email: string; fullName: string }> = {
+    SE170001: { email: 'phaithayj@gmail.com', fullName: 'Nguyễn Hoàng Vinh' },
+    SE170002: { email: 'linhcampochia@gmail.com', fullName: 'Linh Campochia' },
+    SE170003: { email: 'mochibunnyyy123@gmail.com', fullName: 'Viktor Wilson' },
+  };
+
   const firstNames = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương'];
   const middleNames = ['Văn', 'Thị', 'Đức', 'Thành', 'Hoàng', 'Minh', 'Thanh', 'Quang', 'Ngọc', 'Hải', 'Tuấn', 'Quốc', 'Anh'];
   const lastNames = ['An', 'Bình', 'Cường', 'Dũng', 'Đạt', 'Giang', 'Hải', 'Huy', 'Khoa', 'Long', 'Minh', 'Nam', 'Nghĩa', 'Phúc', 'Quân', 'Sơn', 'Tài', 'Thắng', 'Trí', 'Tùng', 'Vinh', 'Vy', 'Yến', 'Trang', 'Phương', 'Linh', 'Nguyên'];
@@ -36,11 +44,12 @@ export async function seed(knex: Knex): Promise<void> {
   for (let i = 0; i < 50; i++) {
     const codeNum = (170000 + i).toString();
     const studentCode = `SE${codeNum}`;
+    const special = specialStudents[studentCode];
     const fn = firstNames[i % firstNames.length];
     const mn = middleNames[(i * 3) % middleNames.length];
     const ln = lastNames[(i * 7) % lastNames.length];
-    const fullName = `${fn} ${mn} ${ln}`;
-    const email = `${ln.toLowerCase()}.${studentCode.toLowerCase()}@fpt.edu.vn`;
+    const fullName = special ? special.fullName : `${fn} ${mn} ${ln}`;
+    const email = special ? special.email : `${ln.toLowerCase()}.${studentCode.toLowerCase()}@fpt.edu.vn`;
 
     studentUsers.push({
       userId: studentCode,
@@ -63,8 +72,23 @@ export async function seed(knex: Knex): Promise<void> {
     is_active: true,
   }));
 
-  for (const chunk of chunkArray(allUsers, 20)) {
-    await knex('users').insert(chunk).onConflict('user_id').ignore();
+  for (const u of allUsers) {
+    await knex('users')
+      .insert(u)
+      .onConflict('user_id')
+      .merge()
+      .catch(async () => {
+        // Nếu trùng email với user_id khác, cập nhật thông tin theo email
+        await knex('users')
+          .where({ email: u.email })
+          .update({
+            full_name: u.full_name,
+            role: u.role,
+            role_id: u.role_id,
+            is_active: u.is_active,
+          })
+          .catch(() => {});
+      });
   }
 
   // ==========================================================================

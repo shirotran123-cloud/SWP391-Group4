@@ -79,9 +79,24 @@ ping -n 3 127.0.0.1 >nul
 echo.
 
 :: ----------------------------------------------------------------------
-:: BUOC 3: KIEM TRA VA CAI DAT THU VIEN NEU THIEU (DEPENDENCIES)
+:: BUOC 3: KIEM TRA MOI TRUONG .ENV VA CAI DAT THU VIEN (DEPENDENCIES)
 :: ----------------------------------------------------------------------
-echo [3/5] Kiem tra thu vien dependencies: node_modules...
+echo [3/5] Kiem tra file cau hinh .env va thu vien dependencies...
+
+if not exist "%~dp0api-gateway\.env" if exist "%~dp0api-gateway\.env.example" (
+    echo  - Tu dong khoi tao api-gateway\.env tu template mau...
+    copy "%~dp0api-gateway\.env.example" "%~dp0api-gateway\.env" >nul
+)
+
+if not exist "%~dp0genai-hub\.env" if exist "%~dp0genai-hub\.env.example" (
+    echo  - Tu dong khoi tao genai-hub\.env tu template mau...
+    copy "%~dp0genai-hub\.env.example" "%~dp0genai-hub\.env" >nul
+)
+
+if not exist "%~dp0frontend\.env" if exist "%~dp0frontend\.env.example" (
+    echo  - Tu dong khoi tao frontend\.env tu template mau...
+    copy "%~dp0frontend\.env.example" "%~dp0frontend\.env" >nul
+)
 
 if not exist "%~dp0api-gateway\node_modules" (
     echo  - Dang cai dat thu vien cho api-gateway...
@@ -262,6 +277,8 @@ echo  [OK] PostgreSQL 15 da san sang tren cong 5432!
 echo  - Dang tu dong kiem tra va ap dung Knex Migrations: 13 bang 3NF...
 cd /d "%~dp0api-gateway"
 call npm.cmd run db:migrate
+echo  - Dang nap du lieu mau (Seed Data: giang vien, sinh vien demo, de thi, rubrics)...
+call npm.cmd run db:seed
 cd /d "%~dp0"
 echo  [OK] Co so du lieu 13 bang 3NF da duoc dong bo hoan tat!
 goto :EOF

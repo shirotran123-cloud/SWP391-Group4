@@ -183,6 +183,15 @@ export class UserRepository implements OnModuleInit {
       },
       {
         userId: 'GV001',
+        email: 'giangvien.edu@gmail.com',
+        fullName: 'ThS. Giảng Viên AITA (Demo)',
+        role: 'INSTRUCTOR',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        userId: 'GV002',
         email: 'trungdt@fe.edu.vn',
         fullName: 'ThS. Đinh Thành Trung',
         role: 'INSTRUCTOR',
@@ -191,10 +200,69 @@ export class UserRepository implements OnModuleInit {
         updatedAt: new Date(),
       },
       {
+        userId: 'GV003',
+        email: 'namlh@fe.edu.vn',
+        fullName: 'TS. Lê Hoàng Nam (Giảng viên)',
+        role: 'INSTRUCTOR',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
         userId: 'SE170000',
         studentCode: 'SE170000',
-        email: 'trungse170000@fpt.edu.vn',
+        email: 'trungdt.student@aita.fpt.edu.vn',
         fullName: 'Đinh Thành Trung (Sinh viên)',
+        role: 'STUDENT',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        userId: 'SE170001',
+        studentCode: 'SE170001',
+        email: 'phaithayj@gmail.com',
+        fullName: 'Nguyễn Hoàng Vinh',
+        role: 'STUDENT',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        userId: 'SE170002',
+        studentCode: 'SE170002',
+        email: 'linhcampochia@gmail.com',
+        fullName: 'Linh Campochia',
+        role: 'STUDENT',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        userId: 'SE170003',
+        studentCode: 'SE170003',
+        email: 'mochibunnyyy123@gmail.com',
+        fullName: 'Viktor Wilson',
+        role: 'STUDENT',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        userId: 'SE170123',
+        studentCode: 'SE170123',
+        email: 'nguyentt@aita.fpt.edu.vn',
+        fullName: 'Trần Thanh Nguyên',
+        role: 'STUDENT',
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+      {
+        userId: 'SE170456',
+        studentCode: 'SE170456',
+        email: 'vinhtt@aita.fpt.edu.vn',
+        fullName: 'Nguyễn Hoàng Vinh (FPT)',
         role: 'STUDENT',
         isActive: true,
         createdAt: new Date(),
@@ -204,6 +272,7 @@ export class UserRepository implements OnModuleInit {
 
     for (const u of defaultUsers) {
       this.records.set(u.userId, u);
+      void this.saveToPostgres(u);
     }
     this.persist();
     this.logger.log(`[UserRepository] Khởi tạo ${defaultUsers.length} người dùng mặc định.`);
