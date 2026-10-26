@@ -18,8 +18,7 @@ interface LoginModalProps {
   onClose: () => void;
   onLoginSuccess: (user: User, token: string) => void;
 }
-
-const API_BASE_URL = 'http://localhost:3000';
+import { API_BASE_URL } from '../config';
 
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>

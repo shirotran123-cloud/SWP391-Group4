@@ -16,8 +16,7 @@ import { io, Socket } from 'socket.io-client';
 
 import { PlagiarismService } from './services/plagiarism.service';
 import JSZip from 'jszip';
-
-const API_BASE_URL = 'http://localhost:3000';
+import { API_BASE_URL } from './config';
 
 function generateFallbackSubId(): string {
   return 'SUB-' + Date.now().toString(36).toUpperCase();

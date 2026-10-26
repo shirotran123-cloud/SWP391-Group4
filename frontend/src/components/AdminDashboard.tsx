@@ -5,8 +5,7 @@ import {
   Trash2, RotateCcw, ChevronDown, ChevronUp, AlertTriangle,
   CheckCircle, XCircle, Clock, Cpu, BarChart2, Settings, Sparkles
 } from 'lucide-react';
-
-const API = 'http://localhost:3000';
+import { API_BASE_URL as API } from '../config';
 
 interface QueueStats {
   queueName: string;

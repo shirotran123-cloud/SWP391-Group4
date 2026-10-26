@@ -19,13 +19,7 @@ import type { UserProfile } from '../types';
 interface LoginViewProps {
   onLoginSuccess: (user: UserProfile) => void;
 }
-
-const API_BASE_URL = 'http://localhost:3000';
-
-// Client ID mặc định từ hệ thống hoặc cấu hình
-const DEFAULT_CLIENT_ID =
-  (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
-  '788798423051-4c6pqis6sjcrnit4c74omft9kqrvp623.apps.googleusercontent.com';
+import { API_BASE_URL, GOOGLE_CLIENT_ID as DEFAULT_CLIENT_ID } from '../config';
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
