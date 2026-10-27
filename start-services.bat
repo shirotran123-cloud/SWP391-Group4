@@ -128,17 +128,17 @@ echo [4/5] Khoi dong cac dich vu: moi dich vu trong 1 cua so rieng...
 
 :: Subsystem 1: AITA API Gateway & BullMQ Worker (Port 3000)
 echo  [4.1] Khoi dong AITA API Gateway va BullMQ Worker: Port 3000...
-start "AITA API Gateway (Port 3000)" /D "%~dp0api-gateway" cmd /k "title AITA API Gateway (Port 3000) && npm run start"
+start "AITA API Gateway (Port 3000)" /D "%~dp0api-gateway" cmd /k "title AITA API Gateway (Port 3000) && npm.cmd run start"
 ping -n 4 127.0.0.1 >nul
 
 :: Subsystem 2: AITA GenAI Hub & AST Service (Port 3001)
 echo  [4.2] Khoi dong AITA GenAI Hub va AST Service: Port 3001...
-start "AITA GenAI Hub (Port 3001)" /D "%~dp0genai-hub" cmd /k "title AITA GenAI Hub (Port 3001) && npm run server"
+start "AITA GenAI Hub (Port 3001)" /D "%~dp0genai-hub" cmd /k "title AITA GenAI Hub (Port 3001) && npm.cmd run server"
 ping -n 3 127.0.0.1 >nul
 
 :: Subsystem 3: AITA React Frontend (Port 5173)
 echo  [4.3] Khoi dong AITA React Web Frontend: Port 5173...
-start "AITA Frontend (Port 5173)" /D "%~dp0frontend" cmd /k "title AITA Frontend (Port 5173) && npm run dev"
+start "AITA Frontend (Port 5173)" /D "%~dp0frontend" cmd /k "title AITA Frontend (Port 5173) && npm.cmd run dev"
 ping -n 3 127.0.0.1 >nul
 
 :: ----------------------------------------------------------------------
