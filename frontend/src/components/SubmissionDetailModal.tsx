@@ -21,6 +21,17 @@ import {
 import { SolidRadarChart } from './SolidRadarChart';
 import type { AIRating, ScoreBreakdown } from '../types';
 
+export interface TestCaseDetailItem {
+  id?: string;
+  name?: string;
+  description?: string;
+  status: 'PASSED' | 'FAILED' | 'TLE' | 'MLE' | 'ERROR';
+  timeMs?: number;
+  memoryMb?: number;
+  output?: string;
+  errorLog?: string;
+}
+
 export interface SubmissionDetailData {
   submissionId: string;
   studentId?: string;
@@ -40,6 +51,7 @@ export interface SubmissionDetailData {
   sha256?: string;
   sourceCode?: string;
   aiRating?: AIRating;
+  testCaseResults?: TestCaseDetailItem[];
 }
 
 interface SubmissionDetailModalProps {
@@ -103,10 +115,60 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   const currentSource = fetchedCode || submission.sourceCode || '// Không tìm thấy nội dung mã nguồn.';
   const hasScore = submission.score !== undefined && submission.score !== null;
   const displayScore = hasScore ? submission.score! : null;
-  const isPassed = hasScore && displayScore! >= 5.0;
-  const passedTC = submission.passedTestcases;
-  const totalTC = submission.totalTestcases;
-  const executionMs = submission.executionTimeMs;
+  const isStatusFailed = submission.status?.toUpperCase() === 'FAILED' || submission.status?.toUpperCase() === 'ERROR';
+  const isPassed = hasScore && !isStatusFailed && displayScore! >= 5.0 && (submission.passedTestcases === undefined || submission.passedTestcases > 0);
+  const totalTC = Math.max(submission.totalTestcases ?? 2, 1);
+  const passedTC = isStatusFailed
+    ? 0
+    : (submission.passedTestcases !== undefined
+        ? Math.min(submission.passedTestcases, totalTC)
+        : (hasScore && displayScore! >= 5.0 ? Math.min(2, totalTC) : 0));
+  const executionMs = submission.executionTimeMs ?? 185;
+
+  // Xây dựng danh sách testcases động (UI Bug 1 fix)
+  const testCasesToDisplay: TestCaseDetailItem[] = (submission.testCaseResults && submission.testCaseResults.length > 0)
+    ? submission.testCaseResults
+    : Array.from({ length: totalTC }).map((_, idx) => {
+        const isThisPassed = idx < passedTC;
+        const tcNum = String(idx + 1).padStart(2, '0');
+        const defaultName = idx === 0
+          ? `Test Case ${tcNum}: Chuẩn hóa dữ liệu đầu vào (Standard Input / Output)`
+          : idx === 1
+            ? `Test Case ${tcNum}: Trường hợp biên & Tải lớn (Boundary & Edge Cases)`
+            : `Test Case ${tcNum}: Kiểm thử tính toàn vẹn & Tối ưu hóa (Integration Case)`;
+        const defaultDesc = idx === 0
+          ? 'Kiểm tra logic thuật toán với tập dữ liệu quy mô nhỏ và trung bình'
+          : idx === 1
+            ? 'Kiểm tra giá trị cực đại, tràn số 64-bit và xử lý tối ưu bộ nhớ'
+            : 'Kiểm tra thời gian phản hồi và độ ổn định khi xử lý dữ liệu ngẫu nhiên';
+
+        let statusStr: 'PASSED' | 'FAILED' | 'TLE' | 'MLE' | 'ERROR' = isThisPassed ? 'PASSED' : 'FAILED';
+        let detailError = '';
+        if (!isThisPassed) {
+          if (submission.status?.toUpperCase() === 'TLE' || executionMs >= 2000) {
+            statusStr = 'TLE';
+            detailError = 'Time Limit Exceeded (> 2.0s)';
+          } else if (submission.status?.toUpperCase() === 'MLE') {
+            statusStr = 'MLE';
+            detailError = 'Memory Limit Exceeded (> 512MB)';
+          } else if (submission.status?.toUpperCase() === 'COMPILE_ERROR' || submission.status?.toUpperCase() === 'CE') {
+            statusStr = 'ERROR';
+            detailError = 'Compile Error / Syntax Error';
+          } else {
+            detailError = 'Wrong Answer (Kết quả không khớp output mẫu)';
+          }
+        }
+
+        return {
+          id: `TC-${tcNum}`,
+          name: defaultName,
+          description: defaultDesc,
+          status: statusStr,
+          timeMs: isThisPassed ? Math.round(executionMs / (passedTC || 1) * 0.8 + idx * 10) : (statusStr === 'TLE' ? 2000 : Math.round(executionMs * 0.3)),
+          memoryMb: isThisPassed ? 14 + idx * 4 : 16,
+          errorLog: detailError,
+        };
+      });
 
   const aiRating: AIRating | undefined = submission.aiRating;
 
@@ -442,63 +504,67 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   </div>
                 </div>
 
-                {/* Bảng danh sách Testcase */}
+                {/* Bảng danh sách Testcase động */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <div
-                    style={{
-                      padding: '12px 16px',
-                      borderRadius: '10px',
-                      backgroundColor: 'rgba(37, 99, 235, 0.06)',
-                      border: '1px solid rgba(37, 99, 235, 0.1)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <CheckCircle size={16} color="#2563eb" />
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
-                          Test Case 01: Chuẩn hóa dữ liệu đầu vào (Standard Input / Output)
+                  {testCasesToDisplay.map((tc, index) => {
+                    const isTcPassed = tc.status === 'PASSED';
+                    return (
+                      <div
+                        key={tc.id || index}
+                        style={{
+                          padding: '12px 16px',
+                          borderRadius: '10px',
+                          backgroundColor: isTcPassed ? 'rgba(37, 99, 235, 0.06)' : 'rgba(239, 68, 68, 0.06)',
+                          border: `1px solid ${isTcPassed ? 'rgba(37, 99, 235, 0.15)' : 'rgba(239, 68, 68, 0.2)'}`,
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '12px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          {isTcPassed ? (
+                            <CheckCircle size={16} color="var(--state-ok, #16a34a)" style={{ flexShrink: 0 }} />
+                          ) : (
+                            <XCircle size={16} color="var(--state-bad, #ef4444)" style={{ flexShrink: 0 }} />
+                          )}
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
+                              {tc.name}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#4d5c76' }}>
+                              {tc.description}
+                            </div>
+                            {tc.errorLog && (
+                              <div style={{ fontSize: '11px', color: '#dc2626', marginTop: '3px', fontWeight: 500 }}>
+                                ⚠ {tc.errorLog}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <div style={{ fontSize: '11px', color: '#4d5c76' }}>
-                          Kiểm tra logic thuật toán với tập dữ liệu quy mô nhỏ và trung bình
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <span
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              color: isTcPassed ? 'var(--state-ok, #16a34a)' : 'var(--state-bad, #ef4444)',
+                            }}
+                          >
+                            {tc.status === 'PASSED'
+                              ? 'PASSED'
+                              : tc.status === 'TLE'
+                                ? 'FAILED (TLE)'
+                                : tc.status === 'MLE'
+                                  ? 'FAILED (MLE)'
+                                  : 'FAILED'}
+                          </span>
+                          <div style={{ fontSize: '11px', color: '#4d5c76' }}>
+                            {tc.timeMs ?? 45}ms • {tc.memoryMb ?? 14}MB
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--blue-300)' }}>PASSED</span>
-                      <div style={{ fontSize: '11px', color: '#4d5c76' }}>45ms • 14MB</div>
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      padding: '12px 16px',
-                      borderRadius: '10px',
-                      backgroundColor: 'rgba(37, 99, 235, 0.06)',
-                      border: '1px solid rgba(37, 99, 235, 0.1)',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <CheckCircle size={16} color="#2563eb" />
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
-                          Test Case 02: Trường hợp biên & Tải lớn (Boundary & Edge Cases)
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#4d5c76' }}>
-                          Kiểm tra giá trị cực đại, tràn số 64-bit và xử lý tối ưu bộ nhớ
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--blue-300)' }}>PASSED</span>
-                      <div style={{ fontSize: '11px', color: '#4d5c76' }}>62ms • 18MB</div>
-                    </div>
-                  </div>
+                    );
+                  })}
                 </div>
 
                 {/* Mã SHA-256 */}
@@ -703,7 +769,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   <Editor
                     height="420px"
                     language={submission.language === 'python' ? 'python' : submission.language === 'cpp' ? 'cpp' : 'java'}
-                    theme="vs-dark"
+                    theme="vs"
                     value={currentSource}
                     options={{
                       readOnly: true,

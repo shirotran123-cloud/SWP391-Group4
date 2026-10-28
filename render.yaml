@@ -1,0 +1,52 @@
+services:
+  # 1. API Gateway & BullMQ Worker
+  - type: web
+    name: aita-api-gateway
+    env: node
+    rootDir: api-gateway
+    buildCommand: npm install && npm run build
+    startCommand: npm run start:prod
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: aita-postgres
+          property: connectionString
+      - key: REDIS_HOST
+        fromService:
+          type: redis
+          name: aita-redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          type: redis
+          name: aita-redis
+          property: port
+
+  # 2. GenAI Hub & Gemini Service
+  - type: web
+    name: aita-genai-hub
+    env: node
+    rootDir: genai-hub
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server.js
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false
+
+databases:
+  - name: aita-postgres
+    plan: free
+    databaseName: aita_autograding
+    user: aita_admin
+
+  - name: aita-redis
+    plan: free
+    ipAllowList: []
