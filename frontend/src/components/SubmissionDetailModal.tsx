@@ -23,6 +23,7 @@ import type { AIRating, ScoreBreakdown } from '../types';
 
 export interface TestCaseDetailItem {
   id?: string;
+  testcaseIndex?: number;
   name?: string;
   description?: string;
   status: 'PASSED' | 'FAILED' | 'TLE' | 'MLE' | 'ERROR';
@@ -116,17 +117,24 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   const displayScore = submission.score ?? 0;
   const isStatusFailed = submission.status?.toUpperCase() === 'FAILED' || submission.status?.toUpperCase() === 'ERROR';
   const isPassed = !isStatusFailed && displayScore >= 5.0 && (submission.passedTestcases === undefined || submission.passedTestcases > 0);
-  const totalTC = Math.max(submission.totalTestcases ?? 2, 1);
+  const totalTC = Math.max(submission.totalTestcases ?? 0, submission.testCaseResults?.length ?? 0, 1);
   const passedTC = isStatusFailed
     ? 0
     : (submission.passedTestcases !== undefined
         ? Math.min(submission.passedTestcases, totalTC)
-        : (displayScore >= 5.0 ? Math.min(2, totalTC) : 0));
+        : (displayScore >= 5.0 ? Math.min(totalTC, totalTC) : 0));
   const executionMs = submission.executionTimeMs ?? 185;
 
   // Xây dựng danh sách testcases động (UI Bug 1 fix)
   const testCasesToDisplay: TestCaseDetailItem[] = (submission.testCaseResults && submission.testCaseResults.length > 0)
-    ? submission.testCaseResults
+    ? [
+        ...submission.testCaseResults,
+        ...Array.from({ length: Math.max(0, totalTC - submission.testCaseResults.length) }, (_, index) => ({
+          id: `TC-${String(submission.testCaseResults!.length + index + 1).padStart(2, '0')}`,
+          status: 'ERROR' as const,
+          errorLog: 'Kết quả testcase không được lưu trong lượt chấm này.',
+        })),
+      ]
     : Array.from({ length: totalTC }).map((_, idx) => {
         const isThisPassed = idx < passedTC;
         const tcNum = String(idx + 1).padStart(2, '0');

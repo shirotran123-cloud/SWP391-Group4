@@ -50,8 +50,13 @@ export class SandboxService {
     const isDockerUp = await runner.isAvailable();
 
     if (isDockerUp) {
-      this.logger.log(`⚡ [SandboxService] Docker Daemon ONLINE -> Kích hoạt Container cô lập cho ${language}`);
-      return this.executeInDocker(language, codeContent, testCases);
+      try {
+        this.logger.log(`⚡ [SandboxService] Docker Daemon ONLINE -> Kích hoạt Container cô lập cho ${language}`);
+        return await this.executeInDocker(language, codeContent, testCases);
+      } catch (err: any) {
+        this.logger.warn(`⚠️ [SandboxService] Lỗi chạy container (${err.message}) -> Graceful fallback Circuit Breaker.`);
+        return this.executeInCircuitBreaker(language, codeContent);
+      }
     }
 
     this.logger.warn(

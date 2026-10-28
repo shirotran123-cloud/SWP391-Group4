@@ -262,8 +262,8 @@ public class Solution {
 }`;
 
     const originalScore = submissionDetail?.score ?? (isPhaithay ? 7.0 : 6.5);
-    const passedTestcases = details?.passedTestcases ?? 2;
-    const totalTestcases = details?.totalTestcases ?? 2;
+    const passedTestcases = details?.passedTestcases ?? 0;
+    const totalTestcases = details?.totalTestcases ?? 0;
 
     const isInvalid = (originalScore === 0 && passedTestcases === 0);
     const testcases = isInvalid

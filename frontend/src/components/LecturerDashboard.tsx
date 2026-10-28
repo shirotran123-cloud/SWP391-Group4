@@ -40,6 +40,7 @@ import { FileTypeIcon } from './FileTypeIcon';
 import type { PlagiarismMatch } from '../types';
 
 import { GeminiAIService, type RubricCriterion } from '../services/gemini-ai.service';
+import { syncAssignmentTestCases } from '../services/assignment-testcases.service';
 
 interface LecturerDashboardProps {
   onOpenDiffViewer?: (match: PlagiarismMatch) => void;
@@ -106,6 +107,12 @@ interface SubmissionRecord {
   attemptsCount?: number;
   /** Explanation of why the counted attempt differs from the newest one. */
   attemptNote?: string;
+  passedTestcases?: number;
+  totalTestcases?: number;
+  testcaseResults?: Array<{ testcaseIndex: number; status: 'PASSED' | 'FAILED' | 'TLE' | 'MLE' | 'ERROR'; timeMs: number }>;
+  scoreBreakdown?: SubmissionDetailData['scoreBreakdown'];
+  executionTimeMs?: number;
+  aiRating?: SubmissionDetailData['aiRating'];
 }
 
 const initialCourses: CourseItem[] = [
@@ -281,6 +288,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [selectedDetailSubmission, setSelectedDetailSubmission] = useState<SubmissionDetailData | null>(null);
 
   const handleOpenDetailModal = (sub: any) => {
+    const gradingDetails = sub.result || sub.details || {};
     setSelectedDetailSubmission({
       submissionId: sub.id || sub.submissionId,
       studentId: sub.studentId,
@@ -291,13 +299,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       language: sub.language || 'java',
       submittedAt: sub.submittedAt || sub.createdAt || new Date().toISOString(),
       score: sub.finalScore ?? sub.score ?? sub.details?.score ?? 9.8,
-      scoreBreakdown: sub.scoreBreakdown || sub.details?.scoreBreakdown,
-      passedTestcases: sub.passedTestcases ?? sub.details?.passedTestcases ?? 2,
-      totalTestcases: sub.totalTestcases ?? sub.details?.totalTestcases ?? 2,
-      executionTimeMs: sub.executionTimeMs ?? sub.details?.executionTimeMs ?? 185,
+      scoreBreakdown: sub.scoreBreakdown || gradingDetails.scoreBreakdown,
+      passedTestcases: sub.passedTestcases ?? gradingDetails.passedTestcases,
+      totalTestcases: sub.totalTestcases ?? gradingDetails.totalTestcases,
+      testCaseResults: sub.testcaseResults ?? gradingDetails.testcaseResults,
+      executionTimeMs: sub.executionTimeMs ?? gradingDetails.executionTimeMs,
       sha256: sub.sha256Hash || sub.sha256,
       sourceCode: sub.sourceCode || sub.details?.sourceCode,
-      aiRating: sub.aiRating || sub.details?.aiRating || {
+      aiRating: sub.aiRating || gradingDetails.aiRating || {
         cleanCodeScore: sub.cleanCodeScore ?? 9.5,
         solidScore: { s: 9.0, o: 8.5, l: 9.0, i: 9.0, d: 8.5 },
         codeSmells: [],
@@ -388,6 +397,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             similarityRate: sim,
             plagiarismMatch: detail.plagiarismMatch || detail.result?.plagiarismMatch || null,
             sourceCode: detail.sourceCode || detail.result?.sourceCode,
+            passedTestcases: detail.passedTestcases ?? detail.result?.passedTestcases,
+            totalTestcases: detail.totalTestcases ?? detail.result?.totalTestcases,
+            testcaseResults: detail.testcaseResults ?? detail.result?.testcaseResults,
+            scoreBreakdown: detail.scoreBreakdown ?? detail.result?.scoreBreakdown,
+            executionTimeMs: detail.executionTimeMs ?? detail.result?.executionTimeMs,
+            aiRating: detail.aiRating ?? detail.result?.aiRating,
             // Extra fields the table uses to explain which attempt counts.
             attemptsCount: row.attemptsCount ?? 1,
             attemptNote: row.note as string | undefined,
@@ -441,6 +456,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               similarityRate: sim,
               plagiarismMatch: s.plagiarismMatch || s.result?.plagiarismMatch || null,
               sourceCode: s.sourceCode || s.result?.sourceCode,
+              passedTestcases: s.passedTestcases ?? s.result?.passedTestcases,
+              totalTestcases: s.totalTestcases ?? s.result?.totalTestcases,
+              testcaseResults: s.testcaseResults ?? s.result?.testcaseResults,
+              scoreBreakdown: s.scoreBreakdown ?? s.result?.scoreBreakdown,
+              executionTimeMs: s.executionTimeMs ?? s.result?.executionTimeMs,
+              aiRating: s.aiRating ?? s.result?.aiRating,
             };
           });
           setRealSubmissions(mapped);
@@ -809,19 +830,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   };
 
   // Lưu & Xuất bản đề bài tập: Lưu vào danh sách môn học và TỰ ĐỘNG ĐIỀU HƯỚNG sang trang môn học đó
-  const handleSaveAssignment = (e: React.FormEvent) => {
+  const handleSaveAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!assignmentTitle.trim()) {
       setAiErrorMsg('Vui lòng nhập Tiêu đề bài tập trước khi xuất bản.');
       return;
     }
-
     const courseObj = courses.find((c) => c.courseId === selectedCourse);
     const courseName = courseObj ? courseObj.courseName : 'Dự Án Phát Triển Phần Mềm';
     const courseCode = courseObj ? courseObj.courseCode : 'SWP391';
 
     const newAsm: PublishedAssignment = {
-      id: `ASM-${Date.now().toString().slice(-5)}`,
+      id: `ASM-${Date.now()}`,
       courseId: selectedCourse,
       title: assignmentTitle,
       description: assignmentDesc,
@@ -838,6 +858,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       submissionCount: 0,
       isNewlyCreated: true,
     };
+
+    setAiErrorMsg(null);
+    try {
+      await syncAssignmentTestCases(newAsm);
+    } catch (error) {
+      setAiErrorMsg(
+        error instanceof Error
+          ? `Không thể xuất bản đề có đầy đủ testcase lên máy chủ: ${error.message}`
+          : 'Không thể xuất bản đề có đầy đủ testcase lên máy chủ.',
+      );
+      return;
+    }
 
     const updatedAsms = [newAsm, ...publishedAssignments];
     setPublishedAssignments(updatedAsms);
