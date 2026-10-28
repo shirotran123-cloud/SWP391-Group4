@@ -144,7 +144,7 @@ export async function seed(knex: Knex): Promise<void> {
       deadline: futureDue,
       time_limit_ms: 2000,
       memory_limit_mb: 512,
-      testcases_count: 2,
+      testcases_count: 5,
     },
     {
       assignment_id: 'TASK-SWP391-M1',
@@ -158,7 +158,7 @@ export async function seed(knex: Knex): Promise<void> {
       deadline: pastDue,
       time_limit_ms: 2000,
       memory_limit_mb: 512,
-      testcases_count: 3,
+      testcases_count: 8,
     },
     {
       assignment_id: 'TASK-PRO192-A1',
@@ -172,7 +172,7 @@ export async function seed(knex: Knex): Promise<void> {
       deadline: futureDue,
       time_limit_ms: 1500,
       memory_limit_mb: 256,
-      testcases_count: 3,
+      testcases_count: 6,
     },
     {
       assignment_id: 'TASK-PRO192-A2',
@@ -186,7 +186,7 @@ export async function seed(knex: Knex): Promise<void> {
       deadline: futureDue,
       time_limit_ms: 2000,
       memory_limit_mb: 256,
-      testcases_count: 2,
+      testcases_count: 4,
     },
     {
       assignment_id: 'TASK-PRN211-M1',
@@ -200,7 +200,7 @@ export async function seed(knex: Knex): Promise<void> {
       deadline: futureDue,
       time_limit_ms: 2000,
       memory_limit_mb: 512,
-      testcases_count: 3,
+      testcases_count: 7,
     },
     {
       assignment_id: 'TASK-PRN211-M2',
@@ -214,7 +214,7 @@ export async function seed(knex: Knex): Promise<void> {
       deadline: futureDue,
       time_limit_ms: 3000,
       memory_limit_mb: 512,
-      testcases_count: 2,
+      testcases_count: 3,
     },
     {
       assignment_id: 'TASK-CSD201-A1',
@@ -228,7 +228,7 @@ export async function seed(knex: Knex): Promise<void> {
       deadline: futureDue,
       time_limit_ms: 2000,
       memory_limit_mb: 512,
-      testcases_count: 3,
+      testcases_count: 10,
     },
     {
       assignment_id: 'TASK-CSD201-A2',
@@ -242,44 +242,48 @@ export async function seed(knex: Knex): Promise<void> {
       deadline: futureDue,
       time_limit_ms: 2000,
       memory_limit_mb: 512,
-      testcases_count: 3,
+      testcases_count: 5,
     },
   ];
 
   await knex('assignments').insert(assignmentsData).onConflict('assignment_id').ignore();
 
   // ==========================================================================
-  // 6. TEST_CASES (~24 test cases)
+  // 6. TEST_CASES — ĐỘNG theo testcases_count của từng assignment
   // ==========================================================================
+  // Bộ mẫu input/output cho testcases đa dạng (vòng lặp sẽ chọn theo index)
+  const tcTemplates = [
+    { input: '5\n4 2 5 1 3',           output: '1 2 3 4 5',               hidden: false },
+    { input: '10\n10 9 8 7 6 5 4 3 2 1', output: '1 2 3 4 5 6 7 8 9 10',   hidden: true },
+    { input: '3\n-5 0 10',              output: '-5 0 10',                  hidden: true },
+    { input: '1\n42',                    output: '42',                       hidden: false },
+    { input: '7\n3 1 4 1 5 9 2',        output: '1 1 2 3 4 5 9',           hidden: true },
+    { input: '4\n100 -100 0 50',        output: '-100 0 50 100',            hidden: true },
+    { input: '6\n6 5 4 3 2 1',          output: '1 2 3 4 5 6',             hidden: true },
+    { input: '8\n8 3 7 1 6 2 5 4',      output: '1 2 3 4 5 6 7 8',        hidden: true },
+    { input: '2\n999 -999',             output: '-999 999',                 hidden: true },
+    { input: '5\n0 0 0 0 0',            output: '0 0 0 0 0',               hidden: false },
+  ];
+
   const testCasesData: any[] = [];
+  // Map: assignment_id -> số lượng TC thực tế đã tạo
+  const assignmentTcCountMap: Record<string, number> = {};
+
   assignmentsData.forEach((a) => {
-    testCasesData.push({
-      test_case_id: `TC-${a.assignment_id}-01`,
-      assignment_id: a.assignment_id,
-      input_data: '5\n4 2 5 1 3',
-      expected_output: '1 2 3 4 5',
-      is_hidden: false,
-      weight: 1.0,
-      time_limit_ms: a.time_limit_ms,
-    });
-    testCasesData.push({
-      test_case_id: `TC-${a.assignment_id}-02`,
-      assignment_id: a.assignment_id,
-      input_data: '10\n10 9 8 7 6 5 4 3 2 1',
-      expected_output: '1 2 3 4 5 6 7 8 9 10',
-      is_hidden: true,
-      weight: 1.0,
-      time_limit_ms: a.time_limit_ms,
-    });
-    testCasesData.push({
-      test_case_id: `TC-${a.assignment_id}-03`,
-      assignment_id: a.assignment_id,
-      input_data: '3\n-5 0 10',
-      expected_output: '-5 0 10',
-      is_hidden: true,
-      weight: 1.0,
-      time_limit_ms: a.time_limit_ms,
-    });
+    const tcCount = a.testcases_count || 3;
+    assignmentTcCountMap[a.assignment_id] = tcCount;
+    for (let t = 0; t < tcCount; t++) {
+      const tpl = tcTemplates[t % tcTemplates.length];
+      testCasesData.push({
+        test_case_id: `TC-${a.assignment_id}-${String(t + 1).padStart(2, '0')}`,
+        assignment_id: a.assignment_id,
+        input_data: tpl.input,
+        expected_output: tpl.output,
+        is_hidden: t === 0 ? false : tpl.hidden,  // TC-01 luôn public
+        weight: 1.0,
+        time_limit_ms: a.time_limit_ms,
+      });
+    }
   });
 
   await knex('test_cases').insert(testCasesData).onConflict('test_case_id').ignore();
@@ -308,8 +312,17 @@ export async function seed(knex: Knex): Promise<void> {
 
     // Tạo điểm ngẫu nhiên thực tế (từ 4.5 đến 10.0)
     const baseScore = Math.min(10.0, Math.round((5.0 + Math.random() * 5.0) * 10) / 10);
-    const tc1Passed = baseScore >= 5.0;
-    const tc2Passed = baseScore >= 7.5;
+
+    // Số TC thực tế đã seed cho assignment này (ĐỘNG, không ghi cứng)
+    const totalTC = assignmentTcCountMap[assign.assignment_id] || 3;
+    // TC dễ → khó: threshold tăng dần, điểm cao mới pass TC cuối
+    const tcPassResults: boolean[] = [];
+    for (let t = 0; t < totalTC; t++) {
+      const threshold = 5.0 + (t / Math.max(totalTC - 1, 1)) * 4.5;
+      tcPassResults.push(baseScore >= threshold);
+    }
+    const passedCount = tcPassResults.filter(Boolean).length;
+
     const cleanScore = Math.round((6.0 + Math.random() * 3.8) * 10) / 10;
     const solidScore = Math.round((6.0 + Math.random() * 4.0) * 10) / 10;
 
@@ -334,36 +347,29 @@ export async function seed(knex: Knex): Promise<void> {
       testcase_score: baseScore >= 7.5 ? 7.0 : (baseScore >= 5.0 ? 4.0 : 0.0),
       final_score: status === 'COMPLETED' ? baseScore : null,
       score: status === 'COMPLETED' ? baseScore : null,
-      details: JSON.stringify({ passedTestcases: tc2Passed ? 2 : (tc1Passed ? 1 : 0), totalTestcases: 2 }),
+      details: JSON.stringify({ passedTestcases: passedCount, totalTestcases: totalTC }),
       created_at: subTime,
       updated_at: subTime,
     });
 
     if (status === 'COMPLETED') {
-      // 2 testcase logs
-      submissionDetailsData.push({
-        detail_id: `DTL-${subId}-01`,
-        submission_id: subId,
-        test_case_id: `TC-${assign.assignment_id}-01`,
-        status: tc1Passed ? 'PASS' : 'FAIL',
-        actual_output: tc1Passed ? '1 2 3 4 5' : 'Output mismatch at index 2',
-        time_ms: Math.floor(20 + Math.random() * 80),
-        memory_kb: Math.floor(15000 + Math.random() * 5000),
-        error_log: tc1Passed ? null : 'Sai kết quả so với mong đợi trên test case cơ bản',
-        created_at: subTime,
-      });
-
-      submissionDetailsData.push({
-        detail_id: `DTL-${subId}-02`,
-        submission_id: subId,
-        test_case_id: `TC-${assign.assignment_id}-02`,
-        status: tc2Passed ? 'PASS' : (baseScore < 6.0 ? 'TLE' : 'FAIL'),
-        actual_output: tc2Passed ? '1 2 3 4 5 6 7 8 9 10' : '',
-        time_ms: tc2Passed ? Math.floor(150 + Math.random() * 300) : 2005,
-        memory_kb: Math.floor(18000 + Math.random() * 8000),
-        error_log: tc2Passed ? null : 'Vượt quá thời gian tối đa Time Limit Exceeded (2.0s)',
-        created_at: subTime,
-      });
+      // Tạo N submission_details — ĐỘNG theo số TC thực tế
+      for (let t = 0; t < totalTC; t++) {
+        const tcId = `TC-${assign.assignment_id}-${String(t + 1).padStart(2, '0')}`;
+        const passed = tcPassResults[t];
+        const tpl = tcTemplates[t % tcTemplates.length];
+        submissionDetailsData.push({
+          detail_id: `DTL-${subId}-${String(t + 1).padStart(2, '0')}`,
+          submission_id: subId,
+          test_case_id: tcId,
+          status: passed ? 'PASS' : (Math.random() < 0.3 ? 'TLE' : 'FAIL'),
+          actual_output: passed ? tpl.output : 'Output mismatch',
+          time_ms: passed ? Math.floor(20 + Math.random() * 200) : (Math.random() < 0.3 ? 2005 : Math.floor(50 + Math.random() * 150)),
+          memory_kb: Math.floor(14000 + Math.random() * 8000),
+          error_log: passed ? null : (Math.random() < 0.3 ? 'Time Limit Exceeded (2.0s)' : 'Sai kết quả so với mong đợi'),
+          created_at: subTime,
+        });
+      }
 
       // AI review record
       const selectedSmells = smellList.slice(0, Math.floor(Math.random() * 3) + 1);

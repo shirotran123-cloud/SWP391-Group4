@@ -126,11 +126,55 @@ public class Solution {
 const initialSteps: GradingStep[] = [
   { id: '1', label: 'Hàng đợi Redis BullMQ', status: 'pending', detail: 'Đang xếp hàng chờ Worker xử lý' },
   { id: '2', label: 'Khởi tạo Docker Sandbox', status: 'pending', detail: 'Cấp phát 512MB RAM & cách ly seccomp.json' },
-  { id: '3', label: 'Chạy Testcase 1 (Dữ liệu cơ sở)', status: 'pending', detail: 'Đánh giá tính chính xác thuật toán' },
-  { id: '4', label: 'Chạy Testcase 2 (Trường hợp biên)', status: 'pending', detail: 'Kiểm tra giới hạn thời gian (TLE) & bộ nhớ' },
+  // Các bước 'tc-1'..'tc-N' được chèn động theo số testcase thật của đề (xem upsertStep).
   { id: '5', label: 'Đánh giá Clean Code & SOLID (GenAI)', status: 'pending', detail: 'Phân tích thiết kế hướng đối tượng qua Gemini/GPT' },
   { id: '6', label: 'Kiểm định Đạo văn AST Winnowing', status: 'pending', detail: 'So khớp vân tay mã nguồn trên cây cú pháp trừu tượng' },
 ];
+
+/**
+ * Cập nhật (hoặc chèn mới) một bước. Bước testcase 'tc-N' chưa có sẽ được chèn trước
+ * bước '5' và giữ đúng thứ tự tc-1, tc-2, ..., tc-N.
+ */
+function upsertStep(prev: GradingStep[], id: string, patch: Partial<GradingStep>, label?: string): GradingStep[] {
+  if (prev.some((s) => s.id === id)) {
+    return prev.map((s) => (s.id === id ? { ...s, ...patch } : s));
+  }
+  if (!id.startsWith('tc-')) return prev;
+  const n = Number(id.slice(3));
+  const newStep: GradingStep = {
+    id,
+    label: label || `tc-${n}`,
+    status: 'pending',
+    detail: '',
+    ...patch,
+  } as GradingStep;
+  const next = [...prev];
+  let insertAt = next.findIndex(
+    (s) => s.id === '5' || s.id === '6' || (s.id.startsWith('tc-') && Number(s.id.slice(3)) > n),
+  );
+  if (insertAt === -1) insertAt = next.length;
+  next.splice(insertAt, 0, newStep);
+  return next;
+}
+
+function syncTestcaseSteps(
+  steps: GradingStep[],
+  results?: Array<{ testcaseIndex: number; status: 'PASSED' | 'FAILED'; timeMs: number }>,
+): GradingStep[] {
+  if (!results) return steps;
+  return results.reduce((next, result) => {
+    const id = `tc-${result.testcaseIndex}`;
+    return upsertStep(
+      next,
+      id,
+      {
+        status: result.status === 'PASSED' ? 'passed' : 'failed',
+        detail: `Testcase ${result.testcaseIndex}/${results.length}: ${result.status === 'PASSED' ? 'ĐẠT' : 'KHÔNG ĐẠT'} (${result.timeMs}ms)`,
+      },
+      id,
+    );
+  }, steps);
+}
 
 export function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -274,22 +318,23 @@ export function App() {
 
     socket.on('grading:progress', (data: { stepId: string; stepName: string; status: any; detail?: string }) => {
       setSteps((prev) =>
-        prev.map((s) => (s.id === data.stepId ? { ...s, status: data.status, detail: data.detail || s.detail } : s))
+        upsertStep(
+          prev,
+          data.stepId,
+          { status: data.status, ...(data.detail ? { detail: data.detail } : {}) },
+          data.stepName,
+        )
       );
     });
 
-    socket.on('testcase:evaluated', (data: { testcaseIndex: number; totalTestcases: number; status: string; timeMs: number }) => {
-      const stepId = data.testcaseIndex === 1 ? '3' : '4';
+    socket.on('testcase:evaluated', (data: { testcaseIndex: number; totalTestcases: number; status: string; timeMs: number; memoryKb?: number }) => {
+      const stepId = `tc-${data.testcaseIndex}`;
+      const mem = data.memoryKb ? `, ${(data.memoryKb / 1024).toFixed(1)}MB` : '';
       setSteps((prev) =>
-        prev.map((s) =>
-          s.id === stepId
-            ? {
-                ...s,
-                status: data.status === 'PASSED' ? 'passed' : 'failed',
-                detail: `Testcase ${data.testcaseIndex}/${data.totalTestcases}: ${data.status === 'PASSED' ? 'ĐẠT' : 'KHÔNG ĐẠT'} (${data.timeMs}ms)`,
-              }
-            : s
-        )
+        upsertStep(prev, stepId, {
+          status: data.status === 'PASSED' ? 'passed' : 'failed',
+          detail: `Testcase ${data.testcaseIndex}/${data.totalTestcases}: ${data.status === 'PASSED' ? 'ĐẠT' : 'KHÔNG ĐẠT'} (${data.timeMs}ms${mem})`,
+        })
       );
     });
 
@@ -322,7 +367,11 @@ export function App() {
         executionTimeMs: data.executionTimeMs,
       });
       setSteps((prev) =>
-        prev.map((s) => (s.status === 'in_progress' || s.status === 'pending' ? { ...s, status: 'passed' } : s))
+        syncTestcaseSteps(prev, data.testcaseResults).map((s) =>
+          s.id.startsWith('tc-') || (s.status !== 'in_progress' && s.status !== 'pending')
+            ? s
+            : { ...s, status: 'passed' }
+        )
       );
       setIsCompleted(true);
     });
@@ -391,8 +440,8 @@ export function App() {
         status: 'GRADED',
         sourceCode: data.sourceCode || current.sourceCode,
         aiRating: data.aiRating || current.aiRating,
-        passedTestcases: data.passedTestcases ?? current.passedTestcases ?? 2,
-        totalTestcases: data.totalTestcases ?? current.totalTestcases ?? 2,
+        passedTestcases: data.passedTestcases ?? current.passedTestcases ?? 0,
+        totalTestcases: data.totalTestcases ?? current.totalTestcases ?? 0,
         executionTimeMs: data.executionTimeMs ?? current.executionTimeMs ?? 185,
         submittedAt: current.submittedAt || new Date().toISOString(),
         fileName: data.fileName || current.fileName || 'Solution.zip',
@@ -549,9 +598,14 @@ export function App() {
           socketRef.current.off('grading:progress');
           socketRef.current.on('grading:progress', (data: { stepId: string; stepName: string; status: any; detail?: string }) => {
             setSteps((prev) =>
-              prev.map((s) => (s.id === data.stepId ? { ...s, status: data.status, detail: data.detail || s.detail } : s))
-            );
-          });
+                  upsertStep(
+                    prev,
+                    data.stepId,
+                    { status: data.status, ...(data.detail ? { detail: data.detail } : {}) },
+                    data.stepName,
+                  )
+                );
+              });
 
           socketRef.current.off('grading:completed');
           socketRef.current.on('grading:completed', (data: any) => {
@@ -576,7 +630,11 @@ export function App() {
               executionTimeMs: data.executionTimeMs,
               fileName: file.name,
             });
-            setSteps((prev) => prev.map((s) => ({ ...s, status: 'passed' })));
+            setSteps((prev) =>
+              syncTestcaseSteps(prev, data.testcaseResults).map((s) =>
+                s.id.startsWith('tc-') ? s : { ...s, status: 'passed' }
+              )
+            );
             setIsCompleted(true);
           });
 
@@ -667,8 +725,6 @@ export function App() {
           detail: `[Lỗi nộp bài] ${errorDetail}. Vui lòng kiểm tra Docker Desktop / API Gateway (cổng 3000) và bấm 'Đóng' rồi thử nộp lại.`,
         },
         { id: '2', label: 'Khởi tạo Docker Sandbox', status: 'pending', detail: 'Chưa thể thực thi' },
-        { id: '3', label: 'Chạy Testcase 1 (Dữ liệu cơ sở)', status: 'pending', detail: 'Chưa thể thực thi' },
-        { id: '4', label: 'Chạy Testcase 2 (Trường hợp biên)', status: 'pending', detail: 'Chưa thể thực thi' },
         { id: '5', label: 'Đánh giá Clean Code & SOLID (GenAI)', status: 'pending', detail: 'Chưa thể thực thi' },
         { id: '6', label: 'Kiểm định Đạo văn AST Winnowing', status: 'pending', detail: 'Chưa thể thực thi' },
       ]);

@@ -10,6 +10,7 @@ import {
 import { CountdownTimer } from './CountdownTimer';
 import { AssignmentDescriptionView } from './AssignmentDescriptionView';
 import { parseAssignmentDescription } from '../utils/assignmentParser';
+import { verifyAssignmentTestCases } from '../services/assignment-testcases.service';
 import type { Task } from '../types';
 import { API_BASE_URL } from '../config/api';
 
@@ -51,6 +52,7 @@ export interface StudentTaskItem extends Task {
   status?: string;
   technicalRequirements?: TechnicalRequirement;
   sampleTestCases?: SampleTestCase[];
+  configuredTestCases?: Array<{ input: string; output: string; weight: number; isHidden: boolean }>;
 }
 
 export interface StudentSubmissionRecord {
@@ -64,6 +66,7 @@ export interface StudentSubmissionRecord {
   scoreBreakdown?: any;
   passedTestcases?: number;
   totalTestcases?: number;
+  testcaseResults?: Array<{ testcaseIndex: number; status: 'PASSED' | 'FAILED'; timeMs: number }>;
   executionTimeMs?: number;
   sourceCode?: string;
   aiRating?: any;
@@ -472,6 +475,16 @@ const getEffectiveRequirements = (task: StudentTaskItem): TechnicalRequirement =
 
 // Helper nạp testcase mẫu cho bất kỳ bài tập nào
 const getEffectiveSampleTestCases = (task: StudentTaskItem): SampleTestCase[] => {
+  if (task.configuredTestCases) {
+    return task.configuredTestCases
+      .filter((testCase) => !testCase.isHidden)
+      .map((testCase, index) => ({
+        name: `Testcase công khai ${index + 1}`,
+        input: testCase.input,
+        expectedOutput: testCase.output,
+        explanation: 'Testcase công khai của đề bài.',
+      }));
+  }
   if (task.sampleTestCases && task.sampleTestCases.length > 0) {
     return task.sampleTestCases;
   }
@@ -571,8 +584,12 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
       submittedAt: record.submittedAt || record.createdAt || new Date().toISOString(),
       score: record.score ?? record.details?.score,
       scoreBreakdown: record.scoreBreakdown || record.details?.scoreBreakdown,
-      passedTestcases: record.passedTestcases ?? record.details?.passedTestcases ?? 2,
-      totalTestcases: record.totalTestcases ?? record.details?.totalTestcases ?? 2,
+      passedTestcases: record.passedTestcases ?? record.details?.passedTestcases ?? 0,
+      totalTestcases: Math.max(
+        record.totalTestcases ?? record.details?.totalTestcases ?? 0,
+        selectedTask?.testCasesCount ?? 0,
+      ),
+      testCaseResults: record.testcaseResults ?? record.details?.testcaseResults,
       executionTimeMs: record.executionTimeMs ?? record.details?.executionTimeMs ?? 185,
       sha256: record.sha256 || record.sha256Hash,
       sourceCode: record.sourceCode || record.details?.sourceCode,
@@ -675,9 +692,12 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           allowedExtensions: item.allowedExtensions || ['.zip'],
           maxSizeMb: item.maxSizeMb || 10,
           testCasesCount: item.testCases ? item.testCases.length : (matchedTemplate?.testCasesCount || 5),
+          configuredTestCases: Array.isArray(item.testCases) ? item.testCases : undefined,
           rubrics: item.rubrics && item.rubrics.length > 0 ? item.rubrics : matchedTemplate?.rubrics,
           technicalRequirements: matchedTemplate?.technicalRequirements,
-          sampleTestCases: matchedTemplate?.sampleTestCases,
+          sampleTestCases: Array.isArray(item.testCases)
+            ? undefined
+            : matchedTemplate?.sampleTestCases,
           status: item.status || 'PUBLISHED',
         };
       });
@@ -951,13 +971,36 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (isExpired) {
       setErrorMessage('[BR-02 Ngoại Lệ] Không thể nộp bài do đã quá hạn chót!');
       return;
     }
     const currentTask = selectedTask || task;
     if (selectedFile && currentTask) {
+      if (selectedTask?.configuredTestCases) {
+        try {
+          await verifyAssignmentTestCases({
+            id: selectedTask.id,
+            courseId: selectedTask.courseId || '',
+            title: selectedTask.title,
+            description: selectedTask.description,
+            deadline: selectedTask.deadline,
+            timeLimitMs: selectedTask.timeLimitMs || 2000,
+            memoryLimitMb: selectedTask.memoryLimitMb || 512,
+            allowedLanguages: selectedTask.allowedLanguages || ['java', 'python', 'cpp'],
+            testCases: selectedTask.configuredTestCases,
+          });
+        } catch (error) {
+          setErrorMessage(
+            error instanceof Error
+              ? `Không thể đồng bộ đủ testcase lên máy chủ nên chưa gửi bài: ${error.message}`
+              : 'Không thể đồng bộ đủ testcase lên máy chủ nên chưa gửi bài.',
+          );
+          return;
+        }
+      }
+
       // Lưu lại thông tin nộp bài tạm thời
       const newRecord: StudentSubmissionRecord = {
         assignmentId: currentTask.id,
@@ -1379,6 +1422,11 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       </div>
                     </div>
                   ))}
+                  {samples.length === 0 && (
+                    <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+                      Đề bài hiện không có testcase công khai. Các testcase ẩn không được hiển thị ở đây.
+                    </div>
+                  )}
                 </div>
               );
             }
@@ -1638,7 +1686,11 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   gap: '5px',
                 }}
               >
-                <CheckCircle size={14} /> Testcases: {prevSubmission?.passedTestcases ?? taskSubmissions[0]?.details?.passedTestcases ?? 2}/{prevSubmission?.totalTestcases ?? taskSubmissions[0]?.details?.totalTestcases ?? 2} Passed
+                <CheckCircle size={14} /> Testcases: {prevSubmission?.passedTestcases ?? taskSubmissions[0]?.details?.passedTestcases ?? 0}/{Math.max(
+                  prevSubmission?.totalTestcases ?? 0,
+                  taskSubmissions[0]?.details?.totalTestcases ?? 0,
+                  selectedTask.testCasesCount ?? 0,
+                )} Passed
               </span>
 
               <span

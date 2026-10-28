@@ -15,6 +15,7 @@ import * as path from 'path';
 import {
   analyzeSourceCode,
   buildScoreBreakdown,
+  calculateTestcaseScore,
   validateSubmissionFile,
 } from '../src/queue/grading-core';
 import { extractFirstSource, gradeSource, runDemoCases } from '../../demo/demo-nop-bai-tinh-diem';
@@ -66,6 +67,9 @@ async function main(): Promise<boolean> {
   gate(overallOf(srpCase.tc1, srpCase.tc2) === 'FAILED', 'SRP overall FAILED (1/2 — rot 1 la rot ca bai)');
   gate(overallOf(invalidCase.tc1, invalidCase.tc2) === 'FAILED', 'INVALID overall FAILED (0/2)');
   gate(passCase.breakdown.total === passCase.score && srpCase.breakdown.total === srpCase.score, 'breakdown total equals score (diem thanh phan giu nguyen)');
+  gate(calculateTestcaseScore(6, 10) === 4.2, 'dynamic testcase score uses 6/10 * 7');
+  gate(calculateTestcaseScore(10, 10) === 7.0, 'dynamic testcase score reaches 7/7');
+  gate(calculateTestcaseScore(0, 0) === 0, 'dynamic testcase score handles empty cases');
 
   // 4. Validation uses the real shared rules.
   gate(validateSubmissionFile(null, 'java', ['java'])?.code === 'MISSING_FILE', 'validation missing file');

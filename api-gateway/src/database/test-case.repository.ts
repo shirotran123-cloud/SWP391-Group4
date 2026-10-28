@@ -137,9 +137,44 @@ export class TestCaseRepository implements OnModuleInit {
   }
 
   public async listByAssignment(assignmentId: string): Promise<TestCaseRecord[]> {
+    if (this.postgres.isAvailable()) {
+      const result = await this.postgres.query(
+        `SELECT test_case_id, assignment_id, input_data, expected_output, is_hidden, weight, time_limit_ms, created_at
+         FROM test_cases
+         WHERE assignment_id = $1
+         ORDER BY created_at ASC, test_case_id ASC`,
+        [assignmentId],
+      );
+      const records: TestCaseRecord[] = result.rows.map((r: any) => ({
+        testCaseId: r.test_case_id,
+        assignmentId: r.assignment_id,
+        inputData: r.input_data,
+        expectedOutput: r.expected_output,
+        isHidden: r.is_hidden,
+        weight: parseFloat(r.weight) || 1.0,
+        timeLimitMs: r.time_limit_ms || 2000,
+        createdAt: new Date(r.created_at),
+        updatedAt: new Date(r.created_at),
+      }));
+
+      for (const [testCaseId, record] of this.records) {
+        if (record.assignmentId === assignmentId) {
+          this.records.delete(testCaseId);
+        }
+      }
+      for (const record of records) {
+        this.records.set(record.testCaseId, record);
+      }
+      this.persist();
+      return records;
+    }
+
     return Array.from(this.records.values())
       .filter((r) => r.assignmentId === assignmentId)
-      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+      .sort((a, b) =>
+        a.createdAt.getTime() - b.createdAt.getTime() ||
+        a.testCaseId.localeCompare(b.testCaseId),
+      );
   }
 
   public async findDuplicate(assignmentId: string, inputData: string, expectedOutput: string, excludeId?: string): Promise<TestCaseRecord | null> {
