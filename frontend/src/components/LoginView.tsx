@@ -19,7 +19,8 @@ import type { UserProfile } from '../types';
 interface LoginViewProps {
   onLoginSuccess: (user: UserProfile) => void;
 }
-import { API_BASE_URL, GOOGLE_CLIENT_ID as DEFAULT_CLIENT_ID } from '../config';
+import { API_BASE_URL } from '../config/api';
+import { GOOGLE_CLIENT_ID as DEFAULT_CLIENT_ID } from '../config';
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);

@@ -8,6 +8,7 @@ import {
 import { AppealModal } from './AppealModal';
 import { FileTypeIcon } from './FileTypeIcon';
 import type { Appeal } from '../types';
+import { API_BASE_URL } from '../config/api';
 
 export interface SubmissionItem {
   submissionId: string;
@@ -48,7 +49,7 @@ interface StudentHistoryViewProps {
 export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
   studentId,
   studentName,
-  apiBaseUrl = 'http://localhost:3000',
+  apiBaseUrl = API_BASE_URL,
   onNavigateToSubmit,
   onOpenAppealModal,
 }) => {

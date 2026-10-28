@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronUp, Edit3, Save, X,
   BarChart2, MessageSquare,
 } from 'lucide-react';
-import { API_BASE_URL as API } from '../config';
+import { API_BASE_URL as API } from '../config/api';
 
 interface SubmissionRecord {
   submissionId: string;

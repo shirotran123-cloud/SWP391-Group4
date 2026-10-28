@@ -16,7 +16,7 @@ import { io, Socket } from 'socket.io-client';
 
 import { PlagiarismService } from './services/plagiarism.service';
 import JSZip from 'jszip';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL } from './config/api';
 
 function generateFallbackSubId(): string {
   return 'SUB-' + Date.now().toString(36).toUpperCase();
@@ -1177,6 +1177,7 @@ export function App() {
                 studentName={currentUser.fullName}
                 enrolledCourses={enrolledCourses}
                 selectedCourseId={selectedStudentCourseId}
+                apiBaseUrl={API_BASE_URL}
                 onSelectCourse={(courseId) => setSelectedStudentCourseId(courseId)}
                 onSubmit={(file, taskItem, lang) => handleSubmission(file, undefined, taskItem, lang)}
               />

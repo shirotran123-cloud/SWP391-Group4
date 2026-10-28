@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { SolidRadarChart } from './SolidRadarChart';
 import type { AIRating, ScoreBreakdown } from '../types';
+import { API_BASE_URL } from '../config/api';
 
 export interface SubmissionDetailData {
   submissionId: string;
@@ -55,7 +56,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   isOpen,
   onClose,
   submission,
-  apiBaseUrl = 'http://localhost:3000',
+  apiBaseUrl = API_BASE_URL,
   onOpenAppeal,
   onDownloadZip,
 }) => {

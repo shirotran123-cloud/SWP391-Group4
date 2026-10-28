@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, AlertCircle, CheckCircle, Clock, Send, Scale, ShieldAlert, Award, Lock, Sparkles, FileText } from 'lucide-react';
 import type { Appeal } from '../types';
+import { API_BASE_URL } from '../config/api';
 
 interface AppealModalProps {
   isOpen: boolean;
@@ -18,7 +19,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
   submissionId = '',
   studentId,
   currentScore,
-  apiBaseUrl = 'http://localhost:3000',
+  apiBaseUrl = API_BASE_URL,
   onAppealSuccess,
 }) => {
   const [subIdInput, setSubIdInput] = useState(submissionId);

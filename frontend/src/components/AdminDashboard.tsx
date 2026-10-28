@@ -5,7 +5,7 @@ import {
   Trash2, RotateCcw, ChevronDown, ChevronUp, AlertTriangle,
   CheckCircle, XCircle, Clock, Cpu, BarChart2, Settings, Sparkles
 } from 'lucide-react';
-import { API_BASE_URL as API } from '../config';
+import { API_BASE_URL as API } from '../config/api';
 
 interface QueueStats {
   queueName: string;
