@@ -12,6 +12,7 @@ import { AssignmentDescriptionView } from './AssignmentDescriptionView';
 import { parseAssignmentDescription } from '../utils/assignmentParser';
 import { verifyAssignmentTestCases } from '../services/assignment-testcases.service';
 import type { Task } from '../types';
+import { API_BASE_URL } from '../config/api';
 
 export interface RubricItem {
   criterion: string;
@@ -527,7 +528,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   enrolledCourses = [],
   selectedCourseId = 'ALL',
   onSelectCourse,
-  apiBaseUrl = 'http://localhost:3000',
+  apiBaseUrl = API_BASE_URL,
   onOpenAppeal,
   onSubmit,
 }) => {

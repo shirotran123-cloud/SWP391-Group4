@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Scale, Clock, CheckCircle, XCircle, AlertCircle, PlusCircle, RefreshCw, Award } from 'lucide-react';
 import type { Appeal } from '../types';
 import { AppealModal } from './AppealModal';
+import { API_BASE_URL } from '../config/api';
 
 interface StudentAppealsViewProps {
   studentId: string;
@@ -12,7 +13,7 @@ interface StudentAppealsViewProps {
 export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
   studentId,
   studentName,
-  apiBaseUrl = 'http://localhost:3000',
+  apiBaseUrl = API_BASE_URL,
 }) => {
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -81,8 +82,8 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
       <div className="glass-panel" style={{ padding: '28px', marginBottom: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
-            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-200)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-              USE CASE 06 &amp; QUY TẮC BR-05
+            <span className="eyebrow" style={{ color: 'var(--blue-200)' }}>
+              Cổng dịch vụ sinh viên • Phúc khảo điểm
             </span>
             <h1 style={{ fontSize: '26px', fontWeight: 600, marginTop: '4px', marginBottom: '8px', color: 'var(--text-main)' }}>
               Theo Dõi Khiếu Nại &amp; Phúc Khảo Điểm (Appeals)

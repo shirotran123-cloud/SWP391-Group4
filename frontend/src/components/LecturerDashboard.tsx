@@ -41,6 +41,7 @@ import { FileTypeIcon } from './FileTypeIcon';
 import type { PlagiarismMatch } from '../types';
 
 import { GeminiAIService, type RubricCriterion } from '../services/gemini-ai.service';
+import { API_BASE_URL } from '../config/api';
 import { syncAssignmentTestCases } from '../services/assignment-testcases.service';
 
 interface LecturerDashboardProps {
@@ -350,7 +351,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
       // requesterRole=LECTURER → API trả đầy đủ plagiarism data (BR-04)
       const res = await fetch(
-        `http://localhost:3000/api/v1/submissions/gradebook?policy=${policy}&requesterRole=LECTURER`,
+        `${API_BASE_URL}/api/v1/submissions/gradebook?policy=${policy}&requesterRole=LECTURER`,
         { headers: authHeaders },
       );
       if (res.ok) {
@@ -363,7 +364,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         let detailById = new Map<string, any>();
         try {
           const detailRes = await fetch(
-            'http://localhost:3000/api/v1/submissions?requesterRole=LECTURER',
+            `${API_BASE_URL}/api/v1/submissions?requesterRole=LECTURER`,
             { headers: authHeaders },
           );
           if (detailRes.ok) {
@@ -434,7 +435,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     // ── Fallback: không có bảng điểm chốt thì dùng danh sách bài nộp thô ──────
     try {
       const token = localStorage.getItem('aita_token') || '';
-      const res = await fetch('http://localhost:3000/api/v1/submissions?requesterRole=LECTURER', {
+      const res = await fetch(`${API_BASE_URL}/api/v1/submissions?requesterRole=LECTURER`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
@@ -512,7 +513,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setScanningPlagiarism(true);
     setPlagiarismScanResult(null);
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/plagiarism/matrix/${encodeURIComponent(assignIdToScan)}`);
+      const res = await fetch(`${API_BASE_URL}/api/v1/plagiarism/matrix/${encodeURIComponent(assignIdToScan)}`);
       if (res.ok) {
         const json = await res.json();
         setPlagiarismScanResult(json.data);
@@ -535,7 +536,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setDownloadingId(subId);
     try {
       const token = localStorage.getItem('aita_token') || '';
-      const res = await fetch(`http://localhost:3000/api/v1/submissions/${subId}/download`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/submissions/${subId}/download`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (res.ok) {
@@ -960,7 +961,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   // Tải danh sách khóa học thực tế từ API Gateway (PostgreSQL 15)
   const fetchLiveCourses = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/v1/courses');
+      const res = await fetch(`${API_BASE_URL}/api/v1/courses`);
       if (res.ok) {
         const json = await res.json();
         const serverCourses = json.data || json || [];
@@ -1002,7 +1003,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setCreateCourseLoading(true);
     const generatedId = 'CRS-' + newCourseCode.trim().toUpperCase();
     try {
-      const res = await fetch('http://localhost:3000/api/v1/courses', {
+      const res = await fetch(`${API_BASE_URL}/api/v1/courses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1070,7 +1071,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const handleExportCourseRoster = async () => {
     const courseIdToFetch = targetCourseId || 'CRS-SWP391';
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToFetch}/students`);
+      const res = await fetch(`${API_BASE_URL}/api/v1/courses/${courseIdToFetch}/students`);
       if (res.ok) {
         const json = await res.json();
         const students = json.data || json || [];
@@ -1102,7 +1103,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     const courseIdToFetch = cId || targetCourseId || 'CRS-SWP391';
     setLoadingCourseStudents(true);
     try {
-      const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToFetch}/students`);
+      const res = await fetch(`${API_BASE_URL}/api/v1/courses/${courseIdToFetch}/students`);
       if (res.ok) {
         const json = await res.json();
         setCourseStudents(json.data || json || []);
@@ -1120,7 +1121,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     if (!window.confirm(`Bạn có chắc muốn xóa sinh viên ${studentName} (${studentId}) khỏi lớp học phần này?`)) return;
     try {
       const courseIdToFetch = targetCourseId || 'CRS-SWP391';
-      const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToFetch}/students/${studentId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/courses/${courseIdToFetch}/students/${studentId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -1290,7 +1291,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       const targetCourseObj = courses.find((c) => c.courseId === courseIdToUse);
       const courseLabel = targetCourseObj ? `${targetCourseObj.courseCode} (${targetCourseObj.courseName})` : courseIdToUse;
 
-      const res = await fetch(`http://localhost:3000/api/v1/courses/${courseIdToUse}/bulk-import`, {
+      const res = await fetch(`${API_BASE_URL}/api/v1/courses/${courseIdToUse}/bulk-import`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ students: studentsToImport }),
@@ -3655,7 +3656,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       {/* TAB 6: PHÚC KHẢO & KHIẾU NẠI ĐIỂM (UC-06 / BR-05) */}
       {activeTab === 'APPEALS' && (
-        <LecturerAppealsManager apiBaseUrl="http://localhost:3000" lecturerId="GV001" />
+        <LecturerAppealsManager apiBaseUrl={API_BASE_URL} lecturerId="GV001" />
       )}
 
 

@@ -295,12 +295,12 @@ So chiếu với tài liệu [`RBL_Syllabus_AITA_10Weeks.md`](file:///c:/Users/A
 
 ---
 
-### 🖥️ UI Bug 9: Hardcode địa chỉ API Gateway `http://localhost:3000` ở 12+ files
+### 🖥️ UI Bug 9: Hardcode địa chỉ API Gateway `http://localhost:3000` ở 12+ files *(Đã khắc phục ✅)*
 * **Vị trí code:** Rải rác trong `SubmissionView.tsx`, `SubmissionDetailModal.tsx`, `StudentHistoryView.tsx`, `StudentAppealsView.tsx`, `AdminDashboard.tsx`, `LecturerPanel.tsx`, `LecturerDashboard.tsx`, `LecturerAppealsManager.tsx`, v.v.
 * **Mô tả & Hậu quả:**  
   Các components đều tự khai báo `const API_BASE_URL = 'http://localhost:3000'`. Nếu nhóm demo qua mạng nội bộ LAN (ví dụ máy chủ chạy ở IP `192.168.1.15:3000` hoặc deploy lên domain test), toàn bộ frontend sẽ gửi request về máy cục bộ của người xem $\to$ sập toàn bộ kết nối.
 * **Giải pháp khắc phục:**  
-  Tạo file cấu hình tập trung [`frontend/src/config/api.ts`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/config/api.ts):
+  Tạo file cấu hình tập trung [`frontend/src/config/api.ts`](file:///d:/download/SWP391-Group4-maingithub/SWP391-Group4-main/frontend/src/config/api.ts):
   ```typescript
   export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
   ```
@@ -308,16 +308,11 @@ So chiếu với tài liệu [`RBL_Syllabus_AITA_10Weeks.md`](file:///c:/Users/A
 
 ---
 
-### 🖥️ UI Bug 10: Tiêu đề mang thuật ngữ kỹ thuật đặc tả nội bộ trong giao diện Sinh viên
-* **Vị trí code:** [`frontend/src/components/StudentAppealsView.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/StudentAppealsView.tsx#L84-L86)
-  ```tsx
-  <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-200)' }}>
-    USE CASE 06 &amp; QUY TẮC BR-05
-  </span>
-  ```
+### 🖥️ UI Bug 10: Tiêu đề mang thuật ngữ kỹ thuật đặc tả nội bộ trong giao diện Sinh viên *(Đã khắc phục ✅)*
+* **Vị trí code:** [`frontend/src/components/StudentAppealsView.tsx`](file:///d:/download/SWP391-Group4-maingithub/SWP391-Group4-main/frontend/src/components/StudentAppealsView.tsx#L84-L86)
 * **Mô tả & Hậu quả:**  
   Trên màn hình của Sinh viên xuất hiện dòng chữ in hoa kỹ thuật: *"USE CASE 06 & QUY TẮC BR-05"*. Đây là tên mã trong tài liệu SRS thiết kế, hiển thị trực tiếp lên giao diện người dùng cuối sẽ tạo cảm giác như một bản nháp bài tập lớn chưa được trau chuốt thành sản phẩm thương mại.
 * **Giải pháp khắc phục:**  
   Đổi thẻ kicker thành văn phong nghiệp vụ thân thiện:
-  `<span className="eyebrow">Cổng dịch vụ sinh viên • Phúc khảo điểm</span>`.
+  `<span className="eyebrow" style={{ color: 'var(--blue-200)' }}>Cổng dịch vụ sinh viên • Phúc khảo điểm</span>`.
 

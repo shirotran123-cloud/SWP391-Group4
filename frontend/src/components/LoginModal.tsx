@@ -18,7 +18,7 @@ interface LoginModalProps {
   onClose: () => void;
   onLoginSuccess: (user: User, token: string) => void;
 }
-import { API_BASE_URL } from '../config';
+import { API_BASE_URL } from '../config/api';
 
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
