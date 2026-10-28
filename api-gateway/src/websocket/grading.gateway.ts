@@ -66,6 +66,11 @@ export interface GradingCompletedPayload {
   };
   passedTestcases: number;
   totalTestcases: number;
+  testcaseResults?: Array<{
+    testcaseIndex: number;
+    status: 'PASSED' | 'FAILED';
+    timeMs: number;
+  }>;
   executionTimeMs: number;
   sourceCode?: string;
   aiRating?: {

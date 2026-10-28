@@ -24,6 +24,7 @@ export interface SubmissionItem {
     score?: number;
     passedTestcases?: number;
     totalTestcases?: number;
+    testcaseResults?: Array<{ testcaseIndex: number; status: 'PASSED' | 'FAILED'; timeMs: number }>;
     executionTimeMs?: number;
     aiRating?: {
       cleanCodeScore?: number;
@@ -78,6 +79,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
       scoreBreakdown: sub.details?.scoreBreakdown,
       passedTestcases: sub.details?.passedTestcases,
       totalTestcases: sub.details?.totalTestcases,
+      testCaseResults: sub.details?.testcaseResults,
       executionTimeMs: (sub.details as any)?.executionTimeMs,
       sha256: sub.sha256Hash,
       sourceCode: sub.details?.sourceCode,

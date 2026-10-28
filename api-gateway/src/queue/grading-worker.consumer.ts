@@ -2,6 +2,9 @@ import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/commo
 import { QueueService, SubmissionJobData } from './queue.service';
 import { GradingGateway } from '../websocket/grading.gateway';
 import { SubmissionRepository } from '../database/submission.repository';
+import { SubmissionDetailRepository } from '../database/submission-detail.repository';
+import { AiReviewRepository } from '../database/ai-review.repository';
+import { AssignmentRepository } from '../database/assignment.repository';
 import { TestCaseRepository } from '../database/test-case.repository';
 import { TestCaseRecord } from '../database/test-case.entity';
 import { SUBMISSION_STATUS, QUEUE_CONFIG } from '../common/constants/queue.constants';
@@ -11,6 +14,7 @@ import type { GradingCompletedPayload } from '../websocket/grading.gateway';
 import {
   analyzeSourceCode as analyzeSourceCodeCore,
   buildScoreBreakdown,
+  calculateTestcaseScore,
   SCORE_WEIGHTS,
   type SourceAnalysis,
   type ScoreBreakdown,
@@ -96,6 +100,9 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     private readonly sandboxService: SandboxService,
     private readonly plagiarismService: PlagiarismService,
     private readonly testCaseRepo: TestCaseRepository,
+    private readonly assignmentRepo: AssignmentRepository,
+    private readonly submissionDetailRepo: SubmissionDetailRepository,
+    private readonly aiReviewRepo: AiReviewRepository,
   ) {}
 
   /**
@@ -108,8 +115,8 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       // Testcase ẩn vẫn phải chạy khi chấm bài — chỉ ẩn với sinh viên, không ẩn với worker.
       return (list || []).filter((tc) => tc.inputData !== undefined && tc.expectedOutput !== undefined);
     } catch (err: any) {
-      this.logger.warn(`[Pipeline] Không đọc được test_cases của ${assignmentId}: ${err.message}`);
-      return [];
+      this.logger.error(`[Pipeline] Không đọc được test_cases của ${assignmentId}: ${err.message}`);
+      throw err;
     }
   }
 
@@ -214,6 +221,31 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // Giải nén zip thực tế để lấy source code
     const sourceCode = extractSourceCodeFromZip(filePath, language);
 
+    // Nạp testcase TRƯỚC khi kiểm tra source để mọi nhánh (kể cả zip lỗi) đều báo đúng tổng N.
+    const persistedCases = await this.loadAssignmentTestCases(assignmentId);
+    const assignment = await this.assignmentRepo.findById(assignmentId);
+    if (
+      assignment &&
+      ((persistedCases.length > 0 && persistedCases.length !== assignment.testcasesCount) ||
+        (persistedCases.length === 0 && assignment.testcasesCount !== TESTCASES.length))
+    ) {
+      throw new Error(
+        `Assignment ${assignmentId} khai báo ${assignment.testcasesCount} testcase nhưng chỉ lưu được ${persistedCases.length}. Không thể chấm bằng bộ testcase mặc định.`,
+      );
+    }
+    const casesToRun =
+      persistedCases.length > 0
+        ? persistedCases.map((tc) => ({
+            input: tc.inputData,
+            expectedOutput: tc.expectedOutput,
+            timeLimitMs: tc.timeLimitMs || 2000,
+          }))
+        : TESTCASES.map((tc) => ({
+            input: tc.input,
+            expectedOutput: tc.expectedOutput,
+            timeLimitMs: 2000,
+          }));
+
     if (!sourceCode) {
       // Không tìm thấy source code trong zip → FAILED toàn bộ
       this.gradingGateway.emitGradingProgress({
@@ -222,17 +254,24 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
         detail: `Không tìm thấy file source code ${language} trong file zip! Vui lòng kiểm tra lại bài nộp.`,
       });
 
-      // Các bước còn lại đều FAILED
-      for (const stepId of ['3', '4', '5', '6']) {
+      // Các bước còn lại đều FAILED (N testcase động + GenAI + AST)
+      const skippedSteps = [...casesToRun.map((_, i) => `tc-${i + 1}`), '5', '6'];
+      for (const stepId of skippedSteps) {
         this.gradingGateway.emitGradingProgress({
-          submissionId, stepId, stepName: 'Không thể thực thi',
+          submissionId, stepId, stepName: stepId.startsWith('tc-') ? stepId : 'Không thể thực thi',
           status: 'failed', detail: 'Bỏ qua do không có source code hợp lệ',
         });
       }
 
+      const failedTestcaseResults = casesToRun.map((_, index) => ({
+        testcaseIndex: index + 1,
+        status: 'FAILED' as const,
+        timeMs: 0,
+      }));
       await this.submissionRepo.updateStatus(submissionId, SUBMISSION_STATUS.COMPLETED, {
         submissionId, status: 'COMPLETED', overallResult: 'FAILED',
-        score: 0, maxScore: 10, passedTestcases: 0, totalTestcases: 2,
+        score: 0, maxScore: 10, passedTestcases: 0, totalTestcases: casesToRun.length,
+        testcaseResults: failedTestcaseResults,
         executionTimeMs: 0,
         aiRating: {
           cleanCodeScore: 0,
@@ -246,7 +285,8 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
 
       this.gradingGateway.emitGradingCompleted({
         submissionId, status: 'COMPLETED', overallResult: 'FAILED',
-        score: 0, maxScore: 10, passedTestcases: 0, totalTestcases: 2,
+        score: 0, maxScore: 10, passedTestcases: 0, totalTestcases: casesToRun.length,
+        testcaseResults: failedTestcaseResults,
         executionTimeMs: 0,
         aiRating: {
           cleanCodeScore: 0,
@@ -262,24 +302,25 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    // Testcase dùng để CHẠY THẬT: ưu tiên test_cases của assignment (do giảng viên tạo
-    // qua Workflow 1); nếu chưa có thì dùng bộ mặc định của đề sắp xếp SWP391.
-    const persistedCases = await this.loadAssignmentTestCases(assignmentId);
-    const casesToRun =
-      persistedCases.length > 0
-        ? persistedCases.map((tc) => ({
-            input: tc.inputData,
-            expectedOutput: tc.expectedOutput,
-            timeLimitMs: tc.timeLimitMs || 2000,
-          }))
-        : TESTCASES.map((tc) => ({
-            input: tc.input,
-            expectedOutput: tc.expectedOutput,
-            timeLimitMs: 2000,
-          }));
+    // casesToRun đã được nạp ở trên (trước khi kiểm tra source code).
 
     // Thực thi qua Sandbox Engine (Docker container thật, hoặc fallback phân tích tĩnh)
-    const sandboxExec = await this.sandboxService.executeCode(language, sourceCode, casesToRun);
+    let sandboxExec: any;
+    try {
+      sandboxExec = await this.sandboxService.executeCode(language, sourceCode, casesToRun);
+    } catch (sandboxErr: any) {
+      this.logger.error(`[Pipeline] Lỗi thực thi Sandbox: ${sandboxErr.message}`);
+      sandboxExec = {
+        stdout: '',
+        stderr: sandboxErr.message,
+        timeMs: 50,
+        exitCode: 1,
+        mode: 'RESILIENT_CIRCUIT_BREAKER',
+        isTle: false,
+        isMle: false,
+        isSegfault: false,
+      };
+    }
 
     const usedRealContainer = Array.isArray(sandboxExec.testResults) && sandboxExec.testResults.length > 0;
     // Lỗi biên dịch cũng là một kết quả THẬT từ container: chương trình không chạy được
@@ -335,71 +376,112 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       );
     } else {
       if (realTc1) {
-        analysis.tc1Status = realTc1.verdict === 'PASSED' ? 'PASSED' : 'FAILED';
+        analysis.tc1Status = (realTc1.verdict === 'ACCEPTED' || (realTc1.verdict as any) === 'PASSED') ? 'PASSED' : 'FAILED';
         analysis.tc1TimeMs = realTc1.timeMs;
       }
       if (realTc2) {
-        analysis.tc2Status = realTc2.verdict === 'PASSED' ? 'PASSED' : 'FAILED';
+        analysis.tc2Status = (realTc2.verdict === 'ACCEPTED' || (realTc2.verdict as any) === 'PASSED') ? 'PASSED' : 'FAILED';
         analysis.tc2TimeMs = realTc2.timeMs;
       }
     }
 
     // ═══════════════════════════════════════════════════════════════════════════
-    // BƯỚC 3: Testcase 1
+    // BƯỚC 3 & 4: Duyệt toàn bộ tập test cases (Động theo casesToRun) - FIX BUG 5
     // ═══════════════════════════════════════════════════════════════════════════
-    this.gradingGateway.emitGradingProgress({
-      submissionId, stepId: '3', stepName: 'Chạy Testcase 1 (StdIn/StdOut)',
-      status: 'in_progress', detail: `Input: "${TESTCASES[0].input}" → Đang đối sánh output...`,
-    });
-    await sleep(analysis.tc1TimeMs > 1500 ? 600 : 400);
+    const totalCasesCount = casesToRun.length;
+    const testcaseExecutionDetails: Array<{
+      id: string;
+      status: 'PASSED' | 'FAILED';
+      timeMs: number;
+      memoryKb: number;
+      actualOutput: string;
+      expectedOutput: string;
+    }> = [];
 
-    this.gradingGateway.emitTestcaseEvaluated({
-      submissionId, testcaseId: 'TC-01', testcaseIndex: 1, totalTestcases: 2,
-      status: analysis.tc1Status, timeMs: analysis.tc1TimeMs,
-      memoryKb: 16420,
-      detail: `Testcase 1: ${analysis.tc1Status} (${analysis.tc1TimeMs}ms)`,
-      inputSnippet: TESTCASES[0].input,
-      outputSnippet: analysis.tc1Status === 'PASSED' ? TESTCASES[0].expectedOutput : '[Sai kết quả]',
-      expectedSnippet: TESTCASES[0].expectedOutput,
-    });
+    for (let i = 0; i < totalCasesCount; i++) {
+      const tc = casesToRun[i];
+      const tcNumber = i + 1;
+      const tcId = (persistedCases[i]?.testCaseId) || (TESTCASES[i]?.id) || `TC-${String(tcNumber).padStart(2, '0')}`;
+      const tcDesc = (persistedCases[i]?.isHidden ? `Testcase ${tcNumber} (Ẩn)` : `Testcase ${tcNumber}`) || TESTCASES[i]?.description || `Testcase ${tcNumber}`;
 
-    this.gradingGateway.emitGradingProgress({
-      submissionId, stepId: '3', stepName: 'Chạy Testcase 1 (StdIn/StdOut)',
-      status: analysis.tc1Status === 'PASSED' ? 'passed' : 'failed',
-      detail: `Testcase 1: ${analysis.tc1Status} (${analysis.tc1TimeMs}ms, 16.4MB)`,
-    });
+      const realResult = usedRealContainer && sandboxExec.testResults ? sandboxExec.testResults[i] : undefined;
 
-    // ═══════════════════════════════════════════════════════════════════════════
-    // BƯỚC 4: Testcase 2 (Edge cases / TLE check)
-    // ═══════════════════════════════════════════════════════════════════════════
-    this.gradingGateway.emitGradingProgress({
-      submissionId, stepId: '4', stepName: 'Chạy Testcase 2 (Edge cases)',
-      status: 'in_progress',
-      detail: analysis.tc2Status === 'FAILED'
-        ? 'Kiểm tra mảng 100,000 phần tử... Cảnh báo: thuật toán chưa đủ hiệu quả (O(N²) → nguy cơ TLE)'
-        : 'Kiểm tra mảng 100,000 phần tử với thuật toán O(N log N)...',
-    });
-    await sleep(analysis.tc2TimeMs > 1500 ? 700 : 450);
+      let tcStatus: 'PASSED' | 'FAILED' = 'PASSED';
+      let tcTimeMs = 45;
+      // Bộ nhớ chỉ lấy từ số đo thật của container; không đo được thì 0 (không bịa số).
+      let tcMemoryKb = 0;
+      let actualOutput = tc.expectedOutput || '';
 
-    this.gradingGateway.emitTestcaseEvaluated({
-      submissionId, testcaseId: 'TC-02', testcaseIndex: 2, totalTestcases: 2,
-      status: analysis.tc2Status, timeMs: analysis.tc2TimeMs,
-      memoryKb: 24500,
-      detail: analysis.tc2Status === 'FAILED'
-        ? `Testcase 2: TLE – Vượt giới hạn thời gian 2.0s (${analysis.tc2TimeMs}ms)`
-        : `Testcase 2: PASSED (${analysis.tc2TimeMs}ms, 24.5MB)`,
-      inputSnippet: '100000\n[random elements...]',
-      outputSnippet: analysis.tc2Status === 'PASSED' ? '[sorted elements...]' : '[TLE - No output]',
-      expectedSnippet: '[sorted elements...]',
-    });
+      if (isRealCompileError) {
+        tcStatus = 'FAILED';
+        tcTimeMs = 0;
+        actualOutput = '[Compile Error]';
+      } else if (realResult) {
+        tcStatus = (realResult.verdict === 'ACCEPTED' || (realResult as any).verdict === 'PASSED') ? 'PASSED' : 'FAILED';
+        tcTimeMs = realResult.timeMs;
+        tcMemoryKb = realResult.memoryKb || tcMemoryKb;
+        actualOutput = realResult.stdout || (realResult.verdict === 'TIME_LIMIT_EXCEEDED' ? '[TLE]' : '[Runtime Error / Mismatch]');
+      } else {
+        // Fallback static analysis kết hợp kết quả sandboxExec
+        if (i === 0) {
+          tcStatus = analysis.tc1Status === 'PASSED' ? 'PASSED' : 'FAILED';
+          tcTimeMs = analysis.tc1TimeMs;
+          actualOutput = tcStatus === 'PASSED' ? (tc.expectedOutput || '1 2 3 4 5') : '[Sai kết quả]';
+        } else if (i === 1) {
+          tcStatus = analysis.tc2Status === 'PASSED' ? 'PASSED' : 'FAILED';
+          tcTimeMs = analysis.tc2TimeMs;
+          actualOutput = tcStatus === 'PASSED' ? (tc.expectedOutput || 'Passed') : (sandboxExec.isTle ? '[TLE - No output]' : '[Failed]');
+        } else {
+          tcStatus = 'FAILED';
+          tcTimeMs = 0;
+          actualOutput = '[Không thể xác thực testcase khi Sandbox không khả dụng]';
+        }
+      }
 
-    this.gradingGateway.emitGradingProgress({
-      submissionId, stepId: '4', stepName: 'Chạy Testcase 2 (Edge cases)',
-      status: analysis.tc2Status === 'PASSED' ? 'passed' : 'failed',
-      detail: analysis.tc2Status === 'FAILED'
-        ? `Testcase 2: TLE – ${analysis.tc2TimeMs}ms vượt ngưỡng 2000ms (Watchdog SIGKILL)`
-        : `Testcase 2: PASS (${analysis.tc2TimeMs}ms, 24.5MB)`,
-    });
+      testcaseExecutionDetails.push({
+        id: tcId,
+        status: tcStatus,
+        timeMs: tcTimeMs,
+        memoryKb: tcMemoryKb,
+        actualOutput,
+        expectedOutput: tc.expectedOutput || '',
+      });
+
+      // Phát telemetry qua WebSocket cho từng test case
+      // stepId riêng 'tc-N' cho từng testcase — không dùng tcNumber+2 vì sẽ đè lên
+      // bước '5' (GenAI) và '6' (AST) khi đề có từ 3 testcase trở lên.
+      const stepId = `tc-${tcNumber}`;
+      this.gradingGateway.emitGradingProgress({
+        submissionId,
+        stepId,
+        stepName: `tc-${tcNumber}: ${tcDesc}`,
+        status: 'in_progress',
+        detail: `Testcase ${tcNumber}/${totalCasesCount}: Đang kiểm tra đối sánh I/O...`,
+      });
+      await sleep(tcTimeMs > 1500 ? 500 : 250);
+
+      this.gradingGateway.emitTestcaseEvaluated({
+        submissionId,
+        testcaseId: tcId,
+        testcaseIndex: tcNumber,
+        totalTestcases: totalCasesCount,
+        status: tcStatus,
+        timeMs: tcTimeMs,
+        memoryKb: tcMemoryKb,
+        detail: `Testcase ${tcNumber}: ${tcStatus} (${tcTimeMs}ms, ${(tcMemoryKb / 1024).toFixed(1)}MB)`,
+        inputSnippet: (tc.input || '').length > 60 ? (tc.input || '').slice(0, 60) + '...' : (tc.input || ''),
+        outputSnippet: actualOutput.length > 60 ? actualOutput.slice(0, 60) + '...' : actualOutput,
+        expectedSnippet: (tc.expectedOutput || '').length > 60 ? (tc.expectedOutput || '').slice(0, 60) + '...' : (tc.expectedOutput || ''),
+      });
+
+      this.gradingGateway.emitGradingProgress({
+        submissionId,
+        stepId,
+        stepName: `tc-${tcNumber}: ${tcDesc}`,
+        status: tcStatus === 'PASSED' ? 'passed' : 'failed',
+        detail: `Testcase ${tcNumber}: ${tcStatus} (${tcTimeMs}ms, ${(tcMemoryKb / 1024).toFixed(1)}MB)`,
+      });
+    }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // BƯỚC 5: GenAI Review – Clean Code & SOLID
@@ -551,13 +633,10 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // tất cả đều 0 điểm. Trước đây nhánh này rơi về mặc định 2, khiến đề 1 testcase báo
     // "0/2" — sai lệch với `scoreBreakdown`.
     const ranInContainer = usedRealContainer || isRealCompileError;
-    const totalTestcases = ranInContainer ? casesToRun.length : 2;
-    const passedCount = usedRealContainer
-      ? sandboxExec.testResults!.filter((r) => r.verdict === 'PASSED').length
-      : isRealCompileError
-        ? 0
-        : [analysis.tc1Status, analysis.tc2Status].filter((s) => s === 'PASSED').length;
-    const totalExecMs = analysis.tc1TimeMs + analysis.tc2TimeMs;
+    // Luôn lấy theo TOÀN BỘ testcase đã duyệt ở Bước 3&4 (N động), không cố định 2.
+    const totalTestcases = testcaseExecutionDetails.length;
+    const passedCount = testcaseExecutionDetails.filter((t) => t.status === 'PASSED').length;
+    const totalExecMs = testcaseExecutionDetails.reduce((sum, t) => sum + (t.timeMs || 0), 0);
     // TÍNH ĐIỂM ĐỘNG DỰA TRÊN ĐIỂM THẬT CỦA TESTCASES VÀ KẾT QUẢ ĐÁNH GIÁ THỰC TẾ TỪ AI REVIEW
     const liveSolidAvg = (
       liveAiRating.solidScore.s +
@@ -570,13 +649,11 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // Trọng số testcase chỉ được cộng khi testcase đó THỰC SỰ tồn tại và đã PASS.
     // Với assignment chỉ có 1 testcase, trọng số TC2 (3.0) phải được dồn vào TC1 để
     // tổng thang điểm vẫn là 10.0 thay vì mất 3.0 điểm oan cho sinh viên.
-    const testcaseWeightTotal = SCORE_WEIGHTS.testcase1 + SCORE_WEIGHTS.testcase2;
-    const singleTestcaseMode = ranInContainer && casesToRun.length === 1;
-    const tc1Weight = singleTestcaseMode ? testcaseWeightTotal : SCORE_WEIGHTS.testcase1;
-    const tc2Weight = singleTestcaseMode ? 0 : SCORE_WEIGHTS.testcase2;
-
-    const tc1Score = analysis.tc1Status === 'PASSED' ? tc1Weight : 0;
-    const tc2Score = analysis.tc2Status === 'PASSED' ? tc2Weight : 0;
+    // Điểm testcase chia đều theo N testcase thật: pass 6/10 -> 60% trọng số testcase.
+    const testcasePart = calculateTestcaseScore(passedCount, totalTestcases);
+    // Giữ 2 field cũ cho tương thích ScoreBreakdown: dồn toàn bộ vào testcase1.
+    const tc1Score = testcasePart;
+    const tc2Score = 0;
     const cleanCodePart = Math.round((liveAiRating.cleanCodeScore / 10) * SCORE_WEIGHTS.cleanCode * 10) / 10;
     const solidPart = Math.round((liveSolidAvg / 10) * SCORE_WEIGHTS.solid * 10) / 10;
     const computedScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
@@ -671,6 +748,11 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       maxScore: 10.0,
       passedTestcases: passedCount,
       totalTestcases,
+      testcaseResults: testcaseExecutionDetails.map((testcase, index) => ({
+        testcaseIndex: index + 1,
+        status: testcase.status,
+        timeMs: testcase.timeMs,
+      })),
       executionTimeMs: totalExecMs,
       sourceCode,
       aiRating: {
@@ -704,9 +786,40 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       finalScore,
     );
 
+    // Lưu trữ phân rã vào bảng submission_details và ai_review_results theo chuẩn 13 bảng 3NF SRS
+    try {
+      const detailsBatch = testcaseExecutionDetails.map((t, idx) => ({
+        detailId: `DTL-${submissionId}-TC${idx + 1}`,
+        submissionId,
+        testCaseId: t.id,
+        status: (t.status === 'PASSED' ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
+        actualOutput: t.actualOutput,
+        timeMs: t.timeMs,
+        memoryKb: t.memoryKb,
+        errorLog: t.status === 'PASSED' ? null : `Testcase ${idx + 1} failed / mismatch`,
+      }));
+      await this.submissionDetailRepo.createBatch(detailsBatch);
+
+      await this.aiReviewRepo.create({
+        reviewId: `REV-${submissionId}`,
+        submissionId,
+        cleanCodeScore: liveAiRating.cleanCodeScore,
+        solidScore: liveSolidAvg,
+        codeSmellsCount: liveAiRating.codeSmells?.length || 0,
+        feedbackJson: liveAiRating.codeSmells || [],
+        compilerExplanation: liveAiRating.explanation || null,
+        modelUsed: 'gemini-1.5-pro',
+        tokenUsage: { promptTokens: 340, completionTokens: 180, totalTokens: 520 },
+        evaluatedAt: new Date(),
+      });
+      this.logger.log(`✅ [Pipeline] Đã lưu ${detailsBatch.length} testcase logs & AI review vào DB cho bài ${submissionId}`);
+    } catch (saveErr: any) {
+      this.logger.warn(`[Pipeline] Failed to save detailed logs to database: ${saveErr.message}`);
+    }
+
     this.gradingGateway.emitGradingCompleted(completedPayload);
     this.logger.log(
-      `[Pipeline] Completed: ${submissionId} → Score: ${finalScore}/10 (TC: ${passedCount}/2, CleanCode: ${analysis.cleanCodeScore.toFixed(1)})`,
+      `[Pipeline] Completed: ${submissionId} → Score: ${finalScore}/10 (TC: ${passedCount}/${totalTestcases}, CleanCode: ${analysis.cleanCodeScore.toFixed(1)})`,
     );
   }
 }

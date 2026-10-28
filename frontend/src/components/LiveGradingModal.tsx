@@ -23,8 +23,6 @@ interface LiveGradingModalProps {
 }
 
 const breakdownItems = [
-  { key: 'testcase1' as const, label: 'Testcase 1', max: 4.0, icon: FlaskConical },
-  { key: 'testcase2' as const, label: 'Testcase 2', max: 3.0, icon: FlaskConical },
   { key: 'cleanCode' as const, label: 'Clean code', max: 2.0, icon: Sparkles },
   { key: 'solid' as const, label: 'SOLID', max: 1.0, icon: CornerUpRight },
 ];
@@ -66,7 +64,15 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
 
   const completedCount = steps.filter((s) => s.status === 'passed' || s.status === 'failed').length;
   const progressPercent = Math.round((completedCount / steps.length) * 100);
-  const hasFailedStep = steps.some((s) => s.status === 'failed');
+  const hasFailedStep = steps.some((step) => {
+    if (/^tc-\d+$/.test(step.id)) return false;
+    return step.status === 'failed' || /chưa chạy được container|fallback phân tích tĩnh/i.test(step.detail || '');
+  });
+  const testcaseSteps = steps
+    .filter((step) => /^tc-\d+$/.test(step.id))
+    .sort((a, b) => Number(a.id.slice(3)) - Number(b.id.slice(3)));
+  const passedTestcaseCount = testcaseSteps.filter((step) => step.status === 'passed').length;
+  const testcaseScore = (scoreBreakdown?.testcase1 ?? 0) + (scoreBreakdown?.testcase2 ?? 0);
 
   return (
     <div className="modal-backdrop">
@@ -143,8 +149,8 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#b91c1c', fontSize: '13px' }}>
               <AlertTriangle size={18} style={{ flexShrink: 0 }} />
               <div>
-                <strong style={{ display: 'block', marginBottom: '2px' }}>Phát hiện lỗi tiến trình nộp / chấm bài</strong>
-                <span>Hệ thống từ chối chạy dữ liệu giả lập (No Mock) nhằm đảm bảo liêm chính và sự nhất quán với máy chủ Docker Sandbox.</span>
+                <strong style={{ display: 'block', marginBottom: '2px' }}>Có bước hệ thống chưa thực thi thành công</strong>
+                <span>Xem chi tiết từng bước bên dưới để biết lỗi thực thi hoặc trạng thái Docker Sandbox.</span>
               </div>
             </div>
             {onRetry && (
@@ -201,6 +207,19 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+                  <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <FlaskConical size={11} /> Testcases ({passedTestcaseCount}/{testcaseSteps.length})
+                  </span>
+                  <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
+                    {testcaseScore.toFixed(1)}/7.0
+                  </span>
+                </div>
+                <div style={{ height: '3px', borderRadius: '2px', backgroundColor: 'rgba(11, 18, 32, 0.05)', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.max(0, Math.min(100, (testcaseScore / 7) * 100))}%`, height: '100%', backgroundColor: 'var(--blue-500)' }} />
+                </div>
+              </div>
               {breakdownItems.map((item) => {
                 const value = scoreBreakdown?.[item.key] ?? 0;
                 const pct = Math.max(0, Math.min(100, (value / item.max) * 100));

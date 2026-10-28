@@ -3,7 +3,7 @@
  * (`queue/grading-worker.consumer.ts`) and the CLI demo (`demo/`).
  *
  * Holds the REAL submission validation rules and the REAL scoring formula
- * (TC1 4.0 + TC2 3.0 + CleanCode 2.0 + SOLID 1.0 = 10). No I/O here:
+ * (testcases 7.0 + CleanCode 2.0 + SOLID 1.0 = 10). No I/O here:
  * no upload, no Docker, no queue, no WebSocket — so demo and unit tests
  * import these functions directly instead of re-implementing them.
  */
@@ -17,6 +17,18 @@ export const SCORE_WEIGHTS = {
   solid: 1.0,
   maxScore: 10.0,
 } as const;
+
+export function calculateTestcaseScore(passedCount: number, totalCount: number): number {
+  const testcaseWeight = SCORE_WEIGHTS.testcase1 + SCORE_WEIGHTS.testcase2;
+  if (!Number.isFinite(totalCount) || totalCount <= 0) return 0;
+
+  const total = Math.floor(totalCount);
+  if (total <= 0) return 0;
+  const passed = Number.isFinite(passedCount)
+    ? Math.max(0, Math.min(Math.floor(passedCount), total))
+    : 0;
+  return Math.round((passed / total) * testcaseWeight * 10) / 10;
+}
 
 export interface SubmissionFileCheck {
   originalname: string;
