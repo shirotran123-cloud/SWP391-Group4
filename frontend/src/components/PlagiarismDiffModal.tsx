@@ -8,7 +8,32 @@ interface PlagiarismDiffModalProps {
   onClose: () => void;
   match: PlagiarismMatch | null;
   studentAName?: string;
+  language?: string;
 }
+
+const resolveLanguage = (explicitLang?: string, codeA?: string, codeB?: string): string => {
+  if (explicitLang) {
+    const l = explicitLang.toLowerCase().trim();
+    if (l === 'python' || l === 'py') return 'python';
+    if (l === 'cpp' || l === 'c++' || l === 'c') return 'cpp';
+    if (l === 'cs' || l === 'csharp' || l === 'c#') return 'csharp';
+    if (l === 'java') return 'java';
+    if (l === 'javascript' || l === 'js') return 'javascript';
+    if (l === 'typescript' || l === 'ts') return 'typescript';
+    return l;
+  }
+  const sample = ((codeA || '') + ' ' + (codeB || '')).slice(0, 1500);
+  if (sample.includes('def ') || (sample.includes('import ') && !sample.includes('import java') && !sample.includes('class '))) {
+    return 'python';
+  }
+  if (sample.includes('#include') || sample.includes('std::') || sample.includes('cout <<') || sample.includes('cin >>')) {
+    return 'cpp';
+  }
+  if (sample.includes('using System;') || sample.includes('namespace ') || sample.includes('Console.WriteLine')) {
+    return 'csharp';
+  }
+  return 'java';
+};
 
 const AITA_THEME = 'aita-diff-light';
 
@@ -42,6 +67,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
   onClose,
   match,
   studentAName = 'Bài Nộp A',
+  language,
 }) => {
   const [copiedId, setCopiedId] = useState(false);
   // Monaco báo lỗi khi model bị dispose trước lúc DiffEditor kịp reset. Giữ modal mounted
@@ -64,6 +90,11 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
   const isHighPlagiarism = similarity >= 65;
   const isSuspected = similarity >= 40;
   const matchedTokensCount = match.matchedTokens?.length || 0;
+  const diffLanguage = resolveLanguage(
+    language || (match as any)?.language,
+    match.sourceCodeA,
+    match.sourceCodeB
+  );
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(match.matchedStudentId);
@@ -313,7 +344,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
         >
           <DiffEditor
             height="100%"
-            language="java"
+            language={diffLanguage}
             theme={AITA_THEME}
             beforeMount={defineTheme}
             original={match.sourceCodeA || '// Không có mã nguồn bài A'}

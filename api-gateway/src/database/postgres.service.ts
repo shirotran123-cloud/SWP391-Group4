@@ -21,23 +21,38 @@ export class PostgresService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async initPostgresConnection(): Promise<void> {
+    const connectionString = process.env.DATABASE_URL;
+    const isSsl =
+      process.env.DATABASE_SSL === 'true' ||
+      Boolean(connectionString && connectionString.includes('sslmode=require'));
+
     const host = process.env.POSTGRES_HOST || 'localhost';
     const port = parseInt(process.env.POSTGRES_PORT || '5432', 10);
     const user = process.env.POSTGRES_USER || 'aita_admin';
     const password = process.env.POSTGRES_PASSWORD || 'aita_secret_password';
     const database = process.env.POSTGRES_DB || 'aita_autograding';
 
-    this.logger.log(`[PostgresService] Đang thử kết nối PostgreSQL tại ${host}:${port}/${database}...`);
-
-    this.pool = new Pool({
-      host,
-      port,
-      user,
-      password,
-      database,
-      connectionTimeoutMillis: 2000, // 2s timeout
-      max: 10,
-    });
+    if (connectionString) {
+      this.logger.log(`[PostgresService] Đang kết nối PostgreSQL qua DATABASE_URL (SSL=${isSsl})...`);
+      this.pool = new Pool({
+        connectionString,
+        ssl: isSsl ? { rejectUnauthorized: false } : undefined,
+        connectionTimeoutMillis: 5000,
+        max: 10,
+      });
+    } else {
+      this.logger.log(`[PostgresService] Đang thử kết nối PostgreSQL tại ${host}:${port}/${database}...`);
+      this.pool = new Pool({
+        host,
+        port,
+        user,
+        password,
+        database,
+        ssl: isSsl ? { rejectUnauthorized: false } : undefined,
+        connectionTimeoutMillis: 2000, // 2s timeout
+        max: 10,
+      });
+    }
 
     try {
       const client = await this.pool.connect();

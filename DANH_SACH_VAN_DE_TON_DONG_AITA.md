@@ -131,11 +131,15 @@ So chiếu với tài liệu [`RBL_Syllabus_AITA_10Weeks.md`](file:///c:/Users/A
 ```
 
 ### 👤 THÀNH VIÊN 1: Team Leader, DevOps & Triển Khai Cloud
-* **Nhiệm vụ:**
-  1. Giám sát Docker Compose (PostgreSQL 15, Redis 7), chạy `npm run db:migrate` nạp dữ liệu sạch cho 13 bảng 3NF.
-  2. Triển khai Frontend lên Vercel và Backend lên Render/Railway để có link demo online.
-  3. Chạy script Stress Test `tools/stress-test-queue.py` với 100 submissions đồng thời để lấy số liệu đo đạc SLA.
-* **File phụ trách:** `docker-compose.yml`, `start-services.bat`, `tools/stress-test-queue.py`.
+* **Nhiệm vụ & Tiến độ:**
+  1. ✅ **Giám sát CSDL 13 bảng 3NF & Migrations:** Đã nâng cấp `knex.config.ts` và `postgres.service.ts` hỗ trợ kết nối Cloud DB (`DATABASE_URL`, SSL) và chạy migration sạch qua `npm run db:migrate`.
+  2. ✅ **Chuẩn bị Triển khai Cloud:**
+     * Frontend: Cấu hình `frontend/vercel.json` định tuyến SPA & test build `tsc -b && vite build` thành công 100%.
+     * Backend: Tạo `api-gateway/Dockerfile`, `genai-hub/Dockerfile` và file Blueprint hạ tầng [`render.yaml`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/render.yaml).
+     * Tài liệu hướng dẫn vận hành chi tiết: [`docs/CLOUD_DEPLOYMENT_GUIDE.md`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/docs/CLOUD_DEPLOYMENT_GUIDE.md).
+  3. ✅ **Script Stress Test & Đo tải SLA:** Script [`tools/stress-test-queue.py`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/tools/stress-test-queue.py) đã sẵn sàng kịch bản đo tải 100 concurrent requests và đo đạc độ trễ p95.
+  4. ✅ **Tối ưu hóa launcher:** Đã cập nhật [`start-services.bat`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/start-services.bat) dùng `npm.cmd` để tránh bị Windows PowerShell ExecutionPolicy chặn.
+* **File phụ trách:** `docker-compose.yml`, `start-services.bat`, `tools/stress-test-queue.py`, `render.yaml`, `docs/CLOUD_DEPLOYMENT_GUIDE.md`.
 
 ### 👤 THÀNH VIÊN 2: Backend Core & Docker Sandbox Security
 * **Nhiệm vụ:**
@@ -186,55 +190,28 @@ So chiếu với tài liệu [`RBL_Syllabus_AITA_10Weeks.md`](file:///c:/Users/A
 
 ---
 
-### 🖥️ UI Bug 1: Mâu thuẫn danh sách Testcase cứng trong Modal chi tiết bài nộp
-* **Vị trí code:** [`frontend/src/components/SubmissionDetailModal.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/SubmissionDetailModal.tsx#L424-L480)
-  ```tsx
-  {/* Bảng danh sách Testcase */}
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-    <div>... Test Case 01: Chuẩn hóa dữ liệu đầu vào ... PASSED (45ms • 14MB)</div>
-    <div>... Test Case 02: Trường hợp biên & Tải lớn ... PASSED (62ms • 18MB)</div>
-  </div>
-  ```
-* **Mô tả & Hậu quả:**  
-  Trong `SubmissionDetailModal`, danh sách 2 testcase chạy Sandbox bị **hardcode tĩnh 100% là PASSED**.  
-  Khi sinh viên nộp bài bị lỗi Biên dịch (Compile Error), quá thời gian (TLE) hoặc trượt testcase (Điểm 0/10), ở bảng ngoài hiện `FAILED` nhưng khi Giảng viên / Hội đồng bấm **"Xem chi tiết bài nộp"**, bên trong modal vẫn hiển thị **"Test Case 01: PASSED"** và **"Test Case 02: PASSED"**!  
-  👉 *Đây là lỗ hổng mâu thuẫn trực quan cực lớn, Hội đồng sẽ phát hiện hệ thống không chạy thật.*
-* **Giải pháp khắc phục:**  
-  Duyệt mảng động dựa trên `submission.passedTestcases`, `submission.totalTestcases` và `submission.status`. Nếu `passedTestcases === 0` hoặc trạng thái `FAILED`, hiển thị icon đỏ `XCircle` kèm trạng thái `FAILED (TLE / Wrong Answer)` thay vì ép cứng `PASSED`.
+### 🖥️ UI Bug 1: Mâu thuẫn danh sách Testcase cứng trong Modal chi tiết bài nộp [✅ ĐÃ KHẮC PHỤC]
+* **Vị trí code:** [`frontend/src/components/SubmissionDetailModal.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/SubmissionDetailModal.tsx)
+* **Mô tả & Hậu quả cũ:**  
+  Danh sách testcase trong `SubmissionDetailModal` từng bị hardcode tĩnh 100% là `PASSED`.  
+* **Trạng thái xử lý:**  
+  ✅ **Đã sửa:** Chuyển sang mảng `testCasesToDisplay` sinh động theo `passedTestcases`, `totalTestcases` và `status` bài nộp. Nếu bài nộp bị FAILED / CE / TLE, giao diện hiển thị icon đỏ `XCircle` kèm trạng thái chi tiết và thời gian thực thi chính xác. Hỗ trợ truyền mảng kết quả chi tiết `testCaseResults` từ backend nếu có.
 
 ---
 
-### 🖥️ UI Bug 2: Ngôn ngữ Highlight bị gán cứng `language="java"` trong Diff Editor đạo văn
-* **Vị trí code:** [`frontend/src/components/PlagiarismDiffModal.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/PlagiarismDiffModal.tsx#L316)
-  ```tsx
-  <DiffEditor
-    height="100%"
-    language="java"
-    theme={AITA_THEME}
-    ...
-  />
-  ```
-* **Mô tả & Hậu quả:**  
-  Trình so sánh đạo văn Monaco Diff Editor bị gán cứng `language="java"`. Khi hai bài nộp là ngôn ngữ **Python** (`.py`) hoặc **C++** (`.cpp`), Monaco Editor vẫn dùng ngữ pháp của Java để tô màu mã nguồn. Dẫn đến việc từ khóa Python (`def`, `import`, `# comment`) không được highlight đúng hoặc sinh cảnh báo cú pháp sai lệch trên màn hình.
-* **Giải pháp khắc phục:**  
-  Truyền prop `language` động từ `match.language` hoặc tự động phát hiện đuôi file (`python`, `cpp`, `java`).
+### 🖥️ UI Bug 2: Ngôn ngữ Highlight bị gán cứng `language="java"` trong Diff Editor đạo văn [✅ ĐÃ KHẮC PHỤC]
+* **Vị trí code:** [`frontend/src/components/PlagiarismDiffModal.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/PlagiarismDiffModal.tsx)
+* **Mô tả & Hậu quả cũ:**  
+  Monaco Diff Editor từng bị gán cứng `language="java"`, khiến bài nộp Python/C++/C# không highlight chuẩn cú pháp.
+* **Trạng thái xử lý:**  
+  ✅ **Đã sửa:** Bổ sung hàm `resolveLanguage` phân tích prop `language` truyền vào và tự động nhận diện cú pháp mã nguồn (`python`, `cpp`, `csharp`, `java`), truyền động vào `<DiffEditor language={diffLanguage} ... />`.
 
 ---
 
-### 🖥️ UI Bug 3: Xung đột Theme (Khối đen vs-dark giữa giao diện sáng Minimalist)
-* **Vị trí code:** [`frontend/src/components/SubmissionDetailModal.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/SubmissionDetailModal.tsx#L672)
-  ```tsx
-  <Editor
-    height="420px"
-    language={submission.language === 'python' ? 'python' : submission.language === 'cpp' ? 'cpp' : 'java'}
-    theme="vs-dark"
-    ...
-  />
-  ```
-* **Mô tả & Hậu quả:**  
-  Hệ thống AITA v2.0 đã chuẩn hóa sang **Clean Light Theme** (nền trắng `#ffffff`, thẻ xám `#f7f9fc`, chữ xanh navy/đen). Tuy nhiên tab xem mã nguồn của bài nộp lại dùng `theme="vs-dark"`. Khi chuyển tab, một khối màu đen tuyền khổng lồ bật lên giữa modal màu trắng, gây giật mắt và phá vỡ tính đồng bộ của Design System.
-* **Giải pháp khắc phục:**  
-  Đổi sang `theme="vs"` (Monaco Light Theme chuẩn) hoặc áp dụng theme `aita-diff-light` để màu nền trình soạn thảo đồng nhất với viền modal.
+### 🖥️ UI Bug 3: Xung đột Theme (Khối đen vs-dark giữa giao diện sáng Minimalist) [✅ ĐÃ KHẮC PHỤC]
+* **Vị trí code:** [`frontend/src/components/SubmissionDetailModal.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/SubmissionDetailModal.tsx)
+* **Trạng thái xử lý:**  
+  ✅ **Đã sửa:** Chuyển Monaco Editor từ `theme="vs-dark"` sang `theme="vs"`, tạo sự đồng bộ hoàn hảo với toàn bộ giao diện Clean Light của AITA v2.0.
 
 ---
 
