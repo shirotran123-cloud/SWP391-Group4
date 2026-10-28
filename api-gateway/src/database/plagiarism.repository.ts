@@ -402,4 +402,39 @@ export class PlagiarismRepository implements OnModuleInit {
       matchedTokensJson: swapped,
     };
   }
+
+  public async deleteReportsBySubmission(submissionId: string): Promise<number> {
+    let deletedCount = 0;
+    for (const [id, r] of this.records.entries()) {
+      if (r.submissionAId === submissionId || r.submissionBId === submissionId) {
+        this.records.delete(id);
+        deletedCount++;
+      }
+    }
+    if (deletedCount > 0) {
+      this.persist();
+    }
+    if (this.postgres.isAvailable()) {
+      try {
+        await this.postgres.safeQuery(
+          `DELETE FROM plagiarism_reports WHERE submission_a_id = $1 OR submission_b_id = $1`,
+          [submissionId],
+        );
+      } catch (err: any) {
+        this.logger.warn(`[PlagiarismRepository] Lỗi xoá reports của ${submissionId}: ${err.message}`);
+      }
+    }
+    return deletedCount;
+  }
+
+  public async deleteFingerprintsBySubmission(submissionId: string): Promise<number> {
+    if (this.postgres.isAvailable()) {
+      try {
+        await this.postgres.safeQuery(`DELETE FROM ast_fingerprints WHERE submission_id = $1`, [submissionId]);
+      } catch (err: any) {
+        this.logger.warn(`[PlagiarismRepository] Lỗi xoá fingerprints của ${submissionId}: ${err.message}`);
+      }
+    }
+    return this.fingerprintRepo.deleteBySubmissionId(submissionId);
+  }
 }

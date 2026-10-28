@@ -325,9 +325,13 @@ export class GradingGateway
 
     if (this.server) {
       // BR-04: Báo cáo đạo văn tuyệt đối không công khai cho sinh viên (chỉ dành cho Giảng viên/HOD)
+      // Sinh viên chỉ nhận điểm số bài nộp, không thấy tỷ lệ % đạo văn hay thông tin bài đối soát
       const studentPayload: GradingCompletedPayload = {
         ...payload,
         plagiarismMatch: undefined,
+        similarityRate: undefined,
+        plagiarismStatus: undefined,
+        computedScoreBeforePenalty: undefined,
       };
       this.server.to(roomName).emit(QUEUE_EVENTS.GRADING_COMPLETED, studentPayload);
       this.server.emit(`admin:${QUEUE_EVENTS.GRADING_COMPLETED}`, payload);

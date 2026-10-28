@@ -536,7 +536,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     this.gradingGateway.emitGradingProgress({
       submissionId, stepId: '6', stepName: 'Phân tích AST & Winnowing',
       status: 'passed',
-      detail: plagiarismDetail,
+      detail: 'Hoàn tất phân tích đối soát mã nguồn.',
     });
 
     // ═══════════════════════════════════════════════════════════════════════════
@@ -582,9 +582,8 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const computedScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // BR-03: đạo văn AST >= 80% đã xác nhận -> ĐIỂM = 0 KHÔNG THỂ HOÀN TÁC.
-    // Trước đây quy tắc này KHÔNG được áp dụng: pipeline chỉ gắn cờ rồi vẫn tính
-    // điểm bình thường, nên bài đạo văn vẫn có thể đạt điểm cao.
+    // BR-03: Đạo văn AST từ 80% trở lên (>= 80.0%) -> LẬP TỨC CHẤM 0 ĐIỂM (Zero-Tolerance)
+    // Sinh viên chỉ biết mình 0 điểm / vi phạm quy chế; % đạo văn chỉ hiện bên Giảng viên (BR-04)
     // ─────────────────────────────────────────────────────────────────────────
     const CONFIRMED_PLAGIARISM_THRESHOLD = 80.0;
     const plagiarismRate = plagiarismMatch ? plagiarismMatch.similarityRate : 0;
@@ -624,8 +623,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    // Only another student's copy, or cross-course reuse, can zero the score. A same-course
-    // resubmission and a same-course reuse never can.
+    // Khi tỷ lệ tương đồng >= 80% (với bài của sinh viên khác hoặc cross-course), lập tức cho 0 điểm
     const isConfirmedPlagiarism =
       selfKind === 'CROSS_COURSE'
         ? plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD
@@ -650,13 +648,14 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
         total: 0,
       };
       this.logger.warn(
-        `[BR-03] Submission ${submissionId} bị xác nhận đạo văn ${plagiarismRate}% (>= ${CONFIRMED_PLAGIARISM_THRESHOLD}%). ` +
-          `Điểm bị đặt về 0 (không thể hoàn tác). Điểm tính toán trước đó: ${computedScore}/10.`,
+        `[BR-03] Submission ${submissionId} bị phát hiện đạo văn ${plagiarismRate}% (>= ${CONFIRMED_PLAGIARISM_THRESHOLD}%). ` +
+          `LẬP TỨC CHẤM 0 ĐIỂM (không thể hoàn tác). Điểm tính toán trước đó: ${computedScore}/10.`,
       );
+      // Gửi tiến độ cho sinh viên: chỉ thông báo vi phạm quy chế liêm chính, KHÔNG làm lộ % đạo văn
       this.gradingGateway.emitGradingProgress({
         submissionId, stepId: '6', stepName: 'Phân tích AST & Winnowing',
         status: 'failed',
-        detail: `BR-03: Đạo văn ${plagiarismRate}% (>= ${CONFIRMED_PLAGIARISM_THRESHOLD}%) — điểm bị đặt về 0 và không thể hoàn tác.`,
+        detail: 'Không đạt yêu cầu liêm chính học thuật (mã nguồn có độ tương đồng vượt giới hạn cho phép). Bài làm bị chấm 0 điểm.',
       });
     }
 

@@ -56,4 +56,8 @@ export class TeamworkService {
 
     return this.teamworkRepo.upsert(record);
   }
+
+  public async syncGitAnalytics(classId = 'CRS-SWP391'): Promise<TeamworkMetricRecord[]> {
+    return this.teamworkRepo.syncLiveGitMetrics(undefined, classId);
+  }
 }

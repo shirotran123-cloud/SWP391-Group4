@@ -152,9 +152,21 @@ export class SubmissionsController {
       data: submissions.map((s) => {
         const details = s.details || {};
         if (!isPrivileged) {
-          // Student: strip sạch plagiarism data
-          const { plagiarismMatch: _pm, plagiarismStatus: _ps, similarityRate: _sr, ...safeDetails } = details as any;
-          return { ...s, result: safeDetails };
+          // Student: strip sạch toàn bộ plagiarism metrics (BR-04)
+          const {
+            plagiarismMatch: _pm,
+            plagiarismStatus: _ps,
+            similarityRate: _sr,
+            computedScoreBeforePenalty: _csbp,
+            ...safeDetails
+          } = details as any;
+          return {
+            ...s,
+            similarityRate: undefined,
+            plagiarismStatus: undefined,
+            plagiarismMatch: undefined,
+            result: safeDetails,
+          };
         }
         // Lecturer/HOD/Admin: trả đầy đủ bao gồm plagiarism metrics
         const sim = details.similarityRate ?? details.plagiarismMatch?.similarityRate ?? 0;
@@ -184,8 +196,23 @@ export class SubmissionsController {
     const details = submission.details || {};
 
     if (!isPrivileged) {
-      const { plagiarismMatch: _pm, plagiarismStatus: _ps, similarityRate: _sr, ...safeDetails } = details as any;
-      return { statusCode: HttpStatus.OK, data: { ...submission, result: safeDetails } };
+      const {
+        plagiarismMatch: _pm,
+        plagiarismStatus: _ps,
+        similarityRate: _sr,
+        computedScoreBeforePenalty: _csbp,
+        ...safeDetails
+      } = details as any;
+      return {
+        statusCode: HttpStatus.OK,
+        data: {
+          ...submission,
+          similarityRate: undefined,
+          plagiarismStatus: undefined,
+          plagiarismMatch: undefined,
+          result: safeDetails,
+        },
+      };
     }
     const sim = details.similarityRate ?? details.plagiarismMatch?.similarityRate ?? 0;
     const pStatus = details.plagiarismStatus ||

@@ -9,7 +9,7 @@ Dự án: AITA – Intelligent Autograding Platform — Group 4 (SWP391)
 | 1 | Đinh Thành Trung | API Gateway, Redis Queue, WebSocket, Core DB | ✅ Hoàn thành + TestCases CRUD mới |
 | 2 | Trần Công Tiến | Docker Sandbox & Seccomp | ✅ Vận hành (fallback verified) |
 | 3 | Nguyễn Hoàng Vinh | GenAI Core, Reviewer, Prompt | ✅ 53/53 tests |
-| 4 | Trần Thanh Nguyên | AST Plagiarism & Winnowing | ✅ Ngưỡng 70%, benchmark 90% |
+| 4 | Trần Thanh Nguyên | AST Plagiarism & Winnowing | ✅ Ngưỡng 80%, benchmark 90% |
 | 5 | Võ Thái Trung | Frontend React + Visualizers | ✅ 15 components, lint 0 errors |
 
 ## 2. Việc mới làm trong turn này
@@ -33,7 +33,7 @@ Dự án: AITA – Intelligent Autograding Platform — Group 4 (SWP391)
   Segfault 139, teardown ≤1.0s ✅ (fallback engine verified, không daemon tại đây)
 - GenAI: ExamGenerator (UC-08), temp 0.2 JSON Schema, CDATA + SECURITY_AUDIT,
   Socratic explainer tiếng Việt, key rotation cooldown 429 ✅
-- AST: normalizer, Winnowing rolling-hash, Jaccard ≥70% FLAGGED_PLAGIARISM,
+- AST: normalizer, Winnowing rolling-hash, Jaccard ≥80% FLAGGED_PLAGIARISM (Điểm 0 BR-03),
   matched_tokens_json → Monaco ✅
 - Frontend: drag-drop .zip ≤10MB client, CountdownTimer, LiveGradingModal
   5 giai đoạn, SolidRadarChart, MonacoDiffViewer, Socratic Hint ✅

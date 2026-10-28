@@ -56,7 +56,7 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
             Chuẩn hóa AST: Tree-sitter Canonical Tokenizer
           </span>
           <span style={{ padding: '6px 12px', borderRadius: '8px', backgroundColor: 'rgba(11, 18, 32, 0.06)', color: 'var(--accent-rose)', fontWeight: 600 }}>
-            Ngưỡng cảnh báo gian lận: ≥ 70.0%
+            Ngưỡng cảnh báo gian lận: ≥ 80.0%
           </span>
         </div>
       </div>
@@ -157,7 +157,7 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
               <div style={{ padding: '14px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Tỷ Lệ Trùng Khớp (Jaccard):</span>
-                <div style={{ fontSize: '26px', fontWeight: 600, color: evaluationResult.similarityRate >= 70 ? 'var(--accent-rose)' : 'var(--accent-emerald)', marginTop: '4px' }}>
+                <div style={{ fontSize: '26px', fontWeight: 600, color: evaluationResult.similarityRate >= 80 ? 'var(--accent-rose)' : 'var(--accent-emerald)', marginTop: '4px' }}>
                   {evaluationResult.similarityRate.toFixed(1)}%
                 </div>
               </div>

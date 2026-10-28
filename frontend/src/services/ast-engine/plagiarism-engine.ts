@@ -45,7 +45,7 @@ export interface PairwisePlagiarismResult {
 }
 
 export class ASTPlagiarismEngine {
-  public static readonly PLAGIARISM_THRESHOLD = 70.0;
+  public static readonly PLAGIARISM_THRESHOLD = 80.0;
 
   public static compareSubmissions(
     subA: CodeSubmission,

@@ -874,3 +874,14 @@ select.field {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
+
+/* ============================================================
+   GRADEBOOK TỰ ĐỘNG THU GỌN CỘT TRÊN MÀN HÌNH MÁY CHIẾU (< 1440px)
+   Ẩn bớt các cột phụ (Lượt nộp, Tên file nén) để tránh vỡ layout
+   ============================================================ */
+@media (max-width: 1440px) {
+  .gradebook-hide-compact {
+    display: none !important;
+  }
+}
+

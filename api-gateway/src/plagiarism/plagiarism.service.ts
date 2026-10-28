@@ -329,6 +329,14 @@ export class PlagiarismService {
     return { submissionId, count: fingerprints.length, fingerprints };
   }
 
+  /**
+   * Cung cấp số liệu thực nghiệm đối soát mã nguồn ngụy trang phục vụ Bài báo IEEE (Thành viên 4)
+   */
+  public async getIEEEOffuscationBenchmark() {
+    const { runExperiments } = await import('./ast-engine/ieee-benchmark');
+    return runExperiments();
+  }
+
   // ────────────────────────────────────────────────────────────────────────────
   // Internals
   // ────────────────────────────────────────────────────────────────────────────

@@ -101,17 +101,12 @@ export function AdminDashboard({ token }: { token: string }) {
       submittedAt: s.submittedAt || s.createdAt || new Date().toISOString(),
       score: s.score ?? s.details?.score,
       scoreBreakdown: s.details?.scoreBreakdown,
-      passedTestcases: s.details?.passedTestcases ?? 2,
-      totalTestcases: s.details?.totalTestcases ?? 2,
-      executionTimeMs: s.details?.executionTimeMs ?? 185,
+      passedTestcases: s.details?.passedTestcases,
+      totalTestcases: s.details?.totalTestcases,
+      executionTimeMs: s.details?.executionTimeMs,
       sha256: s.sha256Hash,
       sourceCode: s.details?.sourceCode,
-      aiRating: s.details?.aiRating || {
-        cleanCodeScore: 9.5,
-        solidScore: { s: 9.0, o: 8.5, l: 9.0, i: 9.0, d: 8.5 },
-        codeSmells: [],
-        explanation: "Ma nguon da qua kiem dinh tu dong Docker Sandbox.",
-      },
+      aiRating: s.details?.aiRating || s.aiRating,
     });
     setDetailModalOpen(true);
   };

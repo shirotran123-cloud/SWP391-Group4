@@ -162,4 +162,25 @@ export class AstFingerprintRepository implements OnModuleInit {
       .filter((r) => r.submissionId === submissionId)
       .sort((a, b) => a.tokenPosition - b.tokenPosition);
   }
+
+  public async deleteBySubmissionId(submissionId: string): Promise<number> {
+    let deletedCount = 0;
+    for (const [id, r] of this.records.entries()) {
+      if (r.submissionId === submissionId) {
+        this.records.delete(id);
+        deletedCount++;
+      }
+    }
+    if (deletedCount > 0) {
+      this.persist();
+    }
+    if (this.postgres.isAvailable()) {
+      try {
+        await this.postgres.safeQuery(`DELETE FROM ast_fingerprints WHERE submission_id = $1`, [submissionId]);
+      } catch (err: any) {
+        this.logger.warn(`[AstFingerprintRepository] Lỗi xoá fingerprints của ${submissionId}: ${err.message}`);
+      }
+    }
+    return deletedCount;
+  }
 }

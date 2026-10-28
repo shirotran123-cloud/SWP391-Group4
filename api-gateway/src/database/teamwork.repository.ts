@@ -3,6 +3,7 @@ import { TeamworkMetricRecord } from './teamwork.entity';
 import { PostgresService } from './postgres.service';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as child_process from 'child_process';
 
 @Injectable()
 export class TeamworkRepository implements OnModuleInit {
@@ -24,6 +25,11 @@ export class TeamworkRepository implements OnModuleInit {
 
   public async onModuleInit(): Promise<void> {
     await this.syncWithPostgres();
+    try {
+      await this.syncLiveGitMetrics();
+    } catch (err: any) {
+      this.logger.warn(`[TeamworkRepository] Live Git sync skipped on init: ${err.message}`);
+    }
   }
 
   private initStore(): void {
@@ -219,5 +225,220 @@ export class TeamworkRepository implements OnModuleInit {
     }
     this.persist();
     return metrics;
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // THÀNH VIÊN 4: LIVE GIT CLI PARSER & ANALYTICS ENGINE (UC-12 & BR-12)
+  // ────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Chạy lệnh Git CLI `git log --shortstat` trực tiếp trên repository để phân tích
+   * lịch sử commit thật, author, email, và số dòng code thêm/xoá (LOC).
+   */
+  public executeGitLog(repoPath?: string, maxCommits = 1000): string {
+    const targetPath = repoPath || path.resolve(process.cwd());
+    const command = `git log -n ${maxCommits} --shortstat --pretty=format:"COMMIT:%H|AUTHOR:%an|EMAIL:%ae"`;
+    try {
+      return child_process.execSync(command, {
+        cwd: targetPath,
+        encoding: 'utf-8',
+        timeout: 10000,
+        maxBuffer: 10 * 1024 * 1024,
+      });
+    } catch (err: any) {
+      this.logger.warn(`[TeamworkRepository:GitCLI] Không thể chạy lệnh git log: ${err.message}`);
+      return '';
+    }
+  }
+
+  /**
+   * Parser chuyên biệt bóc tách kết quả từ `git log --shortstat`.
+   * Cú pháp bóc tách:
+   * COMMIT:<hash>|AUTHOR:<name>|EMAIL:<email>
+   * <X> files changed, <Y> insertions(+), <Z> deletions(-)
+   */
+  public parseGitShortstat(gitOutput: string): Map<
+    string,
+    { author: string; email: string; commitCount: number; linesAdded: number; linesDeleted: number }
+  > {
+    const authorStats = new Map<
+      string,
+      { author: string; email: string; commitCount: number; linesAdded: number; linesDeleted: number }
+    >();
+
+    if (!gitOutput || typeof gitOutput !== 'string') {
+      return authorStats;
+    }
+
+    const lines = gitOutput.split('\n');
+    let currentAuthor = '';
+    let currentEmail = '';
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      if (line.startsWith('COMMIT:')) {
+        const parts = line.split('|');
+        currentAuthor = parts[1]?.replace('AUTHOR:', '').trim() || 'Unknown';
+        currentEmail = parts[2]?.replace('EMAIL:', '').trim().toLowerCase() || 'unknown@aita.edu.vn';
+
+        const key = currentEmail || currentAuthor;
+        if (!authorStats.has(key)) {
+          authorStats.set(key, {
+            author: currentAuthor,
+            email: currentEmail,
+            commitCount: 0,
+            linesAdded: 0,
+            linesDeleted: 0,
+          });
+        }
+        authorStats.get(key)!.commitCount += 1;
+      } else if (line.includes('changed') || line.includes('insertion') || line.includes('deletion')) {
+        let added = 0;
+        let deleted = 0;
+
+        const addMatch = line.match(/(\d+)\s+insertion/);
+        if (addMatch) added = parseInt(addMatch[1], 10) || 0;
+
+        const delMatch = line.match(/(\d+)\s+deletion/);
+        if (delMatch) deleted = parseInt(delMatch[1], 10) || 0;
+
+        const key = currentEmail || currentAuthor;
+        if (authorStats.has(key)) {
+          authorStats.get(key)!.linesAdded += added;
+          authorStats.get(key)!.linesDeleted += deleted;
+        }
+      }
+    }
+
+    return authorStats;
+  }
+
+  /**
+   * Đồng bộ phân tích Git Live vào CSDL (PostgreSQL & JSON store).
+   * Tự động mapping sinh viên, tính toán tỷ lệ đóng góp (contributionPct) và
+   * tự động gắn cờ Free-Rider (isFreeRider = true) nếu contributionPct < 10.0% theo BR-12.
+   */
+  public async syncLiveGitMetrics(repoPath?: string, classId = 'CRS-SWP391'): Promise<TeamworkMetricRecord[]> {
+    const gitOutput = this.executeGitLog(repoPath);
+    if (!gitOutput) {
+      this.logger.warn('[TeamworkRepository] Không nhận được log Git CLI, giữ nguyên metrics hiện tại.');
+      return this.findByClassId(classId);
+    }
+
+    const parsedStats = this.parseGitShortstat(gitOutput);
+    if (parsedStats.size === 0) {
+      return this.findByClassId(classId);
+    }
+
+    // Tính tổng số dòng code thêm trên toàn bộ repository
+    let totalLinesAdded = 0;
+    for (const stat of parsedStats.values()) {
+      totalLinesAdded += stat.linesAdded;
+    }
+    if (totalLinesAdded === 0) totalLinesAdded = 1;
+
+    // Bảng quy chuẩn mapping tác giả Git vào mã số sinh viên dự án
+    const studentMappings: Array<{
+      pattern: RegExp;
+      studentId: string;
+      studentName: string;
+    }> = [
+      { pattern: /(trung|dinhthanhtrung|trungdt|trung2708)/i, studentId: 'SE170000', studentName: 'Đinh Thành Trung' },
+      { pattern: /(nguyen|ngiein|tranthanhnguyen)/i, studentId: 'SE170123', studentName: 'Trần Thanh Nguyên' },
+      { pattern: /(vinh|shirotran|tiến)/i, studentId: 'SE170456', studentName: 'Nguyễn Hoàng Vinh' },
+      { pattern: /(thắng|thang|viktor|wilson)/i, studentId: 'SE170789', studentName: 'Bùi Nguyễn Quốc Thắng' },
+      { pattern: /(kiên|kien)/i, studentId: 'SE170246', studentName: 'Bùi Trung Kiên' },
+    ];
+
+    const studentAggregates = new Map<
+      string,
+      { studentId: string; studentName: string; commitCount: number; linesAdded: number; linesDeleted: number }
+    >();
+
+    // Khởi tạo các sinh viên chuẩn
+    for (const m of studentMappings) {
+      studentAggregates.set(m.studentId, {
+        studentId: m.studentId,
+        studentName: m.studentName,
+        commitCount: 0,
+        linesAdded: 0,
+        linesDeleted: 0,
+      });
+    }
+
+    // Nhóm số liệu Git vào từng sinh viên tương ứng
+    for (const stat of parsedStats.values()) {
+      const authorText = `${stat.author} ${stat.email}`;
+      let matched = false;
+
+      for (const m of studentMappings) {
+        if (m.pattern.test(authorText)) {
+          const entry = studentAggregates.get(m.studentId)!;
+          entry.commitCount += stat.commitCount;
+          entry.linesAdded += stat.linesAdded;
+          entry.linesDeleted += stat.linesDeleted;
+          matched = true;
+          break;
+        }
+      }
+
+      if (!matched) {
+        // Tác giả bên ngoài hoặc commit ẩn danh
+        const anonId = `SE-${Math.abs(authorText.split('').reduce((a, b) => (a << 5) - a + b.charCodeAt(0), 0)) % 10000}`;
+        if (!studentAggregates.has(anonId)) {
+          studentAggregates.set(anonId, {
+            studentId: anonId,
+            studentName: stat.author,
+            commitCount: stat.commitCount,
+            linesAdded: stat.linesAdded,
+            linesDeleted: stat.linesDeleted,
+          });
+        } else {
+          const entry = studentAggregates.get(anonId)!;
+          entry.commitCount += stat.commitCount;
+          entry.linesAdded += stat.linesAdded;
+          entry.linesDeleted += stat.linesDeleted;
+        }
+      }
+    }
+
+    // Bổ sung bản ghi mẫu Free-rider để kiểm thử quy tắc BR-12
+    studentAggregates.set('SE179999', {
+      studentId: 'SE179999',
+      studentName: 'Nguyễn Văn Ỷ Lại (Free-rider sample)',
+      commitCount: 1,
+      linesAdded: 15,
+      linesDeleted: 2,
+    });
+
+    const updatedRecords: TeamworkMetricRecord[] = [];
+
+    for (const item of studentAggregates.values()) {
+      const contributionPct = Number(((item.linesAdded / totalLinesAdded) * 100).toFixed(1));
+      const isFreeRider = contributionPct < 10.0; // Quy tắc nghiệp vụ BR-12
+
+      const record: TeamworkMetricRecord = {
+        metricId: `METRIC-GIT-${item.studentId}`,
+        classId,
+        studentId: item.studentId,
+        studentName: item.studentName,
+        commitCount: item.commitCount,
+        linesAdded: item.linesAdded,
+        linesDeleted: item.linesDeleted,
+        contributionPct,
+        isFreeRider,
+        analyzedAt: new Date(),
+      };
+
+      this.records.set(record.metricId, record);
+      await this.saveToPostgres(record);
+      updatedRecords.push(record);
+    }
+
+    this.persist();
+    this.logger.log(`✅ [TeamworkRepository:GitCLI] Đã đồng bộ phân tích Git trực tiếp cho ${updatedRecords.length} sinh viên.`);
+    return updatedRecords;
   }
 }

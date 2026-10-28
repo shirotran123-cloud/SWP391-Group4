@@ -58,4 +58,29 @@ export class TeamworkController {
       data: metric,
     };
   }
+
+  @Get('sync-git')
+  public async syncGitMetricsGet() {
+    const metrics = await this.teamworkService.syncGitAnalytics();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Đồng bộ chỉ số Git CLI thực tế thành công (git log --shortstat).',
+      total: metrics.length,
+      freeRidersCount: metrics.filter((m) => m.isFreeRider).length,
+      data: metrics,
+    };
+  }
+
+  @Post('sync-git')
+  @HttpCode(HttpStatus.OK)
+  public async syncGitMetricsPost() {
+    const metrics = await this.teamworkService.syncGitAnalytics();
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Đồng bộ chỉ số Git CLI thực tế thành công (git log --shortstat).',
+      total: metrics.length,
+      freeRidersCount: metrics.filter((m) => m.isFreeRider).length,
+      data: metrics,
+    };
+  }
 }

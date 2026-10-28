@@ -1455,7 +1455,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     <ShieldCheck size={24} color="#1d4ed8" />
                     <div style={{ fontSize: '12.5px', color: '#33415a', lineHeight: '1.5' }}>
                       <strong style={{ color: 'var(--text-main)' }}>Giám sát Liêm chính học thuật AST: </strong>
-                      Mọi bài nộp sẽ được tạo chữ ký k-gram thông qua giải thuật Winnowing AST. Nếu độ tương đồng vượt quá 70%, bài nộp sẽ bị tự động đánh dấu nghi vấn gian lận và chuyển tới hội đồng giảng viên xem xét.
+                      Mọi bài nộp sẽ được tạo chữ ký k-gram thông qua giải thuật Winnowing AST. Nếu độ tương đồng từ 80% trở lên, bài nộp sẽ bị tự động đánh dấu vi phạm đạo văn (điểm 0) và chuyển tới hội đồng giảng viên xem xét.
                     </div>
                   </div>
                 </div>
@@ -1637,7 +1637,11 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   gap: '5px',
                 }}
               >
-                <CheckCircle size={14} /> Testcases: {prevSubmission?.passedTestcases ?? taskSubmissions[0]?.details?.passedTestcases ?? 2}/{prevSubmission?.totalTestcases ?? taskSubmissions[0]?.details?.totalTestcases ?? 2} Passed
+                <CheckCircle size={14} /> Testcases: {(() => {
+                  const p = prevSubmission?.passedTestcases ?? taskSubmissions[0]?.details?.passedTestcases;
+                  const t = prevSubmission?.totalTestcases ?? taskSubmissions[0]?.details?.totalTestcases;
+                  return p !== undefined && t !== undefined ? `${p}/${t} Passed` : 'Đang chấm...';
+                })()}
               </span>
 
               <span
@@ -1654,7 +1658,10 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   gap: '5px',
                 }}
               >
-                <Sparkles size={14} /> Clean Code: {prevSubmission?.aiRating?.cleanCodeScore ?? taskSubmissions[0]?.details?.aiRating?.cleanCodeScore ?? 9.5} / 10.0
+                <Sparkles size={14} /> Clean Code: {(() => {
+                  const c = prevSubmission?.aiRating?.cleanCodeScore ?? taskSubmissions[0]?.details?.aiRating?.cleanCodeScore;
+                  return c !== undefined ? `${c} / 10.0` : '—';
+                })()}
               </span>
 
               <span
@@ -1674,9 +1681,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 <Award size={14} /> Kiến Trúc SOLID: {(() => {
                   const ar = prevSubmission?.aiRating ?? taskSubmissions[0]?.details?.aiRating;
                   return ar?.solidScore
-                    ? ((ar.solidScore.s + ar.solidScore.o + ar.solidScore.l + ar.solidScore.i + ar.solidScore.d) / 5).toFixed(1)
-                    : '8.8';
-                })()} / 10.0
+                    ? `${((ar.solidScore.s + ar.solidScore.o + ar.solidScore.l + ar.solidScore.i + ar.solidScore.d) / 5).toFixed(1)} / 10.0`
+                    : '—';
+                })()}
               </span>
 
               <span
@@ -1692,7 +1699,10 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   gap: '5px',
                 }}
               >
-                <Clock size={14} /> Sandbox: {prevSubmission?.executionTimeMs ?? taskSubmissions[0]?.details?.executionTimeMs ?? 185} ms
+                <Clock size={14} /> Sandbox: {(() => {
+                  const ms = prevSubmission?.executionTimeMs ?? taskSubmissions[0]?.details?.executionTimeMs;
+                  return ms !== undefined ? `${ms} ms` : '—';
+                })()}
               </span>
             </div>
 

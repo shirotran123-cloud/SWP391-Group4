@@ -33,6 +33,7 @@ import {
   RefreshCw,
   Activity,
   Users,
+  MoreVertical,
 } from 'lucide-react';
 import { RblBenchmarkView } from './RblBenchmarkView';
 import { LecturerAppealsManager } from './LecturerAppealsManager';
@@ -83,10 +84,10 @@ interface SubmissionRecord {
   assignmentTitle: string;
   fileName: string;
   submittedAt: string;
-  testcaseScore: number;
-  cleanCodeScore: number;
-  solidScore: number;
-  finalScore: number;
+  testcaseScore?: number;
+  cleanCodeScore?: number;
+  solidScore?: number;
+  finalScore?: number;
   plagiarismStatus: 'AN TOÀN' | 'NGHI VẤN' | 'ĐẠO VĂN';
   similarityRate: number;
   plagiarismMatch?: {
@@ -279,8 +280,23 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   // Modal xem chi tiet bai nop & Danh gia AI cho Giang vien
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedDetailSubmission, setSelectedDetailSubmission] = useState<SubmissionDetailData | null>(null);
+  const [openActionDropdownId, setOpenActionDropdownId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleWindowClick = () => setOpenActionDropdownId(null);
+    window.addEventListener('click', handleWindowClick);
+    return () => window.removeEventListener('click', handleWindowClick);
+  }, []);
 
   const handleOpenDetailModal = (sub: any) => {
+    const rawScore = sub.finalScore ?? sub.score ?? sub.details?.score;
+    const aiData = sub.aiRating || sub.details?.aiRating || (sub.cleanCodeScore !== undefined ? {
+      cleanCodeScore: sub.cleanCodeScore,
+      solidScore: typeof sub.solidScore === 'object' ? sub.solidScore : { s: sub.solidScore ?? 0, o: sub.solidScore ?? 0, l: sub.solidScore ?? 0, i: sub.solidScore ?? 0, d: sub.solidScore ?? 0 },
+      codeSmells: [],
+      explanation: 'Đánh giá tự động từ hệ thống.',
+    } : undefined);
+
     setSelectedDetailSubmission({
       submissionId: sub.id || sub.submissionId,
       studentId: sub.studentId,
@@ -290,19 +306,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       fileName: sub.fileName || 'Solution.zip',
       language: sub.language || 'java',
       submittedAt: sub.submittedAt || sub.createdAt || new Date().toISOString(),
-      score: sub.finalScore ?? sub.score ?? sub.details?.score ?? 9.8,
+      score: rawScore,
       scoreBreakdown: sub.scoreBreakdown || sub.details?.scoreBreakdown,
-      passedTestcases: sub.passedTestcases ?? sub.details?.passedTestcases ?? 2,
-      totalTestcases: sub.totalTestcases ?? sub.details?.totalTestcases ?? 2,
-      executionTimeMs: sub.executionTimeMs ?? sub.details?.executionTimeMs ?? 185,
+      passedTestcases: sub.passedTestcases ?? sub.details?.passedTestcases,
+      totalTestcases: sub.totalTestcases ?? sub.details?.totalTestcases,
+      executionTimeMs: sub.executionTimeMs ?? sub.details?.executionTimeMs,
       sha256: sub.sha256Hash || sub.sha256,
       sourceCode: sub.sourceCode || sub.details?.sourceCode,
-      aiRating: sub.aiRating || sub.details?.aiRating || {
-        cleanCodeScore: sub.cleanCodeScore ?? 9.5,
-        solidScore: { s: 9.0, o: 8.5, l: 9.0, i: 9.0, d: 8.5 },
-        codeSmells: [],
-        explanation: "Ma nguon to chuc ro rang, phan tach trach nhiem module tot.",
-      },
+      aiRating: aiData,
     });
     setDetailModalOpen(true);
   };
@@ -364,7 +375,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           const detail = detailById.get(row.countedSubmissionId) || {};
           const sim = detail.similarityRate ?? detail.result?.similarityRate ?? 0;
           const pStatus = detail.plagiarismStatus ||
-            (sim >= 70 ? 'ĐẠO VĂN' : sim >= 40 ? 'NGHI VẤN' : 'AN TOÀN');
+            (sim >= 80 ? 'ĐẠO VĂN' : sim >= 40 ? 'NGHI VẤN' : 'AN TOÀN');
           const rawAssignId = row.assignmentId || row.assignmentTitle || '';
           const matchedAssign = publishedAssignments.find(
             (a) => a.id === rawAssignId || a.title === rawAssignId
@@ -380,10 +391,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             submittedAt: row.submittedAt ? new Date(row.submittedAt).toLocaleString('vi-VN') : 'Vừa xong',
             testcaseScore: row.score !== null && row.score !== undefined
               ? Math.round(row.score * 0.7 * 10) / 10
-              : 0,
-            cleanCodeScore: detail.result?.aiRating?.cleanCodeScore ?? 8.5,
-            solidScore: 8.0,
-            finalScore: row.score ?? 0,
+              : undefined,
+            cleanCodeScore: detail.result?.aiRating?.cleanCodeScore ?? row.cleanCodeScore,
+            solidScore: row.solidScore,
+            finalScore: row.score ?? undefined,
             plagiarismStatus: pStatus as any,
             similarityRate: sim,
             plagiarismMatch: detail.plagiarismMatch || detail.result?.plagiarismMatch || null,
@@ -418,7 +429,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           const mapped: SubmissionRecord[] = serverList.map((s: any) => {
             const sim = s.similarityRate ?? s.result?.similarityRate ?? 0;
             const pStatus = s.plagiarismStatus ||
-              (sim >= 70 ? 'ĐẠO VĂN' : sim >= 40 ? 'NGHI VẤN' : 'AN TOÀN');
+              (sim >= 80 ? 'ĐẠO VĂN' : sim >= 40 ? 'NGHI VẤN' : 'AN TOÀN');
             const rawAssignId = s.assignmentId || s.assignmentTitle || '';
             const matchedAssign = publishedAssignments.find(
               (a) => a.id === rawAssignId || a.title === rawAssignId
@@ -433,10 +444,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               assignmentTitle: matchedAssign?.title || s.assignmentTitle || s.assignmentId || 'Bài nộp',
               fileName: s.fileName || `${s.submissionId || s.id}.zip`,
               submittedAt: s.createdAt ? new Date(s.createdAt).toLocaleString('vi-VN') : 'Vừa xong',
-              testcaseScore: s.score !== undefined ? Math.round(s.score * 0.7 * 10) / 10 : 7.0,
-              cleanCodeScore: s.result?.aiRating?.cleanCodeScore ?? 8.5,
-              solidScore: 8.0,
-              finalScore: s.score ?? 8.5,
+              testcaseScore: s.score !== undefined && s.score !== null ? Math.round(s.score * 0.7 * 10) / 10 : undefined,
+              cleanCodeScore: s.result?.aiRating?.cleanCodeScore ?? s.cleanCodeScore,
+              solidScore: s.solidScore,
+              finalScore: s.score ?? undefined,
               plagiarismStatus: pStatus as any,
               similarityRate: sim,
               plagiarismMatch: s.plagiarismMatch || s.result?.plagiarismMatch || null,
@@ -3295,8 +3306,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
                   <th style={{ padding: '12px 16px' }}>Mã Nộp</th>
                   <th style={{ padding: '12px 16px' }}>Sinh Viên</th>
-                  <th style={{ padding: '12px 16px' }}>Lượt Nộp</th>
-                  <th style={{ padding: '12px 16px' }}>File Nén (.zip)</th>
+                  <th className="gradebook-hide-compact" style={{ padding: '12px 16px' }}>Lượt Nộp</th>
+                  <th className="gradebook-hide-compact" style={{ padding: '12px 16px' }}>File Nén (.zip)</th>
                   <th style={{ padding: '12px 16px' }}>Thời Gian</th>
                   <th style={{ padding: '12px 16px' }}>Testcase</th>
                   <th style={{ padding: '12px 16px' }}>Clean Code</th>
@@ -3304,7 +3315,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   <th style={{ padding: '12px 16px' }}>Tổng Điểm</th>
                   <th style={{ padding: '12px 16px' }}>Trùng Lặp AST</th>
                   <th style={{ padding: '12px 16px' }}>Trạng Thái</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'center' }}>Tải Bài Làm (.zip)</th>
+                  <th style={{ padding: '12px 16px', textAlign: 'center', minWidth: '110px' }}>Thao Tác</th>
                 </tr>
               </thead>
               <tbody>
@@ -3339,7 +3350,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{sub.studentName}</div>
                       <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>{sub.studentId}</div>
                     </td>
-                    <td style={{ padding: '14px 16px' }}>
+                    <td className="gradebook-hide-compact" style={{ padding: '14px 16px' }}>
                       {/* How many times this student submitted the assignment. More than one
                           means the row shows the attempt chosen by the policy, not the only one. */}
                       <span
@@ -3362,29 +3373,43 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         </div>
                       )}
                     </td>
-                    <td style={{ padding: '14px 16px', color: '#1e40af', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
+                    <td className="gradebook-hide-compact" style={{ padding: '14px 16px', color: '#1e40af', fontFamily: 'var(--font-mono)', fontSize: '12px' }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <FileTypeIcon fileName={sub.fileName} size={18} />
                         {sub.fileName}
                       </span>
                     </td>
                     <td style={{ padding: '14px 16px', color: 'var(--text-muted)' }}>{sub.submittedAt}</td>
-                    <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-200)' }}>{sub.testcaseScore}/7.0</td>
-                    <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-300)' }}>{sub.cleanCodeScore}/10</td>
-                    <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-300)' }}>{sub.solidScore}/10</td>
+                    <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-200)' }}>
+                      {sub.testcaseScore !== null && sub.testcaseScore !== undefined ? `${sub.testcaseScore}/7.0` : '—'}
+                    </td>
+                    <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-300)' }}>
+                      {sub.cleanCodeScore !== null && sub.cleanCodeScore !== undefined ? `${sub.cleanCodeScore}/10` : '—'}
+                    </td>
+                    <td style={{ padding: '14px 16px', fontWeight: 600, color: 'var(--blue-300)' }}>
+                      {sub.solidScore !== null && sub.solidScore !== undefined ? `${sub.solidScore}/10` : '—'}
+                    </td>
                     <td style={{ padding: '14px 16px', fontWeight: 700, fontSize: '14px', color: 'var(--text-main)' }}>
-                      <div>{sub.finalScore} / 10</div>
-                      {sub.plagiarismStatus === 'ĐẠO VĂN' && (
-                        <div style={{ fontSize: '10.5px', color: 'var(--state-bad)', fontWeight: 700, marginTop: '2px' }}>
-                          ⚠️ Trùng {sub.similarityRate}%
-                        </div>
+                      {sub.finalScore !== null && sub.finalScore !== undefined ? (
+                        <>
+                          <div>{sub.finalScore} / 10</div>
+                          {sub.plagiarismStatus === 'ĐẠO VĂN' && (
+                            <div style={{ fontSize: '10.5px', color: 'var(--state-bad)', fontWeight: 700, marginTop: '2px' }}>
+                              ⚠️ Trùng {sub.similarityRate}%
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'var(--state-info-bg)', color: 'var(--state-info)', fontWeight: 700 }}>
+                          Đang xử lý
+                        </span>
                       )}
                     </td>
                     {/* Cột Similarity Rate */}
-                    <td style={{ padding: '14px 16px', fontWeight: 800, color: sub.similarityRate >= 70 ? 'var(--state-bad)' : sub.similarityRate >= 40 ? 'var(--state-warn)' : 'var(--text-muted)' }}>
+                    <td style={{ padding: '14px 16px', fontWeight: 800, color: sub.similarityRate >= 80 ? 'var(--state-bad)' : sub.similarityRate >= 40 ? 'var(--state-warn)' : 'var(--text-muted)' }}>
                       {sub.similarityRate > 0 ? (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          {sub.similarityRate >= 70 && '⚠️'} {sub.similarityRate}%
+                          {sub.similarityRate >= 80 && '⚠️'} {sub.similarityRate}%
                         </span>
                       ) : (
                         <span style={{ color: 'var(--text-dim)', fontWeight: 400, fontSize: '12px' }}>Chưa quét</span>
@@ -3417,96 +3442,171 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         {sub.plagiarismStatus}
                       </span>
                     </td>
-                    {/* Cột Hành Động */}
-                    <td style={{ padding: '14px 16px', textAlign: 'center' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenDetailModal(sub)}
-                        title={`Xem chi tiet bai nop ${sub.fileName} cua ${sub.studentName}`}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          background: 'var(--blue-600)',
-                          border: 'none',
-                          color: 'var(--on-blue)',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          marginRight: '6px',
-                          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.35)',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <Sparkles size={13} />
-                        Xem Chi Tiết
-                      </button>
-
-                      {/* NÚt Xem Đạo Văn — chỉ hiện khi có plagiarismMatch và similarityRate ≥ 40 */}
-                      {sub.plagiarismMatch && sub.similarityRate >= 40 && onOpenDiffViewer && (
+                    {/* Cột Hành Động: Gom gọn với nút Chi Tiết và Dropdown Menu ⋮ */}
+                    <td style={{ padding: '14px 16px', textAlign: 'center', position: 'relative' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', justifyContent: 'center' }}>
                         <button
                           type="button"
-                          onClick={() => onOpenDiffViewer({
-                            matchedStudentName: sub.plagiarismMatch!.matchedStudentName || sub.plagiarismMatch!.matchedStudentId,
-                            matchedStudentId: sub.plagiarismMatch!.matchedStudentId,
-                            similarityRate: sub.plagiarismMatch!.similarityRate,
-                            sourceCodeA: sub.plagiarismMatch!.sourceCodeA || sub.sourceCode || '',
-                            sourceCodeB: sub.plagiarismMatch!.sourceCodeB || '',
-                            matchedTokens: sub.plagiarismMatch!.matchedTokens || [],
-                            isFlagged: sub.plagiarismMatch!.isFlagged ?? (sub.similarityRate >= 70),
-                          } as any)}
-                          title={`Xem so sánh code với ${sub.plagiarismMatch.matchedStudentId} (${sub.similarityRate}%)`}
+                          onClick={() => handleOpenDetailModal(sub)}
+                          title={`Xem chi tiết bài nộp ${sub.fileName} của ${sub.studentName}`}
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
+                            gap: '5px',
+                            padding: '6px 11px',
                             borderRadius: '8px',
-                            background: sub.similarityRate >= 80
-                              ? 'linear-gradient(135deg, #b42318 0%, #8f1d13 100%)'
-                              : 'linear-gradient(135deg, #7d4f00 0%, #5c3a00 100%)',
+                            background: 'var(--blue-600)',
                             border: 'none',
-                            color: '#ffffff',
+                            color: 'var(--on-blue)',
                             fontSize: '12px',
                             fontWeight: 700,
                             cursor: 'pointer',
-                            marginRight: '6px',
-                            boxShadow: sub.similarityRate >= 80
-                              ? '0 1px 4px rgba(239,68,68,0.5)'
-                              : '0 1px 4px rgba(245,158,11,0.5)',
+                            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.25)',
+                            whiteSpace: 'nowrap',
                           }}
                         >
-                          <Scale size={13} />
-                          Xem Đạo Văn
+                          <Sparkles size={13} />
+                          <span>Chi Tiết</span>
                         </button>
-                      )}
 
-                      <button
-                        type="button"
-                        onClick={() => handleDownloadZip(sub.id, sub.fileName)}
-                        disabled={downloadingId === sub.id}
-                        title={`Tải xuống bài làm ${sub.fileName} của sinh viên`}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                          border: '1px solid rgba(37, 99, 235, 0.18)',
-                          color: 'var(--blue-200)',
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          opacity: downloadingId === sub.id ? 0.6 : 1,
-                        }}
-                      >
-                        <Download size={13} />
-                        {downloadingId === sub.id ? 'Đang tải...' : 'Tải .zip'}
-                      </button>
+                        <div style={{ position: 'relative' }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenActionDropdownId(openActionDropdownId === sub.id ? null : sub.id);
+                            }}
+                            title="Tùy chọn thao tác khác"
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '7px',
+                              backgroundColor: openActionDropdownId === sub.id ? 'rgba(37, 99, 235, 0.15)' : 'rgba(11, 18, 32, 0.05)',
+                              border: '1px solid rgba(11, 18, 32, 0.12)',
+                              color: 'var(--text-main)',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                          >
+                            <MoreVertical size={14} />
+                          </button>
+
+                          {openActionDropdownId === sub.id && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              style={{
+                                position: 'absolute',
+                                right: 0,
+                                top: 'calc(100% + 4px)',
+                                minWidth: '190px',
+                                backgroundColor: '#ffffff',
+                                borderRadius: '10px',
+                                boxShadow: '0 8px 24px rgba(11, 18, 32, 0.16), 0 2px 6px rgba(11, 18, 32, 0.08)',
+                                border: '1px solid var(--border-color)',
+                                padding: '6px',
+                                zIndex: 60,
+                                textAlign: 'left',
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionDropdownId(null);
+                                  handleOpenDetailModal(sub);
+                                }}
+                                style={{
+                                  width: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  padding: '8px 10px',
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  background: 'transparent',
+                                  color: 'var(--text-main)',
+                                  fontSize: '12.5px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.08)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                              >
+                                <Sparkles size={14} color="#2563eb" />
+                                <span>Xem chi tiết chấm</span>
+                              </button>
+
+                              {sub.plagiarismMatch && sub.similarityRate >= 40 && onOpenDiffViewer && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenActionDropdownId(null);
+                                    onOpenDiffViewer({
+                                      matchedStudentName: sub.plagiarismMatch!.matchedStudentName || sub.plagiarismMatch!.matchedStudentId,
+                                      matchedStudentId: sub.plagiarismMatch!.matchedStudentId,
+                                      similarityRate: sub.plagiarismMatch!.similarityRate,
+                                      sourceCodeA: sub.plagiarismMatch!.sourceCodeA || sub.sourceCode || '',
+                                      sourceCodeB: sub.plagiarismMatch!.sourceCodeB || '',
+                                      matchedTokens: sub.plagiarismMatch!.matchedTokens || [],
+                                      isFlagged: sub.plagiarismMatch!.isFlagged ?? (sub.similarityRate >= 80),
+                                    } as any);
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 10px',
+                                    borderRadius: '6px',
+                                    border: 'none',
+                                    background: 'transparent',
+                                    color: sub.similarityRate >= 80 ? '#b42318' : '#7d4f00',
+                                    fontSize: '12.5px',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                  }}
+                                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.08)')}
+                                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                                >
+                                  <Scale size={14} color={sub.similarityRate >= 80 ? '#b42318' : '#d97706'} />
+                                  <span>Đối sánh đạo văn ({sub.similarityRate}%)</span>
+                                </button>
+                              )}
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setOpenActionDropdownId(null);
+                                  handleDownloadZip(sub.id, sub.fileName);
+                                }}
+                                disabled={downloadingId === sub.id}
+                                style={{
+                                  width: '100%',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px',
+                                  padding: '8px 10px',
+                                  borderRadius: '6px',
+                                  border: 'none',
+                                  background: 'transparent',
+                                  color: 'var(--text-main)',
+                                  fontSize: '12.5px',
+                                  fontWeight: 600,
+                                  cursor: downloadingId === sub.id ? 'not-allowed' : 'pointer',
+                                  opacity: downloadingId === sub.id ? 0.6 : 1,
+                                }}
+                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(37, 99, 235, 0.08)')}
+                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                              >
+                                <Download size={14} color="#1d4ed8" />
+                                <span>{downloadingId === sub.id ? 'Đang tải...' : 'Tải file .zip'}</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </td>
                   </tr>
                 )))}

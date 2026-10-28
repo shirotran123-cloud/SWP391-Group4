@@ -64,7 +64,7 @@ export interface ClassPlagiarismMatrixReport {
 }
 
 export class ASTPlagiarismEngine {
-  public static readonly PLAGIARISM_THRESHOLD = 70.0; // 70% by task spec
+  public static readonly PLAGIARISM_THRESHOLD = 80.0; // BR-03: 80% confirmed plagiarism (score 0)
 
   /**
    * Compares two single submissions and computes Jaccard + Winnowing Containment + AST Structural Cosine Similarity

@@ -30,4 +30,19 @@ export class PlagiarismController {
       data: { submissionId },
     };
   }
+
+  /**
+   * GET /api/v1/plagiarism/benchmark-ieee
+   * Bảng số liệu thực nghiệm đối soát mã nguồn ngụy trang phục vụ Bài báo IEEE (Thành viên 4)
+   */
+  @Get('benchmark-ieee')
+  public async getIEEEBenchmark() {
+    const results = await this.plagiarismService.getIEEEOffuscationBenchmark();
+    return {
+      statusCode: 200,
+      message: 'Bộ thực nghiệm đo lường đối soát mã nguồn ngụy trang IEEE Benchmark Suite',
+      totalScenarios: results.length,
+      data: results,
+    };
+  }
 }

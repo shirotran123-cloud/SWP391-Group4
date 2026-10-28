@@ -93,7 +93,7 @@ export const MonacoDiffViewer: React.FC<MonacoDiffViewerProps> = ({
   const [activeTab, setActiveTab] = useState<'single' | 'diff'>('single');
 
   const similarity = plagiarismMatch?.similarityRate || 0;
-  const isHighRisk = similarity >= 70;
+  const isHighRisk = similarity >= 80;
   const matchedTokensCount = plagiarismMatch?.matchedTokens?.length || 0;
 
   const tabStyle = (isActive: boolean): React.CSSProperties => ({

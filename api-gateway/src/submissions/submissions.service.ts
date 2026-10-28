@@ -11,6 +11,7 @@ import * as path from 'path';
 import { SubmissionRepository, SubmissionQueryFilter } from '../database/submission.repository';
 import { AssignmentRepository } from '../database/assignment.repository';
 import { UserRepository } from '../database/user.repository';
+import { PlagiarismRepository } from '../database/plagiarism.repository';
 import { QueueService } from '../queue/queue.service';
 import { GradingGateway } from '../websocket/grading.gateway';
 import { MAX_UPLOAD_SIZE_BYTES, SUBMISSION_STATUS } from '../common/constants/queue.constants';
@@ -26,6 +27,7 @@ export class SubmissionsService {
     private readonly submissionRepo: SubmissionRepository,
     private readonly assignmentRepo: AssignmentRepository,
     private readonly userRepo: UserRepository,
+    private readonly plagiarismRepo: PlagiarismRepository,
     private readonly queueService: QueueService,
     private readonly gradingGateway: GradingGateway,
   ) {
@@ -106,12 +108,38 @@ export class SubmissionsService {
     const randomSuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
     const submissionId = `SUB-${Date.now().toString().slice(-6)}-${randomSuffix}`;
 
-    // 4. Save file to disk
+    // 4. Thay thế bài nộp cũ: Xoá bài nộp cũ và toàn bộ lịch sử (file, fingerprints, plagiarism reports)
+    try {
+      const existingSubmissions = await this.submissionRepo.findAll({ studentId, assignmentId });
+      for (const oldSub of existingSubmissions) {
+        this.logger.log(
+          `[SubmissionsService] Sinh viên ${studentId} nộp bài mới: Thay thế bài nộp cũ ${oldSub.submissionId}...`,
+        );
+        // Xoá file vật lý trên đĩa
+        if (oldSub.filePath && fs.existsSync(oldSub.filePath)) {
+          try {
+            fs.unlinkSync(oldSub.filePath);
+          } catch (e: any) {
+            this.logger.warn(`[SubmissionsService] Không thể xoá file cũ ${oldSub.filePath}: ${e.message}`);
+          }
+        }
+        // Xoá báo cáo đạo văn liên quan đến bài cũ
+        await this.plagiarismRepo.deleteReportsBySubmission(oldSub.submissionId);
+        // Xoá dấu vân tay AST của bài cũ
+        await this.plagiarismRepo.deleteFingerprintsBySubmission(oldSub.submissionId);
+        // Xoá bản ghi bài nộp cũ trong DB
+        await this.submissionRepo.delete(oldSub.submissionId);
+      }
+    } catch (cleanupErr: any) {
+      this.logger.warn(`[SubmissionsService] Lỗi dọn dẹp bài nộp cũ: ${cleanupErr.message}`);
+    }
+
+    // 5. Save file to disk
     const savedFileName = `${submissionId}.zip`;
     const destinationPath = path.join(this.uploadDir, savedFileName);
     fs.writeFileSync(destinationPath, file.buffer);
 
-    // 5. Store record in SUBMISSIONS database table
+    // 6. Store record in SUBMISSIONS database table
     const record = await this.submissionRepo.create({
       submissionId,
       studentId,

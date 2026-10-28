@@ -101,18 +101,14 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   if (!isOpen || !submission) return null;
 
   const currentSource = fetchedCode || submission.sourceCode || '// Không tìm thấy nội dung mã nguồn.';
-  const displayScore = submission.score ?? 0;
-  const isPassed = displayScore >= 5.0;
-  const passedTC = submission.passedTestcases ?? (displayScore >= 5.0 ? 2 : 0);
-  const totalTC = submission.totalTestcases ?? 2;
-  const executionMs = submission.executionTimeMs ?? 185;
+  const hasScore = submission.score !== undefined && submission.score !== null;
+  const displayScore = hasScore ? submission.score! : null;
+  const isPassed = hasScore && displayScore! >= 5.0;
+  const passedTC = submission.passedTestcases;
+  const totalTC = submission.totalTestcases;
+  const executionMs = submission.executionTimeMs;
 
-  const aiRating: AIRating = submission.aiRating || {
-    cleanCodeScore: 9.5,
-    solidScore: { s: 9.0, o: 8.5, l: 9.0, i: 9.0, d: 8.5 },
-    codeSmells: [],
-    explanation: 'Mã nguồn tổ chức rõ ràng, cấu trúc thuật toán tối ưu và tuân thủ tốt các tiêu chuẩn kiến trúc.',
-  };
+  const aiRating: AIRating | undefined = submission.aiRating;
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(currentSource);
@@ -204,12 +200,12 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     borderRadius: '8px',
                     fontSize: '12px',
                     fontWeight: 600,
-                    backgroundColor: isPassed ? 'var(--state-ok-bg)' : 'var(--state-bad-bg)',
-                    color: isPassed ? 'var(--state-ok)' : 'var(--state-bad)',
-                    border: `1px solid ${isPassed ? 'var(--state-ok-border)' : 'var(--state-bad-border)'}`,
+                    backgroundColor: hasScore ? (isPassed ? 'var(--state-ok-bg)' : 'var(--state-bad-bg)') : 'var(--state-info-bg)',
+                    color: hasScore ? (isPassed ? 'var(--state-ok)' : 'var(--state-bad)') : 'var(--state-info)',
+                    border: `1px solid ${hasScore ? (isPassed ? 'var(--state-ok-border)' : 'var(--state-bad-border)') : 'rgba(37,99,235,0.2)'}`,
                   }}
                 >
-                  {isPassed ? 'ĐẠT' : 'CHƯA ĐẠT'} • {displayScore.toFixed(1)} / 10.0
+                  {hasScore ? `${isPassed ? 'ĐẠT' : 'CHƯA ĐẠT'} • ${displayScore!.toFixed(1)} / 10.0` : 'Đang xử lý'}
                 </span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px', fontSize: '12px', color: '#4d5c76' }}>
@@ -288,7 +284,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               transition: 'all 0.15s ease',
             }}
           >
-            <ListChecks size={15} /> 1. Tổng Quan & Testcases ({passedTC}/{totalTC})
+            <ListChecks size={15} /> 1. Tổng Quan & Testcases {passedTC !== undefined && totalTC !== undefined ? `(${passedTC}/${totalTC})` : ''}
           </button>
 
           <button
@@ -309,7 +305,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
               transition: 'all 0.15s ease',
             }}
           >
-            <Sparkles size={15} /> 2. Đánh Giá SOLID & Clean Code ({aiRating.cleanCodeScore}/10)
+            <Sparkles size={15} /> 2. Đánh Giá SOLID & Clean Code {aiRating ? `(${aiRating.cleanCodeScore}/10)` : '(Chưa có)'}
           </button>
 
           <button
@@ -346,7 +342,13 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     Tổng Điểm Đạt Được
                   </div>
                   <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--text-main)', marginTop: '4px' }}>
-                    {displayScore.toFixed(1)} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>/ 10.0</span>
+                    {hasScore ? (
+                      <>
+                        {displayScore!.toFixed(1)} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>/ 10.0</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '15px', color: 'var(--blue-200)', fontWeight: 700 }}>Đang xử lý</span>
+                    )}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--blue-300)', marginTop: '4px' }}>
                     Trọng số: 70% TC + 15% CC + 15% SOLID
@@ -358,10 +360,18 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     Kết Quả Testcases
                   </div>
                   <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--blue-200)', marginTop: '4px' }}>
-                    {passedTC}/{totalTC} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>Passed</span>
+                    {passedTC !== undefined && totalTC !== undefined ? (
+                      <>
+                        {passedTC}/{totalTC} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>Passed</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '15px', color: 'var(--text-dim)', fontWeight: 600 }}>—</span>
+                    )}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--blue-300)', marginTop: '4px' }}>
-                    {totalTC > 0 ? ((passedTC / totalTC) * 100).toFixed(0) : 100}% độ chính xác thuật toán
+                    {passedTC !== undefined && totalTC !== undefined && totalTC > 0
+                      ? `${((passedTC / totalTC) * 100).toFixed(0)}% độ chính xác thuật toán`
+                      : 'Chờ phân tích kết quả Docker'}
                   </div>
                 </div>
 
@@ -370,10 +380,16 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     Clean Code Score
                   </div>
                   <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--blue-300)', marginTop: '4px' }}>
-                    {aiRating.cleanCodeScore} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>/ 10.0</span>
+                    {aiRating ? (
+                      <>
+                        {aiRating.cleanCodeScore} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>/ 10.0</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '15px', color: 'var(--text-dim)', fontWeight: 600 }}>—</span>
+                    )}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--blue-300)', marginTop: '4px' }}>
-                    {aiRating.codeSmells.length} Cảnh báo mùi mã nguồn
+                    {aiRating ? `${aiRating.codeSmells?.length ?? 0} Cảnh báo mùi mã nguồn` : 'Chưa có dữ liệu AI'}
                   </div>
                 </div>
 
@@ -382,18 +398,24 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     Điểm Kiến Trúc SOLID
                   </div>
                   <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--blue-300)', marginTop: '4px' }}>
-                    {(
-                      (aiRating.solidScore.s +
-                        aiRating.solidScore.o +
-                        aiRating.solidScore.l +
-                        aiRating.solidScore.i +
-                        aiRating.solidScore.d) /
-                      5
-                    ).toFixed(1)}{' '}
-                    <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>/ 10.0</span>
+                    {aiRating?.solidScore ? (
+                      <>
+                        {(
+                          (aiRating.solidScore.s +
+                            aiRating.solidScore.o +
+                            aiRating.solidScore.l +
+                            aiRating.solidScore.i +
+                            aiRating.solidScore.d) /
+                          5
+                        ).toFixed(1)}{' '}
+                        <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>/ 10.0</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '15px', color: 'var(--text-dim)', fontWeight: 600 }}>—</span>
+                    )}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--blue-300)', marginTop: '4px' }}>
-                    Đánh giá theo 5 nguyên lý thiết kế
+                    {aiRating?.solidScore ? 'Đánh giá theo 5 nguyên lý thiết kế' : 'Chưa có dữ liệu AI'}
                   </div>
                 </div>
               </div>
@@ -495,98 +517,110 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
 
           {/* TAB 2: ĐÁNH GIÁ SOLID & CLEAN CODE */}
           {activeTab === 'ai' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
-                {/* Radar Chart */}
-                <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', alignSelf: 'flex-start' }}>
-                    <Award size={18} color="var(--accent-primary)" />
-                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                      Biểu Đồ Radar 5 Trục SOLID
-                    </h3>
-                  </div>
-                  <SolidRadarChart rating={aiRating} />
-                </div>
-
-                {/* Nhận xét AI & Mùi mã nguồn */}
-                <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                    <Sparkles size={18} color="var(--accent-cyan)" />
-                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
-                      Nhận Xét & Đánh Giá Từ Trợ Lý AI
-                    </h3>
+            aiRating ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
+                  {/* Radar Chart */}
+                  <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', alignSelf: 'flex-start' }}>
+                      <Award size={18} color="var(--accent-primary)" />
+                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                        Biểu Đồ Radar 5 Trục SOLID
+                      </h3>
+                    </div>
+                    <SolidRadarChart rating={aiRating} />
                   </div>
 
-                  <p style={{ fontSize: '13px', color: '#33415a', lineHeight: '1.6', marginBottom: '16px', fontStyle: 'italic', backgroundColor: 'rgba(11, 18, 32, 0.04)', padding: '12px 14px', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
-                    &ldquo;{aiRating.explanation}&rdquo;
-                  </p>
-
-                  <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>
-                    Cảnh báo Mùi Mã Nguồn ({aiRating.codeSmells.length}):
-                  </h4>
-
-                  {aiRating.codeSmells.length === 0 ? (
-                    <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.07)', border: '1px solid rgba(37, 99, 235, 0.1)', fontSize: '12px', color: '#1e40af' }}>
-                      <strong>Mã nguồn hoàn hảo:</strong> Không phát hiện Code Smell nào. Cấu trúc hàm gọn gàng, không có tham số dư thừa hay magic numbers.
+                  {/* Nhận xét AI & Mùi mã nguồn */}
+                  <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                      <Sparkles size={18} color="var(--accent-cyan)" />
+                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                        Nhận Xét & Đánh Giá Từ Trợ Lý AI
+                      </h3>
                     </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto' }}>
-                      {aiRating.codeSmells.map((smell, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            padding: '8px 10px',
-                            borderRadius: '6px',
-                            backgroundColor: 'rgba(37, 99, 235, 0.07)',
-                            border: '1px solid rgba(37, 99, 235, 0.1)',
-                            fontSize: '12px',
-                            display: 'flex',
-                            gap: '8px',
-                          }}
-                        >
-                          <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-amber)', fontWeight: 600 }}>
-                            L{smell.line || 15}:
-                          </span>
-                          <span style={{ color: '#33415a' }}>{smell.description}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
 
-              {/* Gợi ý sư phạm Socratic */}
-              <div
-                style={{
-                  padding: '16px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                  border: '1px solid rgba(59, 130, 246, 0.16)',
-                  display: 'flex',
-                  gap: '12px',
-                  alignItems: 'flex-start',
-                }}
-              >
-                <Sparkles size={20} color="var(--accent-primary)" style={{ marginTop: '2px', flexShrink: 0 }} />
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', marginBottom: '4px', margin: 0 }}>
-                    Gợi ý sư phạm (Định Hướng Kiến Trúc & SOLID)
-                  </h4>
-                  <p style={{ fontSize: '13px', color: '#33415a', lineHeight: '1.5', margin: '4px 0 0 0' }}>
-                    {aiRating.codeSmells && aiRating.codeSmells.length > 0 ? (
-                      <span>
-                        <strong>Phát hiện vi phạm: </strong>
-                        {aiRating.codeSmells[0].description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử refactor lại các phương thức để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.
-                      </span>
+                    <p style={{ fontSize: '13px', color: '#33415a', lineHeight: '1.6', marginBottom: '16px', fontStyle: 'italic', backgroundColor: 'rgba(11, 18, 32, 0.04)', padding: '12px 14px', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
+                      &ldquo;{aiRating.explanation}&rdquo;
+                    </p>
+
+                    <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>
+                      Cảnh báo Mùi Mã Nguồn ({aiRating.codeSmells?.length ?? 0}):
+                    </h4>
+
+                    {(aiRating.codeSmells?.length ?? 0) === 0 ? (
+                      <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.07)', border: '1px solid rgba(37, 99, 235, 0.1)', fontSize: '12px', color: '#1e40af' }}>
+                        <strong>Mã nguồn hoàn hảo:</strong> Không phát hiện Code Smell nào. Cấu trúc hàm gọn gàng, không có tham số dư thừa hay magic numbers.
+                      </div>
                     ) : (
-                      <span>
-                        <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện Code Smells nào, phân tách trách nhiệm giữa các class/module rõ ràng và tuân thủ tốt nguyên lý <strong>Single Responsibility Principle (SRP)</strong>.
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto' }}>
+                        {aiRating.codeSmells.map((smell, index) => (
+                          <div
+                            key={index}
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: '6px',
+                              backgroundColor: 'rgba(37, 99, 235, 0.07)',
+                              border: '1px solid rgba(37, 99, 235, 0.1)',
+                              fontSize: '12px',
+                              display: 'flex',
+                              gap: '8px',
+                            }}
+                          >
+                            <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-amber)', fontWeight: 600 }}>
+                              L{smell.line || 15}:
+                            </span>
+                            <span style={{ color: '#33415a' }}>{smell.description}</span>
+                          </div>
+                        ))}
+                      </div>
                     )}
-                  </p>
+                  </div>
+                </div>
+
+                {/* Gợi ý sư phạm Socratic */}
+                <div
+                  style={{
+                    padding: '16px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    border: '1px solid rgba(59, 130, 246, 0.16)',
+                    display: 'flex',
+                    gap: '12px',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <Sparkles size={20} color="var(--accent-primary)" style={{ marginTop: '2px', flexShrink: 0 }} />
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', marginBottom: '4px', margin: 0 }}>
+                      Gợi ý sư phạm (Định Hướng Kiến Trúc & SOLID)
+                    </h4>
+                    <p style={{ fontSize: '13px', color: '#33415a', lineHeight: '1.5', margin: '4px 0 0 0' }}>
+                      {aiRating.codeSmells && aiRating.codeSmells.length > 0 ? (
+                        <span>
+                          <strong>Phát hiện vi phạm: </strong>
+                          {aiRating.codeSmells[0].description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử refactor lại các phương thức để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.
+                        </span>
+                      ) : (
+                        <span>
+                          <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện Code Smells nào, phân tách trách nhiệm giữa các class/module rõ ràng và tuân thủ tốt nguyên lý <strong>Single Responsibility Principle (SRP)</strong>.
+                        </span>
+                      )}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '48px 24px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                <Clock size={36} style={{ margin: '0 auto 12px', color: 'var(--blue-400)' }} />
+                <h4 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+                  Chưa Có Đánh Giá AI Hoặc Đang Trong Hàng Đợi Chấm
+                </h4>
+                <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: '460px', margin: '0 auto', lineHeight: '1.6' }}>
+                  Bài nộp đang chờ điều phối viên BullMQ và GenAI Hub phân tích cấu trúc Clean Code &amp; 5 nguyên lý SOLID. Kết quả sẽ được cập nhật tự động khi hoàn tất.
+                </p>
+              </div>
+            )
           )}
 
           {/* TAB 3: MÃ NGUỒN ĐÃ NỘP */}
@@ -722,7 +756,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             {onOpenAppeal && (
               <button
                 type="button"
-                onClick={() => onOpenAppeal(submission.submissionId, displayScore)}
+                onClick={() => onOpenAppeal(submission.submissionId, displayScore ?? undefined)}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
