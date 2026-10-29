@@ -1,17 +1,17 @@
-# A Comparative Study of AST-Based Winnowing and Tree Edit Distance in Detecting GenAI-Obfuscated Source Code
+﻿# A Comparative Study of AST-Based Winnowing and Tree Edit Distance in Detecting GenAI-Obfuscated Source Code
 
-**Group 4 — Software Engineering Department, FPT University**  
+**Group 4 — Software Engineering Department, FPT University Quy Nhon Campus**  
 *Course: SWP391 - Software Development Project (Research-Based Learning Track, 10 Weeks)*  
 *Academic Year: 2026 | IEEE Standard Format for Conference Proceedings*
 
 ---
 
 ### Author Information
-* **Đinh Thành Trung** (Lead Author & System Architect) — `trungdtse170000@fpt.edu.vn`
-* **Trần Công Tiến** (Co-Author & DevOps Specialist) — `tientcse170999@fpt.edu.vn`
-* **Nguyễn Hoàng Vinh** (Co-Author & GenAI Specialist) — `vinhnhse170456@fpt.edu.vn`
-* **Văn Thái Trung** (Co-Author & Algorithm Specialist) — `trungvtse170789@fpt.edu.vn`
-* **Linh Campochia** (Co-Author, Frontend Lead & Correspondence Author) — `linhcampochia@gmail.com`
+* **Đinh Thành Trung** (Lead Author & System Architect)
+* **Trần Công Tiến** (Co-Author & DevOps Specialist)
+* **Nguyễn Hoàng Vinh** (Co-Author & GenAI Specialist)
+* **Văn Thái Trung** (Co-Author & Algorithm Specialist)
+* **Trần Thanh Nguyên** (Co-Author, Frontend Lead & Correspondence Author)
 
 ---
 
@@ -280,7 +280,7 @@ While the system is robust against singular GenAI refactoring attacks, composite
 4. M. Mozgovoy, T. Kakkonen, and E. Sutinen, "Using computer science ontologies for plagiarism detection," *IEEE Transactions on Education*, vol. 50, no. 4, pp. 317–323, 2007.
 5. S. S. Roy and V. Reddy, "Detection of source code plagiarism using tree-based syntactic representations," *IEEE Access*, vol. 8, pp. 105820–105832, 2020.
 6. A. Aiken, "MOSS (Measure of Software Similarity) system," Stanford University, Tech. Rep., 2000. [Online]. Available: https://theory.stanford.edu/~aiken/moss/
-7. Group 4, "AITA-Intelligent: Source Code Grading and Academic Integrity Platform Architecture," Software Engineering Department, FPT University, System Architecture Document, 2026.
+7. Group 4, "AITA-Intelligent: Source Code Grading and Academic Integrity Platform Architecture," Software Engineering Department, FPT University Quy Nhon Campus, System Architecture Document, 2026.
 8. Group 4, "RBL Syllabus & Laboratory Specification: 10-Week Software Development Project Track," FPT University, Curriculum Document, 2026.
 
 ---

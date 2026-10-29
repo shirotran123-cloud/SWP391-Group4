@@ -180,10 +180,10 @@ export const AppealModal: React.FC<AppealModalProps> = ({
             </div>
             <div>
               <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>
-                Đơn Khiếu Nại &amp; Phúc Khảo Điểm (UC-06)
+                Đơn Khiếu Nại &amp; Phúc Khảo Điểm
               </h2>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                Quy chuẩn IEEE Std 830-1998 &amp; Quy tắc BR-05 (Tối đa 2 lần khiếu nại / mỗi bài nộp)
+                Quy định phúc khảo điểm (Tối đa 2 lần khiếu nại / mỗi bài nộp)
               </p>
             </div>
           </div>
@@ -253,7 +253,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
         {/* BR-05 Policy Banner - Làm rõ quy tắc 2 lần/bài nộp độc lập */}
         <div style={{ padding: '14px 18px', borderRadius: '12px', backgroundColor: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.16)', marginBottom: '20px', fontSize: '13px', color: '#1e40af', lineHeight: 1.6 }}>
           <div style={{ fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--blue-300)', fontSize: '14px' }}>
-            <ShieldAlert size={18} /> Quy định phúc khảo điểm (Quy tắc BR-05):
+            <ShieldAlert size={18} /> Quy định phúc khảo điểm:
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <div>
@@ -435,7 +435,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
             <AlertCircle size={28} style={{ margin: '0 auto 8px' }} />
             <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>Đã đạt giới hạn phúc khảo của bài nộp này (2/2 lần)</div>
             <p style={{ fontSize: '13px', margin: '0 0 6px 0', color: 'var(--text-main)', lineHeight: 1.5 }}>
-              Bài nộp này đã sử dụng đủ 2 lần phúc khảo theo quy tắc BR-05. Quyết định của Giảng viên là quyết định cuối cùng.
+              Bài nộp này đã sử dụng đủ 2 lần phúc khảo theo quy định. Quyết định của Giảng viên là quyết định cuối cùng.
             </p>
             <p style={{ fontSize: '12px', margin: 0, color: '#33415a' }}>
               Lưu ý: Hạn mức này chỉ áp dụng riêng cho mã bài nộp này. Các bài tập khác của bạn vẫn có 2 lượt phúc khảo độc lập bình thường.

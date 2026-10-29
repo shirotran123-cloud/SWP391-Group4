@@ -251,7 +251,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
               Lịch Sử Bài Nộp &amp; Điểm Số
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
-              Xem danh sách bài tập đã nộp, điểm số chi tiết từng tiêu chí, tải lại mã nguồn gốc (.zip) và quản lý khiếu nại phúc khảo theo quy tắc BR-05 (2 lượt/bài nộp).
+              Xem danh sách bài tập đã nộp, điểm số chi tiết từng tiêu chí, tải lại mã nguồn gốc (.zip) và quản lý khiếu nại phúc khảo (tối đa 2 lượt độc lập/bài nộp).
             </p>
           </div>
 
@@ -318,7 +318,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
           </div>
 
           <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>QUY TẮC PHÚC KHẢO BR-05</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>QUY ĐỊNH PHÚC KHẢO ĐIỂM</div>
             <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e40af', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Scale size={16} /> 2 lượt độc lập / mỗi bài tập
             </div>
@@ -822,7 +822,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                       }}
                       title={
                         isMaxAppeals
-                          ? 'Bài nộp này đã sử dụng tối đa 2/2 lượt phúc khảo theo quy tắc BR-05. Không thể khiếu nại thêm.'
+                          ? 'Bài nộp này đã sử dụng tối đa 2/2 lượt phúc khảo theo quy định. Không thể khiếu nại thêm.'
                           : appealsCount === 1
                             ? 'Gửi đơn phúc khảo lần 2 cho riêng bài nộp này (còn 1 lượt)'
                             : 'Gửi đơn khiếu nại & phúc khảo cho riêng bài nộp này (tối đa 2 lượt)'

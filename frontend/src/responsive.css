@@ -1,0 +1,101 @@
+/* ============================================================
+   AITA RESPONSIVE MOBILE & TABLET ENHANCEMENTS
+   ============================================================ */
+
+/* 1. Header & Navigation */
+@media (max-width: 860px) {
+  .nav-user-name,
+  .nav-subtitle,
+  .nav-divider {
+    display: none !important;
+  }
+  .nav-inner {
+    gap: 8px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .nav-status-label,
+  .nav-version {
+    display: none !important;
+  }
+  .nav-logout-text {
+    display: none !important;
+  }
+
+  /* Main content container */
+  main {
+    padding: 12px 10px !important;
+  }
+
+  /* Modal responsive on mobile: Bottom sheet style */
+  .modal-backdrop {
+    padding: 6px !important;
+    align-items: flex-end !important;
+  }
+  .modal-card {
+    max-height: 94vh !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    padding: 18px 14px !important;
+  }
+
+  /* Submissions & Cards */
+  .glass-panel {
+    padding: 16px 12px !important;
+  }
+
+  .drop-zone {
+    padding: 24px 12px !important;
+  }
+
+  /* Course selection cards grid */
+  .course-grid,
+  section div[style*="grid-template-columns: repeat(auto-fit"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tabs horizontal touch scroll */
+  div[role="tablist"] {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  div[role="tablist"]::-webkit-scrollbar {
+    display: none;
+  }
+  div[role="tablist"] button {
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* Testcase / live grading steps */
+  .testcase-row {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tables container: enable horizontal scroll */
+  .table-scroll,
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Smaller action buttons on small mobile */
+  .btn {
+    padding: 7px 12px !important;
+    font-size: 12px !important;
+  }
+  .btn-sm {
+    padding: 5px 8px !important;
+    font-size: 11px !important;
+  }
+
+  /* Quick role switcher dropdown */
+  select {
+    font-size: 11px !important;
+  }
+}

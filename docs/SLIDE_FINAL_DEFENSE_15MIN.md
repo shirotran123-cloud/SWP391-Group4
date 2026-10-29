@@ -1,4 +1,4 @@
-# BỘ SLIDE THUYẾT TRÌNH BẢO VỆ ĐỒ ÁN TỐT NGHIỆP / FINAL DEFENSE (15 PHÚT)
+﻿# BỘ SLIDE THUYẾT TRÌNH BẢO VỆ ĐỒ ÁN TỐT NGHIỆP / FINAL DEFENSE (15 PHÚT)
 ## HỆ THỐNG CHẤM MÃ NGUỒN TỰ ĐỘNG & GIÁM SÁT LIÊM CHÍNH HỌC THUẬT AITA-INTELLIGENT
 > **Học phần:** SWP391 - Đồ án Phát triển Phần mềm (Chuẩn RBL 10 Tuần & IEEE Std 830-1998)  
 > **Nhóm thực hiện:** Group 4 (5 Thành Viên)  
@@ -22,14 +22,14 @@
 
 ## SLIDE 1: BÌA BÁO CÁO & GIỚI THIỆU DỰ ÁN
 * **Tiêu đề:** AITA-Intelligent — Nền tảng Chấm Mã Nguồn Tự Động & Giám Sát Liêm Chính Học Thuật Ứng Dụng AST Winnowing & GenAI
-* **Đơn vị đào tạo:** Bộ môn Kỹ thuật Phần mềm (Software Engineering) — Đại học FPT
+* **Đơn vị đào tạo:** Bộ môn Kỹ thuật Phần mềm (Software Engineering) — Đại học FPT Quy Nhơn
 * **Giảng viên hướng dẫn:** ThS. Đinh Thành Trung
 * **Đội ngũ thực hiện (Group 4):**
   1. **Đinh Thành Trung** (Leader, System Architect & DevOps Lead)
   2. **Trần Công Tiến** (Backend Core & Sandbox Security Engineer)
   3. **Nguyễn Hoàng Vinh** (GenAI Specialist & Database Architect)
   4. **Văn Thái Trung** (Algorithm Specialist & Plagiarism Engine Lead)
-  5. **Linh Campochia** (Frontend Lead & Correspondence Author - Bài báo IEEE)
+  5. **Trần Thanh Nguyên** (Frontend Lead & Correspondence Author - Bài báo IEEE)
 
 ---
 
