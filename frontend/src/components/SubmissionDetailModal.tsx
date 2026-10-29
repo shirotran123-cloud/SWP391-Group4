@@ -846,7 +846,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   cursor: 'pointer',
                 }}
               >
-                <Scale size={15} /> Phúc Khảo Bài Nộp Này (BR-05)
+                <Scale size={15} /> Phúc Khảo Bài Nộp Này
               </button>
             )}
           </div>
