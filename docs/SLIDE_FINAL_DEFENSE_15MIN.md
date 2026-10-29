@@ -1,4 +1,4 @@
-# BỘ SLIDE THUYẾT TRÌNH BẢO VỆ ĐỒ ÁN TỐT NGHIỆP / FINAL DEFENSE (15 PHÚT)
+﻿# BỘ SLIDE THUYẾT TRÌNH BẢO VỆ ĐỒ ÁN TỐT NGHIỆP / FINAL DEFENSE (15 PHÚT)
 ## HỆ THỐNG CHẤM MÃ NGUỒN TỰ ĐỘNG & GIÁM SÁT LIÊM CHÍNH HỌC THUẬT AITA-INTELLIGENT
 > **Học phần:** SWP391 - Đồ án Phát triển Phần mềm (Chuẩn RBL 10 Tuần & IEEE Std 830-1998)  
 > **Nhóm thực hiện:** Group 4 (5 Thành Viên)  

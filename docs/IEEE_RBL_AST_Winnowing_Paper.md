@@ -1,4 +1,4 @@
-# A Comparative Study of AST-Based Winnowing and Tree Edit Distance in Detecting GenAI-Obfuscated Source Code
+﻿# A Comparative Study of AST-Based Winnowing and Tree Edit Distance in Detecting GenAI-Obfuscated Source Code
 
 **Group 4 — Software Engineering Department, FPT University**  
 *Course: SWP391 - Software Development Project (Research-Based Learning Track, 10 Weeks)*  
