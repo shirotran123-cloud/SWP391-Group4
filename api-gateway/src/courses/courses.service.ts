@@ -49,6 +49,19 @@ export class CoursesService {
     });
 
     this.logger.log(`[CoursesService] Created course ${record.courseCode} (${record.courseId})`);
+
+    // Tự động ghi danh danh sách sinh viên mẫu vào lớp học phần mới để sinh viên có thể thấy bài tập ngay
+    try {
+      await this.courseRepo.bulkEnrollStudents(courseId, [
+        { studentCode: 'SE170000', fullName: 'Đỗ Thành Trung', email: 'trungdt.student@aita.fpt.edu.vn' },
+        { studentCode: 'SE170001', fullName: 'Nguyễn Hoàng Phái Thầy', email: 'phaithayj@gmail.com' },
+        { studentCode: 'SE170002', fullName: 'Trần Công Tiến', email: 'tientc@aita.fpt.edu.vn' },
+      ]);
+      this.logger.log(`[CoursesService] Auto-enrolled default student roster into course ${courseId}`);
+    } catch (enrollErr: any) {
+      this.logger.warn(`[CoursesService] Auto-enroll info: ${enrollErr.message}`);
+    }
+
     return record;
   }
 

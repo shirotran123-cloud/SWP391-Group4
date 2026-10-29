@@ -69,13 +69,34 @@ function extractSourceCodeFromZip(filePath: string, language: string): string | 
     };
     const targetExts = extMap[language.toLowerCase()] || ['.java', '.py', '.cpp', '.cs'];
 
-    // Tìm file source code khớp ngôn ngữ (kể cả file rỗng — để scoring gate
-    // phát hiện INVALID thay vì chấm nhầm file khác; không fallback đọc bừa).
+    // 1. Tìm file source code khớp đuôi mở rộng chuẩn của ngôn ngữ
     for (const entry of entries) {
       if (!entry.isDirectory && !entry.entryName.includes('__MACOSX')) {
         const name = entry.entryName.toLowerCase();
         if (targetExts.some((ext) => name.endsWith(ext))) {
           return zip.readAsText(entry);
+        }
+      }
+    }
+
+    // 2. Fallback thông minh: hỗ trợ khi sinh viên đặt tên file .txt hoặc không có đuôi nhưng chứa mã nguồn hợp lệ
+    for (const entry of entries) {
+      if (!entry.isDirectory && !entry.entryName.includes('__MACOSX')) {
+        const name = entry.entryName.toLowerCase();
+        if (name.endsWith('.txt') || !name.includes('.')) {
+          const content = zip.readAsText(entry);
+          if (
+            content &&
+            (content.includes('class ') ||
+              content.includes('public static void main') ||
+              content.includes('import java') ||
+              content.includes('def ') ||
+              content.includes('#include') ||
+              content.includes('namespace') ||
+              content.includes('using System'))
+          ) {
+            return content;
+          }
         }
       }
     }
@@ -483,6 +504,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       });
     }
 
+
     // ═══════════════════════════════════════════════════════════════════════════
     // BƯỚC 5: GenAI Review – Clean Code & SOLID
     // ═══════════════════════════════════════════════════════════════════════════
@@ -646,17 +668,13 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       liveAiRating.solidScore.d
     ) / 5;
 
-    // Trọng số testcase chỉ được cộng khi testcase đó THỰC SỰ tồn tại và đã PASS.
-    // Với assignment chỉ có 1 testcase, trọng số TC2 (3.0) phải được dồn vào TC1 để
-    // tổng thang điểm vẫn là 10.0 thay vì mất 3.0 điểm oan cho sinh viên.
-    // Điểm testcase chia đều theo N testcase thật: pass 6/10 -> 60% trọng số testcase.
-    const testcasePart = calculateTestcaseScore(passedCount, totalTestcases);
-    // Giữ 2 field cũ cho tương thích ScoreBreakdown: dồn toàn bộ vào testcase1.
-    const tc1Score = testcasePart;
-    const tc2Score = 0;
+    // BR-03: Trọng số testcase chiếm 70% tổng điểm (tối đa 7.0 điểm)
+    const testcaseTotalScore = calculateTestcaseScore(passedCount, totalTestcases);
+    const tc1Score = Math.min(SCORE_WEIGHTS.testcase1, testcaseTotalScore);
+    const tc2Score = Math.max(0, Math.round((testcaseTotalScore - tc1Score) * 10) / 10);
     const cleanCodePart = Math.round((liveAiRating.cleanCodeScore / 10) * SCORE_WEIGHTS.cleanCode * 10) / 10;
     const solidPart = Math.round((liveSolidAvg / 10) * SCORE_WEIGHTS.solid * 10) / 10;
-    const computedScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((tc1Score + tc2Score + cleanCodePart + solidPart) * 10) / 10);
+    const computedScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((testcaseTotalScore + cleanCodePart + solidPart) * 10) / 10);
 
     // ─────────────────────────────────────────────────────────────────────────
     // BR-03: Đạo văn AST từ 80% trở lên (>= 80.0%) -> LẬP TỨC CHẤM 0 ĐIỂM (Zero-Tolerance)

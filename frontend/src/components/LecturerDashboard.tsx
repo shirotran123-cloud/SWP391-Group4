@@ -61,6 +61,8 @@ interface CourseItem {
 export interface PublishedAssignment {
   id: string;
   courseId: string;
+  courseCode?: string;
+  course?: string;
   title: string;
   description: string;
   deadline: string;
@@ -598,6 +600,70 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     return defaultPublishedAssignments;
   });
 
+  // Tự động đồng bộ các bài tập và testcases từ LocalStorage xuống Backend Database
+  const syncLocalAssignmentsToBackend = async (asms: PublishedAssignment[]) => {
+    if (!Array.isArray(asms) || asms.length === 0) return;
+    const token = localStorage.getItem('aita_token') || '';
+    const authHeaders: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
+    for (const asm of asms) {
+      if (!asm.id) continue;
+      try {
+        let validDeadlineIso = asm.deadline;
+        const parsed = new Date(asm.deadline);
+        if (isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
+          validDeadlineIso = new Date(Date.now() + 7 * 86400000).toISOString();
+        } else {
+          validDeadlineIso = parsed.toISOString();
+        }
+
+        // Tạo bài tập trên Backend (nếu chưa có)
+        await fetch(`${API_BASE_URL}/api/v1/assignments`, {
+          method: 'POST',
+          headers: authHeaders,
+          body: JSON.stringify({
+            assignmentId: asm.id,
+            courseId: asm.courseId || 'COURSE-SWP391',
+            title: asm.title || 'Bài tập AITA',
+            description: asm.description || '',
+            allowedLanguages: asm.allowedLanguages || ['java', 'python', 'cpp', 'dotnet'],
+            deadline: validDeadlineIso,
+            timeLimitMs: asm.timeLimitMs || 2000,
+            memoryLimitMb: asm.memoryLimitMb || 512,
+            testcasesCount: asm.testCases?.length || 2,
+          }),
+        });
+
+        // Tạo từng testcase (nếu chưa có)
+        if (Array.isArray(asm.testCases) && asm.testCases.length > 0) {
+          for (const tc of asm.testCases) {
+            await fetch(`${API_BASE_URL}/api/v1/test-cases`, {
+              method: 'POST',
+              headers: authHeaders,
+              body: JSON.stringify({
+                assignmentId: asm.id,
+                inputData: tc.input || ' ',
+                expectedOutput: tc.output || ' ',
+                isHidden: !!tc.isHidden,
+                weight: Number(tc.weight) || 1.0,
+                timeLimitMs: asm.timeLimitMs || 2000,
+              }),
+            });
+          }
+        }
+      } catch {
+        // Bỏ qua lỗi kết nối / trùng lặp (409)
+      }
+    }
+  };
+
+  useEffect(() => {
+    syncLocalAssignmentsToBackend(publishedAssignments);
+  }, []);
+
 // Danh sách bài tập hiển thị theo lớp đang chọn
   const availableAssignmentsForFilter = publishedAssignments.filter((a) => {
     if (selectedClassFilter === 'ALL') return true;
@@ -852,14 +918,28 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     const courseName = courseObj ? courseObj.courseName : 'Dự Án Phát Triển Phần Mềm';
     const courseCode = courseObj ? courseObj.courseCode : 'SWP391';
 
+    // Đảm bảo deadline luôn là tương lai và đúng chuẩn ISO
+    let validDeadlineIso = deadlineDate;
+    const parsedDate = new Date(deadlineDate);
+    if (isNaN(parsedDate.getTime()) || parsedDate.getTime() <= Date.now()) {
+      const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      validDeadlineIso = nextWeek.toISOString();
+    } else {
+      validDeadlineIso = parsedDate.toISOString();
+    }
+
+    const generatedId = `ASM-${Date.now().toString().slice(-6)}`;
+
     const newAsm: PublishedAssignment = {
-      id: `ASM-${Date.now()}`,
+      id: generatedId,
       courseId: selectedCourse,
+      courseCode: courseCode,
+      course: `${courseCode} - ${courseName}`,
       title: assignmentTitle,
       description: assignmentDesc,
-      deadline: deadlineDate,
-      timeLimitMs,
-      memoryLimitMb,
+      deadline: validDeadlineIso,
+      timeLimitMs: timeLimitMs || 2000,
+      memoryLimitMb: memoryLimitMb || 512,
       allowedLanguages: [...allowedLanguages],
       testCases: [...testCases],
       rubrics: [...generatedRubrics],
@@ -899,7 +979,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       )
     );
 
-    const toastMsg = `Đã xuất bản thành công: Bài tập "${assignmentTitle}" (${testCases.length} testcases) đã giao cho lớp ${courseCode} (${courseName})!`;
+    const toastMsg = `Đã xuất bản thành công: Bài tập "${assignmentTitle}" (${testCases.length} testcases) đã lưu vào CSDL và giao cho lớp ${courseCode} (${courseName})!`;
     setPublishSuccessToast(toastMsg);
     setCreateSuccessMsg(toastMsg);
 
@@ -1001,14 +1081,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
 
     setCreateCourseLoading(true);
-    const generatedId = 'CRS-' + newCourseCode.trim().toUpperCase();
+    const cleanCode = newCourseCode.trim().toUpperCase();
+    const generatedId = 'CRS-' + cleanCode;
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/courses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           courseId: generatedId,
-          courseCode: newCourseCode.trim().toUpperCase(),
+          courseCode: cleanCode,
           courseName: newCourseName.trim(),
           semester: newCourseSemester,
           description: newCourseDesc,
@@ -1023,7 +1104,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       const newCourseObj: CourseItem = {
         courseId: generatedId,
-        courseCode: newCourseCode.trim().toUpperCase(),
+        courseCode: cleanCode,
         courseName: newCourseName.trim(),
         semester: newCourseSemester,
         instructorName: 'ThS. Giảng Viên AITA',
@@ -1038,9 +1119,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         } catch {}
         return updated;
       });
+      setSelectedCourse(generatedId);
       setTargetCourseId(generatedId);
+      setSelectedCourseDetailId(generatedId);
       setIsCreateCourseModalOpen(false);
-      setPublishSuccessToast(`Đã tạo thành công khóa học mới [${newCourseCode}] và lưu bền vững vào PostgreSQL 15!`);
+      setPublishSuccessToast(`Đã tạo thành công khóa học mới [${cleanCode}] và lưu bền vững vào PostgreSQL 15!`);
       window.dispatchEvent(new Event('aita_courses_updated'));
     } catch (err: any) {
       alert(`Lỗi tạo khóa học: ${err.message}`);

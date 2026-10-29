@@ -6,7 +6,6 @@ export class CreateTestCaseDto {
   assignmentId: string;
 
   @IsString()
-  @IsNotEmpty()
   inputData: string;
 
   @IsString()

@@ -1,5 +1,5 @@
 import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
-﻿import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   UploadCloud, FileArchive, X, Send, ShieldCheck, Clock,
   BookOpen, AlertTriangle, CheckCircle, Search,
@@ -627,7 +627,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   const [selectedLanguage, setSelectedLanguage] = useState<string>('auto');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Tải danh sách bài tập đã xuất bản (Đồng bộ thời gian thực 100% với Giảng viên)
+  // 1. Tải danh sách bài tập đã xuất bản (Đồng bộ thời gian thực 100% với Giảng viên & Backend CSDL)
   useEffect(() => {
     loadAssignmentsAndSubmissions();
 
@@ -670,7 +670,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         }
       }
 
-      // Đồng bộ trực tiếp từ danh sách bài tập Giảng viên đã giao - KHÔNG tự động chèn thêm bài tập ảo
+      // Đồng bộ trực tiếp từ danh sách bài tập Giảng viên đã giao
       listToDisplay = publishedList.map((item) => {
         const matchedTemplate = defaultAssignmentPool.find(
           (t) => t.id === item.id || t.title.toLowerCase().trim() === (item.title || '').toLowerCase().trim()
@@ -682,22 +682,20 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           id: item.id || `ASM-${Date.now()}`,
           courseId: courseId,
           courseCode: courseCode,
-          course: item.course || `${courseCode} - Bài Tập Giảng Viên Đã Giao`,
+          course: item.course || `${courseCode} - Bài Tập Học Phần`,
           title: item.title,
           description: item.description,
           deadline: item.deadline ? (item.deadline.includes('T') ? item.deadline : `${item.deadline}T23:59:00`) : new Date(Date.now() + 7 * 86400000).toISOString(),
           timeLimitMs: item.timeLimitMs || matchedTemplate?.timeLimitMs || 2000,
           memoryLimitMb: item.memoryLimitMb || matchedTemplate?.memoryLimitMb || 512,
-          allowedLanguages: item.allowedLanguages || matchedTemplate?.allowedLanguages || ['java', 'python', 'cpp'],
+          allowedLanguages: item.allowedLanguages || matchedTemplate?.allowedLanguages || ['java', 'python', 'cpp', 'dotnet'],
           allowedExtensions: item.allowedExtensions || ['.zip'],
           maxSizeMb: item.maxSizeMb || 10,
           testCasesCount: item.testCases ? item.testCases.length : (matchedTemplate?.testCasesCount || 5),
           configuredTestCases: Array.isArray(item.testCases) ? item.testCases : undefined,
           rubrics: item.rubrics && item.rubrics.length > 0 ? item.rubrics : matchedTemplate?.rubrics,
-          technicalRequirements: matchedTemplate?.technicalRequirements,
-          sampleTestCases: Array.isArray(item.testCases)
-            ? undefined
-            : matchedTemplate?.sampleTestCases,
+          technicalRequirements: item.technicalRequirements || matchedTemplate?.technicalRequirements,
+          sampleTestCases: item.sampleTestCases || (Array.isArray(item.testCases) ? undefined : matchedTemplate?.sampleTestCases),
           status: item.status || 'PUBLISHED',
         };
       });
@@ -707,6 +705,67 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     }
 
     setAssignmentList(listToDisplay);
+
+    // Đồng bộ trực tiếp từ Backend API để cập nhật bài tập cho các lớp học phần mới tạo
+    const effectiveBaseUrl = apiBaseUrl || API_BASE_URL || 'http://localhost:3000';
+    fetch(`${effectiveBaseUrl}/api/v1/assignments`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (!json) return;
+        const remoteItems = json.data || json || [];
+        if (!Array.isArray(remoteItems) || remoteItems.length === 0) return;
+
+        setAssignmentList((prevList) => {
+          const map = new Map<string, StudentTaskItem>();
+          // Đặt danh sách bài tập hiện có vào map
+          prevList.forEach((it) => map.set(it.id, it));
+
+          // Hợp nhất các bài tập từ server
+          remoteItems.forEach((r: any) => {
+            const asmId = r.assignmentId || r.id;
+            if (!asmId) return;
+
+            const courseId = r.courseId || 'CRS-SWP391';
+            const courseCode = (r.courseCode || courseId).replace('COURSE-', '').replace('CRS-', '');
+            const existing = map.get(asmId);
+
+            const matchedTemplate = defaultAssignmentPool.find(
+              (t) => t.id === asmId || t.title.toLowerCase().trim() === (r.title || '').toLowerCase().trim()
+            );
+
+            const merged: StudentTaskItem = {
+              id: asmId,
+              courseId: courseId,
+              courseCode: courseCode,
+              course: existing?.course || r.course || `${courseCode} - Bài Tập Học Phần`,
+              title: r.title || existing?.title || 'Bài tập mới',
+              description: r.description || existing?.description || '',
+              deadline: r.deadline ? (r.deadline.includes('T') ? r.deadline : `${r.deadline}T23:59:00`) : existing?.deadline || new Date(Date.now() + 7 * 86400000).toISOString(),
+              timeLimitMs: r.timeLimitMs || existing?.timeLimitMs || 2000,
+              memoryLimitMb: r.memoryLimitMb || existing?.memoryLimitMb || 512,
+              allowedLanguages: r.allowedLanguages || existing?.allowedLanguages || ['java', 'python', 'cpp', 'dotnet'],
+              allowedExtensions: existing?.allowedExtensions || ['.zip'],
+              maxSizeMb: existing?.maxSizeMb || 10,
+              testCasesCount: r.testcasesCount || existing?.testCasesCount || (matchedTemplate?.testCasesCount || 2),
+              rubrics: existing?.rubrics || matchedTemplate?.rubrics,
+              technicalRequirements: existing?.technicalRequirements || matchedTemplate?.technicalRequirements,
+              sampleTestCases: existing?.sampleTestCases || matchedTemplate?.sampleTestCases,
+              status: r.status || (r.isActive !== false ? 'PUBLISHED' : 'CLOSED'),
+            };
+
+            map.set(asmId, merged);
+          });
+
+          const finalList = Array.from(map.values());
+          try {
+            localStorage.setItem('aita_published_assignments', JSON.stringify(finalList));
+          } catch {}
+          return finalList;
+        });
+      })
+      .catch((err) => {
+        console.warn('[SubmissionView] Backend assignments fetch fallback:', err);
+      });
 
     // Đọc lịch sử nộp bài của sinh viên
     try {
@@ -782,51 +841,46 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     };
   };
 
-  // Lấy danh sách các môn học để đưa vào bộ lọc
+  // Lấy danh sách các môn học để đưa vào bộ lọc (kết hợp cả lớp đã ghi danh và lớp có bài tập)
   const courseOptions = useMemo(() => {
-    if (enrolledCourses && enrolledCourses.length > 0) {
-      return enrolledCourses.map((c) => c.courseCode.replace(/.*-/, '').trim().toUpperCase());
-    }
     const set = new Set<string>();
+    if (enrolledCourses && enrolledCourses.length > 0) {
+      enrolledCourses.forEach((c) => {
+        const code = (c.courseCode || c.courseId || '').replace(/.*-/, '').trim().toUpperCase();
+        if (code) set.add(code);
+      });
+    }
     assignmentList.forEach((a) => {
-      const code = a.courseCode || a.course?.split('-')[0].trim();
-      if (code) set.add(code.toUpperCase());
+      const code = (a.courseCode || a.courseId || a.course?.split('-')[0] || '').replace(/.*-/, '').trim().toUpperCase();
+      if (code) set.add(code);
     });
     return Array.from(set);
   }, [enrolledCourses, assignmentList]);
 
   // Lọc bài tập theo tìm kiếm, môn học và trạng thái
   const filteredAssignments = useMemo(() => {
-    const enrolledSet = new Set<string>(
-      enrolledCourses && enrolledCourses.length > 0
-        ? enrolledCourses.map((c) => c.courseCode.replace(/.*-/, '').trim().toUpperCase())
-        : ['SWP391', 'PRN211', 'CSD201']
-    );
-
     return assignmentList.filter((item) => {
-      // 1. Chỉ hiện bài tập của môn sinh viên đang học (Enrolled Courses)
-      const itemCode = (item.courseCode || item.course?.split('-')[0].trim() || '').toUpperCase();
-      const isEnrolled = Array.from(enrolledSet).some((ec: string) => itemCode.includes(ec) || ec.includes(itemCode));
-      if (!isEnrolled) return false;
+      const itemCode = (item.courseCode || item.courseId || item.course?.split('-')[0].trim() || '').replace(/.*-/, '').trim().toUpperCase();
 
-      // 2. Lọc theo môn học đang chọn
+      // 1. Lọc theo môn học đang chọn
       if (selectedCourseFilter !== 'ALL') {
-        const filterCode = selectedCourseFilter.toUpperCase();
-        const matchesFilter = itemCode.includes(filterCode) || filterCode.includes(itemCode);
+        const filterCode = selectedCourseFilter.replace(/.*-/, '').trim().toUpperCase();
+        const matchesFilter = itemCode === filterCode || itemCode.includes(filterCode) || filterCode.includes(itemCode);
         if (!matchesFilter) return false;
       }
 
-      // 3. Tìm kiếm từ khóa
+      // 2. Tìm kiếm từ khóa
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
         const matchSearch =
           item.title.toLowerCase().includes(query) ||
           item.course?.toLowerCase().includes(query) ||
+          itemCode.toLowerCase().includes(query) ||
           item.id.toLowerCase().includes(query);
         if (!matchSearch) return false;
       }
 
-      // 4. Trạng thái deadline
+      // 3. Trạng thái deadline
       const meta = getDeadlineMetadata(item.deadline);
       const isSubmitted = !!submissionHistory[item.id];
 
@@ -836,20 +890,18 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
       return true;
     });
-  }, [assignmentList, enrolledCourses, selectedCourseFilter, searchQuery, statusFilter, submissionHistory]);
+  }, [assignmentList, selectedCourseFilter, searchQuery, statusFilter, submissionHistory]);
 
   // Thống kê nhanh
   const stats = useMemo(() => {
-    const enrolledSet = new Set<string>(
-      enrolledCourses && enrolledCourses.length > 0
-        ? enrolledCourses.map((c) => c.courseCode.replace(/.*-/, '').trim().toUpperCase())
-        : ['SWP391', 'PRN211', 'CSD201']
-    );
-
-    const relevant = assignmentList.filter((item) => {
-      const itemCode = (item.courseCode || item.course?.split('-')[0].trim() || '').toUpperCase();
-      return Array.from(enrolledSet).some((ec: string) => itemCode.includes(ec) || ec.includes(itemCode));
-    });
+    let relevant = assignmentList;
+    if (selectedCourseFilter !== 'ALL') {
+      const filterCode = selectedCourseFilter.replace(/.*-/, '').trim().toUpperCase();
+      relevant = assignmentList.filter((a) => {
+        const itemCode = (a.courseCode || a.courseId || a.course?.split('-')[0].trim() || '').replace(/.*-/, '').trim().toUpperCase();
+        return itemCode === filterCode || itemCode.includes(filterCode) || filterCode.includes(itemCode);
+      });
+    }
 
     let total = relevant.length;
     let submitted = 0;
@@ -866,11 +918,11 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
     return {
       total,
-      pending: total - submitted,
+      pending: Math.max(0, total - submitted),
       urgent,
       submitted,
     };
-  }, [assignmentList, enrolledCourses, submissionHistory]);
+  }, [assignmentList, selectedCourseFilter, submissionHistory]);
 
   // Xử lý tính toán mã băm SHA-256
   const calculateSha256 = async (file: File): Promise<string> => {

@@ -81,9 +81,6 @@ export class DockerSandboxRunner {
     return this.availabilityReason;
   }
 
-  /**
-   * Kiểm tra Docker Daemon có sẵn sàng không
-   */
   public async isAvailable(): Promise<boolean> {
     try {
       const pingPromise = this.docker.ping();
@@ -160,6 +157,12 @@ export class DockerSandboxRunner {
       return { available: false, reason: `Ngôn ngữ '${language}' chưa được hỗ trợ trong Docker Sandbox`, results: [] };
     }
 
+    let finalCode = codeContent;
+    const langKey = (language || '').toLowerCase();
+    if (langKey === 'java') {
+      finalCode = finalCode.replace(/^\s*package\s+[^;]+;/m, '// package stripped for sandbox grading;');
+    }
+
     const tempDir = path.resolve(
       process.cwd(),
       'temp',
@@ -169,7 +172,7 @@ export class DockerSandboxRunner {
     const buildDir = path.join(tempDir, 'build');
     fs.mkdirSync(srcDir, { recursive: true });
     fs.mkdirSync(buildDir, { recursive: true });
-    fs.writeFileSync(path.join(srcDir, profile.filename), codeContent, 'utf-8');
+    fs.writeFileSync(path.join(srcDir, profile.filename), finalCode, 'utf-8');
 
     try {
       // ── 1) BIÊN DỊCH MỘT LẦN (container riêng, ngân sách 30s, không tính vào TLE) ──

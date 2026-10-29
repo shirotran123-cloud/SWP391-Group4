@@ -682,11 +682,34 @@ export class PlagiarismService {
       };
       const targetExts = extMap[(language || '').toLowerCase()] || ['.java', '.py', '.cpp', '.cs'];
 
+      // 1. Tìm file source code khớp đuôi mở rộng chuẩn của ngôn ngữ
       for (const entry of entries) {
         if (!entry.isDirectory && !entry.entryName.includes('__MACOSX')) {
           const name = entry.entryName.toLowerCase();
           if (targetExts.some((ext) => name.endsWith(ext))) {
             return zip.readAsText(entry);
+          }
+        }
+      }
+
+      // 2. Fallback thông minh: hỗ trợ khi sinh viên đặt tên file .txt hoặc không có đuôi nhưng chứa mã nguồn hợp lệ
+      for (const entry of entries) {
+        if (!entry.isDirectory && !entry.entryName.includes('__MACOSX')) {
+          const name = entry.entryName.toLowerCase();
+          if (name.endsWith('.txt') || !name.includes('.')) {
+            const content = zip.readAsText(entry);
+            if (
+              content &&
+              (content.includes('class ') ||
+                content.includes('public static void main') ||
+                content.includes('import java') ||
+                content.includes('def ') ||
+                content.includes('#include') ||
+                content.includes('namespace') ||
+                content.includes('using System'))
+            ) {
+              return content;
+            }
           }
         }
       }

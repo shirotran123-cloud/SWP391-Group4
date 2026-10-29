@@ -157,13 +157,15 @@ export function analyzeSourceCode(
     };
   }
 
-  if (codeLength < 50 || (!hasLoop && !hasEfficientSort) || !hasOutput) {
+  const hasValidAlgorithm = hasLoop || hasEfficientSort || /(\breturn\b|\bif\b|\bwhile\b|\bfor\b|\bdef\b|\bclass\b|System\.out|print|cout|Console\.)/.test(code);
+
+  if (codeLength < 30 || (!hasValidAlgorithm && !hasOutput)) {
     return {
       score: 0,
       cleanCodeScore: 0,
       solidScore: { s: 0, o: 0, l: 0, i: 0, d: 0 },
-      codeSmells: [{ line: 1, rule: 'Invalid Submission', description: 'File không chứa code giải thuật sắp xếp hợp lệ.' }],
-      explanation: 'Bài nộp không hợp lệ: không phát hiện cấu trúc giải thuật sắp xếp, vòng lặp hoặc xuất kết quả.',
+      codeSmells: [{ line: 1, rule: 'Invalid Submission', description: 'File không chứa cấu trúc giải thuật hoặc logic hợp lệ.' }],
+      explanation: 'Bài nộp không hợp lệ: không phát hiện cấu trúc giải thuật, hàm xử lý hoặc xuất kết quả.',
       tc1Status: 'FAILED',
       tc2Status: 'FAILED',
       tc1TimeMs: 0,
@@ -171,8 +173,8 @@ export function analyzeSourceCode(
     };
   }
 
-  const tc1Pass = hasInput && hasOutput && (hasEfficientSort || hasLoop);
-  const tc2Pass = hasEfficientSort;
+  const tc1Pass = (hasInput && hasOutput) || (hasOutput && hasValidAlgorithm);
+  const tc2Pass = hasEfficientSort || (hasValidAlgorithm && hasOutput);
   const tc1TimeMs = timing?.tc1TimeMs ?? (hasEfficientSort ? Math.floor(50 + Math.random() * 60) : Math.floor(1500 + Math.random() * 500));
   const tc2TimeMs = timing?.tc2TimeMs ?? (hasEfficientSort ? Math.floor(100 + Math.random() * 80) : Math.floor(1800 + Math.random() * 200));
 

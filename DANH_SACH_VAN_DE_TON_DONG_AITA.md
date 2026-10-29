@@ -30,22 +30,17 @@
 
 ---
 
-### 🚨 Bug 2: Đứt gãy lưu trữ Đề bài & Test Cases (Frontend kẹt ở LocalStorage)
+### 🚨 Bug 2: Đứt gãy lưu trữ Đề bài & Test Cases (Frontend kẹt ở LocalStorage) [✅ ĐÃ KHẮC PHỤC]
 * **Vị trí code:** [`frontend/src/components/LecturerDashboard.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/LecturerDashboard.tsx#L838-L845)
-  ```typescript
-  // Khi Giảng viên bấm "Lưu & Xuất Bản Bài Tập":
-  const updatedAsms = [newAsm, ...publishedAssignments];
-  setPublishedAssignments(updatedAsms);
-  localStorage.setItem('aita_published_assignments', JSON.stringify(updatedAsms));
-  ```
-* **Mô tả & Hậu quả:**  
+* **Mô tả & Hậu quả cũ:**  
   Mặc dù AI Gemini sinh đề và test cases cực kỳ chuẩn xác, nhưng khi Giảng viên bấm xuất bản, dữ liệu **chỉ lưu vào `localStorage` của trình duyệt** mà **CHƯA GỬI VỀ BACKEND POSTGRESQL** (`POST /api/v1/assignments` và `POST /api/v1/test-cases`).
   * Hậu quả 1: Mở trình duyệt khác hoặc máy khác, sinh viên sẽ không thấy bài tập mới của Giảng viên.
   * Hậu quả 2: Khi sinh viên nộp bài, Backend Docker Sandbox truy vấn bảng `test_cases` trong PostgreSQL không thấy dữ liệu $\to$ **tự động rơi về bộ test case mặc định của bài toán Sorting**!
-* **Giải pháp khắc phục:**  
-  Bổ sung lời gọi API trong hàm `handleSaveAssignment`:
-  1. `POST http://localhost:3000/api/v1/assignments`
-  2. `POST http://localhost:3000/api/v1/test-cases` (lưu từng test case vào DB).
+* **Trạng thái xử lý:**  
+  ✅ **Đã sửa:** Cập nhật hàm `handleSaveAssignment` thành hàm bất đồng bộ (`async`), tự động gọi REST APIs:
+  1. `POST http://localhost:3000/api/v1/assignments` tạo đề bài trong CSDL.
+  2. `POST http://localhost:3000/api/v1/test-cases` lặp qua toàn bộ bộ test cases do AI sinh để lưu vào database backend.
+  3. Bổ sung cơ chế auto-sync ngầm khi mount component và trước khi nộp bài trong `App.tsx` để bảo đảm 100% đề bài và test cases luôn có sẵn trên Backend.
 
 ---
 
@@ -77,12 +72,12 @@
 
 ---
 
-### 🚨 Bug 5: WebSocket Telemetry bị hardcode 2 Test Cases
+### 🚨 Bug 5: WebSocket Telemetry và Điểm số Test Cases bị hardcode 2 Test Cases [✅ ĐÃ KHẮC PHỤC]
 * **Vị trí code:** [`api-gateway/src/queue/grading-worker.consumer.ts`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/api-gateway/src/queue/grading-worker.consumer.ts#L350-L405)
-* **Mô tả & Hậu quả:**  
-  Ở Bước 3 và Bước 4 của luồng chấm, server phát cứng sự kiện: `testcaseId: 'TC-01'`, `testcaseId: 'TC-02'`, `totalTestcases: 2` và `memoryKb: 16420`, bất kể đề thi thực tế có 5 hay 10 test cases.
-* **Giải pháp khắc phục:**  
-  Dùng vòng lặp `for (let i = 0; i < casesToRun.length; i++)` để phát sự kiện động theo số lượng test cases thực tế.
+* **Mô tả & Hậu quả cũ:**  
+  Server phát cứng sự kiện `testcaseId: 'TC-01'`, `testcaseId: 'TC-02'` với input/output của bài toán Sorting và chỉ cộng điểm cho 2 testcase đầu tiên.
+* **Trạng thái xử lý:**  
+  ✅ **Đã sửa:** Dùng `casesToRun` động, hiển thị đúng input/output thật của từng testcase và tính điểm testcase tỷ lệ thuận `(passedCount / totalTestcases) * 7.0` (chuẩn BR-03).
 
 ---
 

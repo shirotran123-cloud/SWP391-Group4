@@ -16,8 +16,8 @@ export class TestCasesService {
   ) {}
 
   private validateFields(inputData?: string, expectedOutput?: string, weight?: number, timeLimitMs?: number): void {
-    if (inputData !== undefined && (typeof inputData !== 'string' || inputData.trim().length === 0)) {
-      throw new BadRequestException('Dữ liệu đầu vào (input_data) không được để trống!');
+    if (inputData !== undefined && typeof inputData !== 'string') {
+      throw new BadRequestException('Dữ liệu đầu vào (input_data) phải là định dạng chuỗi!');
     }
     if (expectedOutput !== undefined && (typeof expectedOutput !== 'string' || expectedOutput.trim().length === 0)) {
       throw new BadRequestException('Kết quả mong đợi (expected_output) không được để trống!');
