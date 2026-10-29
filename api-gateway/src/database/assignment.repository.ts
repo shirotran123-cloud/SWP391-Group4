@@ -121,6 +121,8 @@ export class AssignmentRepository implements OnModuleInit {
          )
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          ON CONFLICT (assignment_id) DO UPDATE SET
+           class_id = EXCLUDED.class_id,
+           course_id = EXCLUDED.course_id,
            title = EXCLUDED.title,
            description = EXCLUDED.description,
            allowed_languages = EXCLUDED.allowed_languages,

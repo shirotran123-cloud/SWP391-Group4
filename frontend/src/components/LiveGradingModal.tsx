@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { CheckCircle2, Clock, Loader2, XCircle, Sparkles, Scale, Trophy, FlaskConical, CornerUpRight, AlertTriangle, RefreshCw } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle2, Clock, Loader2, XCircle, Sparkles, Scale, Trophy, FlaskConical, CornerUpRight, AlertTriangle, RefreshCw, Terminal, ShieldAlert, AlertOctagon } from 'lucide-react';
 import type { GradingStep, AIRating, PlagiarismMatch, ScoreBreakdown } from '../types';
 import { SolidRadarChart } from './SolidRadarChart';
 import { MonacoDiffViewer } from './MonacoDiffViewer';
@@ -11,6 +11,7 @@ interface LiveGradingModalProps {
   onRetry?: () => void;
   submissionId: string;
   studentName: string;
+  language?: string;
   steps: GradingStep[];
   isCompleted: boolean;
   aiRating?: AIRating;
@@ -27,12 +28,24 @@ const breakdownItems = [
   { key: 'solid' as const, label: 'SOLID', max: 1.0, icon: CornerUpRight },
 ];
 
+function getCompilerBadgeLabel(lang?: string): string {
+  if (!lang) return 'Java 17 (OpenJDK)';
+  const l = lang.toLowerCase().trim();
+  if (l === 'java') return 'Java 17 (OpenJDK)';
+  if (l === 'cpp') return 'C++17 (GCC 13)';
+  if (l === 'python' || l === 'py') return 'Python 3.11';
+  if (l === 'dotnet' || l === 'cs' || l === 'csharp') return 'C# .NET 8.0';
+  if (l === 'c') return 'C11 (GCC 13)';
+  return lang.toUpperCase();
+}
+
 export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
   isOpen,
   onClose,
   onRetry,
   submissionId,
   studentName,
+  language,
   steps,
   isCompleted,
   aiRating,
@@ -72,7 +85,10 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
     .filter((step) => /^tc-\d+$/.test(step.id))
     .sort((a, b) => Number(a.id.slice(3)) - Number(b.id.slice(3)));
   const passedTestcaseCount = testcaseSteps.filter((step) => step.status === 'passed').length;
-  const testcaseScore = (scoreBreakdown?.testcase1 ?? 0) + (scoreBreakdown?.testcase2 ?? 0);
+  const simRate = plagiarismMatch?.similarityRate ?? 0;
+  const isSeverePlagiarism = simRate >= 80;
+  const effectiveScore = isSeverePlagiarism ? 0.0 : (score !== undefined ? score : undefined);
+  const effectiveTestcaseScore = isSeverePlagiarism ? 0.0 : (scoreBreakdown?.testcase1 ?? 0) + (scoreBreakdown?.testcase2 ?? 0);
 
   return (
     <div className="modal-backdrop">
@@ -85,6 +101,24 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
           <div style={{ minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px', flexWrap: 'wrap' }}>
               <span className="chip chip-mono chip-neutral">#{submissionId.substring(0, 8)}</span>
+              {language && (
+                <span
+                  className="chip chip-mono"
+                  style={{
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                    color: 'var(--primary)',
+                    border: '1px solid rgba(37, 99, 235, 0.25)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontWeight: 600,
+                    fontSize: '11px',
+                  }}
+                >
+                  <Terminal size={11} />
+                  {getCompilerBadgeLabel(language)}
+                </span>
+              )}
               <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                 {studentName}
               </span>
@@ -177,8 +211,34 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
           </div>
         )}
 
+        {/* CẢNH BÁO HỦY ĐIỂM DO ĐẠO VĂN TRÊN 80% (BR-03) */}
+        {isCompleted && isSeverePlagiarism && (
+          <div
+            style={{
+              padding: '14px 18px',
+              borderRadius: '10px',
+              backgroundColor: '#fee2e2',
+              border: '1px solid #ef4444',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+            }}
+          >
+            <AlertOctagon size={24} color="#b91c1c" style={{ flexShrink: 0 }} />
+            <div>
+              <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#991b1b', margin: '0 0 3px 0' }}>
+                HỦY KẾT QUẢ BÀI NỘP: 0.0 / 10 ĐIỂM (QUY CHẾ LIÊM CHÍNH BR-03)
+              </h4>
+              <p style={{ fontSize: '12.5px', color: '#7f1d1d', margin: 0, lineHeight: 1.5 }}>
+                Thuật toán AST Winnowing phát hiện độ tương đồng <strong>{simRate.toFixed(1)}% (≥ 80.0%)</strong> so với kho mã nguồn (trùng khớp với bài của <strong>{plagiarismMatch?.matchedStudentName || plagiarismMatch?.matchedStudentId}</strong>). Bài làm tự động bị <strong>HỦY ĐIỂM VỀ 0.0 ĐIỂM</strong> không thể hoàn tác.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* ĐIỂM TỔNG + BAREM */}
-        {isCompleted && score !== undefined && (
+        {isCompleted && (effectiveScore !== undefined || score !== undefined) && (
           <div
             style={{
               display: 'grid',
@@ -186,43 +246,64 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
               gap: '20px',
               padding: '18px',
               borderRadius: '12px',
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'rgba(11, 18, 32, 0.02)',
+              border: `1px solid ${isSeverePlagiarism ? '#fca5a5' : 'var(--border-color)'}`,
+              backgroundColor: isSeverePlagiarism ? '#fff5f5' : 'rgba(11, 18, 32, 0.02)',
               marginBottom: '24px',
             }}
           >
             <div style={{ borderRight: '1px solid var(--border-soft)', paddingRight: '18px' }}>
-              <p className="eyebrow">Điểm tổng</p>
+              <p className="eyebrow" style={{ color: isSeverePlagiarism ? '#b91c1c' : undefined }}>
+                {isSeverePlagiarism ? 'HỦY ĐIỂM (BR-03)' : 'Điểm tổng'}
+              </p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginTop: '4px' }}>
-                <span style={{ fontSize: '34px', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                  {score}
+                <span
+                  style={{
+                    fontSize: '34px',
+                    fontWeight: 700,
+                    color: isSeverePlagiarism ? '#b91c1c' : 'var(--text-main)',
+                    letterSpacing: '-0.04em',
+                    lineHeight: 1,
+                  }}
+                >
+                  {isSeverePlagiarism ? '0.0' : effectiveScore}
                 </span>
                 <span style={{ fontSize: '13px', color: 'var(--text-dim)' }}>/ {maxScore}</span>
               </div>
-              {executionTimeMs !== undefined && (
+              {isSeverePlagiarism ? (
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#dc2626', marginTop: '6px' }}>
+                  ⚠️ ĐẠO VĂN {simRate.toFixed(1)}% (≥80%)
+                </div>
+              ) : executionTimeMs !== undefined ? (
                 <p style={{ fontSize: '11.5px', color: 'var(--text-dim)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Clock size={11} /> {executionTimeMs}ms thực thi
                 </p>
-              )}
+              ) : null}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
                   <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <FlaskConical size={11} /> Testcases ({passedTestcaseCount}/{testcaseSteps.length})
+                    <FlaskConical size={11} /> Testcases ({isSeverePlagiarism ? 0 : passedTestcaseCount}/{testcaseSteps.length})
                   </span>
-                  <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
-                    {testcaseScore.toFixed(1)}/7.0
+                  <span style={{ fontSize: '11.5px', fontWeight: 600, color: isSeverePlagiarism ? '#b91c1c' : 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
+                    {effectiveTestcaseScore.toFixed(1)}/7.0
                   </span>
                 </div>
                 <div style={{ height: '3px', borderRadius: '2px', backgroundColor: 'rgba(11, 18, 32, 0.05)', overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.max(0, Math.min(100, (testcaseScore / 7) * 100))}%`, height: '100%', backgroundColor: 'var(--blue-500)' }} />
+                  <div
+                    style={{
+                      width: `${isSeverePlagiarism ? 0 : Math.max(0, Math.min(100, (effectiveTestcaseScore / 7) * 100))}%`,
+                      height: '100%',
+                      backgroundColor: isSeverePlagiarism ? '#dc2626' : 'var(--blue-500)',
+                    }}
+                  />
                 </div>
               </div>
               {breakdownItems.map((item) => {
-                const value = scoreBreakdown?.[item.key] ?? 0;
-                const pct = Math.max(0, Math.min(100, (value / item.max) * 100));
+                const rawVal = scoreBreakdown?.[item.key] ?? 0;
+                const value = isSeverePlagiarism ? 0 : rawVal;
+                const pct = isSeverePlagiarism ? 0 : Math.max(0, Math.min(100, (value / item.max) * 100));
                 const Icon = item.icon;
                 return (
                   <div key={item.key}>
@@ -230,12 +311,12 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                       <span style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                         <Icon size={11} /> {item.label}
                       </span>
-                      <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: 600, color: isSeverePlagiarism ? '#b91c1c' : 'var(--text-soft)', fontFamily: 'var(--font-mono)' }}>
                         {value.toFixed(1)}/{item.max.toFixed(1)}
                       </span>
                     </div>
                     <div style={{ height: '3px', borderRadius: '2px', backgroundColor: 'rgba(11, 18, 32, 0.05)', overflow: 'hidden' }}>
-                      <div style={{ width: `${pct}%`, height: '100%', backgroundColor: 'var(--blue-500)' }} />
+                      <div style={{ width: `${pct}%`, height: '100%', backgroundColor: isSeverePlagiarism ? '#dc2626' : 'var(--blue-500)' }} />
                     </div>
                   </div>
                 );

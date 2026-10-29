@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   Code,
   ListChecks,
+  AlertTriangle,
 } from 'lucide-react';
 import { SolidRadarChart } from './SolidRadarChart';
 import type { AIRating, ScoreBreakdown } from '../types';
@@ -54,6 +55,8 @@ export interface SubmissionDetailData {
   sourceCode?: string;
   aiRating?: AIRating;
   testCaseResults?: TestCaseDetailItem[];
+  plagiarismRate?: number;
+  plagiarismStatus?: string;
 }
 
 interface SubmissionDetailModalProps {
@@ -115,12 +118,16 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   if (!isOpen || !submission) return null;
 
   const currentSource = fetchedCode || submission.sourceCode || '// Không tìm thấy nội dung mã nguồn.';
+  const isSeverePlagiarism = (submission.plagiarismRate !== undefined && submission.plagiarismRate >= 80.0) ||
+    submission.status === 'FLAGGED_PLAGIARISM' ||
+    submission.plagiarismStatus === 'ĐẠO VĂN (≥80%)' ||
+    submission.plagiarismStatus === 'ĐẠO VĂN';
   const hasScore = submission.score !== undefined && submission.score !== null;
-  const displayScore = hasScore ? submission.score! : null;
-  const isStatusFailed = submission.status?.toUpperCase() === 'FAILED' || submission.status?.toUpperCase() === 'ERROR';
-  const isPassed = hasScore && !isStatusFailed && displayScore! >= 5.0 && (submission.passedTestcases === undefined || submission.passedTestcases > 0);
+  const displayScore = isSeverePlagiarism ? 0.0 : (hasScore ? submission.score! : null);
+  const isStatusFailed = isSeverePlagiarism || submission.status?.toUpperCase() === 'FAILED' || submission.status?.toUpperCase() === 'ERROR';
+  const isPassed = !isSeverePlagiarism && hasScore && !isStatusFailed && displayScore! >= 5.0 && (submission.passedTestcases === undefined || submission.passedTestcases > 0);
   const totalTC = Math.max(submission.totalTestcases ?? 0, submission.testCaseResults?.length ?? 0, 1);
-  const passedTC = isStatusFailed
+  const passedTC = (isStatusFailed || isSeverePlagiarism)
     ? 0
     : (submission.passedTestcases !== undefined
         ? Math.min(submission.passedTestcases, totalTC)
@@ -304,6 +311,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 <span>Nộp lúc: {new Date(submission.submittedAt).toLocaleString('vi-VN')}</span>
                 <span>•</span>
                 <span>File: <strong>{submission.fileName}</strong></span>
+                <span>•</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  Trình biên dịch: <strong style={{ color: 'var(--primary)', textTransform: 'uppercase' }}>{submission.language || 'Java 17'}</strong>
+                </span>
               </div>
             </div>
           </div>
@@ -326,6 +337,33 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             <X size={20} />
           </button>
         </div>
+
+        {/* SEVERE PLAGIARISM BANNER (BR-03 ZERO SCORE ENFORCEMENT) */}
+        {isSeverePlagiarism && (
+          <div
+            style={{
+              margin: '12px 24px 0 24px',
+              padding: '12px 16px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #f87171',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              color: '#991b1b',
+            }}
+          >
+            <AlertTriangle size={24} color="#dc2626" style={{ flexShrink: 0 }} />
+            <div style={{ fontSize: '13px', lineHeight: 1.4 }}>
+              <div style={{ fontWeight: 700, textTransform: 'uppercase', color: '#b91c1c' }}>
+                Hủy Điểm Bài Nộp: 0.0 / 10.0 (Quy Chế Liêm Chính Học Thuật BR-03)
+              </div>
+              <div style={{ color: '#4b5563', fontSize: '12px', marginTop: '2px' }}>
+                Hệ thống AST & Winnowing phát hiện bài nộp có mức độ tương đồng cao vượt ngưỡng xử phạt nghiêm ngặt (≥ 80.0%{submission.plagiarismRate ? ` - Thực tế: ${submission.plagiarismRate.toFixed(1)}%` : ''}). Toàn bộ điểm kiểm thử và điểm AI đã bị hủy theo quy định.
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TABS NAVIGATION */}
         <div
@@ -500,7 +538,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       Môi Trường Docker Sandbox & Chi Tiết Chạy Testcase
                     </h3>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: '#4d5c76' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: '#4d5c76', flexWrap: 'wrap' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Code size={13} color="var(--primary)" /> Compiler: <strong style={{ color: 'var(--primary)' }}>{(submission.language || 'Java 17').toUpperCase()}</strong>
+                    </span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       <Clock size={13} color="#2563eb" /> Thời gian thực thi: <strong>{executionMs} ms</strong>
                     </span>

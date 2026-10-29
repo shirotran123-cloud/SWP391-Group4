@@ -125,7 +125,7 @@
 
 ## SLIDE 8: ĐÁNH GIÁ CHẤT LƯỢNG MÃ NGUỒN GENAI (SOLID & CLEAN CODE)
 * **Bảng Barem Điểm 4 Thành Phần Chuẩn Hóa:**
-  $$\text{Tổng Điểm} = \text{TC1 (4.0đ)} + \text{TC2 (3.0đ)} + \text{Clean Code (2.0đ)} + \text{SOLID (1.0đ)} = \mathbf{10.0đ}$$
+  $$\text{Tổng Điểm} = \text{TC1 (3.5đ)} + \text{TC2 (3.5đ)} + \text{Clean Code (2.0đ)} + \text{SOLID (1.0đ)} = \mathbf{10.0đ}$$ (Mỗi testcase có điểm ngang nhau = 7.0 / N)
 * **Đánh giá tự động 5 nguyên lý SOLID qua Gemini Flash Lite:**
   - **S (Single Responsibility):** Phát hiện các hàm vừa tính toán thuật toán, vừa in console, vừa ghi file.
   - **O (Open/Closed):** Khuyến khích mở rộng qua Generic và Kế thừa thay vì chuỗi `if-else` cứng.

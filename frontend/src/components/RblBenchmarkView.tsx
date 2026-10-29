@@ -5,7 +5,7 @@ import { PlagiarismService } from '../services/plagiarism.service';
 import type { PlagiarismMatch } from '../types';
 
 interface RblBenchmarkViewProps {
-  onOpenDiffViewer?: (match: PlagiarismMatch) => void;
+  onOpenDiffViewer?: (match: PlagiarismMatch, candidates?: PlagiarismMatch[]) => void;
 }
 
 export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffViewer }) => {
@@ -22,7 +22,15 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
       const match = await PlagiarismService.evaluateBenchmarkPair(pairId);
       setEvaluationResult(match);
       if (onOpenDiffViewer) {
-        onOpenDiffViewer(match);
+        const candidates = await PlagiarismService.getSimilarSubmissions(
+          match.sourceCodeA,
+          'python',
+          'Văn Thái Trung',
+        );
+        const allCandidates = [match, ...candidates.filter((c) => c.matchedStudentId !== match.matchedStudentId)];
+        allCandidates.sort((a, b) => b.similarityRate - a.similarityRate);
+        const best = allCandidates[0] || match;
+        onOpenDiffViewer(best, allCandidates);
       }
     } catch (err) {
       console.error('Lỗi khi chạy đánh giá AST Benchmark:', err);
@@ -192,7 +200,17 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
             {onOpenDiffViewer && (
               <button
                 type="button"
-                onClick={() => onOpenDiffViewer(evaluationResult)}
+                onClick={async () => {
+                  const candidates = await PlagiarismService.getSimilarSubmissions(
+                    evaluationResult.sourceCodeA,
+                    'python',
+                    'Văn Thái Trung',
+                  );
+                  const allCandidates = [evaluationResult, ...candidates.filter((c) => c.matchedStudentId !== evaluationResult.matchedStudentId)];
+                  allCandidates.sort((a, b) => b.similarityRate - a.similarityRate);
+                  const best = allCandidates[0] || evaluationResult;
+                  onOpenDiffViewer(best, allCandidates);
+                }}
                 style={{
                   marginTop: '16px',
                   padding: '10px 18px',

@@ -45,7 +45,9 @@ export interface PairwisePlagiarismResult {
 }
 
 export class ASTPlagiarismEngine {
-  public static readonly PLAGIARISM_THRESHOLD = 80.0;
+  public static readonly PLAGIARISM_THRESHOLD = 70.0;
+  public static readonly CONFIRMED_ZERO_THRESHOLD = 80.0;
+  public static readonly SUSPECTED_WARNING_THRESHOLD = 50.0;
 
   public static compareSubmissions(
     subA: CodeSubmission,
@@ -113,7 +115,11 @@ export class ASTPlagiarismEngine {
     }
 
     const isFlagged = similarityRate >= this.PLAGIARISM_THRESHOLD;
-    const status = isFlagged ? "FLAGGED_PLAGIARISM" : similarityRate >= 40.0 ? "SUSPECTED" : "CLEAN";
+    let status: PairwisePlagiarismResult['status'];
+    if (similarityRate >= this.CONFIRMED_ZERO_THRESHOLD) status = 'FLAGGED_PLAGIARISM';
+    else if (similarityRate >= this.PLAGIARISM_THRESHOLD) status = 'FLAGGED_HIGH';
+    else if (similarityRate >= this.SUSPECTED_WARNING_THRESHOLD) status = 'SUSPECTED';
+    else status = 'CLEAN';
 
     const matchedTokensJson: MatchedTokensJson = {
       submissionAId: subA.submissionId,

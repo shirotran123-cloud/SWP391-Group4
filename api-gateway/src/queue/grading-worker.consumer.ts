@@ -65,7 +65,10 @@ function extractSourceCodeFromZip(filePath: string, language: string): string | 
       java: ['.java'],
       python: ['.py'],
       cpp: ['.cpp', '.cc', '.cxx', '.c'],
+      c: ['.c'],
       dotnet: ['.cs'],
+      csharp: ['.cs'],
+      cs: ['.cs'],
     };
     const targetExts = extMap[language.toLowerCase()] || ['.java', '.py', '.cpp', '.cs'];
 
@@ -669,9 +672,13 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     ) / 5;
 
     // BR-03: Trọng số testcase chiếm 70% tổng điểm (tối đa 7.0 điểm)
+    // Mỗi test case đều có điểm ngang nhau = 7.0 / totalTestcases (ví dụ: 2 testcase -> 3.5đ mỗi testcase)
     const testcaseTotalScore = calculateTestcaseScore(passedCount, totalTestcases);
-    const tc1Score = Math.min(SCORE_WEIGHTS.testcase1, testcaseTotalScore);
-    const tc2Score = Math.max(0, Math.round((testcaseTotalScore - tc1Score) * 10) / 10);
+    const scorePerCase = totalTestcases > 0 ? (SCORE_WEIGHTS.testcase1 + SCORE_WEIGHTS.testcase2) / totalTestcases : 0;
+    const tc1Passed = testcaseExecutionDetails[0]?.status === 'PASSED';
+    const tc2Passed = testcaseExecutionDetails[1]?.status === 'PASSED';
+    const tc1Score = tc1Passed ? Math.round(scorePerCase * 10) / 10 : 0;
+    const tc2Score = tc2Passed ? Math.round((testcaseTotalScore - (tc1Passed ? tc1Score : 0)) * 10) / 10 : 0;
     const cleanCodePart = Math.round((liveAiRating.cleanCodeScore / 10) * SCORE_WEIGHTS.cleanCode * 10) / 10;
     const solidPart = Math.round((liveSolidAvg / 10) * SCORE_WEIGHTS.solid * 10) / 10;
     const computedScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((testcaseTotalScore + cleanCodePart + solidPart) * 10) / 10);
@@ -756,20 +763,22 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
 
 
     // Quy tắc đạt: phải pass TOÀN BỘ testcase mới PASSED (rớt 1 = FAILED toàn bài).
-    // Điểm số từng phần (scoreBreakdown) giữ nguyên để giảng viên thấy chi tiết.
+    // Nếu bị xác nhận đạo văn >= 80% (isConfirmedPlagiarism), lập tức FAILED và 0.0 điểm toàn bài!
     const completedPayload = {
       submissionId,
       status: 'COMPLETED' as const,
-      overallResult: (passedCount === totalTestcases ? 'PASSED' : 'FAILED') as 'PASSED' | 'FAILED',
+      overallResult: (isConfirmedPlagiarism ? 'FAILED' : (passedCount === totalTestcases ? 'PASSED' : 'FAILED')) as 'PASSED' | 'FAILED',
       score: finalScore,
       scoreBreakdown,
       maxScore: 10.0,
-      passedTestcases: passedCount,
+      passedTestcases: isConfirmedPlagiarism ? 0 : passedCount,
       totalTestcases,
       testcaseResults: testcaseExecutionDetails.map((testcase, index) => ({
         testcaseIndex: index + 1,
         status: testcase.status,
         timeMs: testcase.timeMs,
+        score: isConfirmedPlagiarism ? 0 : (testcase.status === 'PASSED' ? Math.round(scorePerCase * 10) / 10 : 0),
+        maxScore: totalTestcases > 0 ? Math.round(scorePerCase * 10) / 10 : 0,
       })),
       executionTimeMs: totalExecMs,
       sourceCode,
@@ -780,14 +789,14 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
         explanation: liveAiRating.explanation,
       },
       plagiarismMatch,
-      // Ngưỡng hiển thị: >= 70% là đạo văn, >= 40% là nghi vấn, còn lại là an toàn.
+      // Ngưỡng hiển thị BR-03: >= 70% là đạo văn (gắn cờ), >= 50% là nghi vấn (danh sách cảnh báo), còn lại là an toàn.
       similarityRate: plagiarismRate,
       plagiarismStatus: (plagiarismRate >= 70
         ? 'ĐẠO VĂN'
-        : plagiarismRate >= 40
+        : plagiarismRate >= 50
           ? 'NGHI VẤN'
           : 'AN TOÀN') as 'AN TOÀN' | 'NGHI VẤN' | 'ĐẠO VĂN',
-      // BR-03: cờ cho client biết điểm đã bị đặt về 0 do đạo văn đã xác nhận.
+      // BR-03: cờ cho client biết điểm đã bị đặt về 0 do đạo văn đã xác nhận (>= 80%).
       confirmedPlagiarism: isConfirmedPlagiarism,
       computedScoreBeforePenalty: computedScore,
       // Lỗi biên dịch: hiển thị cho sinh viên biết vì sao bài bị 0 điểm testcase.

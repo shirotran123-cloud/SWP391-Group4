@@ -52,11 +52,11 @@ async function main(): Promise<boolean> {
   gate(srpCase.score === directSrp.score, 'SRP score equals core output', `${srpCase.score} vs ${directSrp.score}`);
   gate(srpCase.smells.some((s) => s.startsWith('Single Responsibility Principle')), 'SRP case carries SRP smell', srpCase.smells.join(','));
 
-  // 3. Exact expected values (formula TC1 4 + TC2 3 + Clean 2 + SOLID 1).
+  // 3. Exact expected values (formula TC1 3.5 + TC2 3.5 + Clean 2 + SOLID 1).
   gate(passCase.score === 9.8, 'PASS score is 9.8', `got ${passCase.score}`);
-  gate(passCase.breakdown.testcase1 === 4 && passCase.breakdown.testcase2 === 3, 'PASS breakdown TC1=4 TC2=3');
+  gate(passCase.breakdown.testcase1 === 3.5 && passCase.breakdown.testcase2 === 3.5, 'PASS breakdown TC1=3.5 TC2=3.5');
   gate(passCase.tc1 === 'PASSED' && passCase.tc2 === 'PASSED', 'PASS both testcases PASSED');
-  gate(srpCase.score === 5.7, 'SRP score is 5.7', `got ${srpCase.score}`);
+  gate(srpCase.score === 5.2, 'SRP score is 5.2', `got ${srpCase.score}`);
   gate(srpCase.tc1 === 'PASSED' && srpCase.tc2 === 'FAILED', 'SRP TC1 pass TC2 fail (O(N^2))');
   gate(invalidCase.score === 0 && invalidCase.tc1 === 'FAILED' && invalidCase.tc2 === 'FAILED', 'INVALID 0/10 FAILED');
 
@@ -105,7 +105,7 @@ async function main(): Promise<boolean> {
   const noIdentityRes = analyzeSourceCode(noIdentity, 'java', { tc1TimeMs: 0, tc2TimeMs: 0 });
   gate(noIdentityRes.score === 0 && noIdentityRes.tc1Status === 'FAILED', 'code without identity marker scores 0');
   gate(analyzeSourceCode(passCode!, 'java', { tc1TimeMs: 80, tc2TimeMs: 140 }).score === 9.8, 'identity gate keeps PASS at 9.8');
-  gate(analyzeSourceCode(srpCode!, 'java', { tc1TimeMs: 80, tc2TimeMs: 140 }).score === 5.7, 'identity gate keeps SRP at 5.7');
+  gate(analyzeSourceCode(srpCode!, 'java', { tc1TimeMs: 80, tc2TimeMs: 140 }).score === 5.2, 'identity gate keeps SRP at 5.2');
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const AdmZipTest = require('adm-zip');
   const txtOnlyZip = path.join(root, 'txt-only-identity-check.zip');

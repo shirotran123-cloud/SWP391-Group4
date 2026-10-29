@@ -5,7 +5,7 @@
  * `api-gateway/src/queue/grading-core.ts` — cung module ma NestJS worker
  * (`grading-worker.consumer.ts`) dang dung:
  *  - `validateSubmissionFile`: quy tac .zip / 10MB / ngon ngu cho phep
- *  - `analyzeSourceCode`: phan tich + cong thuc TC1 4.0 + TC2 3.0 + Clean 2.0 + SOLID 1.0
+ *  - `analyzeSourceCode`: phan tich + cong thuc TC1 3.5 + TC2 3.5 + Clean 2.0 + SOLID 1.0
  *  - `buildScoreBreakdown`: bang diem chi tiet nhu payload `grading:completed`
  *
  * 3 case chay tren SOURCE THAT giai nen tu 2 file zip mau o root repo:
@@ -137,7 +137,7 @@ export function runDemoCases(): DemoCaseResult[] {
 
 if (require.main === module) {
   console.log('=== AITA Demo: nop bai + co che tinh diem (code that) ===');
-  console.log('Cong thuc worker: TC1 4.0 + TC2 3.0 + CleanCode 2.0 + SOLID 1.0 = 10');
+  console.log('Cong thuc worker: TC1 3.5 + TC2 3.5 + CleanCode 2.0 + SOLID 1.0 = 10');
   console.log('');
   for (const r of runDemoCases()) printCase(r);
 }

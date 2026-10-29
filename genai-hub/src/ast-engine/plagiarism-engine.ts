@@ -1,13 +1,31 @@
 /**
- * Plagiarism Engine Core - RBL Research Core (AITA Autograding Engine)
+ * ASTPlagiarismEngine – So sánh cặp bài nộp & tạo ma trận N×N toàn lớp
  *
- * Computes pairwise Jaccard & Hybrid AST similarity matrices over Winnowing digital fingerprints
- * and AST structural token profiles. Flags plagiarized submissions >= 70% threshold,
- * and exports fine-grained token & line mapping coordinates (matched_tokens_json) for Monaco Diff Viewer.
+ * ─── CÔNG THỨC SIMILARITY (Containment-First) ───────────────────────────────
+ *
+ * Vấn đề với Jaccard: bài B có 2/4 câu giống A → Jaccard = 2/4 = 50% (SAI)
+ * Giải pháp: dùng Containment Index đo "bao nhiêu % của bài NGẮN HƠN bị chứa
+ * trong bài DÀI HƠN".
+ *
+ *   containment(B→A) = |fingerprints(B) ∩ fingerprints(A)| / |fingerprints(B)|
+ *   containment(A→B) = |fingerprints(A) ∩ fingerprints(B)| / |fingerprints(A)|
+ *   maxContainment   = max(containment(B→A), containment(A→B))
+ *
+ * Nếu bài B (2 câu) ⊂ bài A (4 câu) hoàn toàn:
+ *   containment(B→A) = 2/2 = 100%  ← đây là giá trị đúng
+ *   containment(A→B) = 2/4 = 50%
+ *   maxContainment   = 100%         ← plagiarism = 100% ✓
+ *
+ * Thang phân loại (UC-11):
+ *   maxContainment ≥ 80% → FLAGGED_PLAGIARISM (BR-03: điểm = 0)
+ *   maxContainment ≥ 65% → FLAGGED_HIGH      (cờ nghi vấn)
+ *   maxContainment ≥ 40% → SUSPECTED
+ *   else                 → CLEAN
+ * ────────────────────────────────────────────────────────────────────────────
  */
 
-import { ASTNormalizer, NormalizedToken } from "./ast-normalizer";
-import { Fingerprint, WinnowingEngine, WinnowingOptions } from "./winnowing";
+import { ASTNormalizer, NormalizedToken } from './ast-normalizer';
+import { Fingerprint, WinnowingEngine, WinnowingOptions } from './winnowing';
 
 export interface CodeSubmission {
   submissionId: string;
@@ -32,8 +50,9 @@ export interface MatchedTokensJson {
   submissionBId: string;
   similarityRate: number;
   jaccardSimilarity: number;
-  winnowingContainment: number;
-  astStructuralSimilarity: number;
+  containmentBinA: number;        // Bao nhiêu % của B bị chứa trong A
+  containmentAinB: number;        // Bao nhiêu % của A bị chứa trong B
+  maxContainment: number;         // max(containmentBinA, containmentAinB) – metric chính
   totalUniqueFingerprintsA: number;
   totalUniqueFingerprintsB: number;
   commonFingerprintsCount: number;
@@ -43,11 +62,11 @@ export interface MatchedTokensJson {
 export interface PairwisePlagiarismResult {
   submissionAId: string;
   submissionBId: string;
-  similarityRate: number; // Ensemble similarity score
+  similarityRate: number;         // = maxContainment (0–100)
   commonFingerprintsCount: number;
   totalUniqueFingerprints: number;
-  isFlagged: boolean; // >= 70% threshold
-  status: "CLEAN" | "SUSPECTED" | "FLAGGED_HIGH" | "FLAGGED_PLAGIARISM";
+  isFlagged: boolean;             // similarityRate ≥ PLAGIARISM_THRESHOLD
+  status: 'CLEAN' | 'SUSPECTED' | 'FLAGGED_HIGH' | 'FLAGGED_PLAGIARISM';
   matchedTokensJson: MatchedTokensJson;
   executionTimeMs: number;
 }
@@ -56,48 +75,58 @@ export interface ClassPlagiarismMatrixReport {
   assignmentId?: string;
   totalSubmissions: number;
   totalPairsCompared: number;
-  flaggedPairsCount: number; // Pairs >= 70%
-  submissionsList: { id: string; name?: string }[];
-  similarityMatrix: number[][]; // N x N matrix (percentage values)
+  flaggedPairsCount: number;
+  submissionsList: { id: string; name?: string; studentId?: string }[];
+  similarityMatrix: number[][];
   flaggedReports: PairwisePlagiarismResult[];
   totalExecutionTimeMs: number;
 }
 
 export class ASTPlagiarismEngine {
-  public static readonly PLAGIARISM_THRESHOLD = 80.0; // BR-03: 80% confirmed plagiarism (score 0)
+  /** Ngưỡng đánh dấu gắn cờ đạo văn (BR-03, UC-11) */
+  public static readonly PLAGIARISM_THRESHOLD = 70.0;
+  public static readonly CONFIRMED_ZERO_THRESHOLD = 80.0;
+  public static readonly SUSPECTED_WARNING_THRESHOLD = 50.0;
 
   /**
-   * Compares two single submissions and computes Jaccard + Winnowing Containment + AST Structural Cosine Similarity
+   * So sánh 2 bài nộp, trả về PairwisePlagiarismResult.
+   * Metric chính: maxContainment (Containment Index).
    */
   public static compareSubmissions(
     subA: CodeSubmission,
     subB: CodeSubmission,
-    options?: WinnowingOptions
+    options?: WinnowingOptions,
   ): PairwisePlagiarismResult {
     const startTime = Date.now();
 
-    // 1. AST Normalize
-    const normA = ASTNormalizer.normalize(subA.sourceCode, subA.language || "python");
-    const normB = ASTNormalizer.normalize(subB.sourceCode, subB.language || "python");
+    // ── 1. Chuẩn hóa AST ──────────────────────────────────────────────────
+    const langA = (subA.language || 'java').toLowerCase();
+    const langB = (subB.language || 'java').toLowerCase();
+    const normA = ASTNormalizer.normalize(subA.sourceCode, langA);
+    const normB = ASTNormalizer.normalize(subB.sourceCode, langB);
 
-    // 2. Compute Winnowing Fingerprints
-    const fingerprintsA = WinnowingEngine.computeFingerprints(normA.tokens, options);
-    const fingerprintsB = WinnowingEngine.computeFingerprints(normB.tokens, options);
+    // ── 2. Sinh Winnowing fingerprints ────────────────────────────────────
+    const fpA = WinnowingEngine.computeFingerprints(normA.tokens, options);
+    const fpB = WinnowingEngine.computeFingerprints(normB.tokens, options);
 
-    // 3. Winnowing Containment & Jaccard Calculation
-    const setAHashes = new Set(fingerprintsA.map((f) => f.hashValue));
-    const setBHashes = new Set(fingerprintsB.map((f) => f.hashValue));
+    // ── 3. Tính Containment Index ─────────────────────────────────────────
+    const setA = new Set(fpA.map((f) => f.hashValue));
+    const setB = new Set(fpB.map((f) => f.hashValue));
 
+    // Build lookup map cho B để lấy line info khi match
     const mapB = new Map<string, Fingerprint[]>();
-    for (const f of fingerprintsB) {
+    for (const f of fpB) {
       if (!mapB.has(f.hashValue)) mapB.set(f.hashValue, []);
       mapB.get(f.hashValue)!.push(f);
     }
 
+    // Tìm các đoạn trùng khớp
     const matchedSegments: MatchedSegment[] = [];
+    const commonHashes = new Set<string>();
 
-    for (const fA of fingerprintsA) {
-      if (setBHashes.has(fA.hashValue)) {
+    for (const fA of fpA) {
+      if (setB.has(fA.hashValue)) {
+        commonHashes.add(fA.hashValue);
         const matchesInB = mapB.get(fA.hashValue) || [];
         for (const fB of matchesInB) {
           matchedSegments.push({
@@ -112,51 +141,51 @@ export class ASTPlagiarismEngine {
       }
     }
 
-    const unionSet = new Set([...setAHashes, ...setBHashes]);
-    const unionSize = unionSet.size === 0 ? 1 : unionSet.size;
+    const commonCount = commonHashes.size;
+    const sizeA = setA.size;
+    const sizeB = setB.size;
+    const unionSize = new Set([...setA, ...setB]).size || 1;
 
-    const commonHashesSet = new Set(
-      [...setAHashes].filter((h) => setBHashes.has(h))
-    );
-    const commonCount = commonHashesSet.size;
-
+    // Jaccard = |A ∩ B| / |A ∪ B|  (KHÔNG dùng làm metric chính)
     const jaccardSimilarity = Number(((commonCount / unionSize) * 100).toFixed(2));
-    const minSetSize = Math.min(setAHashes.size, setBHashes.size);
-    const winnowingContainment = minSetSize > 0 
-      ? Number(((commonCount / minSetSize) * 100).toFixed(2)) 
+
+    // Containment(B→A): bao nhiêu % fingerprint của B bị chứa trong A
+    const containmentBinA = sizeB > 0
+      ? Number(((commonCount / sizeB) * 100).toFixed(2))
       : 0.0;
 
-    // 4. AST Structural Vector Cosine Similarity
-    const astStructuralSimilarity = this.computeASTTokenCosineSimilarity(normA.tokens, normB.tokens);
+    // Containment(A→B): bao nhiêu % fingerprint của A bị chứa trong B
+    const containmentAinB = sizeA > 0
+      ? Number(((commonCount / sizeA) * 100).toFixed(2))
+      : 0.0;
 
-    // 5. Ensemble Similarity Rate (70% Winnowing + 30% AST Structural Profile)
-    // If winnowing containment is 100% (exact match), similarity is 100%
-    let similarityRate = 0.0;
-    if (winnowingContainment >= 99.0) {
-      similarityRate = 100.0;
-    } else {
-      similarityRate = Number(
-        (0.65 * winnowingContainment + 0.35 * astStructuralSimilarity).toFixed(2)
-      );
-    }
+    // ── 4. similarityRate = maxContainment ───────────────────────────────
+    //  Ý nghĩa: "bài nào ngắn hơn bị chứa bao nhiêu % trong bài kia"
+    //  Nếu B (2 câu) ⊂ A (4 câu): containmentBinA=100% → similarity=100%
+    const maxContainment = Math.max(containmentBinA, containmentAinB);
+    const similarityRate = Number(maxContainment.toFixed(2));
 
+    // ── 5. Phân loại theo ngưỡng (BR-03: >= 50% Cảnh báo, >= 70% Gắn cờ, >= 80% Điểm 0) ───
     const isFlagged = similarityRate >= this.PLAGIARISM_THRESHOLD;
-    const status = isFlagged ? "FLAGGED_PLAGIARISM" : similarityRate >= 40.0 ? "SUSPECTED" : "CLEAN";
+    let status: PairwisePlagiarismResult['status'];
+    if (similarityRate >= this.CONFIRMED_ZERO_THRESHOLD) status = 'FLAGGED_PLAGIARISM';
+    else if (similarityRate >= this.PLAGIARISM_THRESHOLD) status = 'FLAGGED_HIGH';
+    else if (similarityRate >= this.SUSPECTED_WARNING_THRESHOLD) status = 'SUSPECTED';
+    else status = 'CLEAN';
 
     const matchedTokensJson: MatchedTokensJson = {
       submissionAId: subA.submissionId,
       submissionBId: subB.submissionId,
       similarityRate,
       jaccardSimilarity,
-      winnowingContainment,
-      astStructuralSimilarity,
-      totalUniqueFingerprintsA: setAHashes.size,
-      totalUniqueFingerprintsB: setBHashes.size,
+      containmentBinA,
+      containmentAinB,
+      maxContainment,
+      totalUniqueFingerprintsA: sizeA,
+      totalUniqueFingerprintsB: sizeB,
       commonFingerprintsCount: commonCount,
       matchedSegments,
     };
-
-    const executionTimeMs = Date.now() - startTime;
 
     return {
       submissionAId: subA.submissionId,
@@ -167,49 +196,17 @@ export class ASTPlagiarismEngine {
       isFlagged,
       status,
       matchedTokensJson,
-      executionTimeMs,
+      executionTimeMs: Date.now() - startTime,
     };
   }
 
   /**
-   * Computes Cosine Similarity between AST Token Frequency Distributions
-   */
-  private static computeASTTokenCosineSimilarity(tokensA: NormalizedToken[], tokensB: NormalizedToken[]): number {
-    const freqA = new Map<string, number>();
-    const freqB = new Map<string, number>();
-
-    for (const t of tokensA) freqA.set(t.token, (freqA.get(t.token) || 0) + 1);
-    for (const t of tokensB) freqB.set(t.token, (freqB.get(t.token) || 0) + 1);
-
-    const allKeys = new Set([...freqA.keys(), ...freqB.keys()]);
-    if (allKeys.size === 0) return 100.0;
-
-    let dotProduct = 0;
-    let magA = 0;
-    let magB = 0;
-
-    for (const key of allKeys) {
-      const valA = freqA.get(key) || 0;
-      const valB = freqB.get(key) || 0;
-      dotProduct += valA * valB;
-      magA += valA * valA;
-      magB += valB * valB;
-    }
-
-    if (magA === 0 || magB === 0) return 0.0;
-
-    const cosine = dotProduct / (Math.sqrt(magA) * Math.sqrt(magB));
-    return Number((cosine * 100).toFixed(2));
-  }
-
-  /**
-   * Computes full pairwise class Similarity Matrix across all submissions in a class/assignment.
-   * Automatically extracts and flags pairs with similarity >= 70%.
+   * Ma trận N×N toàn lớp: so sánh mọi cặp bài nộp.
    */
   public static computeClassSimilarityMatrix(
     submissions: CodeSubmission[],
     assignmentId?: string,
-    options?: WinnowingOptions
+    options?: WinnowingOptions,
   ): ClassPlagiarismMatrixReport {
     const startTime = Date.now();
     const N = submissions.length;
@@ -222,17 +219,11 @@ export class ASTPlagiarismEngine {
       for (let j = i + 1; j < N; j++) {
         pairsCount++;
         const result = this.compareSubmissions(submissions[i], submissions[j], options);
-        
         similarityMatrix[i][j] = result.similarityRate;
         similarityMatrix[j][i] = result.similarityRate;
-
-        if (result.isFlagged) {
-          flaggedReports.push(result);
-        }
+        if (result.isFlagged) flaggedReports.push(result);
       }
     }
-
-    const totalExecutionTimeMs = Date.now() - startTime;
 
     return {
       assignmentId,
@@ -242,10 +233,11 @@ export class ASTPlagiarismEngine {
       submissionsList: submissions.map((s) => ({
         id: s.submissionId,
         name: s.studentName || s.submissionId,
+        studentId: s.studentId,
       })),
       similarityMatrix,
       flaggedReports: flaggedReports.sort((a, b) => b.similarityRate - a.similarityRate),
-      totalExecutionTimeMs,
+      totalExecutionTimeMs: Date.now() - startTime,
     };
   }
 }

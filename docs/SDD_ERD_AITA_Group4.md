@@ -224,7 +224,7 @@
 
 ## 4. Grading Math (normative, grading-worker.consumer.ts)
 
-- Formula: `score = (TC1 ? 4.0 : 0) + (TC2 ? 3.0 : 0) + (clean/10)*2.0 + (solidAvg/10)*1.0`.
+- Formula: `score = (TC1 ? 3.5 : 0) + (TC2 ? 3.5 : 0) + (clean/10)*2.0 + (solidAvg/10)*1.0` (mỗi testcase có điểm ngang nhau = 7.0 / N).
 - Cap: `min(10, round1)`; `solidAvg = (s+o+l+i+d)/5`.
 - Payload: `scoreBreakdown{testcase1, testcase2, cleanCode, solid, total}`, `maxScore: 10.0`.
 - Total testcases: 2; `passedTestcases` counts PASSED.

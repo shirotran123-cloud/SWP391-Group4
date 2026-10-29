@@ -11,6 +11,10 @@ import {
 export class UpdateAssignmentDto {
   @IsString()
   @IsOptional()
+  courseId?: string;
+
+  @IsString()
+  @IsOptional()
   title?: string;
 
   @IsString()

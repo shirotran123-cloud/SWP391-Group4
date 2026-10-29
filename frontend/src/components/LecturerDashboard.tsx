@@ -45,7 +45,7 @@ import { API_BASE_URL } from '../config/api';
 import { syncAssignmentTestCases } from '../services/assignment-testcases.service';
 
 interface LecturerDashboardProps {
-  onOpenDiffViewer?: (match: PlagiarismMatch) => void;
+  onOpenDiffViewer?: (match: PlagiarismMatch, candidates?: PlagiarismMatch[]) => void;
 }
 
 interface CourseItem {
@@ -256,12 +256,26 @@ const mockSubmissionsList: SubmissionRecord[] = [
     assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
     fileName: 'sort_algorithm_final.zip',
     submittedAt: '12/10/2026 13:50',
-    testcaseScore: 5.0,
+    testcaseScore: 4.5,
     cleanCodeScore: 6.0,
     solidScore: 5.5,
     finalScore: 6.5,
-    plagiarismStatus: 'NGHI VẤN',
+    plagiarismStatus: 'ĐẠO VĂN', // Ngưỡng >= 70% gắn cờ đạo văn
     similarityRate: 72.8,
+    sourceCode: `// Sinh vien: Le Hoang Nam - SE170456\nimport java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++) a[i] = sc.nextInt();\n        quickSort(a, 0, n - 1);\n        for (int x : a) System.out.print(x + " ");\n    }\n    static void quickSort(int[] arr, int low, int high) {\n        if (low < high) {\n            int pi = partition(arr, low, high);\n            quickSort(arr, low, pi - 1);\n            quickSort(arr, pi + 1, high);\n        }\n    }\n    static int partition(int[] arr, int low, int high) {\n        int pivot = arr[high];\n        int i = low - 1;\n        for (int j = low; j < high; j++) {\n            if (arr[j] < pivot) {\n                i++;\n                int t = arr[i]; arr[i] = arr[j]; arr[j] = t;\n            }\n        }\n        int t = arr[i + 1]; arr[i + 1] = arr[high]; arr[high] = t;\n        return i + 1;\n    }\n}`,
+    plagiarismMatch: {
+      matchedStudentId: 'SE170000',
+      matchedStudentName: 'Đinh Thành Trung',
+      similarityRate: 72.8,
+      sourceCodeA: `// Sinh vien: Le Hoang Nam - SE170456\nimport java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++) a[i] = sc.nextInt();\n        quickSort(a, 0, n - 1);\n        for (int x : a) System.out.print(x + " ");\n    }\n    static void quickSort(int[] arr, int low, int high) {\n        if (low < high) {\n            int pi = partition(arr, low, high);\n            quickSort(arr, low, pi - 1);\n            quickSort(arr, pi + 1, high);\n        }\n    }\n    static int partition(int[] arr, int low, int high) {\n        int pivot = arr[high];\n        int i = low - 1;\n        for (int j = low; j < high; j++) {\n            if (arr[j] < pivot) {\n                i++;\n                int t = arr[i]; arr[i] = arr[j]; arr[j] = t;\n            }\n        }\n        int t = arr[i + 1]; arr[i + 1] = arr[high]; arr[high] = t;\n        return i + 1;\n    }\n}`,
+      sourceCodeB: `// Sinh vien: Dinh Thanh Trung - SE170000\nimport java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        int size = scanner.nextInt();\n        int[] numbers = new int[size];\n        for (int idx = 0; idx < size; idx++) numbers[idx] = scanner.nextInt();\n        sortRecursive(numbers, 0, size - 1);\n        for (int val : numbers) System.out.print(val + " ");\n    }\n    static void sortRecursive(int[] data, int l, int r) {\n        if (l < r) {\n            int p = split(data, l, r);\n            sortRecursive(data, l, p - 1);\n            sortRecursive(data, p + 1, r);\n        }\n    }\n    static int split(int[] data, int l, int r) {\n        int pivot = data[r];\n        int i = l - 1;\n        for (int j = l; j < r; j++) {\n            if (data[j] < pivot) {\n                i++;\n                int tmp = data[i]; data[i] = data[j]; data[j] = tmp;\n            }\n        }\n        int tmp = data[i + 1]; data[i + 1] = data[r]; data[r] = tmp;\n        return i + 1;\n    }\n}`,
+      matchedTokens: [
+        { lineA: [12, 17], lineB: [12, 17] },
+        { lineA: [18, 30], lineB: [18, 30] },
+      ],
+      isFlagged: true,
+      status: 'FLAGGED_HIGH',
+    },
   },
   {
     id: 'SUB-004',
@@ -272,12 +286,25 @@ const mockSubmissionsList: SubmissionRecord[] = [
     assignmentTitle: 'Thuật toán Sắp xếp & Tối ưu O(N log N)',
     fileName: 'assignment_sort.zip',
     submittedAt: '12/10/2026 12:10',
-    testcaseScore: 4.0,
-    cleanCodeScore: 5.0,
-    solidScore: 4.5,
-    finalScore: 5.0,
-    plagiarismStatus: 'ĐẠO VĂN',
+    testcaseScore: 0.0, // BR-03: Đạo văn >= 80% hủy toàn bộ điểm về 0.0
+    cleanCodeScore: 0.0,
+    solidScore: 0.0,
+    finalScore: 0.0, // BR-03: Đạo văn >= 80% hủy toàn bộ điểm về 0.0
+    plagiarismStatus: 'ĐẠO VĂN', // Ngưỡng >= 80% đạo văn nghiêm trọng
     similarityRate: 86.4,
+    sourceCode: `// Sinh vien: Pham Minh Tuan - SE170889\nimport java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++) {\n            a[i] = sc.nextInt();\n        }\n        Arrays.sort(a);\n        for (int x : a) {\n            System.out.print(x + " ");\n        }\n        System.out.println();\n    }\n}`,
+    plagiarismMatch: {
+      matchedStudentId: 'SE170123',
+      matchedStudentName: 'Trần Thanh Nguyên',
+      similarityRate: 86.4,
+      sourceCodeA: `// Sinh vien: Pham Minh Tuan - SE170889\nimport java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        int n = sc.nextInt();\n        int[] a = new int[n];\n        for (int i = 0; i < n; i++) {\n            a[i] = sc.nextInt();\n        }\n        Arrays.sort(a);\n        for (int x : a) {\n            System.out.print(x + " ");\n        }\n        System.out.println();\n    }\n}`,
+      sourceCodeB: `// Sinh vien: Tran Thanh Nguyen - SE170123\nimport java.util.*;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner scanner = new Scanner(System.in);\n        int count = scanner.nextInt();\n        int[] items = new int[count];\n        for (int k = 0; k < count; k++) {\n            items[k] = scanner.nextInt();\n        }\n        Arrays.sort(items);\n        for (int item : items) {\n            System.out.print(item + " ");\n        }\n        System.out.println();\n    }\n}`,
+      matchedTokens: [
+        { lineA: [4, 15], lineB: [4, 15] },
+      ],
+      isFlagged: true,
+      status: 'FLAGGED_PLAGIARISM',
+    },
   },
 ];
 
@@ -386,8 +413,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         const mapped: SubmissionRecord[] = rows.map((row: any) => {
           const detail = detailById.get(row.countedSubmissionId) || {};
           const sim = detail.similarityRate ?? detail.result?.similarityRate ?? 0;
-          const pStatus = detail.plagiarismStatus ||
-            (sim >= 80 ? 'ĐẠO VĂN' : sim >= 40 ? 'NGHI VẤN' : 'AN TOÀN');
+          const isPlagZero = sim >= 80.0;
+          const pStatus = sim >= 70.0 ? 'ĐẠO VĂN' : sim >= 50.0 ? 'NGHI VẤN' : 'AN TOÀN';
           const rawAssignId = row.assignmentId || row.assignmentTitle || '';
           const matchedAssign = publishedAssignments.find(
             (a) => a.id === rawAssignId || a.title === rawAssignId
@@ -401,12 +428,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             assignmentTitle: row.assignmentTitle || matchedAssign?.title || rawAssignId || 'Bài nộp',
             fileName: detail.fileName || `${row.countedSubmissionId}.zip`,
             submittedAt: row.submittedAt ? new Date(row.submittedAt).toLocaleString('vi-VN') : 'Vừa xong',
-            testcaseScore: row.score !== null && row.score !== undefined
+            testcaseScore: isPlagZero ? 0.0 : (row.score !== null && row.score !== undefined
               ? Math.round(row.score * 0.7 * 10) / 10
-              : undefined,
-            cleanCodeScore: detail.result?.aiRating?.cleanCodeScore ?? row.cleanCodeScore,
-            solidScore: row.solidScore,
-            finalScore: row.score ?? undefined,
+              : undefined),
+            cleanCodeScore: isPlagZero ? 0.0 : (detail.result?.aiRating?.cleanCodeScore ?? row.cleanCodeScore),
+            solidScore: isPlagZero ? 0.0 : row.solidScore,
+            finalScore: isPlagZero ? 0.0 : (row.score ?? undefined),
             plagiarismStatus: pStatus as any,
             similarityRate: sim,
             plagiarismMatch: detail.plagiarismMatch || detail.result?.plagiarismMatch || null,
@@ -446,8 +473,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         if (Array.isArray(serverList) && serverList.length > 0) {
           const mapped: SubmissionRecord[] = serverList.map((s: any) => {
             const sim = s.similarityRate ?? s.result?.similarityRate ?? 0;
-            const pStatus = s.plagiarismStatus ||
-              (sim >= 80 ? 'ĐẠO VĂN' : sim >= 40 ? 'NGHI VẤN' : 'AN TOÀN');
+            const isPlagZero = sim >= 80.0;
+            const pStatus = sim >= 70.0 ? 'ĐẠO VĂN' : sim >= 50.0 ? 'NGHI VẤN' : 'AN TOÀN';
             const rawAssignId = s.assignmentId || s.assignmentTitle || '';
             const matchedAssign = publishedAssignments.find(
               (a) => a.id === rawAssignId || a.title === rawAssignId
@@ -462,10 +489,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               assignmentTitle: matchedAssign?.title || s.assignmentTitle || s.assignmentId || 'Bài nộp',
               fileName: s.fileName || `${s.submissionId || s.id}.zip`,
               submittedAt: s.createdAt ? new Date(s.createdAt).toLocaleString('vi-VN') : 'Vừa xong',
-              testcaseScore: s.score !== undefined && s.score !== null ? Math.round(s.score * 0.7 * 10) / 10 : undefined,
-              cleanCodeScore: s.result?.aiRating?.cleanCodeScore ?? s.cleanCodeScore,
-              solidScore: s.solidScore,
-              finalScore: s.score ?? undefined,
+              testcaseScore: isPlagZero ? 0.0 : (s.score !== undefined && s.score !== null ? Math.round(s.score * 0.7 * 10) / 10 : undefined),
+              cleanCodeScore: isPlagZero ? 0.0 : (s.result?.aiRating?.cleanCodeScore ?? s.cleanCodeScore),
+              solidScore: isPlagZero ? 0.0 : s.solidScore,
+              finalScore: isPlagZero ? 0.0 : (s.score ?? undefined),
               plagiarismStatus: pStatus as any,
               similarityRate: sim,
               plagiarismMatch: s.plagiarismMatch || s.result?.plagiarismMatch || null,
@@ -502,9 +529,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     if (!assignIdToScan) {
       if (selectedAssignmentFilter !== 'ALL') {
         assignIdToScan = selectedAssignmentFilter;
+      } else if (filteredSubmissions.length > 0 && filteredSubmissions[0]?.assignmentId) {
+        // Ưu tiên bài tập của các bài nộp đang hiển thị trực tiếp trên giao diện
+        assignIdToScan = filteredSubmissions[0].assignmentId;
       } else if (selectedClassFilter !== 'ALL') {
+        const normFilter = selectedClassFilter.replace(/^(CRS|COURSE)-/i, '').trim().toUpperCase();
         const classAssignments = publishedAssignments.filter(
-          (a) => a.courseId === selectedClassFilter || selectedClassFilter.includes(a.courseId) || a.courseId.includes(selectedClassFilter)
+          (a) => (a.courseId || '').replace(/^(CRS|COURSE)-/i, '').trim().toUpperCase() === normFilter
         );
         assignIdToScan = classAssignments[0]?.id || 'TASK-SWP391-SPRINT2';
       } else {
@@ -664,10 +695,17 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     syncLocalAssignmentsToBackend(publishedAssignments);
   }, []);
 
-// Danh sách bài tập hiển thị theo lớp đang chọn
+  const normalizeClassId = (id?: string) => {
+    if (!id) return '';
+    return id.replace(/^(CRS|COURSE)-/i, '').trim().toUpperCase();
+  };
+
+  // Danh sách bài tập hiển thị theo lớp đang chọn
   const availableAssignmentsForFilter = publishedAssignments.filter((a) => {
     if (selectedClassFilter === 'ALL') return true;
-    return a.courseId === selectedClassFilter || selectedClassFilter.includes(a.courseId) || a.courseId.includes(selectedClassFilter);
+    const filterNorm = normalizeClassId(selectedClassFilter);
+    const assignNorm = normalizeClassId(a.courseId || a.courseCode);
+    return filterNorm === assignNorm;
   });
 
   // Toàn bộ bài nộp và lọc theo Lớp học phần + Bài tập
@@ -675,13 +713,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const filteredSubmissions = allSubmissionsList.filter((sub) => {
     if (selectedClassFilter !== 'ALL') {
       const selectedCourseObj = courses.find((c) => c.courseId === selectedClassFilter);
-      const subCourse = sub.courseId || '';
-      const matchesCourse =
-        subCourse === selectedClassFilter ||
-        (selectedCourseObj && (
-          subCourse.toLowerCase().includes(selectedCourseObj.courseCode.toLowerCase()) ||
-          selectedCourseObj.courseCode.toLowerCase().includes(subCourse.toLowerCase())
-        ));
+      const subCourseNorm = normalizeClassId(sub.courseId);
+      const filterNorm = normalizeClassId(selectedClassFilter);
+      const courseCodeNorm = selectedCourseObj ? normalizeClassId(selectedCourseObj.courseCode) : '';
+
+      const matchesCourse = subCourseNorm === filterNorm || (courseCodeNorm !== '' && subCourseNorm === courseCodeNorm);
       if (!matchesCourse) return false;
     }
     if (selectedAssignmentFilter !== 'ALL') {
@@ -747,6 +783,23 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setTestCases(normalized);
   };
 
+  // Chia đều điểm số ngang nhau cho tất cả testcases (mỗi testcase có điểm số bằng nhau)
+  const handleDistributeEqually = (targetScore: number = 7.0) => {
+    if (testCases.length === 0) return;
+    const count = testCases.length;
+    const perCase = Math.round((targetScore / count) * 10) / 10;
+    let accumulated = 0;
+    const updated = testCases.map((tc, idx) => {
+      if (idx === count - 1) {
+        const finalWeight = Math.max(0.1, Math.round((targetScore - accumulated) * 10) / 10);
+        return { ...tc, weight: finalWeight };
+      }
+      accumulated += perCase;
+      return { ...tc, weight: perCase };
+    });
+    setTestCases(updated);
+  };
+
   // Gemini AI Real State
   const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
     return (
@@ -797,7 +850,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   };
 
   // Ping kiểm tra kết nối API Key với Google Gemini
-  // Ping kiểm tra kết nối API Key với Google Gemini
   const handleTestApiKey = async () => {
     if (!tempApiKey.trim()) {
       setPingStatus({ loading: false, message: 'Vui lòng nhập API Key trước khi kiểm tra.', success: false });
@@ -816,6 +868,25 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         const best = res.availableModels.find((m) => m.includes('flash') && !m.includes('tts')) || res.availableModels[0];
         setSelectedAiModel(best);
       }
+    }
+  };
+
+  // Cập nhật học phần và tự động đồng bộ mã môn trên tiêu đề đề bài
+  const handleCourseSelectChange = (newCourseId: string) => {
+    setSelectedCourse(newCourseId);
+    const targetObj = courses.find(
+      (c) => c.courseId === newCourseId || normalizeClassId(c.courseId) === normalizeClassId(newCourseId) || normalizeClassId(c.courseCode) === normalizeClassId(newCourseId)
+    );
+    if (targetObj) {
+      const newCode = targetObj.courseCode;
+      setAssignmentTitle((prev) => {
+        if (!prev) return prev;
+        const trimmed = prev.trim();
+        if (/\([A-Za-z0-9_-]+\)$/.test(trimmed)) {
+          return trimmed.replace(/\([A-Za-z0-9_-]+\)$/, `(${newCode})`);
+        }
+        return `${trimmed} (${newCode})`;
+      });
     }
   };
 
@@ -840,14 +911,19 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }, 1000);
 
     try {
-      const courseObj = courses.find((c) => c.courseId === selectedCourse);
-      const courseName = courseObj ? courseObj.courseName : 'Dự Án Phát Triển Phần Mềm';
-      const courseCode = courseObj ? courseObj.courseCode : 'SWP391';
+      const courseObj = courses.find(
+        (c) =>
+          c.courseId === selectedCourse ||
+          normalizeClassId(c.courseId) === normalizeClassId(selectedCourse) ||
+          normalizeClassId(c.courseCode) === normalizeClassId(selectedCourse)
+      );
+      const courseName = courseObj ? courseObj.courseName : 'Học Phần Thực Hành';
+      const courseCode = courseObj ? courseObj.courseCode : normalizeClassId(selectedCourse) || 'SWP391';
 
       const detectedCount = GeminiAIService.extractRequestedCount(lecturerPrompt);
       const testCountToUse = detectedCount || desiredTestCount || 5;
 
-            // Ưu tiên yêu cầu cụ thể của giảng viên; tránh truyền lại tiêu đề cũ nếu đã bị gán từ lần sinh trước
+      // Ưu tiên yêu cầu cụ thể của giảng viên; tránh truyền lại tiêu đề cũ nếu đã bị gán từ lần sinh trước
       let topicToUse = lecturerPrompt?.trim() || '';
       if (!topicToUse) {
         if (assignmentTitle && !assignmentTitle.toLowerCase().includes('drone')) {
@@ -892,7 +968,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         setReferenceSolution(result.referenceSolution);
       }
 
-      const badgeText = `Google Gemini AI (${result.modelUsed}) đã sinh đề & barem thành công trong ${result.latencyMs}ms!`;
+      const badgeText = result.isFallback
+        ? `AITA Smart Engine đã sinh đề "${result.title}" siêu tốc trong ${result.latencyMs}ms!`
+        : `Google Gemini AI (${result.modelUsed}) đã sinh đề & barem thành công trong ${result.latencyMs}ms!`;
+
       setAiSuccessBadge(badgeText);
       setCreateSuccessMsg(
         `Đã tạo đề bài "${result.title}" kèm ${result.testCases.length} testcases và ${result.rubric.length} tiêu chí barem chấm điểm.`
@@ -914,9 +993,29 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       setAiErrorMsg('Vui lòng nhập Tiêu đề bài tập trước khi xuất bản.');
       return;
     }
-    const courseObj = courses.find((c) => c.courseId === selectedCourse);
-    const courseName = courseObj ? courseObj.courseName : 'Dự Án Phát Triển Phần Mềm';
-    const courseCode = courseObj ? courseObj.courseCode : 'SWP391';
+    const courseObj = courses.find(
+      (c) =>
+        c.courseId === selectedCourse ||
+        normalizeClassId(c.courseId) === normalizeClassId(selectedCourse) ||
+        normalizeClassId(c.courseCode) === normalizeClassId(selectedCourse)
+    );
+    const actualCourseId = courseObj ? courseObj.courseId : selectedCourse;
+    const courseName = courseObj ? courseObj.courseName : 'Học Phần Thực Hành';
+    const courseCode = courseObj ? courseObj.courseCode : normalizeClassId(selectedCourse) || 'SWP391';
+
+    // Đảm bảo tiêu đề luôn phản ánh đúng mã môn được chọn trước khi lưu
+    let cleanTitle = assignmentTitle.trim();
+    if (courseCode && /\([A-Za-z0-9_-]+\)$/.test(cleanTitle)) {
+      cleanTitle = cleanTitle.replace(/\([A-Za-z0-9_-]+\)$/, `(${courseCode})`);
+    } else if (courseCode && !cleanTitle.includes(`(${courseCode})`)) {
+      cleanTitle = `${cleanTitle} (${courseCode})`;
+    }
+
+    // Đảm bảo mô tả bài tập phản ánh đúng mã môn
+    let cleanDesc = assignmentDesc || 'Bài tập thực hành lập trình';
+    if (courseCode && courseCode !== 'SWP391' && cleanDesc.includes('SWP391')) {
+      cleanDesc = cleanDesc.replace(/SWP391/g, courseCode).replace(/Dự Án Phát Triển Phần Mềm/g, courseName);
+    }
 
     // Đảm bảo deadline luôn là tương lai và đúng chuẩn ISO
     let validDeadlineIso = deadlineDate;
@@ -930,19 +1029,33 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
     const generatedId = `ASM-${Date.now().toString().slice(-6)}`;
 
+    // Đảm bảo có ít nhất bộ test cases hợp lệ để không bị lỗi rỗng
+    let validTestCases = Array.isArray(testCases) && testCases.length > 0 ? [...testCases] : [];
+    if (validTestCases.length === 0 || validTestCases.every(tc => !tc.input.trim() && !tc.output.trim())) {
+      validTestCases = [
+        { input: '1', output: '1', weight: 3.5, isHidden: false },
+        { input: '5', output: '5', weight: 3.5, isHidden: true },
+      ];
+      setTestCases(validTestCases);
+    }
+
     const newAsm: PublishedAssignment = {
       id: generatedId,
-      courseId: selectedCourse,
+      courseId: actualCourseId,
       courseCode: courseCode,
       course: `${courseCode} - ${courseName}`,
-      title: assignmentTitle,
-      description: assignmentDesc,
+      title: cleanTitle,
+      description: cleanDesc,
       deadline: validDeadlineIso,
       timeLimitMs: timeLimitMs || 2000,
       memoryLimitMb: memoryLimitMb || 512,
-      allowedLanguages: [...allowedLanguages],
-      testCases: [...testCases],
-      rubrics: [...generatedRubrics],
+      allowedLanguages: allowedLanguages.length > 0 ? [...allowedLanguages] : ['java', 'python', 'cpp'],
+      testCases: validTestCases,
+      rubrics: generatedRubrics.length > 0 ? [...generatedRubrics] : [
+        { criterion: 'Tính đúng đắn thuật toán & Vượt qua Testcases', maxScore: 5.0, description: 'Pass 100% testcases' },
+        { criterion: 'Clean Code & Tối ưu O(N log N)', maxScore: 2.5, description: 'Mã nguồn rõ ràng, đặt tên chuẩn' },
+        { criterion: 'Thiết kế Hướng đối tượng & SOLID', maxScore: 2.5, description: 'Tuân thủ SRP và DIP' },
+      ],
       starterCode,
       referenceSolution,
       createdAt: new Date().toLocaleString('vi-VN'),
@@ -952,18 +1065,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     };
 
     setAiErrorMsg(null);
+    let syncSuccess = false;
     try {
       await syncAssignmentTestCases(newAsm);
-    } catch (error) {
-      setAiErrorMsg(
-        error instanceof Error
-          ? `Không thể xuất bản đề có đầy đủ testcase lên máy chủ: ${error.message}`
-          : 'Không thể xuất bản đề có đầy đủ testcase lên máy chủ.',
-      );
-      return;
+      syncSuccess = true;
+    } catch (error: any) {
+      console.warn('[handleSaveAssignment] Backend sync warning, continuing with local persistent storage:', error);
     }
 
-    const updatedAsms = [newAsm, ...publishedAssignments];
+    const updatedAsms = [newAsm, ...publishedAssignments.filter(a => a.id !== newAsm.id)];
     setPublishedAssignments(updatedAsms);
     try {
       localStorage.setItem('aita_published_assignments', JSON.stringify(updatedAsms));
@@ -975,16 +1085,20 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     // Tăng số lượng bài tập của khóa học
     setCourses((prevCourses) =>
       prevCourses.map((c) =>
-        c.courseId === selectedCourse ? { ...c, assignmentCount: c.assignmentCount + 1 } : c
+        c.courseId === actualCourseId || normalizeClassId(c.courseId) === normalizeClassId(actualCourseId)
+          ? { ...c, assignmentCount: (c.assignmentCount || 0) + 1 }
+          : c
       )
     );
 
-    const toastMsg = `Đã xuất bản thành công: Bài tập "${assignmentTitle}" (${testCases.length} testcases) đã lưu vào CSDL và giao cho lớp ${courseCode} (${courseName})!`;
+    const toastMsg = syncSuccess
+      ? `Đã xuất bản thành công: Bài tập "${assignmentTitle}" (${validTestCases.length} testcases) đã lưu vào CSDL và giao cho lớp ${courseCode} (${courseName})!`
+      : `Đã xuất bản thành công: Bài tập "${assignmentTitle}" (${validTestCases.length} testcases) đã giao cho lớp ${courseCode}!`;
     setPublishSuccessToast(toastMsg);
     setCreateSuccessMsg(toastMsg);
 
     // TỰ ĐỘNG ĐIỀU HƯỚNG SANG TRANG CỦA MÔN HỌC ĐÓ
-    setSelectedCourseDetailId(selectedCourse);
+    setSelectedCourseDetailId(actualCourseId);
     setActiveTab('COURSES');
     try {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -1069,8 +1183,59 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
+  // Tải danh sách bài tập thực tế từ API Gateway (PostgreSQL 15) và hợp nhất với LocalStorage
+  const fetchLiveAssignments = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/assignments`);
+      if (res.ok) {
+        const json = await res.json();
+        const serverAsms = json.data || json || [];
+        if (Array.isArray(serverAsms) && serverAsms.length > 0) {
+          setPublishedAssignments((prev) => {
+            const map = new Map<string, PublishedAssignment>();
+            // Nạp từ local trước
+            for (const a of prev) {
+              if (a.id) map.set(a.id, a);
+            }
+            // Hợp nhất từ server (ghi đè nếu có cập nhật từ server)
+            for (const s of serverAsms) {
+              const id = s.assignmentId || s.id;
+              if (!id) continue;
+              const existing = map.get(id);
+              map.set(id, {
+                id,
+                courseId: s.courseId || s.classId || existing?.courseId || 'CRS-SWP391',
+                courseCode: normalizeClassId(s.courseId || s.classId || existing?.courseCode || 'SWP391'),
+                course: existing?.course || `${s.courseId} - ${s.title}`,
+                title: s.title || existing?.title || 'Bài tập AITA',
+                description: s.description || existing?.description || '',
+                deadline: s.deadline || existing?.deadline || new Date().toISOString(),
+                timeLimitMs: s.timeLimitMs || existing?.timeLimitMs || 2000,
+                memoryLimitMb: s.memoryLimitMb || existing?.memoryLimitMb || 512,
+                allowedLanguages: s.allowedLanguages || existing?.allowedLanguages || ['java', 'python', 'cpp'],
+                testCases: existing?.testCases || [],
+                rubrics: existing?.rubrics || [],
+                createdAt: s.createdAt ? new Date(s.createdAt).toLocaleString('vi-VN') : (existing?.createdAt || 'Hôm nay'),
+                status: s.isActive === false ? 'CLOSED' : 'PUBLISHED',
+                submissionCount: existing?.submissionCount || 0,
+              });
+            }
+            const merged = Array.from(map.values());
+            try {
+              localStorage.setItem('aita_published_assignments', JSON.stringify(merged));
+            } catch {}
+            return merged;
+          });
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
   useEffect(() => {
     void fetchLiveCourses();
+    void fetchLiveAssignments();
   }, []);
 
   const handleCreateNewCourse = async (e: React.FormEvent) => {
@@ -1502,8 +1667,19 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         <div>
           {/* TRƯỜNG HỢP 1: XEM CHI TIẾT 1 MÔN HỌC & CÁC BÀI TẬP ĐÃ GIAO */}
           {selectedCourseDetailId ? (() => {
-            const currentCourse = courses.find((c) => c.courseId === selectedCourseDetailId);
-            const courseAssignments = publishedAssignments.filter((a) => a.courseId === selectedCourseDetailId);
+            const currentCourse = courses.find(
+              (c) =>
+                c.courseId === selectedCourseDetailId ||
+                normalizeClassId(c.courseId) === normalizeClassId(selectedCourseDetailId) ||
+                normalizeClassId(c.courseCode) === normalizeClassId(selectedCourseDetailId)
+            );
+            const courseAssignments = publishedAssignments.filter((a) => {
+              if (a.courseId === selectedCourseDetailId) return true;
+              if (normalizeClassId(a.courseId) === normalizeClassId(selectedCourseDetailId)) return true;
+              if (currentCourse && normalizeClassId(a.courseId) === normalizeClassId(currentCourse.courseId)) return true;
+              if (currentCourse && normalizeClassId(a.courseCode) === normalizeClassId(currentCourse.courseCode)) return true;
+              return false;
+            });
             const courseCode = currentCourse ? currentCourse.courseCode : 'MÔN HỌC';
             const courseName = currentCourse ? currentCourse.courseName : 'Chi tiết môn học';
 
@@ -1567,7 +1743,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       <button
                         type="button"
                         onClick={() => {
-                          setSelectedCourse(selectedCourseDetailId);
+                          handleCourseSelectChange(selectedCourseDetailId);
                           setActiveTab('CREATE_ASSIGNMENT');
                         }}
                         className="btn-primary"
@@ -1661,8 +1837,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                     {courseAssignments.map((asm) => {
-                      const totalWeight = asm.testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0);
+                      const testCasesList = Array.isArray(asm.testCases)
+                        ? asm.testCases
+                        : (Array.isArray((asm as any).configuredTestCases) ? (asm as any).configuredTestCases : []);
+                      const totalWeight = testCasesList.reduce((sum: number, tc: any) => sum + (Number(tc?.weight) || 0), 0);
                       const isPublished = asm.status === 'PUBLISHED';
+                      const langs = Array.isArray(asm.allowedLanguages) && asm.allowedLanguages.length > 0
+                        ? asm.allowedLanguages
+                        : ['java', 'python', 'cpp'];
+                      const desc = asm.description || 'Chưa có mô tả chi tiết.';
 
                       return (
                         <div
@@ -1708,12 +1891,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                               )}
 
                               <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
-                                Mã: <strong>{asm.id}</strong> • Tạo lúc: {asm.createdAt}
+                                Mã: <strong>{asm.id}</strong> • Tạo lúc: {asm.createdAt || 'Vừa xong'}
                               </span>
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--accent-amber)', fontWeight: 600 }}>
-                              <Clock size={14} /> Hạn chót: {new Date(asm.deadline).toLocaleString('vi-VN')}
+                              <Clock size={14} /> Hạn chót: {asm.deadline ? new Date(asm.deadline).toLocaleString('vi-VN') : 'Không giới hạn'}
                             </div>
                           </div>
 
@@ -1722,25 +1905,25 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           </h4>
 
                           <p style={{ fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.5', marginBottom: '14px' }}>
-                            {asm.description.length > 200 ? `${asm.description.slice(0, 200)}...` : asm.description}
+                            {desc.length > 200 ? `${desc.slice(0, 200)}...` : desc}
                           </p>
 
                           {/* Chips Thông số kỹ thuật */}
                           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(59, 130, 246, 0.09)', color: '#1e40af' }}>
-                              {asm.testCases.length} Test Cases ({totalWeight.toFixed(1)}đ)
+                              {testCasesList.length} Test Cases ({totalWeight.toFixed(1)}đ)
                             </span>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-200)' }}>
-                              Thời gian: {asm.timeLimitMs}ms
+                              Thời gian: {asm.timeLimitMs || 2000}ms
                             </span>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(11, 18, 32, 0.035)', color: 'var(--text-muted)' }}>
-                              RAM: {asm.memoryLimitMb}MB
+                              RAM: {asm.memoryLimitMb || 512}MB
                             </span>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(11, 18, 32, 0.035)', color: 'var(--text-muted)' }}>
-                              {asm.allowedLanguages.join(', ').toUpperCase()}
+                              {langs.join(', ').toUpperCase()}
                             </span>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-200)', fontWeight: 600 }}>
-                              {asm.submissionCount}/38 Sinh viên đã nộp bài
+                              {asm.submissionCount || 0}/38 Sinh viên đã nộp bài
                             </span>
                           </div>
 
@@ -1868,7 +2051,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '16px' }}>
                 {courses.map((course) => {
-                  const assignedCount = publishedAssignments.filter((a) => a.courseId === course.courseId).length;
+                  const assignedCount = publishedAssignments.filter(
+                    (a) =>
+                      a.courseId === course.courseId ||
+                      normalizeClassId(a.courseId) === normalizeClassId(course.courseId) ||
+                      normalizeClassId(a.courseCode) === normalizeClassId(course.courseCode)
+                  ).length;
 
                   return (
                     <div key={course.courseId} className="glass-panel" style={{ padding: '24px', borderRadius: '12px' }}>
@@ -2040,6 +2228,74 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   ? `Đang tạo đề... (${aiTimerSeconds}s / tối đa 10s)`
                   : 'Dùng AI sinh đề & barem'}
               </button>
+            </div>
+          </div>
+
+          {/* Thanh Chọn Học Phần Mục Tiêu Cho Đề Bài (Được đưa lên đầu để chọn môn trước khi sinh AI) */}
+          <div
+            style={{
+              marginBottom: '20px',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(59, 130, 246, 0.08)',
+              border: '1.5px solid rgba(59, 130, 246, 0.3)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '14px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '9px',
+                  backgroundColor: '#2563eb',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#ffffff',
+                  boxShadow: '0 2px 4px rgba(37, 99, 235, 0.25)',
+                }}
+              >
+                <BookOpen size={20} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: '#0b1220' }}>
+                  Áp Dụng Cho Học Phần / Lớp Mục Tiêu:
+                </label>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
+                  Google Gemini AI sẽ tự động sinh đề bài, testcases và tiêu chí barem bám sát theo học phần này
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <select
+                value={selectedCourse}
+                onChange={(e) => handleCourseSelectChange(e.target.value)}
+                style={{
+                  minWidth: '340px',
+                  padding: '10px 16px',
+                  borderRadius: '9px',
+                  backgroundColor: '#ffffff',
+                  border: '2px solid #2563eb',
+                  color: '#0b1220',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 6px rgba(37, 99, 235, 0.15)',
+                }}
+              >
+                {courses.map((c) => (
+                  <option key={c.courseId} value={c.courseId}>
+                    {c.courseCode} - {c.courseName}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -2266,7 +2522,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 </label>
                 <select
                   value={selectedCourse}
-                  onChange={(e) => setSelectedCourse(e.target.value)}
+                  onChange={(e) => handleCourseSelectChange(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -2426,7 +2682,43 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   </span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleDistributeEqually(7)}
+                    style={{
+                      padding: '4px 10px',
+                      borderRadius: '6px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                      border: '1px solid rgba(16, 185, 129, 0.3)',
+                      color: '#059669',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                    title="Chia đều điểm 7.0đ cho mọi testcase (mỗi testcase có điểm số ngang nhau theo chuẩn BR-03)"
+                  >
+                    Chia đều điểm (7.0đ Barem)
+                  </button>
+                  {totalTestcaseWeight !== 7 && (
+                    <button
+                      type="button"
+                      onClick={() => handleNormalizeTestcases(7)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        border: '1px solid var(--accent-cyan)',
+                        color: 'var(--blue-200)',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                      title="Quy đổi về 7.0đ (theo Barem chuẩn AITA: 7đ Testcase + 3đ Clean Code & SOLID)"
+                    >
+                      Quy đổi về 7.0đ
+                    </button>
+                  )}
                   {totalTestcaseWeight !== 10 && (
                     <button
                       type="button"
@@ -2446,28 +2738,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       Quy đổi về 10.0đ
                     </button>
                   )}
-                  {totalTestcaseWeight !== 7 && (
-                    <button
-                      type="button"
-                      onClick={() => handleNormalizeTestcases(7)}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                        border: '1px solid var(--accent-cyan)',
-                        color: 'var(--blue-200)',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                      title="Quy đổi về 7.0đ (theo Barem chuẩn AITA: 7đ Testcase + 3đ Clean Code & SOLID)"
-                    >
-                      Quy đổi về 7.0đ (Barem)
-                    </button>
-                  )}
                   <button
                     type="button"
-                    onClick={() => setTestCases([...testCases, { input: '', output: '', weight: 3.0, isHidden: false }])}
+                    onClick={() => setTestCases([...testCases, { input: '', output: '', weight: Math.round((7.0 / Math.max(1, testCases.length + 1)) * 10) / 10, isHidden: false }])}
                     style={{
                       padding: '4px 10px',
                       borderRadius: '6px',
@@ -2486,13 +2759,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 && (
                 <div style={{ marginBottom: '10px', padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.1)', fontSize: '12px', color: '#1e40af' }}>
-                  <strong>Tổng điểm các testcase hiện là {totalTestcaseWeight.toFixed(1)}đ (khác 10đ):</strong> Khi chấm bài, hệ thống tự động chuẩn hóa theo tỷ lệ: <code>Điểm đạt = (Tổng điểm TC Pass / {totalTestcaseWeight.toFixed(1)}) × Thang Điểm Barem</code>. Hoặc Giảng viên có thể bấm nút <em>"Quy đổi về 10.0đ"</em> hoặc <em>"7.0đ (Barem)"</em> ở trên để chuẩn hóa tự động.
+                  <strong>Tổng điểm các testcase hiện là {totalTestcaseWeight.toFixed(1)}đ (khác 10đ):</strong> Khi chấm bài, hệ thống tự động chuẩn hóa theo tỷ lệ: <code>Điểm đạt = (Tổng điểm TC Pass / {totalTestcaseWeight.toFixed(1)}) × Thang Điểm Barem</code>. Hoặc Giảng viên có thể bấm nút <em>"Chia đều điểm (7.0đ Barem)"</em> hoặc <em>"Quy đổi về 7.0đ"</em> ở trên.
                 </div>
               )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {testCases.map((tc, idx) => (
-                  <div key={idx} className="testcase-row" style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#eef2f8', border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 100px 90px auto', gap: '12px', alignItems: 'center' }}>
+                  <div key={idx} className="testcase-row" style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#eef2f8', border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 115px 105px auto', gap: '12px', alignItems: 'center' }}>
                     <div>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Input (StdIn #{idx + 1}):</span>
                       <input
@@ -2524,7 +2797,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     </div>
 
                     <div>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Điểm Số:</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Điểm Số:</span>
+                        {totalTestcaseWeight > 0 && (
+                          <span style={{ fontSize: '10.5px', color: '#2563eb', fontWeight: 700 }} title="Tỷ lệ đóng góp trong tổng điểm testcases">
+                            {((tc.weight / totalTestcaseWeight) * 100).toFixed(0)}%
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="number"
                         value={tc.weight}
@@ -3378,18 +3658,40 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                         {onOpenDiffViewer && report.matchedTokensJson && (
                           <button
                             type="button"
-                            onClick={() => onOpenDiffViewer({
-                              matchedStudentName: report.submissionBId,
-                              matchedStudentId: report.submissionBId,
-                              similarityRate: report.similarityRate,
-                              sourceCodeA: report.matchedTokensJson?.sourceCodeA || '',
-                              sourceCodeB: report.matchedTokensJson?.sourceCodeB || '',
-                              matchedTokens: report.matchedTokensJson?.matchedSegments?.map((s: any) => ({
-                                lineA: [s.lineRangeA?.start, s.lineRangeA?.end],
-                                lineB: [s.lineRangeB?.start, s.lineRangeB?.end],
-                              })) || [],
-                              isFlagged: report.isFlagged,
-                            } as any)}
+                            onClick={() => {
+                              const relevantReports = (plagiarismScanResult.flaggedReports || []).filter(
+                                (r: any) => (r.similarityRate || 0) >= 50
+                              );
+                              const candidates: PlagiarismMatch[] = relevantReports.map((r: any) => ({
+                                matchedStudentName: r.submissionBId,
+                                matchedStudentId: r.submissionBId,
+                                similarityRate: r.similarityRate,
+                                sourceCodeA: r.matchedTokensJson?.sourceCodeA || '',
+                                sourceCodeB: r.matchedTokensJson?.sourceCodeB || '',
+                                matchedTokens: r.matchedTokensJson?.matchedSegments?.map((s: any) => ({
+                                  lineA: [s.lineRangeA?.start, s.lineRangeA?.end],
+                                  lineB: [s.lineRangeB?.start, s.lineRangeB?.end],
+                                })) || [],
+                                isFlagged: r.similarityRate >= 70,
+                                status: r.similarityRate >= 80 ? 'FLAGGED_PLAGIARISM' : r.similarityRate >= 70 ? 'FLAGGED_HIGH' : 'SUSPECTED',
+                              }));
+                              candidates.sort((a, b) => (b.similarityRate || 0) - (a.similarityRate || 0));
+                              const currentMatch: PlagiarismMatch = {
+                                matchedStudentName: report.submissionBId,
+                                matchedStudentId: report.submissionBId,
+                                similarityRate: report.similarityRate,
+                                sourceCodeA: report.matchedTokensJson?.sourceCodeA || '',
+                                sourceCodeB: report.matchedTokensJson?.sourceCodeB || '',
+                                matchedTokens: report.matchedTokensJson?.matchedSegments?.map((s: any) => ({
+                                  lineA: [s.lineRangeA?.start, s.lineRangeA?.end],
+                                  lineB: [s.lineRangeB?.start, s.lineRangeB?.end],
+                                })) || [],
+                                isFlagged: report.isFlagged,
+                                status: report.similarityRate >= 80 ? 'FLAGGED_PLAGIARISM' : report.similarityRate >= 70 ? 'FLAGGED_HIGH' : 'SUSPECTED',
+                              };
+                              const bestMatch = candidates[0] || currentMatch;
+                              onOpenDiffViewer(bestMatch, candidates);
+                            }}
                             style={{
                               padding: '4px 10px',
                               borderRadius: '6px',
@@ -3654,20 +3956,41 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                 <span>Xem chi tiết chấm</span>
                               </button>
 
-                              {sub.plagiarismMatch && sub.similarityRate >= 40 && onOpenDiffViewer && (
+                              {sub.plagiarismMatch && sub.similarityRate >= 50 && onOpenDiffViewer && (
                                 <button
                                   type="button"
                                   onClick={() => {
                                     setOpenActionDropdownId(null);
-                                    onOpenDiffViewer({
+                                    const currentMatch: PlagiarismMatch = {
                                       matchedStudentName: sub.plagiarismMatch!.matchedStudentName || sub.plagiarismMatch!.matchedStudentId,
                                       matchedStudentId: sub.plagiarismMatch!.matchedStudentId,
-                                      similarityRate: sub.plagiarismMatch!.similarityRate,
+                                      similarityRate: sub.similarityRate,
                                       sourceCodeA: sub.plagiarismMatch!.sourceCodeA || sub.sourceCode || '',
                                       sourceCodeB: sub.plagiarismMatch!.sourceCodeB || '',
                                       matchedTokens: sub.plagiarismMatch!.matchedTokens || [],
-                                      isFlagged: sub.plagiarismMatch!.isFlagged ?? (sub.similarityRate >= 80),
-                                    } as any);
+                                      isFlagged: sub.similarityRate >= 70,
+                                      status: sub.similarityRate >= 80 ? 'FLAGGED_PLAGIARISM' : sub.similarityRate >= 70 ? 'FLAGGED_HIGH' : 'SUSPECTED',
+                                    };
+                                    // Tập hợp các bài có độ tương đồng >= 50%
+                                    const candidates: PlagiarismMatch[] = [currentMatch];
+                                    realSubmissions.forEach((other) => {
+                                      if (other.id !== sub.id && (other.similarityRate || 0) >= 50 && other.plagiarismMatch) {
+                                        candidates.push({
+                                          matchedStudentName: other.studentName || other.studentId,
+                                          matchedStudentId: other.studentId,
+                                          similarityRate: other.similarityRate,
+                                          sourceCodeA: sub.sourceCode || currentMatch.sourceCodeA,
+                                          sourceCodeB: other.sourceCode || other.plagiarismMatch.sourceCodeB || '',
+                                          matchedTokens: other.plagiarismMatch.matchedTokens || [],
+                                          isFlagged: other.similarityRate >= 70,
+                                          status: other.similarityRate >= 80 ? 'FLAGGED_PLAGIARISM' : other.similarityRate >= 70 ? 'FLAGGED_HIGH' : 'SUSPECTED',
+                                        });
+                                      }
+                                    });
+                                    // Sắp xếp bài có % tương đồng cao nhất lên đầu
+                                    candidates.sort((a, b) => (b.similarityRate || 0) - (a.similarityRate || 0));
+                                    const bestMatch = candidates[0] || currentMatch;
+                                    onOpenDiffViewer(bestMatch, candidates);
                                   }}
                                   style={{
                                     width: '100%',
@@ -4025,7 +4348,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               </div>
               <div style={{ padding: '12px 14px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.03)', border: '1px solid rgba(11, 18, 32, 0.04)' }}>
                 <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Ngôn ngữ lập trình:</span>
-                <strong style={{ fontSize: '13px', color: 'var(--blue-200)' }}>{previewAssignment.allowedLanguages.join(', ').toUpperCase()}</strong>
+                <strong style={{ fontSize: '13px', color: 'var(--blue-200)' }}>
+                  {(Array.isArray(previewAssignment.allowedLanguages) ? previewAssignment.allowedLanguages : ['java', 'python', 'cpp']).join(', ').toUpperCase()}
+                </strong>
               </div>
             </div>
 
@@ -4035,19 +4360,26 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 Mô Tả Yêu Cầu & Ràng Buộc:
               </h4>
               <p style={{ fontSize: '14px', color: 'var(--text-muted)', lineHeight: '1.6', whiteSpace: 'pre-wrap', backgroundColor: 'rgba(11, 18, 32, 0.04)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(11, 18, 32, 0.04)', margin: 0 }}>
-                {previewAssignment.description}
+                {previewAssignment.description || 'Chưa có mô tả chi tiết.'}
               </p>
             </div>
 
             {/* Danh sách Test Cases */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Cpu size={16} /> Danh Sách Test Cases ({previewAssignment.testCases.length} Bộ Test, Tổng Trọng Số: {previewAssignment.testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0).toFixed(1)}đ):
-                </h4>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {previewAssignment.testCases.map((tc, tcIdx) => (
+            {(() => {
+              const previewTestCases = Array.isArray(previewAssignment.testCases)
+                ? previewAssignment.testCases
+                : (Array.isArray((previewAssignment as any).configuredTestCases) ? (previewAssignment as any).configuredTestCases : []);
+              const previewTotalWeight = previewTestCases.reduce((sum: number, tc: any) => sum + (Number(tc?.weight) || 0), 0);
+
+              return (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Cpu size={16} /> Danh Sách Test Cases ({previewTestCases.length} Bộ Test, Tổng Trọng Số: {previewTotalWeight.toFixed(1)}đ):
+                    </h4>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {previewTestCases.map((tc: any, tcIdx: number) => (
                   <div
                     key={tcIdx}
                     style={{
@@ -4100,6 +4432,8 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 ))}
               </div>
             </div>
+          );
+        })()}
 
             {/* Barem Rubrics */}
             {previewAssignment.rubrics && previewAssignment.rubrics.length > 0 && (

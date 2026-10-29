@@ -79,6 +79,69 @@ export class PlagiarismService {
     return RBL_BENCHMARK_PAIRS;
   }
 
+  /**
+   * Đánh giá đối soát một bài nộp với danh sách bài nộp khác (hoặc tập dữ liệu mẫu).
+   * Lọc những bài có độ tương đồng >= 50% (nghi vấn / cảnh báo), sắp xếp giảm dần theo similarityRate.
+   */
+  public static async getSimilarSubmissions(
+    sourceCode: string,
+    language: string = "python",
+    studentAName: string = "Bài nộp hiện tại",
+    customCandidates?: Array<{ studentName: string; studentId: string; sourceCode: string; language?: string }>
+  ): Promise<PlagiarismMatch[]> {
+    const subA: CodeSubmission = {
+      submissionId: "SUB-CURRENT",
+      studentName: studentAName,
+      studentId: "SE-CURRENT",
+      sourceCode,
+      language,
+    };
+
+    const candidatePool: Array<{ studentName: string; studentId: string; sourceCode: string; language?: string }> = [];
+
+    if (customCandidates && customCandidates.length > 0) {
+      candidatePool.push(...customCandidates);
+    }
+
+    // Nạp thêm từ benchmark pairs nếu hồ sơ kiểm thử cần thêm mẫu đối chiếu
+    if (candidatePool.length < 3) {
+      for (const pair of RBL_BENCHMARK_PAIRS) {
+        if (!candidatePool.some((c) => c.studentId === `RBL-TEST-0${pair.pairId}`)) {
+          candidatePool.push({
+            studentName: `${pair.title}`,
+            studentId: `RBL-TEST-0${pair.pairId}`,
+            sourceCode: pair.codeB,
+            language: "python",
+          });
+        }
+      }
+    }
+
+    const matches: PlagiarismMatch[] = [];
+
+    for (const c of candidatePool) {
+      try {
+        const subB: CodeSubmission = {
+          submissionId: `CANDIDATE-${c.studentId}`,
+          studentName: c.studentName,
+          studentId: c.studentId,
+          sourceCode: c.sourceCode,
+          language: c.language || language,
+        };
+        const res = ASTPlagiarismEngine.compareSubmissions(subA, subB);
+        if (res.similarityRate >= 50.0) {
+          matches.push(this.mapResultToMatch(subA, subB, res));
+        }
+      } catch (err) {
+        console.warn(`Lỗi đối soát với candidate ${c.studentId}:`, err);
+      }
+    }
+
+    // Sắp xếp bài có % tương đồng cao nhất lên đầu (descending)
+    matches.sort((a, b) => b.similarityRate - a.similarityRate);
+    return matches;
+  }
+
   private static mapResultToMatch(
     subA: CodeSubmission,
     subB: CodeSubmission,

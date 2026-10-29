@@ -3,7 +3,7 @@
 - Version: 1.0 — 2026-10-13
 - Audience: Student, Lecturer (GV001/INSTRUCTOR), Admin
 - Frontend: `http://localhost:5173`; Gateway: `http://localhost:3000`
-- Scoring: TC1 4.0 + TC2 3.0 + CleanCode 2.0 + SOLID 1.0 = 10
+- Scoring: TC1 3.5 + TC2 3.5 + CleanCode 2.0 + SOLID 1.0 = 10 (mỗi testcase có điểm ngang nhau = 7.0 / N)
 - Plagiarism gate: `>= 70%` flagged (`PLAGIARISM_THRESHOLD = 70.0`)
 
 ## 1. What Is AITA?
@@ -93,7 +93,7 @@ cd frontend; npm run dev
 - Step 11e: (5) GenAI Review (`ai:reviewed`).
 - Step 11f: (6) AST Winnowing matrix note.
 - Step 12: finish event `grading:completed` (or `grading:failed` + DLQ).
-- Step 13: read score card `scoreBreakdown {testcase1:4.0, testcase2:3.0, cleanCode, solid, total/10}`.
+- Step 13: read score card `scoreBreakdown {testcase1:3.5, testcase2:3.5, cleanCode, solid, total/10}`.
 - Step 14: inspect `SolidRadarChart` + code smells + explanation.
 - Step 15: history saved under `Lịch Sử Nộp & Điểm Số` (`StudentHistoryView`).
 - Timeout note: TLE shows 2005ms / watchdog wording; MLE shows 512MB wording.

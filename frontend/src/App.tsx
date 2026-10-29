@@ -324,11 +324,13 @@ export function App() {
   const [steps, setSteps] = useState<GradingStep[]>(initialSteps);
   const [isCompleted, setIsCompleted] = useState(false);
   const [submissionId, setSubmissionId] = useState('');
+  const [submissionLanguage, setSubmissionLanguage] = useState<string>('java');
   const [currentAssignmentId, setCurrentAssignmentId] = useState('');
   const [currentSourceCode, setCurrentSourceCode] = useState<string>(mockSourceCodeStudent);
   const [aiRating, setAiRating] = useState<AIRating | undefined>(undefined);
   const [plagiarismMatch, setPlagiarismMatch] = useState<PlagiarismMatch | undefined>(undefined);
   const [plagiarismDiffMatch, setPlagiarismDiffMatch] = useState<PlagiarismMatch | null>(null);
+  const [plagiarismCandidateMatches, setPlagiarismCandidateMatches] = useState<PlagiarismMatch[]>([]);
   const [score, setScore] = useState<number | undefined>(undefined);
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown | undefined>(undefined);
   const [executionTimeMs, setExecutionTimeMs] = useState<number | undefined>(undefined);
@@ -598,6 +600,7 @@ export function App() {
       activeTask.allowedLanguages,
       explicitLanguage
     );
+    setSubmissionLanguage(detectedLanguage);
 
     const token = localStorage.getItem('aita_token');
     const headers: Record<string, string> = {};
@@ -710,30 +713,43 @@ export function App() {
           socketRef.current.off('grading:completed');
           socketRef.current.on('grading:completed', (data: any) => {
             if (data.aiRating) setAiRating(data.aiRating);
+            const actualPlag = computedPlagiarism || data.plagiarismMatch;
             if (isLecturerRole(currentUser?.role)) {
-              setPlagiarismMatch(computedPlagiarism || data.plagiarismMatch);
+              setPlagiarismMatch(actualPlag);
             } else {
               setPlagiarismMatch(undefined);
             }
-            if (data.score !== undefined) setScore(data.score);
-            if (data.scoreBreakdown) setScoreBreakdown(data.scoreBreakdown);
+
+            // BR-03: Đạo văn AST từ 80% trở lên (>= 80.0%) -> LẬP TỨC CHẤM 0 ĐIỂM HOÀN TOÀN
+            const sim = data.similarityRate ?? actualPlag?.similarityRate ?? 0;
+            const isSeverePlag = data.confirmedPlagiarism || sim >= 80.0;
+            const finalScore = isSeverePlag ? 0.0 : (data.score !== undefined ? data.score : 0.0);
+            const finalBreakdown: ScoreBreakdown = isSeverePlag
+              ? { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: 0 }
+              : (data.scoreBreakdown || { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: finalScore });
+
+            setScore(finalScore);
+            setScoreBreakdown(finalBreakdown);
             if (data.executionTimeMs !== undefined) setExecutionTimeMs(data.executionTimeMs);
             if (data.sourceCode) setCurrentSourceCode(data.sourceCode);
             persistGradingResult({
-              score: data.score,
-              scoreBreakdown: data.scoreBreakdown,
+              score: finalScore,
+              scoreBreakdown: finalBreakdown,
               submissionId: data.submissionId,
               sourceCode: data.sourceCode,
               aiRating: data.aiRating,
-              passedTestcases: data.passedTestcases,
+              passedTestcases: isSeverePlag ? 0 : data.passedTestcases,
               totalTestcases: data.totalTestcases,
               executionTimeMs: data.executionTimeMs,
               fileName: file.name,
             });
             setSteps((prev) =>
-              syncTestcaseSteps(prev, data.testcaseResults).map((s) =>
-                s.id.startsWith('tc-') ? s : { ...s, status: 'passed' }
-              )
+              syncTestcaseSteps(prev, data.testcaseResults).map((s) => {
+                if (isSeverePlag && s.id === '6') {
+                  return { ...s, status: 'failed', detail: `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm theo quy tắc BR-03.` };
+                }
+                return s.id.startsWith('tc-') ? s : { ...s, status: 'passed' };
+              })
             );
             setIsCompleted(true);
           });
@@ -755,17 +771,26 @@ export function App() {
               if (sub.status === 'GRADED' || sub.status === 'FAILED') {
                 clearInterval(pollTimer);
                 if (sub.aiRating) setAiRating(sub.aiRating);
-                if (sub.score !== undefined) setScore(sub.score);
-                if (sub.scoreBreakdown) setScoreBreakdown(sub.scoreBreakdown);
+
+                // BR-03: Đạo văn AST từ 80% trở lên (>= 80.0%) -> LẬP TỨC CHẤM 0 ĐIỂM
+                const sim = sub.similarityRate ?? sub.result?.similarityRate ?? 0;
+                const isSeverePlag = sub.confirmedPlagiarism || sim >= 80.0;
+                const finalScore = isSeverePlag ? 0.0 : (sub.score !== undefined ? sub.score : 0.0);
+                const finalBreakdown: ScoreBreakdown = isSeverePlag
+                  ? { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: 0 }
+                  : (sub.scoreBreakdown || { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: finalScore });
+
+                setScore(finalScore);
+                setScoreBreakdown(finalBreakdown);
                 if (sub.executionTimeMs !== undefined) setExecutionTimeMs(sub.executionTimeMs);
                 if (sub.sourceCode) setCurrentSourceCode(sub.sourceCode);
                 persistGradingResult({
-                  score: sub.score,
-                  scoreBreakdown: sub.scoreBreakdown,
+                  score: finalScore,
+                  scoreBreakdown: finalBreakdown,
                   submissionId: subId,
                   sourceCode: sub.sourceCode || codeToGrade,
                   aiRating: sub.aiRating,
-                  passedTestcases: sub.passedTestcases,
+                  passedTestcases: isSeverePlag ? 0 : sub.passedTestcases,
                   totalTestcases: sub.totalTestcases,
                   executionTimeMs: sub.executionTimeMs,
                   fileName: file.name,
@@ -773,8 +798,10 @@ export function App() {
                 setSteps((prev) =>
                   prev.map((s) => ({
                     ...s,
-                    status: sub.status === 'GRADED' ? 'passed' : 'failed',
-                    detail: sub.status === 'GRADED' ? 'Hoàn thành (Đạt)' : (sub.errorMessage || 'Thất bại'),
+                    status: isSeverePlag && s.id === '6' ? 'failed' : (sub.status === 'GRADED' ? 'passed' : 'failed'),
+                    detail: isSeverePlag && s.id === '6'
+                      ? `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm theo quy tắc BR-03.`
+                      : (sub.status === 'GRADED' ? 'Hoàn thành (Đạt)' : (sub.errorMessage || 'Thất bại')),
                   }))
                 );
                 setIsCompleted(true);
@@ -843,13 +870,24 @@ export function App() {
 
   const simulateSocketGradingEvents = (realPlagiarism?: PlagiarismMatch) => {
     const delays = [600, 1400, 2400, 3400, 4600, 5800];
-    const fallbackBreakdown: ScoreBreakdown = {
-      testcase1: 4.0,
-      testcase2: 3.0,
-      cleanCode: 1.7,
-      solid: 0.8,
-      total: 9.5,
-    };
+    const simRate = realPlagiarism?.similarityRate ?? 0;
+    const isSeverePlag = simRate >= 80.0;
+    const effectiveBreakdown: ScoreBreakdown = isSeverePlag
+      ? {
+          testcase1: 0,
+          testcase2: 0,
+          cleanCode: 0,
+          solid: 0,
+          total: 0,
+        }
+      : {
+          testcase1: 3.5,
+          testcase2: 3.5,
+          cleanCode: 1.7,
+          solid: 0.8,
+          total: 9.5,
+        };
+    const effectiveScore = isSeverePlag ? 0.0 : effectiveBreakdown.total;
 
     delays.forEach((delay, index) => {
       setTimeout(() => {
@@ -878,21 +916,27 @@ export function App() {
             setSteps((prevSteps) =>
               prevSteps.map((s) => ({
                 ...s,
-                status: 'passed',
+                status: isSeverePlag && s.id === '6' ? 'failed' : 'passed',
                 detail:
                   s.id === '6'
-                    ? 'Hoàn tất phân tích cấu trúc cây cú pháp trừu tượng AST.'
+                    ? isSeverePlag
+                      ? `Vi phạm liêm chính: Đạo văn AST ${simRate.toFixed(1)}% (≥ 80.0%). Bài làm bị hủy toàn bộ điểm số (0.0/10) theo quy tắc BR-03.`
+                      : 'Hoàn tất phân tích cấu trúc cây cú pháp trừu tượng AST.'
                     : 'Hoàn thành (ĐẠT)',
               }))
             );
 
             setAiRating({
-              cleanCodeScore: 8.5,
-              solidScore: { s: 6.0, o: 9.0, l: 8.5, i: 9.0, d: 8.0 },
+              cleanCodeScore: isSeverePlag ? 0 : 8.5,
+              solidScore: isSeverePlag
+                ? { s: 0, o: 0, l: 0, i: 0, d: 0 }
+                : { s: 6.0, o: 9.0, l: 8.5, i: 9.0, d: 8.0 },
               codeSmells: [
                 { line: 15, rule: 'Single Responsibility Principle', description: 'Hàm `sortAndPrintAndSaveToDatabase` vi phạm nguyên lý SRP do ôm đồm nhiều nhiệm vụ độc lập.' },
               ],
-              explanation: 'Mã nguồn có giải thuật rõ ràng, tối ưu thời gian chạy. Cần tách các phương thức in ấn và lưu trữ để tuân thủ nguyên lý Đơn trách nhiệm.',
+              explanation: isSeverePlag
+                ? `Mã nguồn có độ tương đồng AST ${simRate.toFixed(1)}% vượt ngưỡng nghiêm trọng ≥ 80.0% theo quy chế liêm chính học thuật BR-03. Bài làm bị chấm 0.0 điểm.`
+                : 'Mã nguồn có giải thuật rõ ràng, tối ưu thời gian chạy. Cần tách các phương thức in ấn và lưu trữ để tuân thủ nguyên lý Đơn trách nhiệm.',
             });
 
             if (isLecturerRole(currentUser?.role)) {
@@ -900,10 +944,16 @@ export function App() {
             } else {
               setPlagiarismMatch(undefined);
             }
-            setScoreBreakdown(fallbackBreakdown);
-            setScore(fallbackBreakdown.total);
+            setScoreBreakdown(effectiveBreakdown);
+            setScore(effectiveScore);
             setExecutionTimeMs(1420);
-            persistGradingResult({ score: fallbackBreakdown.total, scoreBreakdown: fallbackBreakdown, submissionId: submissionIdRef.current });
+            persistGradingResult({
+              score: effectiveScore,
+              scoreBreakdown: effectiveBreakdown,
+              submissionId: submissionIdRef.current,
+              passedTestcases: isSeverePlag ? 0 : 2,
+              totalTestcases: 2,
+            });
             setIsCompleted(true);
           }, 600);
         }
@@ -1188,8 +1238,9 @@ export function App() {
         {(isLecturerRole(currentUser.role) || (activeView === 'lecturer' && currentUser.role === 'ADMIN')) && (
           <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
             <LecturerDashboard
-              onOpenDiffViewer={(match) => {
+              onOpenDiffViewer={(match, candidates) => {
                 setPlagiarismDiffMatch(match);
+                setPlagiarismCandidateMatches(candidates || [match]);
               }}
             />
           </div>
@@ -1363,6 +1414,7 @@ export function App() {
         onRetry={handleRetrySubmission}
         submissionId={submissionId}
         studentName={currentUser.fullName}
+        language={submissionLanguage}
         steps={steps}
         isCompleted={isCompleted}
         aiRating={aiRating}
@@ -1376,8 +1428,12 @@ export function App() {
       {/* MODAL ĐỐI SÁNH ĐẠO VĂN DÀNH CHO GIẢNG VIÊN (BR-04) */}
       <PlagiarismDiffModal
         isOpen={!!plagiarismDiffMatch}
-        onClose={() => setPlagiarismDiffMatch(null)}
+        onClose={() => {
+          setPlagiarismDiffMatch(null);
+          setPlagiarismCandidateMatches([]);
+        }}
         match={plagiarismDiffMatch}
+        similarMatches={plagiarismCandidateMatches}
         studentAName={currentUser?.fullName || 'Bài nộp A'}
       />
 

@@ -53,6 +53,7 @@ export interface StudentTaskItem extends Task {
   technicalRequirements?: TechnicalRequirement;
   sampleTestCases?: SampleTestCase[];
   configuredTestCases?: Array<{ input: string; output: string; weight: number; isHidden: boolean }>;
+  testCases?: Array<{ input: string; output: string; weight: number; isHidden: boolean }>;
 }
 
 export interface StudentSubmissionRecord {
@@ -521,6 +522,73 @@ const getEffectiveSampleTestCases = (task: StudentTaskItem): SampleTestCase[] =>
   ];
 };
 
+export interface CompilerOption {
+  id: string;
+  name: string;
+  compiler: string;
+  badge: string;
+  ext: string;
+  icon: string;
+  cmd: string;
+}
+
+export const COMPILER_OPTIONS: CompilerOption[] = [
+  {
+    id: 'auto',
+    name: 'Tự động nhận diện',
+    compiler: 'Auto-detect theo file (.zip)',
+    badge: 'Khuyên dùng',
+    ext: '.zip',
+    icon: '⚡',
+    cmd: 'Tự động quét cấu trúc và phần mở rộng mã nguồn',
+  },
+  {
+    id: 'java',
+    name: 'Java (OpenJDK 17)',
+    compiler: 'Eclipse Temurin JDK 17',
+    badge: 'javac 17',
+    ext: '.java',
+    icon: '☕',
+    cmd: 'javac -J-Xmx256m → java -Xmx256m',
+  },
+  {
+    id: 'cpp',
+    name: 'C++17 (GCC 13)',
+    compiler: 'GNU C++17 Compiler (g++)',
+    badge: 'g++ 13',
+    ext: '.cpp, .cc',
+    icon: '⚡',
+    cmd: 'g++ -O2 -std=c++17 -Wall',
+  },
+  {
+    id: 'python',
+    name: 'Python (CPython 3.11)',
+    compiler: 'Python 3.11-slim runtime',
+    badge: 'python 3.11',
+    ext: '.py',
+    icon: '🐍',
+    cmd: 'python3 -u solution.py',
+  },
+  {
+    id: 'dotnet',
+    name: 'C# / .NET (.NET 8.0 SDK)',
+    compiler: 'Microsoft .NET 8.0 SDK',
+    badge: 'dotnet 8',
+    ext: '.cs',
+    icon: '🔷',
+    cmd: 'dotnet build / run (C# 12)',
+  },
+  {
+    id: 'c',
+    name: 'C11 (GCC 13)',
+    compiler: 'GNU C Compiler (gcc)',
+    badge: 'gcc 13',
+    ext: '.c',
+    icon: '🔧',
+    cmd: 'gcc -O2 -std=c11 -Wall',
+  },
+];
+
 export const SubmissionView: React.FC<SubmissionViewProps> = ({
   task,
   studentId = 'SE170000',
@@ -559,7 +627,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     if (!selectedCourseId || selectedCourseId === 'ALL') {
       setSelectedCourseFilter('ALL');
     } else {
-      const normalized = selectedCourseId.replace(/.*-/, '').trim().toUpperCase();
+      const normalized = selectedCourseId.replace(/^(CRS|COURSE)-/i, '').trim().toUpperCase();
       setSelectedCourseFilter(normalized);
     }
   }, [selectedCourseId]);
@@ -677,6 +745,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         );
         const courseId = item.courseId || 'COURSE-SWP391';
         const courseCode = item.courseCode || courseId.replace('COURSE-', '').replace('CRS-', '');
+        const actualTestCases = Array.isArray(item.testCases)
+          ? item.testCases
+          : (Array.isArray(item.configuredTestCases) ? item.configuredTestCases : undefined);
 
         return {
           id: item.id || `ASM-${Date.now()}`,
@@ -691,11 +762,12 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           allowedLanguages: item.allowedLanguages || matchedTemplate?.allowedLanguages || ['java', 'python', 'cpp', 'dotnet'],
           allowedExtensions: item.allowedExtensions || ['.zip'],
           maxSizeMb: item.maxSizeMb || 10,
-          testCasesCount: item.testCases ? item.testCases.length : (matchedTemplate?.testCasesCount || 5),
-          configuredTestCases: Array.isArray(item.testCases) ? item.testCases : undefined,
+          testCasesCount: actualTestCases ? actualTestCases.length : (matchedTemplate?.testCasesCount || 5),
+          configuredTestCases: actualTestCases,
+          testCases: actualTestCases,
           rubrics: item.rubrics && item.rubrics.length > 0 ? item.rubrics : matchedTemplate?.rubrics,
           technicalRequirements: item.technicalRequirements || matchedTemplate?.technicalRequirements,
-          sampleTestCases: item.sampleTestCases || (Array.isArray(item.testCases) ? undefined : matchedTemplate?.sampleTestCases),
+          sampleTestCases: item.sampleTestCases || (actualTestCases ? undefined : matchedTemplate?.sampleTestCases),
           status: item.status || 'PUBLISHED',
         };
       });
@@ -733,6 +805,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               (t) => t.id === asmId || t.title.toLowerCase().trim() === (r.title || '').toLowerCase().trim()
             );
 
+            const preservedTestCases = existing?.testCases || existing?.configuredTestCases || (Array.isArray(r.testCases) ? r.testCases : undefined);
+
             const merged: StudentTaskItem = {
               id: asmId,
               courseId: courseId,
@@ -746,7 +820,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               allowedLanguages: r.allowedLanguages || existing?.allowedLanguages || ['java', 'python', 'cpp', 'dotnet'],
               allowedExtensions: existing?.allowedExtensions || ['.zip'],
               maxSizeMb: existing?.maxSizeMb || 10,
-              testCasesCount: r.testcasesCount || existing?.testCasesCount || (matchedTemplate?.testCasesCount || 2),
+              testCasesCount: preservedTestCases ? preservedTestCases.length : (r.testcasesCount || existing?.testCasesCount || (matchedTemplate?.testCasesCount || 2)),
+              testCases: preservedTestCases,
+              configuredTestCases: preservedTestCases,
               rubrics: existing?.rubrics || matchedTemplate?.rubrics,
               technicalRequirements: existing?.technicalRequirements || matchedTemplate?.technicalRequirements,
               sampleTestCases: existing?.sampleTestCases || matchedTemplate?.sampleTestCases,
@@ -841,42 +917,49 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     };
   };
 
+  const normalizeCourseCode = (val?: string) => {
+    if (!val) return '';
+    return val.replace(/^(CRS|COURSE)-/i, '').trim().toUpperCase();
+  };
+
   // Lấy danh sách các môn học để đưa vào bộ lọc (kết hợp cả lớp đã ghi danh và lớp có bài tập)
   const courseOptions = useMemo(() => {
     const set = new Set<string>();
     if (enrolledCourses && enrolledCourses.length > 0) {
       enrolledCourses.forEach((c) => {
-        const code = (c.courseCode || c.courseId || '').replace(/.*-/, '').trim().toUpperCase();
+        const code = normalizeCourseCode(c.courseCode || c.courseId);
         if (code) set.add(code);
       });
     }
     assignmentList.forEach((a) => {
-      const code = (a.courseCode || a.courseId || a.course?.split('-')[0] || '').replace(/.*-/, '').trim().toUpperCase();
+      const rawCode = a.courseCode || (a.course ? a.course.split(' - ')[0] : '') || a.courseId;
+      const code = normalizeCourseCode(rawCode);
       if (code) set.add(code);
     });
-    return Array.from(set);
+    return Array.from(set).sort();
   }, [enrolledCourses, assignmentList]);
 
   // Lọc bài tập theo tìm kiếm, môn học và trạng thái
   const filteredAssignments = useMemo(() => {
     return assignmentList.filter((item) => {
-      const itemCode = (item.courseCode || item.courseId || item.course?.split('-')[0].trim() || '').replace(/.*-/, '').trim().toUpperCase();
+      const itemCode = normalizeCourseCode(item.courseCode || item.courseId || (item.course ? item.course.split(' - ')[0] : ''));
 
-      // 1. Lọc theo môn học đang chọn
+      // 1. Lọc theo môn học đang chọn (SO SÁNH CHÍNH XÁC 100%)
       if (selectedCourseFilter !== 'ALL') {
-        const filterCode = selectedCourseFilter.replace(/.*-/, '').trim().toUpperCase();
-        const matchesFilter = itemCode === filterCode || itemCode.includes(filterCode) || filterCode.includes(itemCode);
-        if (!matchesFilter) return false;
+        const filterCode = normalizeCourseCode(selectedCourseFilter);
+        if (itemCode !== filterCode) {
+          return false;
+        }
       }
 
       // 2. Tìm kiếm từ khóa
       if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase();
+        const query = searchQuery.toLowerCase().trim();
         const matchSearch =
-          item.title.toLowerCase().includes(query) ||
-          item.course?.toLowerCase().includes(query) ||
+          (item.title || '').toLowerCase().includes(query) ||
+          (item.course || '').toLowerCase().includes(query) ||
           itemCode.toLowerCase().includes(query) ||
-          item.id.toLowerCase().includes(query);
+          (item.id || '').toLowerCase().includes(query);
         if (!matchSearch) return false;
       }
 
@@ -896,10 +979,10 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   const stats = useMemo(() => {
     let relevant = assignmentList;
     if (selectedCourseFilter !== 'ALL') {
-      const filterCode = selectedCourseFilter.replace(/.*-/, '').trim().toUpperCase();
+      const filterCode = normalizeCourseCode(selectedCourseFilter);
       relevant = assignmentList.filter((a) => {
-        const itemCode = (a.courseCode || a.courseId || a.course?.split('-')[0].trim() || '').replace(/.*-/, '').trim().toUpperCase();
-        return itemCode === filterCode || itemCode.includes(filterCode) || filterCode.includes(itemCode);
+        const itemCode = normalizeCourseCode(a.courseCode || a.courseId || (a.course ? a.course.split(' - ')[0] : ''));
+        return itemCode === filterCode;
       });
     }
 
@@ -1060,6 +1143,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         fileName: selectedFile.name,
         fileSizeMb: Number((selectedFile.size / (1024 * 1024)).toFixed(2)),
         sha256: sha256Checksum || undefined,
+        language: selectedLanguage !== 'auto' ? selectedLanguage : undefined,
         status: 'QUEUED',
       };
 
@@ -1873,50 +1957,164 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             Nén toàn bộ mã nguồn bài làm của bạn vào định dạng <code>.zip</code> (tối đa {selectedTask.maxSizeMb || 10}MB). Hệ thống sẽ tự động tính mã SHA-256 để chống chỉnh sửa và đối sánh đạo văn.
           </p>
 
-          {/* LỰA CHỌN NGÔN NGỮ LẬP TRÌNH (FIX BUG 1: HỖ TRỢ CHÍNH XÁC C++, C#, JAVA, PYTHON) */}
+          {/* LỰA CHỌN TRÌNH BIÊN DỊCH & MÔI TRƯỜNG THỰC THI (COMPILER SELECTION) */}
           <div
             style={{
-              marginBottom: '18px',
-              padding: '12px 16px',
-              borderRadius: '10px',
+              marginBottom: '20px',
+              padding: '16px 18px',
+              borderRadius: '12px',
               backgroundColor: 'rgba(11, 18, 32, 0.02)',
               border: '1px solid var(--border-color)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '10px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Code size={16} color="var(--blue-500)" />
-              <label htmlFor="submission-language-select" style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-main)' }}>
-                Ngôn ngữ mã nguồn nộp:
-              </label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Terminal size={17} color="var(--blue-500)" />
+                <label htmlFor="submission-language-select" style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>
+                  Lựa Chọn Trình Biên Dịch &amp; Ngôn Ngữ Nộp Bài (Compiler):
+                </label>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'var(--text-dim)', flexWrap: 'wrap' }}>
+                <span>Đề bài cho phép:</span>
+                {(selectedTask.allowedLanguages && selectedTask.allowedLanguages.length > 0
+                  ? selectedTask.allowedLanguages
+                  : ['java', 'python', 'cpp', 'dotnet']
+                ).map((l) => (
+                  <span
+                    key={l}
+                    className="chip chip-neutral chip-mono"
+                    style={{ padding: '2px 8px', fontSize: '11px', fontWeight: 700, color: 'var(--blue-400)', backgroundColor: 'rgba(37, 99, 235, 0.08)' }}
+                  >
+                    {l.toUpperCase()}
+                  </span>
+                ))}
+              </div>
             </div>
-            <select
-              id="submission-language-select"
-              value={selectedLanguage}
-              onChange={(e) => setSelectedLanguage(e.target.value)}
+
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px', lineHeight: 1.5 }}>
+              Chỉ định trình biên dịch và runtime Docker Sandbox để hệ thống giải nén, biên dịch và chạy test cases cho gói mã nguồn <code>.zip</code>:
+            </p>
+
+            {/* Grid Thẻ Trình Biên Dịch Trực Quan */}
+            <div
               style={{
-                padding: '6px 14px',
-                borderRadius: '8px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: '#ffffff',
-                color: 'var(--text-main)',
-                fontSize: '12.5px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                outline: 'none',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                gap: '8px',
+                marginBottom: '10px',
               }}
             >
-              <option value="auto">⚡ Tự động nhận diện theo file (.zip)</option>
-              <option value="java">☕ Java (.java)</option>
-              <option value="python">🐍 Python (.py)</option>
-              <option value="cpp">⚡ C++ (.cpp, .cc, .cxx)</option>
-              <option value="dotnet">🔷 C# (.cs)</option>
-              <option value="c">🔧 C (.c)</option>
-            </select>
+              {COMPILER_OPTIONS.map((opt) => {
+                const isSelected = selectedLanguage === opt.id;
+                const allowedList = (selectedTask.allowedLanguages || ['java', 'python', 'cpp', 'dotnet']).map((l) => l.toLowerCase());
+                const isPermitted =
+                  opt.id === 'auto' ||
+                  allowedList.includes(opt.id) ||
+                  (opt.id === 'cpp' && (allowedList.includes('cpp') || allowedList.includes('c++'))) ||
+                  (opt.id === 'dotnet' && (allowedList.includes('dotnet') || allowedList.includes('csharp') || allowedList.includes('cs')));
+
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setSelectedLanguage(opt.id)}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: isSelected ? '1.5px solid var(--blue-500)' : '1px solid var(--border-color)',
+                      backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.08)' : '#ffffff',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      outline: 'none',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                      <span style={{ fontSize: '12.5px', fontWeight: 700, color: isSelected ? 'var(--blue-600)' : 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>{opt.icon}</span> {opt.name}
+                      </span>
+                      {isSelected ? (
+                        <CheckCircle size={14} color="var(--blue-600)" />
+                      ) : isPermitted && opt.id !== 'auto' ? (
+                        <span style={{ fontSize: '10px', color: '#16a34a', fontWeight: 700, backgroundColor: 'rgba(22, 163, 74, 0.1)', padding: '1px 5px', borderRadius: '4px' }}>
+                          Cho phép
+                        </span>
+                      ) : null}
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+                      {opt.cmd}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Dropdown HTML tiêu chuẩn tương thích */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--border-soft)', flexWrap: 'wrap', gap: '8px' }}>
+              <span style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                Hoặc chọn qua danh sách thả xuống:
+              </span>
+              <select
+                id="submission-language-select"
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: '#ffffff',
+                  color: 'var(--text-main)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+              >
+                {COMPILER_OPTIONS.map((opt) => (
+                  <option key={opt.id} value={opt.id}>
+                    {opt.icon} {opt.name} ({opt.badge})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Cảnh báo nếu chọn ngôn ngữ không thuộc allowedLanguages */}
+            {(() => {
+              const allowedList = (selectedTask.allowedLanguages || ['java', 'python', 'cpp', 'dotnet']).map((l) => l.toLowerCase());
+              const isPermitted =
+                selectedLanguage === 'auto' ||
+                allowedList.includes(selectedLanguage) ||
+                (selectedLanguage === 'cpp' && (allowedList.includes('cpp') || allowedList.includes('c++'))) ||
+                (selectedLanguage === 'dotnet' && (allowedList.includes('dotnet') || allowedList.includes('csharp') || allowedList.includes('cs')));
+              if (!isPermitted) {
+                return (
+                  <div
+                    style={{
+                      marginTop: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '6px',
+                      backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      color: '#dc2626',
+                      fontSize: '11.5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+                    <span>
+                      Cảnh báo: Ngôn ngữ biên dịch này không nằm trong danh sách cho phép của đề bài (
+                      {allowedList.map((l) => l.toUpperCase()).join(', ')}). Hệ thống có thể từ chối nộp bài!
+                    </span>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
 
           <div
@@ -1993,6 +2191,44 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       <span>SHA-256: {sha256Checksum.substring(0, 16)}...{sha256Checksum.substring(sha256Checksum.length - 8)}</span>
                     </div>
                   )}
+
+                  {/* Thông tin Trình Biên Dịch & Sandbox */}
+                  <div style={{ marginTop: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center' }}>
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                        border: '1px solid rgba(37, 99, 235, 0.18)',
+                        fontSize: '11.5px',
+                        color: 'var(--text-main)',
+                      }}
+                    >
+                      <Terminal size={12} color="var(--blue-500)" />
+                      <span>
+                        Trình biên dịch: <strong>{COMPILER_OPTIONS.find((o) => o.id === selectedLanguage)?.name || selectedLanguage}</strong>
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(16, 185, 129, 0.08)',
+                        border: '1px solid rgba(16, 185, 129, 0.2)',
+                        fontSize: '11.5px',
+                        color: 'var(--text-main)',
+                      }}
+                    >
+                      <Cpu size={12} color="#10b981" />
+                      <span>Docker Sandbox: <strong>512MB RAM • 2.0s TLE</strong></span>
+                    </div>
+                  </div>
                 </div>
                 <button
                   type="button"

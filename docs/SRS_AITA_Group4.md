@@ -46,7 +46,7 @@
 
 - `RBL_Syllabus_AITA_10Weeks.md` (5 subsystems, CLO1–CLO6, gates).
 - `database/init_all_13_tables.sql` (13 tables 3NF + 2 infra).
-- `api-gateway/src/queue/grading-worker.consumer.ts` (weights 4.0/3.0/2.0/1.0).
+- `api-gateway/src/queue/grading-worker.consumer.ts` (weights 3.5/3.5/2.0/1.0, equal testcase weights).
 - `api-gateway/src/sandbox/sandbox.service.ts` (DOCKER_SECCOMP / RESILIENT_CIRCUIT_BREAKER).
 - `sandbox/worker/index.ts` (512MB, 2.0s, none, 64).
 - `genai-hub/src/ast-engine/plagiarism-engine.ts` (threshold 70.0, 0.65/0.35).
@@ -241,8 +241,8 @@
 
 ## 4. Grading Formula (normative)
 
-- Total: TC1 4.0 + TC2 3.0 + CleanCode 2.0 + SOLID 1.0 = 10.
-- TC1 pass → 4.0 else 0; TC2 pass → 3.0 else 0.
+- Total: TC1 3.5 + TC2 3.5 + CleanCode 2.0 + SOLID 1.0 = 10 (mỗi testcase có điểm ngang nhau = 7.0 / N).
+- TC1 pass → 3.5 else 0; TC2 pass → 3.5 else 0.
 - CleanCode part = `(cleanCodeScore / 10) * 2.0`.
 - SOLID part = `(solidAvg / 10) * 1.0`; `solidAvg` = mean of S/O/L/I/D.
 - Rounding one decimal (`Math.round(x*10)/10`), capped at 10.
@@ -313,7 +313,7 @@
 - 6: steps 3–4 TC runs, each emits `testcase:evaluated`.
 - 7: step 5 GenAI emits `ai:reviewed` (CleanCode + SOLID).
 - 8: step 6 AST Winnowing matrix note.
-- 9: `grading:completed` with `scoreBreakdown` 4.0/3.0/clean/solid/total.
+- 9: `grading:completed` with `scoreBreakdown` 3.5/3.5/clean/solid/total.
 - 10: modal shows total/10 + radar; history in `Lịch Sử Nộp & Điểm Số`.
 - 11: optional appeal (≤2 within 48h) → lecturer `ACCEPTED`/`REJECTED`.
 - 12: ACCEPTED adjusts `submissions.score`.
@@ -339,7 +339,7 @@
 
 - Queue acceptance <200ms on `POST /api/v1/submissions`.
 - Sandbox 512MB / 2.0s / `--network none` / `--pids-limit 64`.
-- Weights 4.0/3.0/2.0/1.0 = 10 with 2 testcases.
+- Weights 3.5/3.5/2.0/1.0 = 10 with 2 testcases (mỗi testcase điểm ngang nhau).
 - Flag `>= 70%` with default config.
 - Appeals `<= 2` per submission within 48h.
 - Free-rider flagged below 10%.

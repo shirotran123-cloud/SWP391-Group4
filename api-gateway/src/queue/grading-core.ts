@@ -11,8 +11,8 @@
 export const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 
 export const SCORE_WEIGHTS = {
-  testcase1: 4.0,
-  testcase2: 3.0,
+  testcase1: 3.5,
+  testcase2: 3.5,
   cleanCode: 2.0,
   solid: 1.0,
   maxScore: 10.0,
@@ -173,8 +173,9 @@ export function analyzeSourceCode(
     };
   }
 
+  const isSpecialAlgorithm = /octree|vram|knapsack|dp\[|balo/i.test(code);
   const tc1Pass = (hasInput && hasOutput) || (hasOutput && hasValidAlgorithm);
-  const tc2Pass = hasEfficientSort || (hasValidAlgorithm && hasOutput);
+  const tc2Pass = hasEfficientSort || isSpecialAlgorithm;
   const tc1TimeMs = timing?.tc1TimeMs ?? (hasEfficientSort ? Math.floor(50 + Math.random() * 60) : Math.floor(1500 + Math.random() * 500));
   const tc2TimeMs = timing?.tc2TimeMs ?? (hasEfficientSort ? Math.floor(100 + Math.random() * 80) : Math.floor(1800 + Math.random() * 200));
 

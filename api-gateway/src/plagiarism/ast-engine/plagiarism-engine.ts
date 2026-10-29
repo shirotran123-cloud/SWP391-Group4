@@ -83,8 +83,10 @@ export interface ClassPlagiarismMatrixReport {
 }
 
 export class ASTPlagiarismEngine {
-  /** Ngưỡng đánh dấu đạo văn chắc chắn (BR-03, UC-11) */
-  public static readonly PLAGIARISM_THRESHOLD = 65.0;
+  /** Ngưỡng đánh dấu gắn cờ đạo văn (BR-03, UC-11) */
+  public static readonly PLAGIARISM_THRESHOLD = 70.0;
+  public static readonly CONFIRMED_ZERO_THRESHOLD = 80.0;
+  public static readonly SUSPECTED_WARNING_THRESHOLD = 50.0;
 
   /**
    * So sánh 2 bài nộp, trả về PairwisePlagiarismResult.
@@ -163,12 +165,12 @@ export class ASTPlagiarismEngine {
     const maxContainment = Math.max(containmentBinA, containmentAinB);
     const similarityRate = Number(maxContainment.toFixed(2));
 
-    // ── 5. Phân loại theo ngưỡng ─────────────────────────────────────────
+    // ── 5. Phân loại theo ngưỡng (BR-03: >= 50% Cảnh báo, >= 70% Gắn cờ, >= 80% Điểm 0) ───
     const isFlagged = similarityRate >= this.PLAGIARISM_THRESHOLD;
     let status: PairwisePlagiarismResult['status'];
-    if (similarityRate >= 80.0) status = 'FLAGGED_PLAGIARISM';
-    else if (similarityRate >= 65.0) status = 'FLAGGED_HIGH';
-    else if (similarityRate >= 40.0) status = 'SUSPECTED';
+    if (similarityRate >= this.CONFIRMED_ZERO_THRESHOLD) status = 'FLAGGED_PLAGIARISM';
+    else if (similarityRate >= this.PLAGIARISM_THRESHOLD) status = 'FLAGGED_HIGH';
+    else if (similarityRate >= this.SUSPECTED_WARNING_THRESHOLD) status = 'SUSPECTED';
     else status = 'CLEAN';
 
     const matchedTokensJson: MatchedTokensJson = {

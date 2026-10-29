@@ -295,16 +295,9 @@ export class PlagiarismService {
       });
     }
 
-    let matrix: ClassPlagiarismMatrixReport;
-    let engine: string = 'LOCAL_AST_ENGINE';
-
-    const hubReport = submissions.length >= 2 ? await this.requestHubMatrix(submissions, assignmentId) : null;
-    if (hubReport) {
-      matrix = hubReport;
-      engine = 'GENAI_HUB_HTTP';
-    } else {
-      matrix = ASTPlagiarismEngine.computeClassSimilarityMatrix(submissions, assignmentId);
-    }
+    // Luôn sử dụng LOCAL_AST_ENGINE (SSOT) để đồng bộ tuyệt đối 100% với kết quả chấm bài của Worker
+    const matrix: ClassPlagiarismMatrixReport = ASTPlagiarismEngine.computeClassSimilarityMatrix(submissions, assignmentId);
+    const engine: string = 'LOCAL_AST_ENGINE';
 
     return {
       assignmentId,
