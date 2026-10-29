@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Slide Thuyết Trình Bảo Vệ Đồ Án (15 Phút) - AITA Group 4</title>
+  <style>
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #f1f5f9;
+      color: #0f172a;
+      line-height: 1.6;
+      padding: 24px 16px;
+    }
+    .paper-container {
+      max-width: 960px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 40px 48px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1e3a8a;
+      border-bottom: 2px solid #3b82f6;
+      padding-bottom: 10px;
+      margin-bottom: 12px;
+    }
+    
+
+    
+    /* Presentation Slide Specific Styling */
+    h2 {
+      page-break-before: always;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 2px solid #2563eb;
+      color: #1e40af;
+    }
+    h2:first-of-type {
+      page-break-before: avoid;
+      margin-top: 0;
+      border-top: none;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 10px 14px;
+      text-align: left;
+    }
+    th {
+      background: #eff6ff;
+      color: #1e3a8a;
+      font-weight: 700;
+    }
+    tr:nth-child(even) {
+      background: #f8fafc;
+    }
+  
+
+    pre {
+      background: #0f172a;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: Consolas, 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.45;
+      margin: 16px 0;
+    }
+    code {
+      font-family: Consolas, 'Courier New', monospace;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    pre code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+    blockquote {
+      border-left: 4px solid #2563eb;
+      background: #eff6ff;
+      padding: 12px 18px;
+      margin: 16px 0;
+      border-radius: 0 8px 8px 0;
+      color: #1e3a8a;
+    }
+    ul, ol {
+      margin-left: 24px;
+      margin-bottom: 14px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .print-bar {
+      position: sticky;
+      top: 10px;
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 16px;
+      z-index: 100;
+    }
+    .btn-action {
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      padding: 9px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13.5px;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.35);
+      transition: background 0.15s ease;
+    }
+    .btn-action:hover {
+      background: #1d4ed8;
+    }
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      .paper-container {
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+      .print-bar {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-bar">
+    <button class="btn-action" onclick="window.print()">🖨️ In ra PDF hoặc Lưu file (Ctrl + P)</button>
+  </div>
+  <div class="paper-container">
+    <p>﻿# BỘ SLIDE THUYẾT TRÌNH BẢO VỆ ĐỒ ÁN TỐT NGHIỆP / FINAL DEFENSE (15 PHÚT)</p>
+<h2>HỆ THỐNG CHẤM MÃ NGUỒN TỰ ĐỘNG &amp; GIÁM SÁT LIÊM CHÍNH HỌC THUẬT AITA-INTELLIGENT</h2>
+<blockquote>
+<p><strong>Học phần:</strong> SWP391 - Đồ án Phát triển Phần mềm (Chuẩn RBL 10 Tuần &amp; IEEE Std 830-1998)<br><strong>Nhóm thực hiện:</strong> Group 4 (5 Thành Viên)<br><strong>Thời gian báo cáo:</strong> 15 Phút chính thức + 15 Phút Hỏi - Đáp (Q&amp;A)<br><strong>Phiên bản hệ thống:</strong> AITA v2.0 Production (Full Stack: React + NestJS + Docker + BullMQ + PostgreSQL 15)</p>
+</blockquote>
+<hr>
+<h2>⏱️ PHÂN BỔ THỜI GIAN THUYẾT TRÌNH CHO 5 THÀNH VIÊN (15 PHÚT)</h2>
+<table>
+<thead>
+<tr>
+<th align="center">Mốc thời gian</th>
+<th align="center">Thời lượng</th>
+<th align="left">Người trình bày &amp; Vai trò</th>
+<th align="left">Nội dung trọng tâm</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>00:00 – 02:30</strong></td>
+<td align="center">2.5 phút</td>
+<td align="left"><strong>Thành viên 1</strong> (Team Leader &amp; DevOps)</td>
+<td align="left">Bối cảnh nghiên cứu, Nhu cầu thực tiễn &amp; Kiến trúc tổng thể hệ thống AITA</td>
+</tr>
+<tr>
+<td align="center"><strong>02:30 – 05:00</strong></td>
+<td align="center">2.5 phút</td>
+<td align="left"><strong>Thành viên 2</strong> (Backend Core &amp; Sandbox)</td>
+<td align="left">Thiết kế Docker Sandbox an toàn, Chống tấn công (TLE, MLE, Fork-bomb)</td>
+</tr>
+<tr>
+<td align="center"><strong>05:00 – 07:30</strong></td>
+<td align="center">2.5 phút</td>
+<td align="left"><strong>Thành viên 3</strong> (GenAI Specialist)</td>
+<td align="left">Tích hợp GenAI chấm Clean Code / SOLID &amp; Quy trình tạo đề / testcase</td>
+</tr>
+<tr>
+<td align="center"><strong>07:30 – 10:30</strong></td>
+<td align="center">3.0 phút</td>
+<td align="left"><strong>Thành viên 4</strong> (Algorithm Specialist)</td>
+<td align="left">Thuật toán AST-Winnowing, Kết quả thực nghiệm 10 cặp mã nguồn ngụy trang</td>
+</tr>
+<tr>
+<td align="center"><strong>10:30 – 13:30</strong></td>
+<td align="center">3.0 phút</td>
+<td align="left"><strong>Thành viên 5</strong> (Frontend Lead &amp; IEEE)</td>
+<td align="left">Trải nghiệm UI/UX, Đóng góp Bài báo Khoa học IEEE &amp; Chứng minh SLA</td>
+</tr>
+<tr>
+<td align="center"><strong>13:30 – 15:00</strong></td>
+<td align="center">1.5 phút</td>
+<td align="left"><strong>Cả nhóm</strong> (Team Leader chốt)</td>
+<td align="left">Tổng kết dự án, Bài học kinh nghiệm &amp; Chuyển sang phiên Q&amp;A Hội đồng</td>
+</tr>
+</tbody></table>
+<hr>
+<h2>SLIDE 1: BÌA BÁO CÁO &amp; GIỚI THIỆU DỰ ÁN</h2>
+<ul>
+<li><strong>Tiêu đề:</strong> AITA-Intelligent — Nền tảng Chấm Mã Nguồn Tự Động &amp; Giám Sát Liêm Chính Học Thuật Ứng Dụng AST Winnowing &amp; GenAI</li>
+<li><strong>Đơn vị đào tạo:</strong> Bộ môn Kỹ thuật Phần mềm (Software Engineering) — Đại học FPT</li>
+<li><strong>Giảng viên hướng dẫn:</strong> ThS. Đinh Thành Trung</li>
+<li><strong>Đội ngũ thực hiện (Group 4):</strong><ol>
+<li><strong>Đinh Thành Trung</strong> (Leader, System Architect &amp; DevOps Lead)</li>
+<li><strong>Trần Công Tiến</strong> (Backend Core &amp; Sandbox Security Engineer)</li>
+<li><strong>Nguyễn Hoàng Vinh</strong> (GenAI Specialist &amp; Database Architect)</li>
+<li><strong>Văn Thái Trung</strong> (Algorithm Specialist &amp; Plagiarism Engine Lead)</li>
+<li><strong>Linh Campochia</strong> (Frontend Lead &amp; Correspondence Author - Bài báo IEEE)</li>
+</ol>
+</li>
+</ul>
+<hr>
+<h2>SLIDE 2: BỐI CẢNH NGHIÊN CỨU &amp; THỰC TRẠNG GIAN LẬN THỜI KỲ GENAI</h2>
+<ul>
+<li><strong>Thực trạng cấp bách:</strong><ul>
+<li>Sự bùng nổ của ChatGPT-4o, GitHub Copilot, Claude khiến sinh viên dễ dàng tạo ra các đoạn mã &quot;ngụy trang&quot; chỉ bằng một câu lệnh prompt.</li>
+<li>Các công cụ so khớp văn bản truyền thống (MOSS, text-diff) hoàn toàn bất lực trước: đổi tên biến, đảo ngược vòng lặp <code>for</code>/<code>while</code>, tách hàm, chèn dead-code.</li>
+</ul>
+</li>
+<li><strong>Mục tiêu cốt lõi của AITA:</strong><ul>
+<li><strong>Đảm bảo tính thực thi an toàn 100%:</strong> Sinh viên nộp code C++, Java, Python, C# được biên dịch và chạy cách ly tuyệt đối trong Docker Sandbox.</li>
+<li><strong>Đánh giá toàn diện 2 tầng:</strong> Tầng 1 kiểm định chức năng bằng Testcases; Tầng 2 dùng GenAI chấm Clean Code &amp; 5 nguyên lý SOLID.</li>
+<li><strong>Nguyên tắc vàng Liêm chính học thuật:</strong> <strong>Zero False Accusations (Độ chính xác 100% - Không bao giờ vu khống sinh viên trung thực)</strong>.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>SLIDE 3: KIẾN TRÚC TỔNG THỂ HỆ THỐNG AITA-INTELLIGENT</h2>
+<pre><code>┌────────────────────────────────────────────────────────────────────────┐
+│                   CLIENT LAYER (React 18 + Vite)                       │
+│    Giao diện Sinh viên (Nộp bài, Xem điểm, Phúc khảo) • Cổng Giảng viên│
+└───────────────────────────────────┬────────────────────────────────────┘
+                                    │ HTTP / WebSocket (Socket.IO)
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                API GATEWAY &amp; ASYNC QUEUE (NestJS + BullMQ)              │
+│    Xác thực Google SSO • Lưu trữ 13 bảng 3NF PostgreSQL • Redis Queue  │
+└───────────────────┬───────────────────────────────┬────────────────────┘
+                    │                               │
+                    ▼                               ▼
+┌───────────────────────────────────────┐ ┌──────────────────────────────┐
+│       DOCKER SANDBOX ISOLATION        │ │    GENAI &amp; INTEGRITY HUB     │
+│  - gcc:13, openjdk:17, python:3.11    │ │  - Gemini Flash Lite 2026    │
+│  - 512MB RAM, CPU 2.0s watchdog       │ │  - AST Normalizer Engine     │
+│  - --network none, --pids-limit 64    │ │  - Winnowing Fingerprinting  │
+└───────────────────────────────────────┘ └──────────────────────────────┘
+</code></pre>
+<ul>
+<li><strong>Luồng xử lý bất đồng bộ:</strong> Sinh viên nộp bài $\to$ Gateway trả mã <code>202 Accepted</code> trong $&lt; 200$ms $\to$ Worker nhận job từ Redis $\to$ Sandbox thực thi $\to$ GenAI chấm kiến trúc $\to$ Trả kết quả Realtime qua Socket.IO.</li>
+</ul>
+<hr>
+<h2>SLIDE 4: THIẾT KẾ DOCKER SANDBOX AN TOÀN &amp; CƠ CHẾ DEFENSE-IN-DEPTH</h2>
+<ul>
+<li><strong>4 Rào chắn An ninh Vật lý:</strong><ol>
+<li><strong>Tách biệt Mạng (<code>--network none</code>):</strong> Triệt tiêu hoàn toàn nguy cơ sinh viên gửi cờ bí mật ra Internet hoặc tải mã độc về container.</li>
+<li><strong>Giới hạn Tài nguyên Cực đại:</strong> Áp trần RAM 512MB (<code>MemoryLimit</code>) và CPU 2.0s (<code>Watchdog Timer</code>).</li>
+<li><strong>Ngăn chặn Fork-bomb (<code>--pids-limit 64</code>):</strong> Đánh chặn mã nguồn độc hại sinh tiến trình con làm tê liệt máy chủ.</li>
+<li><strong>Quyền Đọc-Ghi Cô lập (<code>Read-Only Rootfs &amp; Ephemeral Bind Mount</code>):</strong> Mã nguồn chỉ được biên dịch trong thư mục tạm, tự động xóa sạch trong $\le 1.0$s.</li>
+</ol>
+</li>
+<li><strong>Cơ chế Circuit Breaker Fallback:</strong> Nếu Docker Daemon gặp sự cố bất khả kháng, hệ thống chuyển sang Safe Fallback Engine để bảo toàn SLA không làm nghẽn tiến trình thi cử.</li>
+</ul>
+<hr>
+<h2>SLIDE 5: GIẢI THUẬT AST-NORMALIZED WINNOWING &amp; BAREM ĐẠO VĂN</h2>
+<ul>
+<li><strong>Quy trình 4 bước triệt tiêu mã ngụy trang:</strong><ol>
+<li><strong>Chuẩn hóa AST:</strong> Bóc tách Abstract Syntax Tree, xóa toàn bộ comment và khoảng trắng thừa.</li>
+<li><strong>Bình thường hóa Định danh (Canonical Mapping):</strong> Chuyển toàn bộ tên biến, hàm thành <code>VAR_1, VAR_2, FUNC_1, LITERAL</code>.</li>
+<li><strong>Tạo k-gram &amp; Băm Winnowing:</strong> Sử dụng cửa sổ trượt $w=10, k=15$ lấy các giá trị băm cực tiểu làm chữ ký số fingerprint.</li>
+<li><strong>Chỉ số tương đồng Ensemble:</strong>
+$$S_{\text{comb}} = 0.65 \times \text{Containment} + 0.35 \times \text{Cosine(AST Histogram)}$$</li>
+</ol>
+</li>
+<li><strong>3 Dải phân loại học thuật (Rule BR-03):</strong><ul>
+<li><strong>$S &lt; 40%$ (CLEAN):</strong> Mã nguồn độc lập, tự động thông qua.</li>
+<li><strong>$40% \le S &lt; 70%$ (SUSPECTED):</strong> Nghi vấn; chuyển giảng viên thẩm định trực quan.</li>
+<li><strong>$S \ge 70%$ (FLAGGED):</strong> Gắn cờ gian lận, chuyển Hội đồng xử lý.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>SLIDE 6: KẾT QUẢ THỰC NGHIỆM ĐỐI SOÁT 10 CẶP MÃ NGUỒN NGỤY TRANG</h2>
+<table>
+<thead>
+<tr>
+<th align="center">Cặp thử nghiệm</th>
+<th align="left">Kiểu ngụy trang GenAI</th>
+<th align="center">Ground Truth</th>
+<th align="center">Độ tương đồng AITA</th>
+<th align="center">Trạng thái cờ</th>
+<th align="center">Đánh giá</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center"><strong>Pair 01</strong></td>
+<td align="left">Đổi tên toàn bộ biến &amp; hàm</td>
+<td align="center">Plagiarized</td>
+<td align="center"><strong>100.00%</strong></td>
+<td align="center">Gắn cờ</td>
+<td align="center"><strong>PASS (Bắt trúng)</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Pair 02</strong></td>
+<td align="left">Đảo vòng lặp <code>for</code> thành <code>while</code></td>
+<td align="center">Plagiarized</td>
+<td align="center"><strong>85.26%</strong></td>
+<td align="center">Gắn cờ</td>
+<td align="center"><strong>PASS (Bắt trúng)</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Pair 03</strong></td>
+<td align="left">Chèn Dead Code &amp; Comment rác</td>
+<td align="center">Plagiarized</td>
+<td align="center"><strong>83.49%</strong></td>
+<td align="center">Gắn cờ</td>
+<td align="center"><strong>PASS (Bắt trúng)</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Pair 04</strong></td>
+<td align="left">Tách hàm con &amp; Inlining</td>
+<td align="center">Plagiarized</td>
+<td align="center"><strong>78.99%</strong></td>
+<td align="center">Gắn cờ</td>
+<td align="center"><strong>PASS (Bắt trúng)</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Pair 05</strong></td>
+<td align="left">Đảo nhánh điều kiện <code>if-else</code></td>
+<td align="center">Plagiarized</td>
+<td align="center"><strong>100.00%</strong></td>
+<td align="center">Gắn cờ</td>
+<td align="center"><strong>PASS (Bắt trúng)</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Pair 06</strong></td>
+<td align="left">Thay thế biểu thức tương đương</td>
+<td align="center">Plagiarized</td>
+<td align="center"><strong>79.51%</strong></td>
+<td align="center">Gắn cờ</td>
+<td align="center"><strong>PASS (Bắt trúng)</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Pair 07</strong></td>
+<td align="left">Phá vỡ định dạng Indentation</td>
+<td align="center">Plagiarized</td>
+<td align="center"><strong>100.00%</strong></td>
+<td align="center">Gắn cờ</td>
+<td align="center"><strong>PASS (Bắt trúng)</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Pair 08</strong></td>
+<td align="left">ChatGPT-4o viết lại cấu trúc</td>
+<td align="center">Plagiarized</td>
+<td align="center"><strong>74.39%</strong></td>
+<td align="center">Gắn cờ</td>
+<td align="center"><strong>PASS (Bắt trúng)</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Pair 09</strong></td>
+<td align="left">Ngụy trang hỗn hợp đa tầng</td>
+<td align="center">Plagiarized</td>
+<td align="center"><strong>54.07%</strong></td>
+<td align="center">Nghi vấn</td>
+<td align="center"><strong>Chuyển GV (An toàn)</strong></td>
+</tr>
+<tr>
+<td align="center"><strong>Pair 10</strong></td>
+<td align="left"><strong>Mẫu đối chứng: MergeSort vs QuickSort</strong></td>
+<td align="center"><strong>CLEAN</strong></td>
+<td align="center"><strong>51.97%</strong></td>
+<td align="center"><strong>KHÔNG CỜ</strong></td>
+<td align="center"><strong>PASS (Không vu khống)</strong></td>
+</tr>
+</tbody></table>
+<ul>
+<li><strong>Chỉ số đo lường thực nghiệm:</strong> <strong>Độ chính xác 90.00% | Precision 100% | Recall 88.89%</strong>.</li>
+</ul>
+<hr>
+<h2>SLIDE 7: SO SÁNH THỰC NGHIỆM VÀ ĐỐI SÁNH TREE EDIT DISTANCE (TED)</h2>
+<ul>
+<li><strong>Câu hỏi nghiên cứu: Tại sao không dùng Tree Edit Distance (TED)?</strong><ul>
+<li><strong>Độ phức tạp tính toán:</strong> TED yêu cầu $\mathcal{O}(N^3)$ đến $\mathcal{O}(N^4)$, mất từ $1.5\text{s} - 4.5\text{s}$ cho mỗi cặp bài nộp.</li>
+<li><strong>Khả năng lập chỉ mục:</strong> Winnowing cho phép lưu trữ Fingerprints vào PostgreSQL B-Tree Index, tra cứu 1-nhiều cực nhanh. TED bắt buộc phải so sánh tay từng cặp (Pairwise DP) không thể đánh chỉ mục.</li>
+<li><strong>Hiệu năng thực tế AITA:</strong> Xử lý <strong>947 dòng code (2,625 tokens)</strong> chỉ mất <strong>12.0 ms</strong> (Thỏa mãn vượt bậc tiêu chuẩn SLA $&lt; 200$ ms).</li>
+</ul>
+</li>
+<li><strong>Đề xuất Kiến trúc Lai (Two-Tier Hybrid Engine):</strong><ul>
+<li>Tầng 1 (AST Winnowing): Sàng lọc nhanh $95%$ bài nộp trong 12ms.</li>
+<li>Tầng 2 (TED Refinement): Chỉ kích hoạt đối với các bài rơi vào dải Nghi vấn ($40% - 70%$).</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>SLIDE 8: ĐÁNH GIÁ CHẤT LƯỢNG MÃ NGUỒN GENAI (SOLID &amp; CLEAN CODE)</h2>
+<ul>
+<li><strong>Bảng Barem Điểm 4 Thành Phần Chuẩn Hóa:</strong>
+$$\text{Tổng Điểm} = \text{TC1 (4.0đ)} + \text{TC2 (3.0đ)} + \text{Clean Code (2.0đ)} + \text{SOLID (1.0đ)} = \mathbf{10.0đ}$$</li>
+<li><strong>Đánh giá tự động 5 nguyên lý SOLID qua Gemini Flash Lite:</strong><ul>
+<li><strong>S (Single Responsibility):</strong> Phát hiện các hàm vừa tính toán thuật toán, vừa in console, vừa ghi file.</li>
+<li><strong>O (Open/Closed):</strong> Khuyến khích mở rộng qua Generic và Kế thừa thay vì chuỗi <code>if-else</code> cứng.</li>
+<li><strong>L (Liskov Substitution):</strong> Đảm bảo lớp con thay thế được lớp cha mà không làm hỏng logic.</li>
+<li><strong>I (Interface Segregation):</strong> Khuyến khích các Interface nhỏ gọn, chuyên biệt.</li>
+<li><strong>D (Dependency Inversion):</strong> Khuyến khích phụ thuộc vào Abstraction (<code>ISorter</code>) thay vì cụ thể.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>SLIDE 9: KIỂM THỬ TẢI HỆ THỐNG &amp; ĐO ĐẠC ĐÓNG GÓP NHÓM (GIT ANALYTICS)</h2>
+<ul>
+<li><strong>Kiểm thử tải Hàng đợi BullMQ (Stress Test):</strong><ul>
+<li>Chạy script mô phỏng 100 submissions đồng thời.</li>
+<li>Thời gian phản hồi tiếp nhận bài: $p_{95} = 45$ ms (Đạt chuẩn SLA $&lt; 200$ ms).</li>
+<li>Tỷ lệ hoàn thành công việc: $100%$ không bị rơi rụng job.</li>
+</ul>
+</li>
+<li><strong>Minh bạch Đóng góp Nhóm (Git Analytics Parser thật - UC-12):</strong><ul>
+<li>Hệ thống tích hợp module bóc tách <code>git log --shortstat</code> trực tiếp từ repo.</li>
+<li>Tính toán chính xác số commit, dòng thêm/xóa của từng bạn sinh viên.</li>
+<li>Tự động gắn cờ Free-Rider nếu thành viên có tỷ lệ đóng góp $&lt; 10%$.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>SLIDE 10: TRẢI NGHIỆM NGƯỜI DÙNG &amp; TỔNG KẾT NÂNG CẤP V2.0</h2>
+<ul>
+<li><strong>Các điểm sửa đổi quan trọng vừa hoàn tất:</strong><ul>
+<li><strong>Sửa Bug 1 (Ngôn ngữ bài nộp):</strong> Sinh viên có thể chọn trực tiếp C++, C#, Java, Python từ dropdown; bộ lọc zip nhận diện chuẩn xác đuôi file và signature mã nguồn.</li>
+<li><strong>Sửa Bug 4 (Không mock ngầm):</strong> Khi mất kết nối hoặc server gặp sự cố, hệ thống hiển thị thông báo minh bạch kèm nút <em>&quot;Thử lại&quot;</em> thay vì chạy điểm giả lập.</li>
+<li><strong>Role Switcher tiện lợi:</strong> Tích hợp thanh đổi vai trò nhanh (Admin $\leftrightarrow$ Giảng viên $\leftrightarrow$ Sinh viên) trực tiếp trên thanh điều hướng, giúp buổi thuyết trình không bị ngắt quãng.</li>
+<li><strong>Phân quyền Google SSO:</strong> Chuẩn hóa các tài khoản preset demo không còn gặp lỗi 401.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>SLIDE 11: ĐÓNG GÓP KHOA HỌC &amp; BÀI BÁO IEEE RBL</h2>
+<ul>
+<li><strong>Bài báo Nghiên cứu Khoa học chuẩn IEEE (6 - 8 trang):</strong><ul>
+<li>Tiêu đề: <em>&quot;A Comparative Study of AST-Based Winnowing and Tree Edit Distance in Detecting GenAI-Obfuscated Source Code&quot;</em>.</li>
+<li>Nội dung hoàn chỉnh: Đầy đủ 8 phần từ Abstract, Formal Math Model, Bảng thực nghiệm 10 cặp, Phân tích ngưỡng $\tau = 70%$, đến Tham khảo học thuật.</li>
+<li>Sẵn sàng xuất bản và nộp lưu chiểu cho Hội đồng Nghiên cứu Khoa học FPT.</li>
+</ul>
+</li>
+</ul>
+<hr>
+<h2>SLIDE 12: TỔNG KẾT, BÀI HỌC KINH NGHIỆM &amp; PHIÊN HỎI - ĐÁP (Q&amp;A)</h2>
+<ul>
+<li><strong>Giá trị đạt được qua 10 tuần RBL:</strong><ul>
+<li>Làm chủ kiến trúc Microservices hướng sự kiện (Event-Driven Architecture) với NestJS, Redis BullMQ và Docker Engine.</li>
+<li>Ứng dụng thành công lý thuyết Cây Cú Pháp Trừu Tượng (AST) và Giải thuật Winnowing vào giải quyết vấn đề liêm chính học thuật thực tế.</li>
+<li>Xây dựng sản phẩm hoàn thiện, giao diện chuyên nghiệp, sẵn sàng triển khai thực tế.</li>
+</ul>
+</li>
+<li><strong>Nhóm 4 xin trân trọng cảm ơn Thầy/Cô trong Hội đồng!</strong></li>
+<li><em>Xin mời Hội đồng đặt câu hỏi phản biện.</em></li>
+</ul>
+
+  </div>
+</body>
+</html>
