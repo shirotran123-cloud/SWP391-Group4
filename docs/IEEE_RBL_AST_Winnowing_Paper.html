@@ -352,7 +352,7 @@
   <div class="ieee-header">
     <div class="paper-title">A Comparative Study of AST-Based Winnowing and Tree Edit Distance in Detecting GenAI-Obfuscated Source Code</div>
     <div class="course-meta">
-      Group 4 &mdash; Software Engineering Department, FPT University<br>
+      Group 4 &mdash; Software Engineering Department, FPT University Quy Nhon Campus<br>
       Course: SWP391 - Software Development Project (Research-Based Learning Track, 10 Weeks) &bull; Academic Year: 2026<br>
       IEEE Standard Format for Conference Proceedings
     </div>
@@ -361,27 +361,27 @@
       <div class="author-card">
         <div class="author-name">Đinh Thành Trung</div>
         <div class="author-role">Lead Author &amp; System Architect</div>
-        <div class="author-affil">Dept. of Software Engineering<br>FPT University, Da Nang, Vietnam</div>
+        <div class="author-affil">Dept. of Software Engineering<br>FPT University, Quy Nhon, Vietnam</div>
       </div>
       <div class="author-card">
         <div class="author-name">Trần Công Tiến</div>
         <div class="author-role">Co-Author &amp; DevOps Specialist</div>
-        <div class="author-affil">Dept. of Software Engineering<br>FPT University, Da Nang, Vietnam</div>
+        <div class="author-affil">Dept. of Software Engineering<br>FPT University, Quy Nhon, Vietnam</div>
       </div>
       <div class="author-card">
         <div class="author-name">Nguyễn Hoàng Vinh</div>
         <div class="author-role">Co-Author &amp; GenAI Specialist</div>
-        <div class="author-affil">Dept. of Software Engineering<br>FPT University, Da Nang, Vietnam</div>
+        <div class="author-affil">Dept. of Software Engineering<br>FPT University, Quy Nhon, Vietnam</div>
       </div>
       <div class="author-card">
         <div class="author-name">Văn Thái Trung</div>
         <div class="author-role">Co-Author &amp; Algorithm Specialist</div>
-        <div class="author-affil">Dept. of Software Engineering<br>FPT University, Da Nang, Vietnam</div>
+        <div class="author-affil">Dept. of Software Engineering<br>FPT University, Quy Nhon, Vietnam</div>
       </div>
       <div class="author-card">
         <div class="author-name">Trần Thanh Nguyên</div>
         <div class="author-role">Co-Author &amp; Correspondence Author</div>
-        <div class="author-affil">Dept. of Software Engineering<br>FPT University, Da Nang, Vietnam</div>
+        <div class="author-affil">Dept. of Software Engineering<br>FPT University, Quy Nhon, Vietnam</div>
       </div>
     </div>
   </div>
@@ -485,39 +485,42 @@
 <h2>III. DETECTION PIPELINE ARCHITECTURE</h2>
 <p>The AITA-Intelligent plagiarism detection pipeline operates as a modular subsystem integrated into the NestJS API Gateway and BullMQ worker queues.</p>
 <h3>A. Pipeline Stages</h3>
-<div class="pipeline-bw-container">
-  <div class="p-row">
-    <div class="p-bw-box">Source A</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box">AST Parser</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box">Normalizer</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box">Tokens A</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box">Winnowing</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box">Fingerprints A</div>
-  </div>
-  <div class="p-converge">
-    <div class="p-bracket">}</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box" style="font-weight:bold;">Ensemble Scorer (0.65 Cont + 0.35 Cos)</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box" style="font-weight:bold;">Similarity % (Verdict)</div>
-  </div>
-  <div class="p-row" style="margin-top: 4px;">
-    <div class="p-bw-box">Source B</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box">AST Parser</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box">Normalizer</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box">Tokens B</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box">Winnowing</div>
-    <div class="p-bw-arr">➔</div>
-    <div class="p-bw-box">Fingerprints B</div>
+<div class="full-width-block">
+  <div class="pipeline-bw-container" style="border: 1px solid #000; padding: 10px 14px; background: #fff; text-align: center;">
+    <div class="p-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 8.5pt;">
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px; font-weight: bold;">Source A</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px;">AST Parser</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px;">Normalizer</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px;">Tokens A</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px;">Winnowing</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px;">Fingerprints A</div>
+    </div>
+    <div class="p-converge" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 6px 0; font-size: 8.5pt;">
+      <div class="p-bracket" style="font-size: 16pt; line-height: 1;">}</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1.5px solid #000; padding: 4px 12px; font-weight: bold;">Ensemble Scorer (0.65 Cont. + 0.35 Cos.)</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1.5px solid #000; padding: 4px 12px; font-weight: bold;">Similarity % (Verdict)</div>
+    </div>
+    <div class="p-row" style="display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 8.5pt; margin-top: 4px;">
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px; font-weight: bold;">Source B</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px;">AST Parser</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px;">Normalizer</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px;">Tokens B</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px;">Winnowing</div>
+      <div class="p-bw-arr" style="font-size: 10pt;">➔</div>
+      <div class="p-bw-box" style="border: 1px solid #000; padding: 4px 8px;">Fingerprints B</div>
+    </div>
+    <div class="fig-caption" style="text-align: center; margin-top: 6pt; font-size: 8.5pt; font-style: italic;"><b>Fig. 2.</b> End-to-end AST-Normalized Winnowing &amp; Ensemble Comparison Pipeline.</div>
   </div>
 </div><h4>Stage 1: AST Normalization and Canonical Token Serialization</h4>
 <p>The AST parser traverses the concrete syntax tree, discarding comments and mapping identifiers into positional canonical forms:</p>

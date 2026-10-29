@@ -22,7 +22,7 @@
 
 ## SLIDE 1: BÌA BÁO CÁO & GIỚI THIỆU DỰ ÁN
 * **Tiêu đề:** AITA-Intelligent — Nền tảng Chấm Mã Nguồn Tự Động & Giám Sát Liêm Chính Học Thuật Ứng Dụng AST Winnowing & GenAI
-* **Đơn vị đào tạo:** Bộ môn Kỹ thuật Phần mềm (Software Engineering) — Đại học FPT
+* **Đơn vị đào tạo:** Bộ môn Kỹ thuật Phần mềm (Software Engineering) — Đại học FPT Quy Nhơn
 * **Giảng viên hướng dẫn:** ThS. Đinh Thành Trung
 * **Đội ngũ thực hiện (Group 4):**
   1. **Đinh Thành Trung** (Leader, System Architect & DevOps Lead)
