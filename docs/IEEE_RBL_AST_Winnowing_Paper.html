@@ -312,7 +312,8 @@
       font-family: 'Consolas', 'Courier New', monospace;
       font-size: 8pt;
       line-height: 1.3;
-      overflow-x: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
       margin: 6pt 0;
       break-inside: avoid;
     }
@@ -386,8 +387,6 @@
   </div>
 
   <div class="ieee-body">
-    <p>﻿# A Comparative Study of AST-Based Winnowing and Tree Edit Distance in Detecting GenAI-Obfuscated Source Code</p>
-<p><strong>Group 4 — Software Engineering Department, FPT University</strong><br><em>Course: SWP391 - Software Development Project (Research-Based Learning Track, 10 Weeks)</em><br><em>Academic Year: 2026 | IEEE Standard Format for Conference Proceedings</em></p>
 
 
 
@@ -452,7 +451,7 @@
     <div class="fig-caption"><b>Fig. 1.</b> End-to-end multi-tier autograding and integrity architecture in AITA-Intelligent.</div>
   </div>
 </div><h3>B. Problem Statement</h3>
-<p>Character-level string matching (e.g., Levenshtein distance, Diff3) and unnormalized <span class="math-inline">n</span>-gram fingerprinting degrade sharply under simple identifier substitution or whitespace adjustments. To resist surface-level disguise, researchers introduced Abstract Syntax Tree (AST) representations. However, full tree comparisons—most notably Tree Edit Distance (TED)—exhibit cubic or quartic time complexity (<span class="math-inline"><i>O</i>(|T_1| &middot; |T_2| &middot; deg(T_1) &middot; deg(T_2)</span>), rendering them impractical for synchronous institutional queues handling hundreds of concurrent submissions.</p>
+<p>Character-level string matching (e.g., Levenshtein distance, Diff3) and unnormalized <span class="math-inline">n</span>-gram fingerprinting degrade sharply under simple identifier substitution or whitespace adjustments. To resist surface-level disguise, researchers introduced Abstract Syntax Tree (AST) representations. However, full tree comparisons—most notably Tree Edit Distance (TED)—exhibit cubic or quartic time complexity (<span class="math-inline"><i>O</i>(|<i>T</i><sub>1</sub>| &middot; |<i>T</i><sub>2</sub>| &middot; deg(<i>T</i><sub>1</sub>) &middot; deg(<i>T</i><sub>2</sub>)</span>), rendering them impractical for synchronous institutional queues handling hundreds of concurrent submissions.</p>
 <p>Conversely, the Winnowing algorithm (Schleimer et al., SIGMOD 2003) offers guaranteed bounded match detection with linear execution time <span class="math-inline"><i>O</i>(N)</span> and sub-linear storage requirements. The core research question therefore arises:</p>
 <blockquote>
 <p><strong>Research Question (RQ):</strong> <em>Can an AST-normalized Winnowing pipeline effectively detect sophisticated GenAI-obfuscated code under production latency constraints (<span class="math-inline">&le; 200</span> ms), and where does its detection capability break down compared to theoretical Tree Edit Distance?</em></p>
@@ -469,8 +468,8 @@
 
 <h2>II. RELATED WORK &amp; THEORETICAL FOUNDATION</h2>
 <h3>A. The Winnowing Algorithm</h3>
-<p>Document fingerprinting by hashing all <span class="math-inline">k</span>-grams yields an impractical storage footprint and sensitivity to minor insertions. Schleimer, Wilkerson, and Aiken (2003) introduced <strong>Winnowing</strong>, an algorithm guaranteeing that in any text window of length <span class="math-inline">w</span>, at least one fingerprint is selected. Given a sequence of hashes <span class="math-inline">h_1, h_2, ..., h_n</span>, a sliding window of size <span class="math-inline">w</span> selects the minimum hash value:</p>
-<div class="math-block">p_i = arg min_{j &isin; [i, i + w - 1]} h_j</div><p>To maintain determinism when multiple positions share the minimum value, the rightmost minimum is preserved. The algorithm guarantees that any match of length <span class="math-inline">L &ge; w + k - 1</span> characters is guaranteed to be detected, while matches shorter than <span class="math-inline">k</span> characters are disregarded. In standard AITA production, default operational parameters are set to <span class="math-inline">k=5, w=3</span> for broad sensitivity; however, for structured structural plagiarism detection, we demonstrate that <span class="math-inline">k=15, w=10</span> filters local syntactic noise while capturing overarching algorithm structure.</p>
+<p>Document fingerprinting by hashing all <span class="math-inline">k</span>-grams yields an impractical storage footprint and sensitivity to minor insertions. Schleimer, Wilkerson, and Aiken (2003) introduced <strong>Winnowing</strong>, an algorithm guaranteeing that in any text window of length <span class="math-inline">w</span>, at least one fingerprint is selected. Given a sequence of hashes <span class="math-inline"><i>h</i><sub>1</sub>, <i>h</i><sub>2</sub>, ..., <i>h</i><sub><i>n</i></sub></span>, a sliding window of size <span class="math-inline">w</span> selects the minimum hash value:</p>
+<div class="math-block"><i>p</i><sub><i>i</i></sub> = arg min<sub>j &isin; [i, i + w - 1]</sub> <i>h</i><sub><i>j</i></sub></div><p>To maintain determinism when multiple positions share the minimum value, the rightmost minimum is preserved. The algorithm guarantees that any match of length <span class="math-inline">L &ge; w + k - 1</span> characters is guaranteed to be detected, while matches shorter than <span class="math-inline">k</span> characters are disregarded. In standard AITA production, default operational parameters are set to <span class="math-inline">k=5, w=3</span> for broad sensitivity; however, for structured structural plagiarism detection, we demonstrate that <span class="math-inline">k=15, w=10</span> filters local syntactic noise while capturing overarching algorithm structure.</p>
 <h3>B. AST Normalization</h3>
 <p>An Abstract Syntax Tree is a finite, labeled, directed tree whose interior nodes represent programming operators and whose leaves represent operands (identifiers, constants). Standard tokenizers retain surface syntax. In contrast, our AST normalizer executes four reduction steps:</p>
 <ol>
@@ -480,8 +479,8 @@
 <li><strong>Keyword and Control Flow Preservation:</strong> Retaining semantic control tokens (<code>for</code>, <code>while</code>, <code>if</code>, <code>return</code>, <code>class</code>, <code>try</code>).</li>
 </ol>
 <h3>C. Tree Edit Distance (TED)</h3>
-<p>Tree Edit Distance, formulated by Zhang and Shasha (1989), defines the distance between two rooted labeled trees <span class="math-inline">T_1</span> and <span class="math-inline">T_2</span> as the minimum cost sequence of node edit operations (insert, delete, relabel) that transforms <span class="math-inline">T_1</span> into <span class="math-inline">T_2</span>:</p>
-<div class="math-block">TED(T_1, T_2) = min_{S = &lang; op_1, ..., op_m &rang;} &sum;_{i=1}^m cost(op_i)</div><p>TED natively recognizes sub-tree movements and function extraction because moving a sub-tree corresponds to a deletion and insertion without disrupting adjacent sub-tree structures. However, computing TED between two ASTs of size <span class="math-inline">|V_1|</span> and <span class="math-inline">|V_2|</span> incurs a worst-case computational complexity of <span class="math-inline"><i>O</i>(|V_1| &middot; |V_2| &middot; depth(T_1) &middot; depth(T_2))</span>, which scales to several seconds for medium-sized programs (<span class="math-inline">N &gt; 300</span> AST nodes).</p>
+<p>Tree Edit Distance, formulated by Zhang and Shasha (1989), defines the distance between two rooted labeled trees <span class="math-inline"><i>T</i><sub>1</sub></span> and <span class="math-inline"><i>T</i><sub>2</sub></span> as the minimum cost sequence of node edit operations (insert, delete, relabel) that transforms <span class="math-inline"><i>T</i><sub>1</sub></span> into <span class="math-inline"><i>T</i><sub>2</sub></span>:</p>
+<div class="math-block">TED(<i>T</i><sub>1</sub>, <i>T</i><sub>2</sub>) = min<sub>S = &lang; <i>op</i><sub>1</sub>, ..., <i>op</i><sub><i>m</i></sub> &rang;</sub> &sum;<sub>i=1</sub>^m cost(op_i)</div><p>TED natively recognizes sub-tree movements and function extraction because moving a sub-tree corresponds to a deletion and insertion without disrupting adjacent sub-tree structures. However, computing TED between two ASTs of size <span class="math-inline">|<i>V</i><sub>1</sub>|</span> and <span class="math-inline">|<i>V</i><sub>2</sub>|</span> incurs a worst-case computational complexity of <span class="math-inline"><i>O</i>(|<i>V</i><sub>1</sub>| &middot; |<i>V</i><sub>2</sub>| &middot; depth(<i>T</i><sub>1</sub>) &middot; depth(<i>T</i><sub>2</sub>))</span>, which scales to several seconds for medium-sized programs (<span class="math-inline">N &gt; 300</span> AST nodes).</p>
 
 <h2>III. DETECTION PIPELINE ARCHITECTURE</h2>
 <p>The AITA-Intelligent plagiarism detection pipeline operates as a modular subsystem integrated into the NestJS API Gateway and BullMQ worker queues.</p>
@@ -522,13 +521,13 @@
   </div>
 </div><h4>Stage 1: AST Normalization and Canonical Token Serialization</h4>
 <p>The AST parser traverses the concrete syntax tree, discarding comments and mapping identifiers into positional canonical forms:</p>
-<div class="math-block">T_{norm} = &lang; t_1, t_2, ..., t_M &rang;,  &emsp;  t_i &isin; &Sigma;<sub>canonical</sub></div><p>Each token <span class="math-inline">t_i</span> retains its source file coordinate span <span class="math-inline">(L_{start}, C_{start}, L_{end}, C_{end})</span> to enable visual highlight mapping in the Monaco Diff Editor.</p>
+<div class="math-block">T<sub>norm</sub> = &lang; t_1, t_2, ..., t_M &rang;,  &emsp;  <i>t</i><sub><i>i</i></sub> &isin; &Sigma;<sub>canonical</sub></div><p>Each token <span class="math-inline"><i>t</i><sub><i>i</i></sub></span> retains its source file coordinate span <span class="math-inline">(L<sub>start</sub>, C<sub>start</sub>, L<sub>end</sub>, C<sub>end</sub>)</span> to enable visual highlight mapping in the Monaco Diff Editor.</p>
 <h4>Stage 2: K-Gram Construction and Rolling Hash</h4>
 <p>Sequences of <span class="math-inline">k</span> consecutive normalized tokens form <span class="math-inline">k</span>-grams:</p>
-<div class="math-block">g_i = &lang; t_i, t_{i+1}, ..., t_{i+k-1} &rang;</div><p>Each <span class="math-inline">k</span>-gram is hashed using a 64-bit non-cryptographic Murmur3/FNV-1a hash to produce an integer value <span class="math-inline">h(g_i) &isin; [0, 2^{64}-1]</span>.</p>
+<div class="math-block"><i>g</i><sub><i>i</i></sub> = &lang; <i>t</i><sub><i>i</i></sub>, t<sub>i+1</sub>, ..., t<sub>i+k-1</sub> &rang;</div><p>Each <span class="math-inline">k</span>-gram is hashed using a 64-bit non-cryptographic Murmur3/FNV-1a hash to produce an integer value <span class="math-inline">h(<i>g</i><sub><i>i</i></sub>) &isin; [0, 2<sup>64</sup>-1]</span>.</p>
 <h4>Stage 3: Sliding Window Fingerprint Selection</h4>
 <p>A sliding window of width <span class="math-inline">w</span> selects the minimum hash value. The resulting set of unique fingerprint hashes forms the document signature:</p>
-<div class="math-block">&Fscr;(D) = \{ (h, span) | h  is selected by Winnowing over  D \}</div><h4>Stage 4: Ensemble Similarity Metric</h4>
+<div class="math-block">&Fscr;(D) = { (h, span) | h  is selected by Winnowing over  D }</div><h4>Stage 4: Ensemble Similarity Metric</h4>
 <p>To mitigate false positives arising from identical length disparities, AITA computes an ensemble score combining <strong>Containment</strong> and <strong>AST Token Histogram Cosine Similarity</strong>:</p>
 <ol>
 <li><strong>Jaccard Containment:</strong></li>
@@ -536,10 +535,10 @@
 <div class="math-block">C(A, B) = <span class="fraction"><span class="top">|&Fscr;(A) &cap; &Fscr;(B)|</span><span class="bottom">min(|&Fscr;(A)|, |&Fscr;(B)|)</span></span> &times; 100%</div><ol start="2">
 <li><strong>AST Token Vector Cosine Similarity:</strong></li>
 </ol>
-<div class="math-block">\cos(<b>v</b>_A, <b>v</b>_B) = <span class="fraction"><span class="top"><b>v</b>_A &middot; <b>v</b>_B</span><span class="bottom">\|<b>v</b>_A\| \|<b>v</b>_B\|</span></span> &times; 100%</div><ol start="3">
-<li><strong>Composite Similarity Rate (<span class="math-inline">S_{comb}</span>):</strong></li>
+<div class="math-block">cos(<b>v</b>_A, <b>v</b>_B) = <span class="fraction"><span class="top"><b>v</b>_A &middot; <b>v</b>_B</span><span class="bottom">&Vert;<b>v</b>_A&Vert; &Vert;<b>v</b>_B&Vert;</span></span> &times; 100%</div><ol start="3">
+<li><strong>Composite Similarity Rate (<span class="math-inline">S<sub>comb</sub></span>):</strong></li>
 </ol>
-<div class="math-block">S_{comb} = 0.65 &middot; C(A, B) + 0.35 &middot; \cos(<b>v</b>_A, <b>v</b>_B)</div><p>If containment <span class="math-inline">C(A, B) &ge; 99.0%</span>, the system triggers a short-circuit verdict assigning <span class="math-inline">S_{comb} = 100.0%</span>, recognizing complete code transposition.</p>
+<div class="math-block">S<sub>comb</sub> = 0.65 &middot; C(A, B) + 0.35 &middot; cos(<b>v</b>_A, <b>v</b>_B)</div><p>If containment <span class="math-inline">C(A, B) &ge; 99.0%</span>, the system triggers a short-circuit verdict assigning <span class="math-inline">S<sub>comb</sub> = 100.0%</span>, recognizing complete code transposition.</p>
 <h3>B. Institutional Classification Bands</h3>
 <p>In accordance with Rule BR-03 and IEEE autograding guidelines, submissions are triaged into three action bands:</p>
 <ul>
@@ -567,14 +566,14 @@
 <h2>V. EMPIRICAL RESULTS</h2>
 <h3>A. Detection Rates and Verdicts</h3>
 <p>All experiments were executed using the deterministic benchmark runner (<code>run-ast-benchmark.ts</code>) configured with <span class="math-inline">k=15, w=10</span>, and threshold <span class="math-inline">&tau; = 70.0%</span>.</p>
-<div class="full-width-block"><div class="table-caption">TABLE I: EMPIRICAL BENCHMARK RESULTS ACROSS 10 ADVERSARIAL PAIRS (<i>k</i>=15, <i>w</i>=10, <i>&tau;</i>=70.0%)</div><table class="ieee-table"> EMPIRICAL BENCHMARK RESULTS ACROSS 10 ADVERSARIAL PAIRS (<span class="math-inline">k=15, w=10, &tau;=70.0%</span>)</h4>
+<div class="full-width-block"><div class="table-caption">TABLE I: EMPIRICAL BENCHMARK RESULTS ACROSS 10 ADVERSARIAL PAIRS (<i>k</i>=15, <i>w</i>=10, <i>&tau;</i>=70.0%)</div><table class="ieee-table">
 <table>
 <thead>
 <tr>
 <th align="center">Pair ID</th>
 <th align="left">Obfuscation Archetype</th>
 <th align="center">Ground Truth</th>
-<th align="center">Measured Similarity (<span class="math-inline">S_{comb}</span>)</th>
+<th align="center">Measured Similarity (<span class="math-inline">S<sub>comb</sub></span>)</th>
 <th align="center">Containment</th>
 <th align="center">Flagged (<span class="math-inline">&ge; 70%</span>)</th>
 <th align="center">Empirical Verdict</th>
@@ -679,7 +678,7 @@
 <li><strong>True Negatives (<span class="math-inline">TN</span>):</strong> 1 (Pair 10)</li>
 <li><strong>False Negatives (<span class="math-inline">FN</span>):</strong> 1 (Pair 09)</li>
 </ul>
-<div class="math-block">Accuracy = <span class="fraction"><span class="top">TP + TN</span><span class="bottom">TP + TN + FP + FN</span></span> = <span class="fraction"><span class="top">8 + 1</span><span class="bottom">10</span></span> = <b>90.00%</b></div><div class="math-block">Precision = <span class="fraction"><span class="top">TP</span><span class="bottom">TP + FP</span></span> = <span class="fraction"><span class="top">8</span><span class="bottom">8 + 0</span></span> = <b>100.00%</b></div><div class="math-block">Recall = <span class="fraction"><span class="top">TP</span><span class="bottom">TP + FN</span></span> = <span class="fraction"><span class="top">8</span><span class="bottom">8 + 1</span></span> = <b>88.89%</b></div><div class="math-block">F_1-Score = 2 &times; <span class="fraction"><span class="top">Precision &middot; Recall</span><span class="bottom">Precision + Recall</span></span> = 2 &times; <span class="fraction"><span class="top">1.0 &middot; 0.8889</span><span class="bottom">1.0 + 0.8889</span></span> = <b>94.12%</b></div><h3>C. Latency and Scalability Benchmark</h3>
+<div class="math-block">Accuracy = <span class="fraction"><span class="top">TP + TN</span><span class="bottom">TP + TN + FP + FN</span></span> = <span class="fraction"><span class="top">8 + 1</span><span class="bottom">10</span></span> = <b>90.00%</b></div><div class="math-block">Precision = <span class="fraction"><span class="top">TP</span><span class="bottom">TP + FP</span></span> = <span class="fraction"><span class="top">8</span><span class="bottom">8 + 0</span></span> = <b>100.00%</b></div><div class="math-block">Recall = <span class="fraction"><span class="top">TP</span><span class="bottom">TP + FN</span></span> = <span class="fraction"><span class="top">8</span><span class="bottom">8 + 1</span></span> = <b>88.89%</b></div><div class="math-block"><i>F</i><sub>1</sub>-Score = 2 &times; <span class="fraction"><span class="top">Precision &middot; Recall</span><span class="bottom">Precision + Recall</span></span> = 2 &times; <span class="fraction"><span class="top">1.0 &middot; 0.8889</span><span class="bottom">1.0 + 0.8889</span></span> = <b>94.12%</b></div><h3>C. Latency and Scalability Benchmark</h3>
 <p>To validate compliance with the autograder&#39;s latency Service Level Agreement (<span class="math-inline">SLA &le; 200</span> ms), we subjected the pipeline to a stress test on a synthesized 947-line Python program comprising 2,625 raw tokens:</p>
 <ul>
 <li><strong>Tokens Extracted &amp; Normalized:</strong> 2,625 tokens</li>
@@ -691,7 +690,7 @@
 
 <h2>VI. COMPARATIVE ANALYSIS: AST WINNOWING VS. TREE EDIT DISTANCE</h2>
 <p>To provide a rigorous theoretical perspective for institutional decision-makers, Table II contrasts our empirical AST Winnowing implementation against classical Tree Edit Distance (TED).</p>
-<div class="full-width-block"><div class="table-caption">TABLE II: COMPARATIVE MATRIX: AST WINNOWING VS. TREE EDIT DISTANCE (TED)</div><table class="ieee-table"> COMPARATIVE MATRIX: AST WINNOWING VS. TREE EDIT DISTANCE (TED)</h4>
+<div class="full-width-block"><div class="table-caption">TABLE II: COMPARATIVE MATRIX: AST WINNOWING VS. TREE EDIT DISTANCE (TED)</div><table class="ieee-table">
 <table>
 <thead>
 <tr>
@@ -718,7 +717,7 @@
 <tr>
 <td align="left"><strong>Storage Model</strong></td>
 <td align="left">Sub-linear 64-bit hash fingerprints</td>
-<td align="left">Full AST serialization (<span class="math-inline">\approx 10&times;</span> source size)</td>
+<td align="left">Full AST serialization (<span class="math-inline">&asymp; 10&times;</span> source size)</td>
 </tr>
 <tr>
 <td align="left"><strong>Indexability</strong></td>
