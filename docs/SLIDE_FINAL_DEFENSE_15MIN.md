@@ -29,7 +29,7 @@
   2. **Trần Công Tiến** (Backend Core & Sandbox Security Engineer)
   3. **Nguyễn Hoàng Vinh** (GenAI Specialist & Database Architect)
   4. **Văn Thái Trung** (Algorithm Specialist & Plagiarism Engine Lead)
-  5. **Trần Thành Nguyên** (Frontend Lead & Correspondence Author - Bài báo IEEE)
+  5. **Trần Thanh Nguyên** (Frontend Lead & Correspondence Author - Bài báo IEEE)
 
 ---
 

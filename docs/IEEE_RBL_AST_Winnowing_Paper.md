@@ -11,7 +11,7 @@
 * **Trần Công Tiến** (Co-Author & DevOps Specialist)
 * **Nguyễn Hoàng Vinh** (Co-Author & GenAI Specialist)
 * **Văn Thái Trung** (Co-Author & Algorithm Specialist)
-* **Trần Thành Nguyên** (Co-Author, Frontend Lead & Correspondence Author)
+* **Trần Thanh Nguyên** (Co-Author, Frontend Lead & Correspondence Author)
 
 ---
 
