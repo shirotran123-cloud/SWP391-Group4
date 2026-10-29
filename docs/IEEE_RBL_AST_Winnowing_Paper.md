@@ -7,11 +7,11 @@
 ---
 
 ### Author Information
-* **Đinh Thành Trung** (Lead Author & System Architect) — `trungdtse170000@fpt.edu.vn`
-* **Trần Công Tiến** (Co-Author & DevOps Specialist) — `tientcse170999@fpt.edu.vn`
-* **Nguyễn Hoàng Vinh** (Co-Author & GenAI Specialist) — `vinhnhse170456@fpt.edu.vn`
-* **Văn Thái Trung** (Co-Author & Algorithm Specialist) — `trungvtse170789@fpt.edu.vn`
-* **Linh Campochia** (Co-Author, Frontend Lead & Correspondence Author) — `linhcampochia@gmail.com`
+* **Đinh Thành Trung** (Lead Author & System Architect)
+* **Trần Công Tiến** (Co-Author & DevOps Specialist)
+* **Nguyễn Hoàng Vinh** (Co-Author & GenAI Specialist)
+* **Văn Thái Trung** (Co-Author & Algorithm Specialist)
+* **Trần Thành Nguyên** (Co-Author, Frontend Lead & Correspondence Author)
 
 ---
 
