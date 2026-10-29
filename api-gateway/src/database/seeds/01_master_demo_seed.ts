@@ -1,4 +1,6 @@
 import { Knex } from 'knex';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export async function seed(knex: Knex): Promise<void> {
   console.log('🌱 Bắt đầu nạp dữ liệu mẫu quy mô lớn (Seed Data) cho AITA Platform...');
@@ -32,9 +34,37 @@ export async function seed(knex: Knex): Promise<void> {
   // 50 Sinh viên với tên tiếng Việt thực tế (bảo toàn các tài khoản demo đã xác minh)
   const specialStudents: Record<string, { email: string; fullName: string }> = {
     SE170001: { email: 'phaithayj@gmail.com', fullName: 'Nguyễn Hoàng Vinh' },
-    SE170002: { email: 'linhcampochia@gmail.com', fullName: 'Linh Campochia' },
-    SE170003: { email: 'mochibunnyyy123@gmail.com', fullName: 'Viktor Wilson' },
+    SE170002: { email: 'linh.se170002@fpt.edu.vn', fullName: 'Linh Campochia' },
+    SE170003: { email: 'wilson.se170003@fpt.edu.vn', fullName: 'Viktor Wilson' },
   };
+
+  // Tài khoản sinh viên thực nghiệm nộp bài trực tiếp (Google SSO / Direct Email)
+  const explicitTestUsers = [
+    {
+      userId: 'linhcampochia@gmail.com',
+      roleId: 'STUDENT',
+      role: 'STUDENT',
+      studentCode: 'QE200033',
+      email: 'linhcampochia@gmail.com',
+      fullName: 'Linh Campochia',
+    },
+    {
+      userId: 'mochibunnyyy123@gmail.com',
+      roleId: 'STUDENT',
+      role: 'STUDENT',
+      studentCode: 'QE200000',
+      email: 'mochibunnyyy123@gmail.com',
+      fullName: 'Viktor Wilson',
+    },
+    {
+      userId: 'QE200001',
+      roleId: 'STUDENT',
+      role: 'STUDENT',
+      studentCode: 'QE200001',
+      email: 'shirotran123@gmail.com',
+      fullName: 'ABC',
+    },
+  ];
 
   const firstNames = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương'];
   const middleNames = ['Văn', 'Thị', 'Đức', 'Thành', 'Hoàng', 'Minh', 'Thanh', 'Quang', 'Ngọc', 'Hải', 'Tuấn', 'Quốc', 'Anh'];
@@ -61,7 +91,7 @@ export async function seed(knex: Knex): Promise<void> {
     });
   }
 
-  const allUsers = [...staffUsers, ...studentUsers].map((u) => ({
+  const allUsers = [...staffUsers, ...explicitTestUsers, ...studentUsers].map((u) => ({
     user_id: u.userId,
     role_id: u.roleId,
     email: u.email,
@@ -92,21 +122,31 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   // ==========================================================================
-  // 3. CLASSES (5 Lớp Học Phần)
+  // 3. CLASSES (6 Lớp Học Phần)
   // ==========================================================================
   const classesData = [
+    { class_id: 'CRS-TEST123456', lecturer_id: 'GV001', class_code: 'TEST123456', class_name: 'Test123456', semester: 'Học kỳ Thu 2026', description: 'Test123456' },
     { class_id: 'CRS-SWP391', lecturer_id: 'GV001', class_code: 'SE1701-SWP391', class_name: 'Application Development Project (SWP391)', semester: 'Fall 2026', description: 'Dự án Phát triển phần mềm thực chiến Scrum' },
     { class_id: 'CRS-PRO192', lecturer_id: 'GV001', class_code: 'SE1702-PRO192', class_name: 'Object-Oriented Programming (PRO192)', semester: 'Fall 2026', description: 'Lập trình hướng đối tượng với Java Core' },
     { class_id: 'CRS-PRN211', lecturer_id: 'GV002', class_code: 'SE1703-PRN211', class_name: 'Basic Cross-Platform .NET (PRN211)', semester: 'Fall 2026', description: 'Lập trình ứng dụng đa nền tảng với .NET Core' },
     { class_id: 'CRS-CSD201', lecturer_id: 'GV003', class_code: 'SE1704-CSD201', class_name: 'Data Structures and Algorithms (CSD201)', semester: 'Fall 2026', description: 'Cấu trúc dữ liệu và giải thuật nâng cao' },
     { class_id: 'CRS-MAS291', lecturer_id: 'GV004', class_code: 'SE1705-MAS291', class_name: 'Statistics & Probability for CS (MAS291)', semester: 'Fall 2026', description: 'Xác suất thống kê ứng dụng cho Kỹ sư phần mềm' },
   ];
-  await knex('classes').insert(classesData).onConflict('class_id').ignore();
+  await knex('classes').insert(classesData).onConflict('class_id').merge();
 
   // ==========================================================================
-  // 4. CLASS_MEMBERS (~130 lượt ghi danh sinh viên)
+  // 4. CLASS_MEMBERS (~135 lượt ghi danh sinh viên)
   // ==========================================================================
   const enrollments: any[] = [];
+  // Ghi danh thành viên vào lớp thực nghiệm TEST123456
+  enrollments.push(
+    { class_id: 'CRS-TEST123456', user_id: 'linhcampochia@gmail.com', status: 'ACTIVE' },
+    { class_id: 'CRS-TEST123456', user_id: 'mochibunnyyy123@gmail.com', status: 'ACTIVE' },
+    { class_id: 'CRS-TEST123456', user_id: 'QE200001', status: 'ACTIVE' },
+    { class_id: 'CRS-TEST123456', user_id: 'SE170002', status: 'ACTIVE' },
+    { class_id: 'CRS-TEST123456', user_id: 'SE170003', status: 'ACTIVE' },
+  );
+
   studentUsers.forEach((stu, idx) => {
     // 30 sinh viên đầu vào SWP391
     if (idx < 30) enrollments.push({ class_id: 'CRS-SWP391', user_id: stu.userId, status: 'ACTIVE' });
@@ -125,13 +165,87 @@ export async function seed(knex: Knex): Promise<void> {
   }
 
   // ==========================================================================
-  // 5. ASSIGNMENTS (8 Đề bài thực hành)
+  // 5. ASSIGNMENTS (13 Đề bài thực hành)
   // ==========================================================================
   const now = new Date();
   const futureDue = new Date(now.getTime() + 14 * 86400 * 1000);
   const pastDue = new Date(now.getTime() - 2 * 86400 * 1000);
 
-  const assignmentsData = [
+  const testClassAssignments = [
+    // 5 bài tập thuộc lớp thực nghiệm TEST123456
+    {
+      assignment_id: 'ASM-219423',
+      class_id: 'CRS-TEST123456',
+      course_id: 'CRS-TEST123456',
+      title: 'Thuật Toán Dãy Số Fibonacci & Tối Ưu Hóa Quy Hoạch Động (TEST123456)',
+      description: 'Cài đặt thuật toán tính số Fibonacci thứ N với độ phức tạp tối ưu O(N) và bộ nhớ O(1), tuân thủ Clean Code & SOLID.',
+      allowed_languages: JSON.stringify(['java', 'python', 'cpp']),
+      max_score: 10.0,
+      due_date: futureDue,
+      deadline: futureDue,
+      time_limit_ms: 2000,
+      memory_limit_mb: 512,
+      testcases_count: 3,
+    },
+    {
+      assignment_id: 'ASM-835029',
+      class_id: 'CRS-TEST123456',
+      course_id: 'CRS-TEST123456',
+      title: 'Bài Tập Lập Trình: Kiểm tra số nguyên tố tối ưu (TEST123456) - 1',
+      description: 'Kiểm tra số nguyên tố tối ưu O(sqrt(N))',
+      allowed_languages: JSON.stringify(['java']),
+      max_score: 10.0,
+      due_date: futureDue,
+      deadline: futureDue,
+      time_limit_ms: 2000,
+      memory_limit_mb: 512,
+      testcases_count: 3,
+    },
+    {
+      assignment_id: 'ASM-766589',
+      class_id: 'CRS-TEST123456',
+      course_id: 'CRS-TEST123456',
+      title: 'Bài Tập Lập Trình: Kiểm tra số nguyên tố tối ưu (TEST123456) - 2',
+      description: 'Kiểm tra số nguyên tố tối ưu O(sqrt(N))',
+      allowed_languages: JSON.stringify(['java']),
+      max_score: 10.0,
+      due_date: futureDue,
+      deadline: futureDue,
+      time_limit_ms: 2000,
+      memory_limit_mb: 512,
+      testcases_count: 3,
+    },
+    {
+      assignment_id: 'ASM-723745',
+      class_id: 'CRS-TEST123456',
+      course_id: 'CRS-TEST123456',
+      title: 'Bài Tập Lập Trình: Kiểm tra số nguyên tố tối ưu (TEST123456) - 3',
+      description: 'Kiểm tra số nguyên tố tối ưu O(sqrt(N))',
+      allowed_languages: JSON.stringify(['java']),
+      max_score: 10.0,
+      due_date: futureDue,
+      deadline: futureDue,
+      time_limit_ms: 2000,
+      memory_limit_mb: 512,
+      testcases_count: 3,
+    },
+    {
+      assignment_id: 'ASM-655945',
+      class_id: 'CRS-TEST123456',
+      course_id: 'CRS-TEST123456',
+      title: 'Bài Tập Lập Trình: Kiểm tra số nguyên tố tối ưu (TEST123456) - 4',
+      description: 'Kiểm tra số nguyên tố tối ưu O(sqrt(N))',
+      allowed_languages: JSON.stringify(['java']),
+      max_score: 10.0,
+      due_date: futureDue,
+      deadline: futureDue,
+      time_limit_ms: 2000,
+      memory_limit_mb: 512,
+      testcases_count: 3,
+    },
+  ];
+
+  const standardAssignmentsData = [
     {
       assignment_id: 'TASK-SWP391-SPRINT2',
       class_id: 'CRS-SWP391',
@@ -246,6 +360,8 @@ export async function seed(knex: Knex): Promise<void> {
     },
   ];
 
+  const assignmentsData = [...testClassAssignments, ...standardAssignmentsData];
+
   await knex('assignments').insert(assignmentsData).onConflict('assignment_id').ignore();
 
   // ==========================================================================
@@ -286,6 +402,37 @@ export async function seed(knex: Knex): Promise<void> {
     }
   });
 
+  // Đảm bảo các testcases cụ thể cho ASM-219423 khớp chính xác với kết quả chi tiết
+  testCasesData.push(
+    {
+      test_case_id: 'f80d6e90-d4b9-4e10-abaf-484e7caeee9d',
+      assignment_id: 'ASM-219423',
+      input_data: '1',
+      expected_output: '1',
+      is_hidden: false,
+      weight: 2.30,
+      time_limit_ms: 2000,
+    },
+    {
+      test_case_id: '82a22505-371b-46d3-9701-dd4c7896536a',
+      assignment_id: 'ASM-219423',
+      input_data: '2',
+      expected_output: '1',
+      is_hidden: false,
+      weight: 2.30,
+      time_limit_ms: 2000,
+    },
+    {
+      test_case_id: 'af7a9675-3715-4e8a-b362-346302546b29',
+      assignment_id: 'ASM-219423',
+      input_data: '5',
+      expected_output: '5',
+      is_hidden: false,
+      weight: 2.40,
+      time_limit_ms: 2000,
+    },
+  );
+
   await knex('test_cases').insert(testCasesData).onConflict('test_case_id').ignore();
 
   // ==========================================================================
@@ -303,11 +450,11 @@ export async function seed(knex: Knex): Promise<void> {
     { line: 92, rule: 'Duplicate Logic', description: 'Đoạn mã đảo vị trí mảng bị lặp lại ở 2 nơi.' },
   ];
 
-  // Sinh 80 bài nộp
+  // Sinh 80 bài nộp cho các lớp học phần tiêu chuẩn
   for (let i = 0; i < 80; i++) {
     const subId = `SUB-DEMO-${(1001 + i).toString()}`;
     const stu = studentUsers[i % studentUsers.length];
-    const assign = assignmentsData[i % assignmentsData.length];
+    const assign = standardAssignmentsData[i % standardAssignmentsData.length];
     const lang = languages[i % languages.length];
 
     // Tạo điểm ngẫu nhiên thực tế (từ 4.5 đến 10.0)
@@ -390,14 +537,309 @@ export async function seed(knex: Knex): Promise<void> {
     }
   }
 
+  // ==========================================================================
+  // Thêm 2 bài nộp thực nghiệm thực tế cho lớp TEST123456 (Linh Campochia & Viktor Wilson)
+  // ==========================================================================
+  const subLinhSource = `"""
+Fibonacci Calculation Module - Variant with ~70-76% AST Similarity
+Status: FLAGGED_HIGH (Flagged under UC-11 / BR-03 for high similarity >= 70%)
+"""
+import sys
+
+class FibonacciCalculator:
+    @staticmethod
+    def calculate(n: int) -> int:
+        if n <= 0:
+            raise ValueError("Index N must be a positive integer (N >= 1)")
+        if n == 1 or n == 2:
+            return 1
+
+        prev_val = 1
+        curr_val = 1
+
+        step = 3
+        while step <= n:
+            next_val = prev_val + curr_val
+            prev_val = curr_val
+            curr_val = next_val
+            step += 1
+
+        return curr_val
+
+def main():
+    try:
+        raw_input = sys.stdin.read().split()
+        if not raw_input:
+            return
+        n = int(raw_input[0])
+        result = FibonacciCalculator.calculate(n)
+        print(result)
+    except Exception as e:
+        sys.stderr.write(f"Error: {e}\\n")
+
+if __name__ == '__main__':
+    main()
+`;
+
+  const subViktorSource = `"""
+Fibonacci Calculation Module - Standard Reference Implementation
+Complies with Clean Code & SOLID (Single Responsibility Principle)
+Time Complexity: O(N)
+Space Complexity: O(1)
+"""
+import sys
+
+class FibonacciCalculator:
+    """
+    Service responsible solely for calculating Fibonacci numbers.
+    Adheres strictly to the Single Responsibility Principle (SRP).
+    """
+    @staticmethod
+    def calculate(n: int) -> int:
+        if n <= 0:
+            raise ValueError("Index N must be a positive integer (N >= 1)")
+        if n == 1 or n == 2:
+            return 1
+
+        prev_val = 1
+        curr_val = 1
+
+        for _ in range(3, n + 1):
+            next_val = prev_val + curr_val
+            prev_val = curr_val
+            curr_val = next_val
+
+        return curr_val
+
+def main():
+    try:
+        raw_input = sys.stdin.read().strip()
+        if not raw_input:
+            return
+        n = int(raw_input)
+        result = FibonacciCalculator.calculate(n)
+        print(result)
+    except Exception as e:
+        sys.stderr.write(f"Error: {e}\\n")
+
+if __name__ == '__main__':
+    main()
+`;
+
+  const subLinhDetails = {
+    score: 9.5,
+    status: 'COMPLETED',
+    aiRating: {
+      codeSmells: [
+        { line: 8, rule: 'Dependency Inversion Principle', description: 'Tight Coupling: Consider defining an interface or abstract base class for calculators and injecting dependencies rather than relying strictly on static methods.' },
+        { line: 28, rule: 'Single Responsibility Principle', description: 'Mixed Responsibilities: Separate the input/output IO logic from the algorithmic computation logic to improve modularity.' },
+      ],
+      solidScore: { d: 6, i: 10, l: 10, o: 8, s: 8 },
+      explanation: 'The submission demonstrates good overall code structure with meaningful naming, type hinting, and proper exception handling. The iterative Fibonacci calculation avoids deep recursion limits. However, the static method usage within a tightly coupled class design reduces dependency inversion, and standard I/O is hardcoded inside the execution flow.',
+      cleanCodeScore: 8.5,
+    },
+    maxScore: 10,
+    sourceCode: subLinhSource,
+    completedAt: '2026-10-29T11:27:43.664Z',
+    compileError: false,
+    submissionId: 'SUB-250024-JAH7DL',
+    overallResult: 'PASSED',
+    scoreBreakdown: { solid: 0.8, total: 9.5, cleanCode: 1.7, testcase1: 2.3, testcase2: 4.7 },
+    similarityRate: 76,
+    totalTestcases: 3,
+    executionTimeMs: 120,
+    passedTestcases: 3,
+    plagiarismMatch: {
+      status: 'FLAGGED_HIGH',
+      isFlagged: true,
+      sourceCodeA: subLinhSource,
+      sourceCodeB: subViktorSource,
+      matchedTokens: [
+        { lineA: [6, 6], lineB: [7, 7] },
+        { lineA: [6, 7], lineB: [7, 8] },
+        { lineA: [7, 8], lineB: [8, 9] },
+        { lineA: [8, 9], lineB: [9, 10] },
+        { lineA: [9, 10], lineB: [10, 11] },
+        { lineA: [12, 13], lineB: [13, 14] },
+        { lineA: [17, 19], lineB: [17, 19] },
+        { lineA: [22, 24], lineB: [21, 23] },
+        { lineA: [24, 26], lineB: [23, 25] },
+        { lineA: [27, 29], lineB: [26, 28] },
+        { lineA: [30, 32], lineB: [29, 31] },
+      ],
+      similarityRate: 76,
+      executionTimeMs: 395,
+      matchedStudentId: 'mochibunnyyy123@gmail.com',
+      jaccardSimilarity: 61.29,
+      matchedStudentName: 'Viktor Wilson',
+      winnowingContainment: 76,
+      astStructuralSimilarity: 76,
+    },
+    testcaseResults: [
+      { score: 2.3, status: 'PASSED', timeMs: 40, maxScore: 2.3, testcaseIndex: 1 },
+      { score: 2.3, status: 'PASSED', timeMs: 40, maxScore: 2.3, testcaseIndex: 2 },
+      { score: 2.3, status: 'PASSED', timeMs: 40, maxScore: 2.3, testcaseIndex: 3 },
+    ],
+    plagiarismStatus: 'ĐẠO VĂN',
+    confirmedPlagiarism: false,
+    executedInContainer: true,
+    computedScoreBeforePenalty: 9.5,
+  };
+
+  const subViktorDetails = {
+    score: 9.9,
+    status: 'COMPLETED',
+    aiRating: {
+      codeSmells: [],
+      solidScore: { d: 10, i: 10, l: 10, o: 10, s: 10 },
+      explanation: 'The student submission is exceptionally well-written, following Python best practices, PEP 8 guidelines, and strict SOLID principles. The code is clean, well-documented, includes appropriate input validation and error handling, and implements an efficient O(N) time and O(1) space algorithm.',
+      cleanCodeScore: 9.5,
+    },
+    maxScore: 10,
+    sourceCode: subViktorSource,
+    completedAt: '2026-10-29T11:25:05.650Z',
+    compileError: false,
+    submissionId: 'SUB-100009-ETK78X',
+    overallResult: 'PASSED',
+    scoreBreakdown: { solid: 1.0, total: 9.9, cleanCode: 1.9, testcase1: 2.3, testcase2: 4.7 },
+    similarityRate: 8,
+    totalTestcases: 3,
+    executionTimeMs: 130,
+    passedTestcases: 3,
+    plagiarismMatch: {
+      status: 'CLEAN',
+      isFlagged: false,
+      similarityRate: 8,
+      executionTimeMs: 312,
+      matchedStudentId: 'linhcampochia@gmail.com',
+      jaccardSimilarity: 2.61,
+      matchedStudentName: 'Linh Campochia',
+      winnowingContainment: 8,
+      astStructuralSimilarity: 8,
+    },
+    testcaseResults: [
+      { score: 2.3, status: 'PASSED', timeMs: 40, maxScore: 2.3, testcaseIndex: 1 },
+      { score: 2.3, status: 'PASSED', timeMs: 50, maxScore: 2.3, testcaseIndex: 2 },
+      { score: 2.3, status: 'PASSED', timeMs: 40, maxScore: 2.3, testcaseIndex: 3 },
+    ],
+    plagiarismStatus: 'AN TOÀN',
+    confirmedPlagiarism: false,
+    executedInContainer: true,
+    computedScoreBeforePenalty: 9.9,
+  };
+
+  // 1. Bài nộp của Linh Campochia (Đạo văn 76%)
+  submissionsData.push({
+    submission_id: 'SUB-250024-JAH7DL',
+    assignment_id: 'ASM-219423',
+    student_id: 'linhcampochia@gmail.com',
+    file_hash: '56d28388f9ed6c3ef8b6e6d85656cc346fefa4c1403416fe36921259577810f2',
+    sha256_hash: '56d28388f9ed6c3ef8b6e6d85656cc346fefa4c1403416fe36921259577810f2',
+    file_path: 'uploads/submissions/SUB-250024-JAH7DL.zip',
+    file_name: 'python_plagiarism_78.zip',
+    file_size_bytes: 592,
+    language: 'python',
+    status: 'COMPLETED',
+    queue_job_id: 'job_SUB-250024-JAH7DL',
+    testcase_score: 6.70,
+    final_score: 9.50,
+    score: 9.50,
+    details: JSON.stringify(subLinhDetails),
+    created_at: new Date('2026-10-29T11:27:30.064Z'),
+    updated_at: new Date('2026-10-29T11:27:43.670Z'),
+  });
+
+  // 2. Bài nộp của Viktor Wilson (An toàn 8%)
+  submissionsData.push({
+    submission_id: 'SUB-100009-ETK78X',
+    assignment_id: 'ASM-219423',
+    student_id: 'mochibunnyyy123@gmail.com',
+    file_hash: '196fc19d04be2e01bc1e1c7b26341521d6246ba7e63eca66e9a9f481c5179486',
+    sha256_hash: '196fc19d04be2e01bc1e1c7b26341521d6246ba7e63eca66e9a9f481c5179486',
+    file_path: 'uploads/submissions/SUB-100009-ETK78X.zip',
+    file_name: 'python_pass_100.zip',
+    file_size_bytes: 643,
+    language: 'python',
+    status: 'COMPLETED',
+    queue_job_id: 'job_SUB-100009-ETK78X',
+    testcase_score: 6.90,
+    final_score: 9.90,
+    score: 9.90,
+    details: JSON.stringify(subViktorDetails),
+    created_at: new Date('2026-10-29T11:25:00.126Z'),
+    updated_at: new Date('2026-10-29T11:25:05.657Z'),
+  });
+
+  // Chi tiết testcase của 2 bài nộp
+  const expTcIds = [
+    'f80d6e90-d4b9-4e10-abaf-484e7caeee9d',
+    '82a22505-371b-46d3-9701-dd4c7896536a',
+    'af7a9675-3715-4e8a-b362-346302546b29',
+  ];
+  expTcIds.forEach((tcId, idx) => {
+    submissionDetailsData.push({
+      detail_id: `DTL-SUB-250024-JAH7DL-TC${idx + 1}`,
+      submission_id: 'SUB-250024-JAH7DL',
+      test_case_id: tcId,
+      status: 'PASS',
+      actual_output: idx === 2 ? '5' : '1',
+      time_ms: 40,
+      memory_kb: 5500 + idx * 50,
+      error_log: null,
+      created_at: new Date('2026-10-29T11:27:43.676Z'),
+    });
+    submissionDetailsData.push({
+      detail_id: `DTL-SUB-100009-ETK78X-TC${idx + 1}`,
+      submission_id: 'SUB-100009-ETK78X',
+      test_case_id: tcId,
+      status: 'PASS',
+      actual_output: idx === 2 ? '5' : '1',
+      time_ms: 40 + idx * 5,
+      memory_kb: 5600 + idx * 100,
+      error_log: null,
+      created_at: new Date('2026-10-29T11:25:05.666Z'),
+    });
+  });
+
+  // AI Review results
+  aiReviewsData.push({
+    review_id: 'REV-SUB-250024-JAH7DL',
+    submission_id: 'SUB-250024-JAH7DL',
+    clean_code_score: 8.5,
+    solid_score: 8.4,
+    code_smells_count: 2,
+    feedback_json: JSON.stringify(subLinhDetails.aiRating.codeSmells),
+    compiler_explanation: subLinhDetails.aiRating.explanation,
+    model_used: 'gemini-1.5-pro',
+    token_usage: JSON.stringify({ promptTokens: 350, completionTokens: 180, totalTokens: 530 }),
+    evaluated_at: new Date('2026-10-29T11:27:43.664Z'),
+    created_at: new Date('2026-10-29T11:27:43.664Z'),
+    updated_at: new Date('2026-10-29T11:27:43.664Z'),
+  });
+
+  aiReviewsData.push({
+    review_id: 'REV-SUB-100009-ETK78X',
+    submission_id: 'SUB-100009-ETK78X',
+    clean_code_score: 9.5,
+    solid_score: 10.0,
+    code_smells_count: 0,
+    feedback_json: JSON.stringify([]),
+    compiler_explanation: subViktorDetails.aiRating.explanation,
+    model_used: 'gemini-1.5-pro',
+    token_usage: JSON.stringify({ promptTokens: 340, completionTokens: 150, totalTokens: 490 }),
+    evaluated_at: new Date('2026-10-29T11:25:05.650Z'),
+    created_at: new Date('2026-10-29T11:25:05.650Z'),
+    updated_at: new Date('2026-10-29T11:25:05.650Z'),
+  });
+
   for (const chunk of chunkArray(submissionsData, 25)) {
-    await knex('submissions').insert(chunk).onConflict('submission_id').ignore();
+    await knex('submissions').insert(chunk).onConflict('submission_id').merge();
   }
   for (const chunk of chunkArray(submissionDetailsData, 40)) {
-    await knex('submission_details').insert(chunk).onConflict('detail_id').ignore();
+    await knex('submission_details').insert(chunk).onConflict('detail_id').merge();
   }
   for (const chunk of chunkArray(aiReviewsData, 25)) {
-    await knex('ai_review_results').insert(chunk).onConflict('review_id').ignore();
+    await knex('ai_review_results').insert(chunk).onConflict('review_id').merge();
   }
 
   // ==========================================================================
@@ -421,14 +863,59 @@ export async function seed(knex: Knex): Promise<void> {
       });
     }
   }
+
+  // Fingerprints cho 2 bài nộp thực nghiệm TEST123456
+  for (let k = 0; k < 20; k++) {
+    const isCommon = k < 15;
+    const commonHash = `winnowing_fib_${k * 77}_hash`;
+    fingerprintsData.push({
+      fingerprint_id: `FP-SUB-100009-ETK78X-${k}`,
+      submission_id: 'SUB-100009-ETK78X',
+      hash_value: isCommon ? commonHash : `winnowing_viktor_uniq_${k}`,
+      token_position: k * 10,
+      ast_node_type: 'WINNOWING_KGRAM',
+      file_path: 'main',
+      line_start: k * 2 + 1,
+      line_end: k * 2 + 3,
+      token_start: k * 10,
+      token_end: k * 10 + 9,
+    });
+    fingerprintsData.push({
+      fingerprint_id: `FP-SUB-250024-JAH7DL-${k}`,
+      submission_id: 'SUB-250024-JAH7DL',
+      hash_value: isCommon ? commonHash : `winnowing_linh_uniq_${k}`,
+      token_position: k * 10,
+      ast_node_type: 'WINNOWING_KGRAM',
+      file_path: 'main',
+      line_start: k * 2 + 1,
+      line_end: k * 2 + 3,
+      token_start: k * 10,
+      token_end: k * 10 + 9,
+    });
+  }
+
   for (const chunk of chunkArray(fingerprintsData, 50)) {
     await knex('ast_fingerprints').insert(chunk).onConflict('fingerprint_id').ignore();
   }
 
   // ==========================================================================
-  // 9. PLAGIARISM_REPORTS (20 Cặp đối sánh đạo văn)
+  // 9. PLAGIARISM_REPORTS (21 Cặp đối sánh đạo văn)
   // ==========================================================================
   const plagiarismData: any[] = [
+    // Báo cáo đạo văn thực nghiệm giữa Linh Campochia và Viktor Wilson (76%)
+    {
+      report_id: 'PLG-730b11f9-99db-4373-b11f-71bc6977f504',
+      assignment_id: 'ASM-219423',
+      submission_a_id: 'SUB-100009-ETK78X',
+      submission_b_id: 'SUB-250024-JAH7DL',
+      similarity_rate: 76.0,
+      flagged_as_fraud: true,
+      common_fingerprints_count: 28,
+      total_unique_fingerprints: 45,
+      matched_tokens_json: JSON.stringify(subLinhDetails.plagiarismMatch.matchedTokens),
+      status: 'FLAGGED_PLAGIARISM',
+      created_at: new Date('2026-10-29T11:27:43.650Z'),
+    },
     // 2 cặp đạo văn nặng (để demo cờ gian lận đỏ và Monaco Diff Viewer)
     {
       report_id: 'PLAG-01',
@@ -696,6 +1183,28 @@ export async function seed(knex: Knex): Promise<void> {
   ];
 
   await knex('ai_prompt_templates').insert(promptTemplates).onConflict('template_code').ignore();
+
+  // Đảm bảo file zip bài nộp mẫu tồn tại trong api-gateway/uploads/submissions để chức năng tải file hoạt động
+  try {
+    const uploadsDir = path.resolve(__dirname, '../../../uploads/submissions');
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+    const rootDir = path.resolve(__dirname, '../../../../');
+    const passZip = path.join(rootDir, 'python_pass_100.zip');
+    const plagZip = path.join(rootDir, 'python_plagiarism_70.zip');
+    const targetPass = path.join(uploadsDir, 'SUB-100009-ETK78X.zip');
+    const targetPlag = path.join(uploadsDir, 'SUB-250024-JAH7DL.zip');
+
+    if (fs.existsSync(passZip) && !fs.existsSync(targetPass)) {
+      fs.copyFileSync(passZip, targetPass);
+    }
+    if (fs.existsSync(plagZip) && !fs.existsSync(targetPlag)) {
+      fs.copyFileSync(plagZip, targetPlag);
+    }
+  } catch {
+    // Non-fatal if filesystem copy fails
+  }
 
   console.log('🎉 ĐÃ NẠP THÀNH CÔNG HƠN 800 BẢN GHI DỮ LIỆU MẪU VÀO CƠ SỞ DỮ LIỆU POSTGRESQL 15!');
 }

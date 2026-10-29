@@ -352,6 +352,7 @@ ON CONFLICT (user_id) DO NOTHING;
 -- 3. Seed Classes
 INSERT INTO classes (class_id, lecturer_id, class_code, class_name, semester, description, is_active)
 VALUES 
+    ('CRS-TEST123456', 'GV001', 'TEST123456', 'Test123456', 'Học kỳ Thu 2026', 'Test123456', TRUE),
     ('CRS-SWP391', 'GV001', 'SE1701-SWP391', 'Application Development Project (SWP391)', 'Fall 2026', 'Dự án Phát triển phần mềm theo chuẩn Agile Scrum', TRUE),
     ('CRS-PRO192', 'GV001', 'SE1702-PRO192', 'Object-Oriented Programming (PRO192)', 'Fall 2026', 'Lập trình hướng đối tượng với Java và Design Patterns', TRUE),
     ('CRS-CSD201', 'GV001', 'SE1703-CSD201', 'Data Structures and Algorithms (CSD201)', 'Fall 2026', 'Cấu trúc dữ liệu và giải thuật nâng cao', TRUE)
@@ -360,6 +361,8 @@ ON CONFLICT (class_id) DO NOTHING;
 -- 4. Seed Class Members
 INSERT INTO class_members (member_id, class_id, user_id, status)
 VALUES
+    ('MB-TEST-01', 'CRS-TEST123456', 'SE170002', 'ACTIVE'),
+    ('MB-TEST-02', 'CRS-TEST123456', 'SE170003', 'ACTIVE'),
     ('MB-001', 'CRS-SWP391', 'SE170000', 'ACTIVE'),
     ('MB-002', 'CRS-SWP391', 'SE170123', 'ACTIVE'),
     ('MB-003', 'CRS-SWP391', 'SE170456', 'ACTIVE'),
@@ -371,6 +374,23 @@ ON CONFLICT (class_id, user_id) DO NOTHING;
 -- 5. Seed Assignments
 INSERT INTO assignments (assignment_id, class_id, course_id, title, description, language, allowed_languages, time_limit_sec, time_limit_ms, memory_limit_mb, due_date, deadline, max_score, testcases_count, is_active)
 VALUES 
+    (
+        'ASM-219423',
+        'CRS-TEST123456',
+        'CRS-TEST123456',
+        'Thuật Toán Dãy Số Fibonacci & Tối Ưu Hóa Quy Hoạch Động (TEST123456)',
+        'Cài đặt thuật toán tính số Fibonacci thứ N với độ phức tạp tối ưu O(N) và bộ nhớ O(1), tuân thủ Clean Code & SOLID.',
+        'python',
+        '["java", "python", "cpp"]'::jsonb,
+        2.0,
+        2000,
+        512,
+        CURRENT_TIMESTAMP + INTERVAL '14 days',
+        CURRENT_TIMESTAMP + INTERVAL '14 days',
+        10.00,
+        3,
+        TRUE
+    ),
     (
         'TASK-SWP391-SPRINT2',
         'CRS-SWP391',
@@ -393,6 +413,9 @@ ON CONFLICT (assignment_id) DO NOTHING;
 -- 6. Seed Test Cases
 INSERT INTO test_cases (test_case_id, assignment_id, input_data, expected_output, is_hidden, weight, time_limit_ms)
 VALUES
+    ('f80d6e90-d4b9-4e10-abaf-484e7caeee9d', 'ASM-219423', '1', '1', FALSE, 2.30, 2000),
+    ('82a22505-371b-46d3-9701-dd4c7896536a', 'ASM-219423', '2', '1', FALSE, 2.30, 2000),
+    ('af7a9675-3715-4e8a-b362-346302546b29', 'ASM-219423', '5', '5', FALSE, 2.40, 2000),
     ('TC-SWP-01', 'TASK-SWP391-SPRINT2', '5\n4 2 5 1 3\n', '1 2 3 4 5', FALSE, 1.0, 2000),
     ('TC-SWP-02', 'TASK-SWP391-SPRINT2', '3\n10 0 -5\n', '-5 0 10', TRUE, 1.0, 2000)
 ON CONFLICT (test_case_id) DO NOTHING;
