@@ -12,6 +12,8 @@ import {
   ClassPlagiarismMatrixReport,
   CodeSubmission,
   PairwisePlagiarismResult,
+  PlagiarismCluster,
+  CrossClusterIndependence,
 } from './ast-engine/plagiarism-engine';
 import { PlagiarismRepository } from '../database/plagiarism.repository';
 import { SubmissionRepository } from '../database/submission.repository';
@@ -83,8 +85,11 @@ export interface AssignmentMatrixResult {
   totalPairsCompared: number;
   flaggedPairsCount: number;
   similarityMatrix: number[][];
-  submissionsList: { id: string; name?: string }[];
+  submissionsList: { id: string; name?: string; studentId?: string; sourceCode?: string; language?: string }[];
   flaggedReports: unknown[];
+  clusters: PlagiarismCluster[];
+  independentSubmissions: { id: string; name?: string; studentId?: string }[];
+  crossClusterIndependence: CrossClusterIndependence[];
   totalExecutionTimeMs: number;
   engine: string;
 }
@@ -273,14 +278,33 @@ export class PlagiarismService {
     };
   }
 
-  /** Full class matrix for an assignment (BR-04 gated at the controller level). */
+  /** Full class matrix for an assignment or class (BR-04 gated at the controller level). */
   public async getAssignmentMatrix(assignmentId: string): Promise<AssignmentMatrixResult> {
     const startTime = Date.now();
-    const records = await this.submissionRepo.findAll({ assignmentId });
+    let records: SubmissionRecord[] = [];
+
+    try {
+      if (!assignmentId || assignmentId === 'ALL') {
+        records = await this.submissionRepo.findAll({});
+      } else if (assignmentId.startsWith('CRS-') || assignmentId.startsWith('CLASS-') || assignmentId.startsWith('COURSE-')) {
+        const classAssignments = await this.assignmentRepo.findByCourseId(assignmentId);
+        const assignIds = classAssignments.map((a) => a.assignmentId);
+        if (assignIds.length > 0) {
+          const allRecords = await this.submissionRepo.findAll({});
+          records = allRecords.filter((r) => assignIds.includes(r.assignmentId));
+        } else {
+          records = [];
+        }
+      } else {
+        records = await this.submissionRepo.findAll({ assignmentId });
+      }
+    } catch {
+      records = [];
+    }
 
     const submissions: CodeSubmission[] = [];
     for (const record of records) {
-      const code = this.extractSourceCodeFromZip(record.filePath, record.language);
+      const code = this.extractSourceCodeFromZip(record.filePath, record.language, record);
       if (code === null) {
         this.logger.warn(`[Plagiarism] Bỏ qua ${record.submissionId}: không giải nén được source code (${record.filePath}).`);
         continue;
@@ -307,6 +331,9 @@ export class PlagiarismService {
       similarityMatrix: matrix.similarityMatrix,
       submissionsList: matrix.submissionsList,
       flaggedReports: matrix.flaggedReports,
+      clusters: matrix.clusters,
+      independentSubmissions: matrix.independentSubmissions,
+      crossClusterIndependence: matrix.crossClusterIndependence,
       totalExecutionTimeMs: matrix.totalExecutionTimeMs || Date.now() - startTime,
       engine,
     };
@@ -661,55 +688,69 @@ export class PlagiarismService {
    * Giải nén file zip và tìm file source code đầu tiên phù hợp ngôn ngữ.
    * Mirrors the exact working pattern of `extractSourceCodeFromZip` in grading-worker.consumer.ts.
    */
-  public extractSourceCodeFromZip(filePath: string, language: string): string | null {
+  public extractSourceCodeFromZip(filePath: string, language: string, fallbackRecord?: any): string | null {
     try {
-      if (!filePath || !fs.existsSync(filePath)) return null;
-      const zip = new AdmZip(filePath);
-      const entries = zip.getEntries();
+      if (filePath && fs.existsSync(filePath)) {
+        const zip = new AdmZip(filePath);
+        const entries = zip.getEntries();
 
-      const extMap: Record<string, string[]> = {
-        java: ['.java'],
-        python: ['.py'],
-        cpp: ['.cpp', '.cc', '.cxx', '.c'],
-        dotnet: ['.cs'],
-      };
-      const targetExts = extMap[(language || '').toLowerCase()] || ['.java', '.py', '.cpp', '.cs'];
+        const extMap: Record<string, string[]> = {
+          java: ['.java'],
+          python: ['.py'],
+          cpp: ['.cpp', '.cc', '.cxx', '.c'],
+          dotnet: ['.cs'],
+        };
+        const targetExts = extMap[(language || '').toLowerCase()] || ['.java', '.py', '.cpp', '.cs'];
 
-      // 1. Tìm file source code khớp đuôi mở rộng chuẩn của ngôn ngữ
-      for (const entry of entries) {
-        if (!entry.isDirectory && !entry.entryName.includes('__MACOSX')) {
-          const name = entry.entryName.toLowerCase();
-          if (targetExts.some((ext) => name.endsWith(ext))) {
-            return zip.readAsText(entry);
+        // 1. Tìm file source code khớp đuôi mở rộng chuẩn của ngôn ngữ
+        for (const entry of entries) {
+          if (!entry.isDirectory && !entry.entryName.includes('__MACOSX')) {
+            const name = entry.entryName.toLowerCase();
+            if (targetExts.some((ext) => name.endsWith(ext))) {
+              return zip.readAsText(entry);
+            }
           }
         }
-      }
 
-      // 2. Fallback thông minh: hỗ trợ khi sinh viên đặt tên file .txt hoặc không có đuôi nhưng chứa mã nguồn hợp lệ
-      for (const entry of entries) {
-        if (!entry.isDirectory && !entry.entryName.includes('__MACOSX')) {
-          const name = entry.entryName.toLowerCase();
-          if (name.endsWith('.txt') || !name.includes('.')) {
-            const content = zip.readAsText(entry);
-            if (
-              content &&
-              (content.includes('class ') ||
-                content.includes('public static void main') ||
-                content.includes('import java') ||
-                content.includes('def ') ||
-                content.includes('#include') ||
-                content.includes('namespace') ||
-                content.includes('using System'))
-            ) {
-              return content;
+        // 2. Fallback thông minh: hỗ trợ khi sinh viên đặt tên file .txt hoặc không có đuôi nhưng chứa mã nguồn hợp lệ
+        for (const entry of entries) {
+          if (!entry.isDirectory && !entry.entryName.includes('__MACOSX')) {
+            const name = entry.entryName.toLowerCase();
+            if (name.endsWith('.txt') || !name.includes('.')) {
+              const content = zip.readAsText(entry);
+              if (
+                content &&
+                (content.includes('class ') ||
+                  content.includes('public static void main') ||
+                  content.includes('import java') ||
+                  content.includes('def ') ||
+                  content.includes('#include') ||
+                  content.includes('namespace') ||
+                  content.includes('using System'))
+              ) {
+                return content;
+              }
             }
           }
         }
       }
-
-      return null;
     } catch {
-      return null;
+      // ignore
     }
+
+    // 3. Fallback trích xuất từ chi tiết bài nộp trong DB nếu file zip không tồn tại trên đĩa
+    if (fallbackRecord && fallbackRecord.details) {
+      try {
+        const parsed = typeof fallbackRecord.details === 'string'
+          ? JSON.parse(fallbackRecord.details)
+          : fallbackRecord.details;
+        if (parsed?.sourceCode) return parsed.sourceCode;
+        if (parsed?.plagiarismMatch?.sourceCodeA) return parsed.plagiarismMatch.sourceCodeA;
+      } catch {
+        // ignore
+      }
+    }
+
+    return null;
   }
 }

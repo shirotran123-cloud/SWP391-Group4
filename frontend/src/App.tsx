@@ -9,7 +9,7 @@ import { RblBenchmarkView } from './components/RblBenchmarkView';
 import { StudentAppealsView } from './components/StudentAppealsView';
 import { StudentHistoryView } from './components/StudentHistoryView';
 import { PlagiarismDiffModal } from './components/PlagiarismDiffModal';
-import type { Task, GradingStep, AIRating, PlagiarismMatch, User, ScoreBreakdown } from './types';
+import type { Task, GradingStep, AIRating, PlagiarismMatch, User, ScoreBreakdown, PlagiarismCluster, PlagiarismPairItem, CrossClusterIndependence } from './types';
 import { isLecturerRole } from './types';
 import { Terminal, Shield, LogOut, FileCode, Upload, BookOpen, LayoutDashboard, Scale, ArrowLeftRight, Clock, GraduationCap, Check } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
@@ -331,6 +331,11 @@ export function App() {
   const [plagiarismMatch, setPlagiarismMatch] = useState<PlagiarismMatch | undefined>(undefined);
   const [plagiarismDiffMatch, setPlagiarismDiffMatch] = useState<PlagiarismMatch | null>(null);
   const [plagiarismCandidateMatches, setPlagiarismCandidateMatches] = useState<PlagiarismMatch[]>([]);
+  const [plagiarismClusters, setPlagiarismClusters] = useState<PlagiarismCluster[]>([]);
+  const [plagiarismAllSubmissions, setPlagiarismAllSubmissions] = useState<any[]>([]);
+  const [plagiarismInitialClusterId, setPlagiarismInitialClusterId] = useState<number | undefined>(undefined);
+  const [plagiarismInitialPair, setPlagiarismInitialPair] = useState<PlagiarismPairItem | null>(null);
+  const [plagiarismCrossClusterIndependence, setPlagiarismCrossClusterIndependence] = useState<CrossClusterIndependence[]>([]);
   const [score, setScore] = useState<number | undefined>(undefined);
   const [scoreBreakdown, setScoreBreakdown] = useState<ScoreBreakdown | undefined>(undefined);
   const [executionTimeMs, setExecutionTimeMs] = useState<number | undefined>(undefined);
@@ -1238,9 +1243,14 @@ export function App() {
         {(isLecturerRole(currentUser.role) || (activeView === 'lecturer' && currentUser.role === 'ADMIN')) && (
           <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
             <LecturerDashboard
-              onOpenDiffViewer={(match, candidates) => {
+              onOpenDiffViewer={(match, candidates, extraData) => {
                 setPlagiarismDiffMatch(match);
                 setPlagiarismCandidateMatches(candidates || [match]);
+                setPlagiarismClusters(extraData?.clusters || []);
+                setPlagiarismAllSubmissions(extraData?.allSubmissions || []);
+                setPlagiarismInitialClusterId(extraData?.initialClusterId);
+                setPlagiarismInitialPair(extraData?.initialPair || null);
+                setPlagiarismCrossClusterIndependence(extraData?.crossClusterIndependence || []);
               }}
             />
           </div>
@@ -1431,10 +1441,19 @@ export function App() {
         onClose={() => {
           setPlagiarismDiffMatch(null);
           setPlagiarismCandidateMatches([]);
+          setPlagiarismClusters([]);
+          setPlagiarismInitialPair(null);
+          setPlagiarismInitialClusterId(undefined);
+          setPlagiarismCrossClusterIndependence([]);
         }}
         match={plagiarismDiffMatch}
         similarMatches={plagiarismCandidateMatches}
         studentAName={currentUser?.fullName || 'Bài nộp A'}
+        clusters={plagiarismClusters}
+        allSubmissions={plagiarismAllSubmissions}
+        initialClusterId={plagiarismInitialClusterId}
+        initialPair={plagiarismInitialPair}
+        crossClusterIndependence={plagiarismCrossClusterIndependence}
       />
 
       {/* Login Modal (backup/fallback) */}

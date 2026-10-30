@@ -479,6 +479,178 @@ export async function seed(knex: Knex): Promise<void> {
 
     const status = i === 78 ? 'QUEUED' : (i === 79 ? 'IN_PROGRESS' : 'COMPLETED');
 
+    // Gán mã nguồn thực tế cho Nhóm 1 (A, B, C) và Nhóm 2 (D, E) để kiểm định đạo văn theo nhóm
+    let customSourceCode = `// AITA Code Submission: ${subId}\n// Sinh vien: ${stu.fullName}\n\ndef solve():\n    return 42\n`;
+    if (i === 0) {
+      // Sinh viên A (SUB-DEMO-1001) - Nhóm 1: Thuật toán Fibonacci & Nguyên tố chuẩn
+      customSourceCode = `"""
+Bài nộp của ${stu.fullName} (Sinh viên A - Nhóm 1)
+Thuật toán: Tính số Fibonacci tối ưu O(N) và kiểm tra số nguyên tố
+"""
+def fibonacci(n: int) -> int:
+    if n <= 0:
+        return 0
+    if n == 1 or n == 2:
+        return 1
+    prev_val = 1
+    curr_val = 1
+    for _ in range(3, n + 1):
+        next_val = prev_val + curr_val
+        prev_val = curr_val
+        curr_val = next_val
+    return curr_val
+
+def is_prime(val: int) -> bool:
+    if val < 2:
+        return False
+    for i in range(2, int(val ** 0.5) + 1):
+        if val % i == 0:
+            return False
+    return True
+`;
+    } else if (i === 1) {
+      // Sinh viên B (SUB-DEMO-1002) - Nhóm 1: Chép từ A (Đổi tên biến & Dùng while loop)
+      customSourceCode = `"""
+Bài nộp của ${stu.fullName} (Sinh viên B - Chép bài từ Sinh viên A)
+Thuật toán: Tính Fibonacci & Số nguyên tố (Đổi tên biến và dùng vòng lặp while)
+"""
+def compute_fib(number: int) -> int:
+    if number <= 0:
+        return 0
+    if number == 1 or number == 2:
+        return 1
+    a_term = 1
+    b_term = 1
+    step = 3
+    while step <= number:
+        c_term = a_term + b_term
+        a_term = b_term
+        b_term = c_term
+        step += 1
+    return b_term
+
+def check_prime_number(num: int) -> bool:
+    if num < 2:
+        return False
+    idx = 2
+    limit = int(num ** 0.5)
+    while idx <= limit:
+        if num % idx == 0:
+            return False
+        idx += 1
+    return True
+`;
+    } else if (i === 2) {
+      // Sinh viên C (SUB-DEMO-1003) - Nhóm 1: Chép từ A (Đổi tên biến & Thêm comment rác)
+      customSourceCode = `"""
+Bài nộp của ${stu.fullName} (Sinh viên C - Chép bài từ Sinh viên A)
+Thuật toán: Tính số Fibonacci và kiểm tra số nguyên tố
+"""
+def calculate_fibonacci_number(k: int) -> int:
+    # Validation index k
+    if k <= 0:
+        return 0
+    if k == 1 or k == 2:
+        return 1
+    first_item = 1
+    second_item = 1
+    for i in range(3, k + 1):
+        # Calculate next term
+        temp_sum = first_item + second_item
+        first_item = second_item
+        second_item = temp_sum
+    return second_item
+
+def verify_prime(target_val: int) -> bool:
+    # Check if target is prime
+    if target_val < 2:
+        return False
+    for d in range(2, int(target_val ** 0.5) + 1):
+        if target_val % d == 0:
+            return False
+    return True
+`;
+    } else if (i === 3) {
+      // Sinh viên D (SUB-DEMO-1004) - Nhóm 2: Thuật toán QuickSort & Binary Search (Khác biệt hoàn toàn nhóm 1)
+      customSourceCode = `"""
+Bài nộp của ${stu.fullName} (Sinh viên D - Nhóm 2)
+Thuật toán: Sắp xếp QuickSort và Tìm kiếm nhị phân Binary Search
+"""
+def binary_search(arr, target):
+    low = 0
+    high = len(arr) - 1
+    while low <= high:
+        mid = (low + high) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            low = mid + 1
+        else:
+            high = mid - 1
+    return -1
+
+def quick_sort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quick_sort(left) + middle + quick_sort(right)
+`;
+    } else if (i === 4) {
+      // Sinh viên E (SUB-DEMO-1005) - Nhóm 2: Chép từ D (Đổi tên biến & cấu trúc list comp)
+      customSourceCode = `"""
+Bài nộp của ${stu.fullName} (Sinh viên E - Chép bài từ Sinh viên D)
+Thuật toán: Tìm kiếm nhị phân & QuickSort (Đổi tên biến)
+"""
+def search_in_sorted_array(items, key):
+    left_ptr = 0
+    right_ptr = len(items) - 1
+    while left_ptr <= right_ptr:
+        middle_idx = (left_ptr + right_ptr) // 2
+        if items[middle_idx] == key:
+            return middle_idx
+        elif items[middle_idx] < key:
+            left_ptr = middle_idx + 1
+        else:
+            right_ptr = middle_idx - 1
+    return -1
+
+def sort_elements_fast(data_list):
+    if len(data_list) <= 1:
+        return data_list
+    pivot_val = data_list[len(data_list) // 2]
+    less = [item for item in data_list if item < pivot_val]
+    equal = [item for item in data_list if item == pivot_val]
+    greater = [item for item in data_list if item > pivot_val]
+    return sort_elements_fast(less) + equal + sort_elements_fast(greater)
+`;
+    } else {
+      // Sinh viên F, G... độc lập, an toàn
+      customSourceCode = `"""
+Bài nộp độc lập của ${stu.fullName}
+Thuật toán: Phân tích thừa số nguyên tố & Ước số chung lớn nhất GCD
+"""
+def gcd(a: int, b: int) -> int:
+    while b:
+        a, b = b, a % b
+    return a
+
+def prime_factors(n: int):
+    factors = []
+    d = 2
+    while d * d <= n:
+        while (n % d) == 0:
+            factors.append(d)
+            n //= d
+        d += 1
+    if n > 1:
+        factors.append(n)
+    return factors
+`;
+    }
+
     submissionsData.push({
       submission_id: subId,
       assignment_id: assign.assignment_id,
@@ -488,13 +660,18 @@ export async function seed(knex: Knex): Promise<void> {
       file_path: `uploads/${subId}/submission.zip`,
       file_name: 'solution.zip',
       file_size_bytes: Math.floor(10240 + Math.random() * 50000),
-      language: lang,
+      language: 'python',
       status,
       queue_job_id: `job-${subId}`,
       testcase_score: baseScore >= 7.5 ? 7.0 : (baseScore >= 5.0 ? 4.0 : 0.0),
       final_score: status === 'COMPLETED' ? baseScore : null,
       score: status === 'COMPLETED' ? baseScore : null,
-      details: JSON.stringify({ passedTestcases: passedCount, totalTestcases: totalTC }),
+      details: JSON.stringify({
+        passedTestcases: passedCount,
+        totalTestcases: totalTC,
+        sourceCode: customSourceCode,
+        similarityRate: i < 3 ? (i === 0 ? 88.5 : i === 1 ? 88.5 : 84.0) : (i === 3 || i === 4 ? 86.8 : 8.5),
+      }),
       created_at: subTime,
       updated_at: subTime,
     });
@@ -916,55 +1093,80 @@ if __name__ == '__main__':
       status: 'FLAGGED_PLAGIARISM',
       created_at: new Date('2026-10-29T11:27:43.650Z'),
     },
-    // 2 cặp đạo văn nặng (để demo cờ gian lận đỏ và Monaco Diff Viewer)
+    // NHÓM 1: Sinh viên A cho B và C chép bài (3 người chép bài lẫn nhau)
     {
       report_id: 'PLAG-01',
       assignment_id: 'TASK-SWP391-SPRINT2',
       submission_a_id: 'SUB-DEMO-1001',
       submission_b_id: 'SUB-DEMO-1002',
-      similarity_rate: 94.5,
+      similarity_rate: 88.5,
       flagged_as_fraud: true,
-      common_fingerprints_count: 38,
+      common_fingerprints_count: 36,
       total_unique_fingerprints: 40,
-      matched_tokens_json: JSON.stringify([{ lineA: [12, 35], lineB: [14, 37], tokens: 85 }]),
+      matched_tokens_json: JSON.stringify([{ lineA: [6, 24], lineB: [6, 26], tokens: 78 }]),
       status: 'FLAGGED_PLAGIARISM',
     },
     {
       report_id: 'PLAG-02',
       assignment_id: 'TASK-SWP391-SPRINT2',
-      submission_a_id: 'SUB-DEMO-1003',
-      submission_b_id: 'SUB-DEMO-1004',
-      similarity_rate: 81.2,
+      submission_a_id: 'SUB-DEMO-1001',
+      submission_b_id: 'SUB-DEMO-1003',
+      similarity_rate: 84.0,
       flagged_as_fraud: true,
-      common_fingerprints_count: 32,
-      total_unique_fingerprints: 39,
-      matched_tokens_json: JSON.stringify([{ lineA: [20, 48], lineB: [22, 50], tokens: 68 }]),
-      status: 'FLAGGED_HIGH',
+      common_fingerprints_count: 34,
+      total_unique_fingerprints: 41,
+      matched_tokens_json: JSON.stringify([{ lineA: [6, 22], lineB: [6, 24], tokens: 72 }]),
+      status: 'FLAGGED_PLAGIARISM',
     },
-    // 3 cặp nghi vấn
     {
       report_id: 'PLAG-03',
       assignment_id: 'TASK-SWP391-SPRINT2',
-      submission_a_id: 'SUB-DEMO-1005',
-      submission_b_id: 'SUB-DEMO-1006',
-      similarity_rate: 56.4,
-      flagged_as_fraud: false,
-      common_fingerprints_count: 22,
+      submission_a_id: 'SUB-DEMO-1002',
+      submission_b_id: 'SUB-DEMO-1003',
+      similarity_rate: 80.2,
+      flagged_as_fraud: true,
+      common_fingerprints_count: 32,
       total_unique_fingerprints: 40,
-      matched_tokens_json: JSON.stringify([{ lineA: [10, 25], lineB: [15, 30], tokens: 35 }]),
-      status: 'SUSPECTED',
+      matched_tokens_json: JSON.stringify([{ lineA: [7, 25], lineB: [7, 26], tokens: 68 }]),
+      status: 'FLAGGED_PLAGIARISM',
     },
+    // NHÓM 2: Sinh viên D cho E chép bài (2 người chép bài lẫn nhau)
     {
       report_id: 'PLAG-04',
-      assignment_id: 'TASK-PRO192-A1',
-      submission_a_id: 'SUB-DEMO-1007',
-      submission_b_id: 'SUB-DEMO-1008',
-      similarity_rate: 61.8,
-      flagged_as_fraud: false,
-      common_fingerprints_count: 25,
+      assignment_id: 'TASK-SWP391-SPRINT2',
+      submission_a_id: 'SUB-DEMO-1004',
+      submission_b_id: 'SUB-DEMO-1005',
+      similarity_rate: 86.8,
+      flagged_as_fraud: true,
+      common_fingerprints_count: 35,
       total_unique_fingerprints: 41,
+      matched_tokens_json: JSON.stringify([{ lineA: [6, 28], lineB: [6, 28], tokens: 75 }]),
+      status: 'FLAGGED_PLAGIARISM',
+    },
+    // ĐỐI SOÁT CHÉO: Nhóm 1 và Nhóm 2 hoàn toàn độc lập (Độ tương đồng cực thấp)
+    {
+      report_id: 'PLAG-CROSS-AD',
+      assignment_id: 'TASK-SWP391-SPRINT2',
+      submission_a_id: 'SUB-DEMO-1001',
+      submission_b_id: 'SUB-DEMO-1004',
+      similarity_rate: 9.4,
+      flagged_as_fraud: false,
+      common_fingerprints_count: 4,
+      total_unique_fingerprints: 45,
       matched_tokens_json: JSON.stringify([]),
-      status: 'SUSPECTED',
+      status: 'CLEAN',
+    },
+    {
+      report_id: 'PLAG-CROSS-BE',
+      assignment_id: 'TASK-SWP391-SPRINT2',
+      submission_a_id: 'SUB-DEMO-1002',
+      submission_b_id: 'SUB-DEMO-1005',
+      similarity_rate: 8.7,
+      flagged_as_fraud: false,
+      common_fingerprints_count: 3,
+      total_unique_fingerprints: 44,
+      matched_tokens_json: JSON.stringify([]),
+      status: 'CLEAN',
     },
   ];
 

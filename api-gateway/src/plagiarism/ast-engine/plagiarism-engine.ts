@@ -62,6 +62,12 @@ export interface MatchedTokensJson {
 export interface PairwisePlagiarismResult {
   submissionAId: string;
   submissionBId: string;
+  studentNameA?: string;
+  studentNameB?: string;
+  studentIdA?: string;
+  studentIdB?: string;
+  sourceCodeA?: string;
+  sourceCodeB?: string;
   similarityRate: number;         // = maxContainment (0–100)
   commonFingerprintsCount: number;
   totalUniqueFingerprints: number;
@@ -71,14 +77,43 @@ export interface PairwisePlagiarismResult {
   executionTimeMs: number;
 }
 
+export interface PlagiarismCluster {
+  clusterId: number;
+  clusterName: string;
+  studentCount: number;
+  students: Array<{ submissionId: string; studentId: string; studentName: string; sourceCode?: string }>;
+  pairs: PairwisePlagiarismResult[];
+  maxSimilarity: number;
+  riskLevel: 'CONFIRMED_ZERO' | 'FLAGGED' | 'WARNING';
+}
+
+export interface CrossClusterIndependence {
+  clusterAId: number;
+  clusterBId: number;
+  clusterAName: string;
+  clusterBName: string;
+  maxCrossSimilarity: number;
+  samplePair?: {
+    submissionAId: string;
+    submissionBId: string;
+    studentNameA: string;
+    studentNameB: string;
+    similarityRate: number;
+  };
+  isIndependent: boolean;
+}
+
 export interface ClassPlagiarismMatrixReport {
   assignmentId?: string;
   totalSubmissions: number;
   totalPairsCompared: number;
   flaggedPairsCount: number;
-  submissionsList: { id: string; name?: string; studentId?: string }[];
+  submissionsList: { id: string; name?: string; studentId?: string; sourceCode?: string; language?: string }[];
   similarityMatrix: number[][];
   flaggedReports: PairwisePlagiarismResult[];
+  clusters: PlagiarismCluster[];
+  independentSubmissions: { id: string; name?: string; studentId?: string }[];
+  crossClusterIndependence: CrossClusterIndependence[];
   totalExecutionTimeMs: number;
 }
 
@@ -211,7 +246,7 @@ export class ASTPlagiarismEngine {
     const startTime = Date.now();
     const N = submissions.length;
     const similarityMatrix: number[][] = Array.from({ length: N }, () => Array(N).fill(100.0));
-    const flaggedReports: PairwisePlagiarismResult[] = [];
+    const allPairs: PairwisePlagiarismResult[] = [];
     let pairsCount = 0;
 
     for (let i = 0; i < N; i++) {
@@ -219,9 +254,173 @@ export class ASTPlagiarismEngine {
       for (let j = i + 1; j < N; j++) {
         pairsCount++;
         const result = this.compareSubmissions(submissions[i], submissions[j], options);
+        result.studentNameA = submissions[i].studentName || submissions[i].submissionId;
+        result.studentNameB = submissions[j].studentName || submissions[j].submissionId;
+        result.studentIdA = submissions[i].studentId || submissions[i].submissionId;
+        result.studentIdB = submissions[j].studentId || submissions[j].submissionId;
+        result.sourceCodeA = submissions[i].sourceCode;
+        result.sourceCodeB = submissions[j].sourceCode;
+
         similarityMatrix[i][j] = result.similarityRate;
         similarityMatrix[j][i] = result.similarityRate;
-        if (result.isFlagged) flaggedReports.push(result);
+        allPairs.push(result);
+      }
+    }
+
+    // Lọc tất cả các cặp có độ tương đồng >= 50% (nghi vấn, gắn cờ, điểm 0)
+    const significantPairs = allPairs.filter((p) => p.similarityRate >= this.SUSPECTED_WARNING_THRESHOLD);
+    const flaggedReports = significantPairs.sort((a, b) => b.similarityRate - a.similarityRate);
+
+    // ── Thuật toán phân cụm đồ thị liên thông (Connected Components / Clusters) ──
+    const parent = new Map<number, number>();
+    for (let i = 0; i < N; i++) parent.set(i, i);
+
+    const find = (i: number): number => {
+      let root = i;
+      while (root !== parent.get(root)!) root = parent.get(root)!;
+      let curr = i;
+      while (curr !== root) {
+        const nxt = parent.get(curr)!;
+        parent.set(curr, root);
+        curr = nxt;
+      }
+      return root;
+    };
+
+    const union = (i: number, j: number) => {
+      const rootI = find(i);
+      const rootJ = find(j);
+      if (rootI !== rootJ) parent.set(rootI, rootJ);
+    };
+
+    // Nối các đỉnh có cạnh similarity >= 50.0%
+    for (let i = 0; i < N; i++) {
+      for (let j = i + 1; j < N; j++) {
+        if (similarityMatrix[i][j] >= this.SUSPECTED_WARNING_THRESHOLD) {
+          union(i, j);
+        }
+      }
+    }
+
+    // Nhóm các chỉ số theo root
+    const componentMap = new Map<number, number[]>();
+    for (let i = 0; i < N; i++) {
+      const r = find(i);
+      if (!componentMap.has(r)) componentMap.set(r, []);
+      componentMap.get(r)!.push(i);
+    }
+
+    const clusters: PlagiarismCluster[] = [];
+    const independentSubmissions: { id: string; name?: string; studentId?: string }[] = [];
+
+    let clusterIdx = 1;
+    for (const [, memberIndices] of componentMap.entries()) {
+      if (memberIndices.length >= 2) {
+        // Nhóm có từ 2 sinh viên trở lên chép bài nhau
+        const memberSubmissions = memberIndices.map((idx) => ({
+          submissionId: submissions[idx].submissionId,
+          studentId: submissions[idx].studentId || submissions[idx].submissionId,
+          studentName: submissions[idx].studentName || submissions[idx].submissionId,
+          sourceCode: submissions[idx].sourceCode,
+        }));
+
+        // Tìm tất cả các cặp trong nhóm này
+        const clusterPairs: PairwisePlagiarismResult[] = [];
+        let maxSim = 0;
+        for (let a = 0; a < memberIndices.length; a++) {
+          for (let b = a + 1; b < memberIndices.length; b++) {
+            const idxA = memberIndices[a];
+            const idxB = memberIndices[b];
+            const subAId = submissions[idxA].submissionId;
+            const subBId = submissions[idxB].submissionId;
+            const pairMatch = allPairs.find(
+              (p) =>
+                (p.submissionAId === subAId && p.submissionBId === subBId) ||
+                (p.submissionAId === subBId && p.submissionBId === subAId),
+            );
+            if (pairMatch) {
+              clusterPairs.push(pairMatch);
+              if (pairMatch.similarityRate > maxSim) maxSim = pairMatch.similarityRate;
+            }
+          }
+        }
+
+        clusterPairs.sort((a, b) => b.similarityRate - a.similarityRate);
+
+        let riskLevel: PlagiarismCluster['riskLevel'] = 'WARNING';
+        if (maxSim >= this.CONFIRMED_ZERO_THRESHOLD) riskLevel = 'CONFIRMED_ZERO';
+        else if (maxSim >= this.PLAGIARISM_THRESHOLD) riskLevel = 'FLAGGED';
+
+        clusters.push({
+          clusterId: clusterIdx,
+          clusterName: `Nhóm Đạo Văn ${clusterIdx} (${memberIndices.length} sinh viên)`,
+          studentCount: memberIndices.length,
+          students: memberSubmissions,
+          pairs: clusterPairs,
+          maxSimilarity: maxSim,
+          riskLevel,
+        });
+        clusterIdx++;
+      } else {
+        // Sinh viên nộp bài độc lập, an toàn
+        const idx = memberIndices[0];
+        independentSubmissions.push({
+          id: submissions[idx].submissionId,
+          name: submissions[idx].studentName || submissions[idx].submissionId,
+          studentId: submissions[idx].studentId,
+        });
+      }
+    }
+
+    // Sắp xếp các cụm theo maxSimilarity giảm dần (nhóm nghiêm trọng nhất lên đầu)
+    clusters.sort((a, b) => b.maxSimilarity - a.maxSimilarity);
+    // Cập nhật lại số thứ tự clusterId
+    clusters.forEach((c, idx) => {
+      c.clusterId = idx + 1;
+      c.clusterName = `Nhóm Đạo Văn ${idx + 1} (${c.studentCount} sinh viên)`;
+    });
+
+    // ── Tính đối soát độc lập chéo giữa các nhóm (Cross-Cluster Independence) ──
+    const crossClusterIndependence: CrossClusterIndependence[] = [];
+    for (let c1 = 0; c1 < clusters.length; c1++) {
+      for (let c2 = c1 + 1; c2 < clusters.length; c2++) {
+        const cluster1 = clusters[c1];
+        const cluster2 = clusters[c2];
+        let maxCrossSim = 0;
+        let samplePair: CrossClusterIndependence['samplePair'] | undefined;
+
+        for (const s1 of cluster1.students) {
+          for (const s2 of cluster2.students) {
+            const pairMatch = allPairs.find(
+              (p) =>
+                (p.submissionAId === s1.submissionId && p.submissionBId === s2.submissionId) ||
+                (p.submissionAId === s2.submissionId && p.submissionBId === s1.submissionId),
+            );
+            const sim = pairMatch ? pairMatch.similarityRate : 0;
+            if (sim >= maxCrossSim) {
+              maxCrossSim = sim;
+              if (pairMatch) {
+                samplePair = {
+                  submissionAId: s1.submissionId,
+                  submissionBId: s2.submissionId,
+                  studentNameA: s1.studentName,
+                  studentNameB: s2.studentName,
+                  similarityRate: sim,
+                };
+              }
+            }
+          }
+        }
+
+        crossClusterIndependence.push({
+          clusterAId: cluster1.clusterId,
+          clusterBId: cluster2.clusterId,
+          clusterAName: cluster1.clusterName,
+          clusterBName: cluster2.clusterName,
+          maxCrossSimilarity: maxCrossSim,
+          samplePair,
+          isIndependent: maxCrossSim < this.SUSPECTED_WARNING_THRESHOLD,
+        });
       }
     }
 
@@ -234,9 +433,14 @@ export class ASTPlagiarismEngine {
         id: s.submissionId,
         name: s.studentName || s.submissionId,
         studentId: s.studentId,
+        sourceCode: s.sourceCode,
+        language: s.language,
       })),
       similarityMatrix,
-      flaggedReports: flaggedReports.sort((a, b) => b.similarityRate - a.similarityRate),
+      flaggedReports,
+      clusters,
+      independentSubmissions,
+      crossClusterIndependence,
       totalExecutionTimeMs: Date.now() - startTime,
     };
   }
