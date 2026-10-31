@@ -100,19 +100,19 @@ export function pickBestTextModel(availableModels: string[]): string {
     .filter(m => isPureTextModel(m));
 
   if (cleanList.length === 0) {
-    return 'gemini-2.0-flash';
+    return 'gemini-flash-lite-latest';
   }
 
   const priorityOrder = [
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-flash-8b',
-    'gemini-2.0-flash-lite',
-    'gemini-2.0-pro-exp',
-    'gemini-1.5-pro',
-    'gemini-1.5-pro-latest',
-    'gemini-pro',
+    'gemini-flash-lite-latest',
+    'gemini-flash-latest',
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+    'gemini-2.5-pro',
+    'gemini-pro-latest',
   ];
 
   for (const prio of priorityOrder) {
@@ -247,15 +247,22 @@ export class GeminiAIService {
     // CHỌN NGẪU NHIÊN 1 BỐI CẢNH ĐỜI THỰC ĐỘC ĐÁO CHO LẦN GỌI NÀY ĐỂ ĐA DẠNG HÓA
     const chosenDomain = DIVERSE_REAL_WORLD_DOMAINS[Math.floor(Math.random() * DIVERSE_REAL_WORLD_DOMAINS.length)];
 
-    // 1. Chỉ chọn tối đa 2 mô hình văn bản siêu tốc hàng đầu (gemini-2.0-flash hoặc gemini-1.5-flash)
-    // Tránh việc lặp qua 25+ model gây treo giao diện hàng trăm giây
+    // 1. Chọn các mô hình văn bản siêu tốc hiện hành từ Google Gemini API
     let modelsToTry: string[] = [];
     if (options.model && isPureTextModel(options.model)) {
       const cleanReq = options.model.startsWith('models/') ? options.model : `models/${options.model}`;
       modelsToTry.push(cleanReq);
     }
-    if (!modelsToTry.includes('models/gemini-2.0-flash')) modelsToTry.push('models/gemini-2.0-flash');
-    if (!modelsToTry.includes('models/gemini-1.5-flash')) modelsToTry.push('models/gemini-1.5-flash');
+    const candidateModels = [
+      'models/gemini-flash-lite-latest',
+      'models/gemini-flash-latest',
+      'models/gemini-2.5-flash',
+      'models/gemini-2.5-flash-lite',
+      'models/gemini-3.5-flash',
+    ];
+    for (const c of candidateModels) {
+      if (!modelsToTry.includes(c)) modelsToTry.push(c);
+    }
 
     const systemPrompt = `Bạn là chuyên gia khảo thí AI tại Đại học FPT.
 Nhiệm vụ: Soạn thảo đề thi lập trình chi tiết, phong phú, độc đáo và gắn với các bài toán công nghệ thực tế theo yêu cầu của Giảng viên.
@@ -506,7 +513,44 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
       };
     }
 
-    // 3. Mặc định theo chủ đề người dùng nhập
+    // 3. Phân loại chủ đề: Mã ASCII / Ký tự
+    if (
+      rawText.includes('ascii') ||
+      rawText.includes('chữ cái') ||
+      rawText.includes('ký tự') ||
+      rawText.includes('kí tự') ||
+      rawText.includes('character')
+    ) {
+      const asciiTests = [
+        { input: 'A', output: '65', weight: 3.5, isHidden: false, explanation: 'Ký tự in hoa A (ASCII 65)' },
+        { input: 'a', output: '97', weight: 3.5, isHidden: false, explanation: 'Ký tự in thường a (ASCII 97)' },
+        { input: '0', output: '48', weight: 3.0, isHidden: true, explanation: 'Ký tự số 0 (ASCII 48)' },
+        { input: 'Z', output: '90', weight: 2.0, isHidden: true, explanation: 'Ký tự in hoa biên Z (ASCII 90)' },
+        { input: 'z', output: '122', weight: 2.0, isHidden: true, explanation: 'Ký tự in thường biên z (ASCII 122)' },
+        { input: '!', output: '33', weight: 2.0, isHidden: true, explanation: 'Ký tự đặc biệt dấu chấm than (ASCII 33)' },
+      ].slice(0, count);
+
+      return {
+        title: `Bài Tập Lập Trình: Tra cứu mã ASCII của ký tự (${options.courseCode})`,
+        description: `### Bối Cảnh Nghiệp Vụ Thực Tế\nTrong xử lý dữ liệu truyền thông và mã hóa ký tự, việc chuyển đổi ký tự sang mã nhị phân/thập phân ASCII là nền tảng để kiểm tra tính toàn vẹn và nén dữ liệu cho học phần ${options.courseCode} (${options.courseName}).\n\n### Yêu Cầu Kỹ Thuật\n1. Nhập vào 1 ký tự duy nhất từ bàn phím (StdIn).\n2. Chuyển đổi và in ra giá trị mã số nguyên ASCII tương ứng của ký tự đó (StdOut).\n3. Đảm bảo mã nguồn tối ưu, đặt tên biến rõ nghĩa theo chuẩn Clean Code.\n\n### Định Dạng Đầu Vào (StdIn)\n- Một dòng duy nhất chứa 1 ký tự.\n\n### Định Dạng Đầu Ra (StdOut)\n- Một số nguyên duy nhất là mã ASCII của ký tự đã nhập.\n\n### Ràng Buộc\n- Ký tự thuộc bảng mã ASCII chuẩn (từ mã 32 đến 126).\n- Giới hạn thời gian: 2000ms\n- Giới hạn bộ nhớ: 512MB`,
+        timeLimitMs: 2000,
+        memoryLimitMb: 512,
+        allowedLanguages: options.allowedLanguages || ['java', 'python', 'cpp'],
+        testCases: asciiTests,
+        rubric: [
+          { criterion: 'Tính đúng đắn thuật toán & Vượt qua Testcases', maxScore: 5.0, description: 'Pass 100% testcases' },
+          { criterion: 'Clean Code & Chuẩn đặt tên', maxScore: 2.5, description: 'Mã nguồn sạch, xử lý ký tự chuẩn' },
+          { criterion: 'Thiết kế Hướng đối tượng & SOLID', maxScore: 2.5, description: 'Tuân thủ Single Responsibility (SRP)' },
+        ],
+        starterCode: `import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (!sc.hasNext()) return;\n        char c = sc.next().charAt(0);\n        System.out.println((int) c);\n    }\n}`,
+        referenceSolution: `import java.util.Scanner;\n\npublic class Solution {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (!sc.hasNext()) return;\n        char c = sc.next().charAt(0);\n        System.out.println((int) c);\n    }\n}`,
+        modelUsed: 'AITA Smart Engine (Tối ưu tốc độ cao)',
+        latencyMs: Math.max(120, Date.now() - startTime),
+        isFallback: true,
+      };
+    }
+
+    // 4. Mặc định theo chủ đề người dùng nhập
     const defaultTitle = options.topicPrompt?.trim()
       ? `Bài Tập Lập Trình: ${options.topicPrompt.slice(0, 50)} (${options.courseCode})`
       : `Bài Tập Thực Hành Cấu Trúc Dữ Liệu & Giải Thuật (${options.courseCode})`;

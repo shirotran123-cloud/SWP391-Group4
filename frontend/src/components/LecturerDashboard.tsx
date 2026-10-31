@@ -1118,7 +1118,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   // Form state cho tạo đề bài
   const [assignmentTitle, setAssignmentTitle] = useState('Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị');
-  const [selectedCourse, setSelectedCourse] = useState('COURSE-SWP391');
+  const [selectedCourse, setSelectedCourse] = useState<string>(() => {
+    return initialCourses[0]?.courseId || 'CRS-TEST123456';
+  });
   const [assignmentDesc, setAssignmentDesc] = useState('Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian và tuân thủ các nguyên lý SOLID.');
   const [deadlineDate, setDeadlineDate] = useState('2026-10-26T23:59');
   const [allowedLanguages, setAllowedLanguages] = useState<string[]>(['java', 'python', 'cpp']);
@@ -1238,21 +1240,29 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
-  // Cập nhật học phần và tự động đồng bộ mã môn trên tiêu đề đề bài
+  // Cập nhật học phần và tự động đồng bộ mã môn trên tiêu đề đề bài lẫn mô tả
   const handleCourseSelectChange = (newCourseId: string) => {
     setSelectedCourse(newCourseId);
     const targetObj = courses.find(
-      (c) => c.courseId === newCourseId || normalizeClassId(c.courseId) === normalizeClassId(newCourseId) || normalizeClassId(c.courseCode) === normalizeClassId(newCourseId)
+      (c) =>
+        c.courseId === newCourseId ||
+        normalizeClassId(c.courseId) === normalizeClassId(newCourseId) ||
+        normalizeClassId(c.courseCode) === normalizeClassId(newCourseId)
     );
     if (targetObj) {
       const newCode = targetObj.courseCode;
+      const newName = targetObj.courseName;
       setAssignmentTitle((prev) => {
         if (!prev) return prev;
         const trimmed = prev.trim();
-        if (/\([A-Za-z0-9_-]+\)$/.test(trimmed)) {
-          return trimmed.replace(/\([A-Za-z0-9_-]+\)$/, `(${newCode})`);
+        if (/\([A-Za-z0-9_ -]+\)$/.test(trimmed)) {
+          return trimmed.replace(/\([A-Za-z0-9_ -]+\)$/, `(${newCode})`);
         }
         return `${trimmed} (${newCode})`;
+      });
+      setAssignmentDesc((prev) => {
+        if (!prev) return prev;
+        return prev.replace(/(học phần\s+)[^\n()]+(\s*\([^)]*\))?/i, `$1${newCode} (${newName})`);
       });
     }
   };
@@ -1977,7 +1987,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           <button
             type="button"
             className="btn btn-primary btn-sm"
-            onClick={() => setActiveTab('CREATE_ASSIGNMENT')}
+            onClick={() => {
+              if (selectedCourseDetailId) {
+                handleCourseSelectChange(selectedCourseDetailId);
+              }
+              setActiveTab('CREATE_ASSIGNMENT');
+            }}
           >
             <PlusCircle size={14} /> Tạo đề bài
           </button>
@@ -2004,7 +2019,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               type="button"
               role="tab"
               aria-selected={active}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => {
+                if (tab.key === 'CREATE_ASSIGNMENT' && selectedCourseDetailId) {
+                  handleCourseSelectChange(selectedCourseDetailId);
+                }
+                setActiveTab(tab.key as any);
+              }}
               style={{
                 padding: '9px 13px',
                 border: 'none',
