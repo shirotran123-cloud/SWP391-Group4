@@ -4,29 +4,22 @@
   <meta charset="UTF-8">
   <title>A Comparative Study of AST-Based Winnowing and Tree Edit Distance in Detecting GenAI-Obfuscated Source Code</title>
   <style>
-    /* IEEE Standard Conference Proceedings Format - Strictly Monochromatic (Black & White) */
     @page {
       size: A4 portrait;
-      margin: 19mm 14mm 22mm 14mm;
-      @bottom-center {
-        content: counter(page);
-        font-family: 'Times New Roman', Times, serif;
-        font-size: 9pt;
-        color: #000;
-      }
+      margin: 18mm 14mm 20mm 14mm;
     }
     * {
       box-sizing: border-box;
-      color: #000 !important;
     }
     body {
       font-family: 'Times New Roman', Times, 'Liberation Serif', serif;
       font-size: 10pt;
-      line-height: 1.44;
-      color: #000;
+      line-height: 1.4;
+      color: #111;
       background: #fff;
       margin: 0;
       padding: 0;
+      -webkit-font-smoothing: antialiased;
     }
 
     /* IEEE Header */
@@ -37,17 +30,18 @@
       padding-bottom: 4pt;
     }
     .paper-title {
-      font-size: 19pt;
+      font-size: 18.5pt;
       font-weight: bold;
       line-height: 1.25;
-      margin-bottom: 8pt;
-      letter-spacing: -0.2px;
+      margin-bottom: 7pt;
+      color: #000;
     }
     .course-meta {
       font-size: 9pt;
       font-style: italic;
       margin-bottom: 12pt;
       line-height: 1.35;
+      color: #222;
     }
 
     /* Authors Monochromatic Grid */
@@ -55,7 +49,7 @@
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 10px 18px;
+      gap: 12px 20px;
       margin-bottom: 14pt;
     }
     .author-card {
@@ -65,15 +59,18 @@
     .author-name {
       font-size: 10pt;
       font-weight: bold;
+      color: #000;
     }
     .author-role {
       font-size: 8.5pt;
       font-style: italic;
       margin-top: 1px;
+      color: #333;
     }
     .author-affil {
       font-size: 7.5pt;
       margin-top: 1px;
+      color: #444;
     }
 
     /* Two-Column Body Layout */
@@ -81,7 +78,6 @@
       column-count: 2;
       column-gap: 6.5mm;
       text-align: justify;
-      hyphens: auto;
     }
 
     /* Headings */
@@ -90,28 +86,31 @@
       font-weight: bold;
       text-transform: uppercase;
       text-align: center;
-      margin-top: 14pt;
+      margin-top: 13pt;
       margin-bottom: 6pt;
       letter-spacing: 0.5px;
       break-after: avoid;
+      page-break-after: avoid;
     }
     h3 {
       font-size: 9.5pt;
       font-style: italic;
       font-weight: bold;
-      margin-top: 10pt;
+      margin-top: 9pt;
       margin-bottom: 4pt;
       break-after: avoid;
+      page-break-after: avoid;
     }
     h4 {
       font-size: 9pt;
       font-weight: bold;
-      margin-top: 8pt;
-      margin-bottom: 4pt;
+      margin-top: 7pt;
+      margin-bottom: 3pt;
       break-after: avoid;
+      page-break-after: avoid;
     }
     p {
-      margin: 0 0 7pt 0;
+      margin: 0 0 6pt 0;
       text-indent: 14pt;
     }
     p:first-of-type {
@@ -139,8 +138,9 @@
       text-align: center;
       font-family: 'Times New Roman', serif;
       font-size: 9.5pt;
-      margin: 9pt 0;
+      margin: 8pt 0;
       break-inside: avoid;
+      page-break-inside: avoid;
     }
     .fraction {
       display: inline-flex;
@@ -161,24 +161,28 @@
     /* Full-Width Blocks */
     .full-width-block {
       column-span: all;
-      margin: 14pt auto;
+      margin: 12pt auto;
       width: 100%;
       break-inside: avoid;
+      page-break-inside: avoid;
     }
 
-    /* Figure 1 Blueprint (Black & White) */
+    /* Figure 1 Blueprint */
     .figure-container {
-      border: 1px solid #000;
+      border: 1px solid #222;
+      border-radius: 4px;
       padding: 10px 14px;
-      background: #fff;
+      background: #fafafa;
       text-align: center;
     }
     .arch-box {
-      border: 1px solid #000;
+      border: 1px solid #333;
+      border-radius: 3px;
       background: #fff;
       padding: 5px 8px;
       font-size: 8.5pt;
       text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     .arch-box-title {
       font-weight: bold;
@@ -187,11 +191,13 @@
       font-size: 7.5pt;
       font-style: italic;
       margin: 1px 0;
+      color: #333;
     }
     .arch-box-desc {
       font-size: 7.5pt;
       line-height: 1.25;
       margin-top: 1px;
+      color: #444;
     }
     .root-box {
       width: 320px;
@@ -200,15 +206,18 @@
     .arch-arrow-down {
       font-size: 10pt;
       margin: 2px 0;
+      color: #444;
     }
     .arch-arrow-down-small {
       font-size: 8pt;
       margin: 1px 0;
+      color: #444;
     }
     .arch-arrow-right {
       font-size: 12pt;
       align-self: center;
       padding: 0 6px;
+      color: #444;
     }
     .arch-row {
       display: flex;
@@ -234,71 +243,77 @@
       font-size: 8.5pt;
       font-style: italic;
       margin-top: 6pt;
+      text-align: center;
     }
 
-    /* Pipeline Flowchart (Black & White) */
+    /* Pipeline Flowchart */
     .pipeline-bw-container {
-      background: #fff;
-      border: 1px solid #000;
-      padding: 6px 8px;
+      background: #fafafa;
+      border: 1px solid #222;
+      border-radius: 4px;
+      padding: 8px 10px;
       margin: 8pt 0;
       font-size: 7.5pt;
       break-inside: avoid;
+      page-break-inside: avoid;
     }
     .p-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 3px;
+      gap: 4px;
     }
     .p-bw-box {
-      border: 1px solid #000;
-      padding: 2px 5px;
+      border: 1px solid #333;
+      border-radius: 2px;
+      background: #fff;
+      padding: 3px 6px;
       white-space: nowrap;
       text-align: center;
     }
     .p-bw-arr {
       font-size: 8pt;
+      color: #555;
     }
     .p-converge {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
-      margin: 3px 0;
+      gap: 6px;
+      margin: 4px 0;
     }
     .p-bracket {
       font-size: 14pt;
       line-height: 1;
     }
 
-    /* Tables (IEEE Standard: Top 1.5pt, Header bottom 1pt, Table bottom 1.5pt) */
+    /* Tables */
     .table-caption {
       text-align: center;
       font-size: 8.5pt;
       font-weight: bold;
       text-transform: uppercase;
       margin-bottom: 4pt;
+      letter-spacing: 0.3px;
     }
     .ieee-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 8.2pt;
-      line-height: 1.3;
+      font-size: 8pt;
+      line-height: 1.35;
       margin: 0 auto;
     }
     .ieee-table th {
       border-top: 1.5pt solid #000;
       border-bottom: 1pt solid #000;
-      padding: 4px 6px;
+      padding: 5px 6px;
       font-weight: bold;
-      background: #fff;
+      background: #f7f7f7;
       text-align: center;
     }
     .ieee-table td {
-      padding: 3.5px 6px;
-      border-bottom: 0.5pt solid #ccc;
-      background: #fff;
+      padding: 4px 6px;
+      border-bottom: 0.5pt solid #ddd;
     }
     .ieee-table tr:last-child td {
       border-bottom: 1.5pt solid #000;
@@ -306,33 +321,39 @@
 
     /* Code & Blockquote */
     pre {
-      background: #fff;
-      border: 1px solid #000;
+      background: #f8f9fa;
+      border: 1px solid #ccc;
+      border-radius: 3px;
       padding: 6px 8px;
       font-family: 'Consolas', 'Courier New', monospace;
       font-size: 8pt;
-      line-height: 1.3;
+      line-height: 1.35;
       white-space: pre-wrap;
       word-break: break-all;
       margin: 6pt 0;
       break-inside: avoid;
+      page-break-inside: avoid;
     }
     code {
       font-family: 'Consolas', 'Courier New', monospace;
       font-size: 8.5pt;
-      background: #fff;
-      border: 0.5px solid #ccc;
+      background: #f4f4f4;
+      border: 0.5px solid #ddd;
+      border-radius: 2px;
       padding: 1px 3px;
     }
     pre code {
       border: none;
       padding: 0;
+      background: transparent;
     }
     blockquote {
-      border-left: 2px solid #000;
-      background: #fff;
+      border-left: 2.5px solid #333;
+      background: #f9f9f9;
       padding: 6px 12px;
       margin: 8pt 0;
+      break-inside: avoid;
+      page-break-inside: avoid;
     }
 
     /* References */
@@ -345,6 +366,7 @@
     ol.references li {
       margin-bottom: 3pt;
     }
+
   </style>
 </head>
 <body>
@@ -570,7 +592,6 @@
 <h3>A. Detection Rates and Verdicts</h3>
 <p>All experiments were executed using the deterministic benchmark runner (<code>run-ast-benchmark.ts</code>) configured with <span class="math-inline">k=15, w=10</span>, and threshold <span class="math-inline">&tau; = 70.0%</span>.</p>
 <div class="full-width-block"><div class="table-caption">TABLE I: EMPIRICAL BENCHMARK RESULTS ACROSS 10 ADVERSARIAL PAIRS (<i>k</i>=15, <i>w</i>=10, <i>&tau;</i>=70.0%)</div><table class="ieee-table">
-<table>
 <thead>
 <tr>
 <th align="center">Pair ID</th>
@@ -694,7 +715,6 @@
 <h2>VI. COMPARATIVE ANALYSIS: AST WINNOWING VS. TREE EDIT DISTANCE</h2>
 <p>To provide a rigorous theoretical perspective for institutional decision-makers, Table II contrasts our empirical AST Winnowing implementation against classical Tree Edit Distance (TED).</p>
 <div class="full-width-block"><div class="table-caption">TABLE II: COMPARATIVE MATRIX: AST WINNOWING VS. TREE EDIT DISTANCE (TED)</div><table class="ieee-table">
-<table>
 <thead>
 <tr>
 <th align="left">Architectural Dimension</th>
