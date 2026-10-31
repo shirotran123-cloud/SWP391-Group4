@@ -386,6 +386,7 @@ export async function seed(knex: Knex): Promise<void> {
   const assignmentTcCountMap: Record<string, number> = {};
 
   assignmentsData.forEach((a) => {
+    if (a.assignment_id === 'ASM-219423') return; // Đã cấu hình riêng 3 testcases bên dưới
     const tcCount = a.testcases_count || 3;
     assignmentTcCountMap[a.assignment_id] = tcCount;
     for (let t = 0; t < tcCount; t++) {
