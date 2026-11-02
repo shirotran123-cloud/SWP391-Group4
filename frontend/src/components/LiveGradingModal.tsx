@@ -228,7 +228,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
             <AlertOctagon size={24} color="#b91c1c" style={{ flexShrink: 0 }} />
             <div>
               <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#991b1b', margin: '0 0 3px 0' }}>
-                HỦY KẾT QUẢ BÀI NỘP: 0.0 / 10 ĐIỂM (QUY CHẾ LIÊM CHÍNH BR-03)
+                HỦY KẾT QUẢ BÀI NỘP: 0.0 / 10 ĐIỂM (VI PHẠM LIÊM CHÍNH HỌC THUẬT)
               </h4>
               <p style={{ fontSize: '12.5px', color: '#7f1d1d', margin: 0, lineHeight: 1.5 }}>
                 Thuật toán AST Winnowing phát hiện độ tương đồng <strong>{simRate.toFixed(1)}% (≥ 80.0%)</strong> so với kho mã nguồn (trùng khớp với bài của <strong>{plagiarismMatch?.matchedStudentName || plagiarismMatch?.matchedStudentId}</strong>). Bài làm tự động bị <strong>HỦY ĐIỂM VỀ 0.0 ĐIỂM</strong> không thể hoàn tác.
@@ -253,7 +253,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
           >
             <div style={{ borderRight: '1px solid var(--border-soft)', paddingRight: '18px' }}>
               <p className="eyebrow" style={{ color: isSeverePlagiarism ? '#b91c1c' : undefined }}>
-                {isSeverePlagiarism ? 'HỦY ĐIỂM (BR-03)' : 'Điểm tổng'}
+                {isSeverePlagiarism ? 'HỦY ĐIỂM (VI PHẠM)' : 'Điểm tổng'}
               </p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginTop: '4px' }}>
                 <span

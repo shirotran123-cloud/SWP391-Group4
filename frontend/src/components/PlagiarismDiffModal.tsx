@@ -447,7 +447,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
                 <BadgeIcon size={14} /> {badge.label}
               </span>
               <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Quy chế BR-03: <strong>≥50%</strong> Cảnh báo · <strong>≥70%</strong> Gắn cờ · <strong>≥80%</strong> Hủy điểm (0.0đ)
+                Quy chế xử lý vi phạm: <strong>≥50%</strong> Cảnh báo · <strong>≥70%</strong> Gắn cờ · <strong>≥80%</strong> Hủy điểm (0.0đ)
               </span>
             </div>
 
@@ -455,7 +455,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
               Chia 2 Màn Hình Đối Sánh Đạo Văn: {displayStudentA.name} ⇔ {displayStudentB.name}
             </h2>
             <p style={{ fontSize: '12px', color: 'var(--text-dim)', margin: 0 }}>
-              Cơ chế bảo mật BR-04: Báo cáo chỉ dành cho Giảng viên / Ban chủ nhiệm bộ môn. Phân cụm kiểm định theo từng nhóm nhỏ độc lập.
+              Bảo mật thông tin: Báo cáo chỉ dành cho Giảng viên / Ban chủ nhiệm bộ môn. Phân cụm kiểm định theo từng nhóm nhỏ độc lập.
             </p>
           </div>
 
@@ -826,7 +826,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
             }}
           >
             <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-              Xử Lý Theo BR-03
+              Xử Lý Vi Phạm Đạo Văn
             </span>
             <div style={{ fontSize: '13px', fontWeight: 800, color: badge.text, marginTop: '3px' }}>
               {isSevereZeroScore
@@ -918,7 +918,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
           >
             <AlertOctagon size={16} color="#b91c1c" style={{ flexShrink: 0 }} />
             <span>
-              <strong>QUY CHẾ BR-03 (ZERO-TOLERANCE):</strong> Phát hiện đạo văn <strong>{similarity.toFixed(1)}% (≥ 80.0%)</strong> giữa <strong>{displayStudentA.name}</strong> và <strong>{displayStudentB.name}</strong>. Cả hai bài nộp bị <strong>HỦY TOÀN BỘ ĐIỂM SỐ VỀ 0.0 ĐIỂM</strong> ngay lập tức.
+              <strong>QUY CHẾ LIÊM CHÍNH (ZERO-TOLERANCE):</strong> Phát hiện đạo văn <strong>{similarity.toFixed(1)}% (≥ 80.0%)</strong> giữa <strong>{displayStudentA.name}</strong> và <strong>{displayStudentB.name}</strong>. Cả hai bài nộp bị <strong>HỦY TOÀN BỘ ĐIỂM SỐ VỀ 0.0 ĐIỂM</strong> ngay lập tức.
             </span>
           </div>
         ) : isFlaggedPlagiarism ? (

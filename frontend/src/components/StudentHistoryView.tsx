@@ -631,7 +631,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                           Thông Tin Phúc Khảo Bài Nộp (Đã sử dụng: {appealsCount}/2 lượt của bài này)
                         </span>
                         <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontStyle: 'italic' }}>
-                          — Quy tắc BR-05
+                          — Quy chế phúc khảo
                         </span>
                       </div>
 

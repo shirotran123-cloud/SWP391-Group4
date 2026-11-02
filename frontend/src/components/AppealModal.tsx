@@ -65,7 +65,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
   if (!isOpen) return null;
 
   const appealsCount = appeals.length;
-  const maxAppeals = 2; // Quy tắc BR-05: Tối đa 2 lần cho MỖI bài nộp độc lập
+  const maxAppeals = 2; // Quy định: Tối đa 2 lần cho MỖI bài nộp độc lập
   const canSubmit = appealsCount < maxAppeals;
 
   const handleSubmitAppeal = async (e: React.FormEvent) => {
@@ -250,7 +250,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
           </div>
         </div>
 
-        {/* BR-05 Policy Banner - Làm rõ quy tắc 2 lần/bài nộp độc lập */}
+        {/* Policy Banner - Làm rõ quy tắc 2 lần/bài nộp độc lập */}
         <div style={{ padding: '14px 18px', borderRadius: '12px', backgroundColor: 'rgba(59, 130, 246, 0.06)', border: '1px solid rgba(59, 130, 246, 0.16)', marginBottom: '20px', fontSize: '13px', color: '#1e40af', lineHeight: 1.6 }}>
           <div style={{ fontWeight: 700, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--blue-300)', fontSize: '14px' }}>
             <ShieldAlert size={18} /> Quy định phúc khảo điểm:

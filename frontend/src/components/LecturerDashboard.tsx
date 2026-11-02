@@ -1267,7 +1267,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
-  // Sinh đề tự động bằng 100% Google Gemini AI THẬT (UC-08)
+  // Sinh đề tự động bằng 100% Google Gemini AI THẬT 
   const handleAiGenerateAssignment = async () => {
     setAiErrorMsg(null);
     setCreateSuccessMsg(null);
@@ -2525,7 +2525,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         </div>
       )}
 
-      {/* TAB 2: TẠO ĐỀ BÀI TẬP & GOOGLE GEMINI AI GENERATOR (UC-08) */}
+      {/* TAB 2: TẠO ĐỀ BÀI TẬP & GOOGLE GEMINI AI GENERATOR  */}
       {activeTab === 'CREATE_ASSIGNMENT' && (
         <div className="glass-panel" style={{ padding: '32px', borderRadius: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
@@ -3069,7 +3069,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       fontWeight: 700,
                       cursor: 'pointer',
                     }}
-                    title="Chia đều điểm 7.0đ cho mọi testcase (mỗi testcase có điểm số ngang nhau theo chuẩn BR-03)"
+                    title="Chia đều điểm 7.0đ cho mọi testcase (mỗi testcase có điểm số ngang nhau theo quy chế chấm điểm)"
                   >
                     Chia đều điểm (7.0đ Barem)
                   </button>
@@ -3288,7 +3288,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         <div className="glass-panel" style={{ padding: '32px', borderRadius: '12px' }}>
           <div style={{ marginBottom: '24px' }}>
             <h2 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-main)' }}>
-              Nhập Danh Sách Sinh Viên Hàng Loạt & Kiểm Định Giao Dịch ACID (UC-02)
+              Nhập Danh Sách Sinh Viên Hàng Loạt 
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
               Tính năng tuân thủ chặt chẽ ràng buộc R06: Bắt buộc sử dụng SQL Transaction khi nạp danh sách từ file Excel. Khi có bất kỳ lỗi nào xảy ra ở dòng thứ N, 100% dữ liệu đã xử lý trước đó phải được Rollback nguyên vẹn.
@@ -3963,7 +3963,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             )}
           </div>
 
-          {/* Bảng Báo Cáo Phân Tích Đạo Văn Toàn Lớp Theo Nhóm (BR-03 / UC-11) */}
+          {/* Bảng Báo Cáo Phân Tích Đạo Văn Toàn Lớp Theo Nhóm  */}
           {showPlagiarismMatrix && plagiarismScanResult && (() => {
             const clusters: PlagiarismCluster[] = plagiarismScanResult.clusters || [];
             const crossIndep: CrossClusterIndependence[] = plagiarismScanResult.crossClusterIndependence || [];
@@ -4035,7 +4035,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           textTransform: 'uppercase',
                         }}
                       >
-                        BÁO CÁO PHÂN CỤM ĐẠO VĂN TOÀN LỚP (BR-03)
+                        BÁO CÁO PHÂN CỤM ĐẠO VĂN TOÀN LỚP
                       </span>
                       <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                         Đề bài: <strong>{plagiarismScanResult.assignmentId}</strong>
@@ -4175,7 +4175,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                 color: '#ffffff',
                               }}
                             >
-                              {isSevere ? 'QUY CHẾ BR-03: ĐIỂM 0.0' : 'CẢNH BÁO GẮN CỜ (≥70%)'}
+                              {isSevere ? 'VI PHẠM ĐẠO VĂN: 0.0 ĐIỂM' : 'CẢNH BÁO GẮN CỜ (≥70%)'}
                             </span>
                           </div>
 
@@ -4804,7 +4804,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         <RblBenchmarkView onOpenDiffViewer={onOpenDiffViewer} />
       )}
 
-      {/* TAB 6: PHÚC KHẢO & KHIẾU NẠI ĐIỂM (UC-06 / BR-05) */}
+      {/* TAB 6: PHÚC KHẢO & KHIẾU NẠI ĐIỂM  */}
       {activeTab === 'APPEALS' && (
         <LecturerAppealsManager apiBaseUrl={API_BASE_URL} lecturerId="GV001" />
       )}

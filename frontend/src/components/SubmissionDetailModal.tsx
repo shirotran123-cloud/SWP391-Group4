@@ -356,7 +356,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             <AlertTriangle size={24} color="#dc2626" style={{ flexShrink: 0 }} />
             <div style={{ fontSize: '13px', lineHeight: 1.4 }}>
               <div style={{ fontWeight: 700, textTransform: 'uppercase', color: '#b91c1c' }}>
-                Hủy Điểm Bài Nộp: 0.0 / 10.0 (Quy Chế Liêm Chính Học Thuật BR-03)
+                Hủy Điểm Bài Nộp: 0.0 / 10.0 (Vi Phạm Liêm Chính Học Thuật)
               </div>
               <div style={{ color: '#4b5563', fontSize: '12px', marginTop: '2px' }}>
                 Hệ thống AST & Winnowing phát hiện bài nộp có mức độ tương đồng cao vượt ngưỡng xử phạt nghiêm ngặt (≥ 80.0%{submission.plagiarismRate ? ` - Thực tế: ${submission.plagiarismRate.toFixed(1)}%` : ''}). Toàn bộ điểm kiểm thử và điểm AI đã bị hủy theo quy định.

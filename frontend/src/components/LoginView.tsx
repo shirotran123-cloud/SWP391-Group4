@@ -467,7 +467,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               ))}
 
               <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: '6px' }}>
-                Thử nghiệm cơ chế bảo vệ danh tính (BR-01 Access Control):
+                Thử nghiệm cơ chế bảo vệ danh tính:
               </div>
 
               <button

@@ -1026,7 +1026,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     if (!currentTask) return;
 
     if (isExpired) {
-      setErrorMessage(`[BR-02 Ngoại Lệ] Đã quá hạn chót nộp bài (${new Date(currentTask.deadline).toLocaleString('vi-VN')})! Cổng nộp đã tự động đóng.`);
+      setErrorMessage(`Đã quá hạn chót nộp bài (${new Date(currentTask.deadline).toLocaleString('vi-VN')})! Cổng nộp đã tự động đóng.`);
       setExceptionType('EXPIRED');
       return;
     }
@@ -1097,7 +1097,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     setSha256Checksum(null);
     if (nextState) {
       setErrorMessage(
-        '[BR-02 Ngoại Lệ 2] Cổng nộp bài đã đóng do quá hạn chót Deadline. Không cho phép nộp bổ sung nhằm bảo toàn tính toàn vẹn học thuật.',
+        'Cổng nộp bài đã đóng do quá hạn chót Deadline. Không cho phép nộp bổ sung nhằm bảo toàn tính toàn vẹn học thuật.',
       );
       setExceptionType('EXPIRED');
     } else {
@@ -1108,7 +1108,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
   const handleSubmit = async () => {
     if (isExpired) {
-      setErrorMessage('[BR-02 Ngoại Lệ] Không thể nộp bài do đã quá hạn chót!');
+      setErrorMessage('Không thể nộp bài do đã quá hạn chót!');
       return;
     }
     const currentTask = selectedTask || task;
@@ -1254,7 +1254,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               }}
             >
               {isDeadlineSimulatedExpired ? <RefreshCw size={12} /> : <Lock size={12} />}
-              {isDeadlineSimulatedExpired ? 'Khôi phục Deadline' : 'Demo Quá Deadline (BR-02)'}
+              {isDeadlineSimulatedExpired ? 'Khôi phục Deadline' : 'Demo Quá Deadline'}
             </button>
           </div>
         </div>
@@ -1700,9 +1700,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                       </div>
                       <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12.5px', color: '#33415a', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <li>File nén chỉ chứa mã nguồn (.java, .py, .cpp, .cs). Không đính kèm file .class, .exe hoặc file rác.</li>
-                        <li>Dung lượng file tối đa: <strong>10 MB</strong>. Vượt quá sẽ bị chặn theo chuẩn <em>BR-01</em>.</li>
+                        <li>Dung lượng file tối đa: <strong>10 MB</strong>. Vượt quá sẽ bị chặn theo quy định của hệ thống.</li>
                         <li>Nghiêm cấm: Gọi <code>System.exit()</code>, mở kết nối mạng Socket/HTTP, truy xuất file hệ thống.</li>
-                        <li>Thời hạn nộp bài: Sau khi hết thời gian đếm ngược, cổng nộp bài tự động khóa theo chuẩn <em>BR-02</em>.</li>
+                        <li>Thời hạn nộp bài: Sau khi hết thời gian đếm ngược, cổng nộp bài tự động khóa tự động đóng.</li>
                       </ul>
                     </div>
                   </div>
@@ -2312,9 +2312,9 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               <div>
                 <div style={{ fontWeight: 700, marginBottom: '2px' }}>
                   {exceptionType === 'OVERSIZE'
-                    ? 'ĐÁNH CHẶN NGOẠI LỆ: DUNG LƯỢNG VƯỢT QUÁ 10MB'
+                    ? 'THÔNG BÁO: DUNG LƯỢNG VƯỢT QUÁ 10MB'
                     : exceptionType === 'EXPIRED'
-                    ? 'ĐÁNH CHẶN NGOẠI LỆ: QUÁ HẠN NỘP BÀI (BR-02)'
+                    ? 'THÔNG BÁO: QUÁ HẠN NỘP BÀI'
                     : 'LỖI BÀI NỘP'}
                 </div>
                 <span>{errorMessage}</span>
@@ -2367,7 +2367,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             >
               {isExpired ? (
                 <>
-                  <Lock size={16} /> Cổng Nộp Đã Đóng (Quá Hạn Chót BR-02)
+                  <Lock size={16} /> Cổng Nộp Đã Đóng (Quá Hạn Chót)
                 </>
               ) : (
                 <>

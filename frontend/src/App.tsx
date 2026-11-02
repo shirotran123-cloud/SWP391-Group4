@@ -17,6 +17,7 @@ import { io, Socket } from 'socket.io-client';
 import { PlagiarismService } from './services/plagiarism.service';
 import JSZip from 'jszip';
 import { API_BASE_URL } from './config/api';
+import Footer from './components/Footer';
 
 function generateFallbackSubId(): string {
   return 'SUB-' + Date.now().toString(36).toUpperCase();
@@ -751,7 +752,7 @@ export function App() {
             setSteps((prev) =>
               syncTestcaseSteps(prev, data.testcaseResults).map((s) => {
                 if (isSeverePlag && s.id === '6') {
-                  return { ...s, status: 'failed', detail: `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm theo quy tắc BR-03.` };
+                  return { ...s, status: 'failed', detail: `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.` };
                 }
                 return s.id.startsWith('tc-') ? s : { ...s, status: 'passed' };
               })
@@ -805,7 +806,7 @@ export function App() {
                     ...s,
                     status: isSeverePlag && s.id === '6' ? 'failed' : (sub.status === 'GRADED' ? 'passed' : 'failed'),
                     detail: isSeverePlag && s.id === '6'
-                      ? `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm theo quy tắc BR-03.`
+                      ? `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.`
                       : (sub.status === 'GRADED' ? 'Hoàn thành (Đạt)' : (sub.errorMessage || 'Thất bại')),
                   }))
                 );
@@ -925,7 +926,7 @@ export function App() {
                 detail:
                   s.id === '6'
                     ? isSeverePlag
-                      ? `Vi phạm liêm chính: Đạo văn AST ${simRate.toFixed(1)}% (≥ 80.0%). Bài làm bị hủy toàn bộ điểm số (0.0/10) theo quy tắc BR-03.`
+                      ? `Vi phạm liêm chính: Đạo văn AST ${simRate.toFixed(1)}% (≥ 80.0%). Bài làm bị hủy toàn bộ điểm số (0.0/10) do vi phạm quy chế liêm chính học thuật.`
                       : 'Hoàn tất phân tích cấu trúc cây cú pháp trừu tượng AST.'
                     : 'Hoàn thành (ĐẠT)',
               }))
@@ -940,7 +941,7 @@ export function App() {
                 { line: 15, rule: 'Single Responsibility Principle', description: 'Hàm `sortAndPrintAndSaveToDatabase` vi phạm nguyên lý SRP do ôm đồm nhiều nhiệm vụ độc lập.' },
               ],
               explanation: isSeverePlag
-                ? `Mã nguồn có độ tương đồng AST ${simRate.toFixed(1)}% vượt ngưỡng nghiêm trọng ≥ 80.0% theo quy chế liêm chính học thuật BR-03. Bài làm bị chấm 0.0 điểm.`
+                ? `Mã nguồn có độ tương đồng AST ${simRate.toFixed(1)}% vượt ngưỡng nghiêm trọng ≥ 80.0% theo quy chế liêm chính học thuật. Bài làm bị chấm 0.0 điểm.`
                 : 'Mã nguồn có giải thuật rõ ràng, tối ưu thời gian chạy. Cần tách các phương thức in ấn và lưu trữ để tuân thủ nguyên lý Đơn trách nhiệm.',
             });
 
@@ -1082,20 +1083,6 @@ export function App() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '14.5px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-main)' }}>
                   AITA
-                </span>
-                <span
-                  className="nav-version"
-                  style={{
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    letterSpacing: '0.06em',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    border: '1px solid var(--border-strong)',
-                    color: 'var(--text-muted)',
-                  }}
-                >
-                  v2.0
                 </span>
               </div>
               <span
@@ -1464,30 +1451,8 @@ export function App() {
       />
 
       {/* CHÂN TRANG (FOOTER) THUẦN TIẾNG VIỆT */}
-      <footer
-        style={{
-          borderTop: '1px solid var(--border-color)',
-          padding: '18px 24px',
-          backgroundColor: 'var(--ink-900)',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1320px',
-            margin: '0 auto',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '10px',
-            fontSize: '11.5px',
-            color: 'var(--text-dim)',
-          }}
-        >
-          <span>AITA — Hệ thống đánh giá mã nguồn &amp; giám sát liêm chính học thuật</span>
-          <span>Bộ môn Kỹ thuật Phần mềm · Đại học FPT · 2026</span>
-        </div>
-      </footer>
+      <Footer />
+
     </div>
   );
 }

@@ -381,7 +381,7 @@ public class Solution {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-200)', textTransform: 'uppercase' }}>
-            HỘI ĐỒNG PHÚC KHẢO (UC-06 / BR-05)
+            HỘI ĐỒNG PHÚC KHẢO ĐIỂM
           </span>
           <h2 style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-main)', marginTop: '4px' }}>
             Quản Lý &amp; Thẩm Định Đơn Phúc Khảo
