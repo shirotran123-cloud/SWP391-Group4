@@ -141,6 +141,23 @@ echo  [4.3] Khoi dong AITA React Web Frontend: Port 5173...
 start "AITA Frontend (Port 5173)" /D "%~dp0frontend" cmd /k "title AITA Frontend (Port 5173) && npm.cmd run dev"
 ping -n 3 127.0.0.1 >nul
 
+:: Subsystem 4: AITA Ngrok Tunnel cho Vercel (Port 3000)
+set "NGROK_CMD="
+where ngrok >nul 2>&1
+if !ERRORLEVEL! EQU 0 (
+    set "NGROK_CMD=ngrok"
+) else if exist "C:\ngrok\ngrok.exe" (
+    set "NGROK_CMD=C:\ngrok\ngrok.exe"
+)
+
+if defined NGROK_CMD (
+    echo  [4.4] Khoi dong Ngrok Tunnel cho Vercel: Port 3000...
+    start "AITA Ngrok Tunnel (Port 3000)" cmd /k "title AITA Ngrok Tunnel (Port 3000) && "!NGROK_CMD!" http --url=reseller-calamari-footwear.ngrok-free.dev 3000"
+    ping -n 2 127.0.0.1 >nul
+) else (
+    echo  [4.4] Khong tim thay ngrok - Bo qua tunnel tu dong.
+)
+
 :: ----------------------------------------------------------------------
 :: BUOC 5: TU DONG MO TRINH DUYET VA HIEN THI BANG DIEU KHIEN
 :: ----------------------------------------------------------------------
@@ -160,6 +177,7 @@ echo    * API Gateway va Telemetry: http://localhost:3000
 echo    * GenAI Hub (Gemini):       http://localhost:3001
 echo    * PostgreSQL Database:      localhost:5432 (DB: aita_autograding)
 echo    * Redis Queue (BullMQ):     localhost:6379 (Queue: grading_queue)
+echo    * Ngrok Tunnel cho Vercel:  https://reseller-calamari-footwear.ngrok-free.dev -> :3000
 echo.
 echo  [TAI KHOAN DEMO CO SAN]:
 echo    * Giang vien: giangvien.edu@gmail.com

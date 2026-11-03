@@ -6,10 +6,12 @@ echo    AITA-INTELLIGENT: DUNG TOAN BO CAC DICH VU HE THONG
 echo ======================================================================
 echo.
 
-echo [1/3] Dang dung cac tien trinh Node.js (Gateway, GenAI Hub, Frontend)...
+echo [1/3] Dang dung cac tien trinh Node.js (Gateway, GenAI Hub, Frontend, Ngrok)...
 taskkill /F /FI "WINDOWTITLE eq AITA API Gateway (Port 3000)*" >nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq AITA GenAI Hub (Port 3001)*" >nul 2>&1
 taskkill /F /FI "WINDOWTITLE eq AITA Frontend (Port 5173)*" >nul 2>&1
+taskkill /F /FI "WINDOWTITLE eq AITA Ngrok Tunnel (Port 3000)*" >nul 2>&1
+taskkill /F /IM ngrok.exe >nul 2>&1
 
 echo [2/3] Dang dung ha tang Docker Compose (PostgreSQL 15 va Redis 7)...
 where docker >nul 2>&1
