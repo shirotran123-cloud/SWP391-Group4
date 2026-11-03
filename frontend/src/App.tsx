@@ -352,6 +352,8 @@ export function App() {
     const socket = io(API_BASE_URL, {
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
+      // Bỏ qua trang cảnh báo ngrok khi Socket.IO fallback sang HTTP long-polling
+      extraHeaders: { 'ngrok-skip-browser-warning': 'true' },
     });
 
     socket.on('connect', () => {
