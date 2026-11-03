@@ -6,6 +6,7 @@
     "frontend"
   ],
   "scripts": {
+    "postinstall": "npm install --prefix frontend",
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
     "start:gateway": "npm run start --prefix api-gateway",
@@ -25,5 +26,9 @@
     "swp391"
   ],
   "author": "SWP391 Group 4",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0"
+  }
 }
