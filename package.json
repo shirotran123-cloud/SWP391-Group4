@@ -2,6 +2,9 @@
   "name": "aita-intelligent-monorepo",
   "version": "1.0.0",
   "description": "AITA-Intelligent - AI-Powered Teaching Assistant & AST Code Analytics Platform (SWP391 Group 4)",
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
     "db:up": "docker compose up -d",
     "db:down": "docker compose down",
