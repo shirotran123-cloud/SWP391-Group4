@@ -115,6 +115,7 @@ post_json(BASE + "/api/v1/assignments", {
     "courseId": "CRS-SWP391",
     "title": "Kiem thu tai 100 yeu cau dong thoi",
     "allowedLanguages": ["python"],
+    "testcasesCount": 1,
     "deadline": "2030-01-01T00:00:00.000Z",
 })
 post_json(BASE + "/api/v1/test-cases", {
