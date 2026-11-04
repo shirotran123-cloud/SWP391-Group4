@@ -25,6 +25,67 @@ const CustomSolidTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) =
   return null;
 };
 
+/**
+ * Custom renderer cho nhãn 5 trục SOLID trên RadarChart.
+ * Tự động ngắt dòng thông minh và căn lề linh hoạt để không bị tràn mép trái/phải trên mọi kích thước màn hình.
+ */
+const renderPolarAngleTick = (props: any) => {
+  const { x, y, cx, cy, payload } = props;
+  const text: string = payload?.value || '';
+
+  // Xác định textAnchor chính xác theo tọa độ x so với tâm cx
+  let textAnchor: 'inherit' | 'middle' | 'end' | 'start' = 'middle';
+  if (x < cx - 12) {
+    textAnchor = 'end';
+  } else if (x > cx + 12) {
+    textAnchor = 'start';
+  }
+
+  // Ngắt dòng cho các nhãn dài để luôn nằm trọn vẹn trong khung vẽ
+  let lines: string[] = [text];
+  if (text.includes('D (Đảo ngược') || text.includes('Đảo ngược')) {
+    lines = ['D (Đảo ngược', 'phụ thuộc)'];
+  } else if (text.includes('I (Phân tách') || text.includes('Phân tách')) {
+    lines = ['I (Phân tách', 'Interface)'];
+  } else if (text.includes('L (Thay thế') || text.includes('Thay thế')) {
+    lines = ['L (Thay thế', 'Liskov)'];
+  }
+
+  if (lines.length === 1) {
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor={textAnchor}
+        fill="#33415a"
+        fontSize={11}
+        fontWeight={600}
+      >
+        {lines[0]}
+      </text>
+    );
+  }
+
+  // Với nhãn 2 dòng: căn chỉnh khoảng cách dòng dy để cân đối với điểm đỉnh radar
+  return (
+    <text
+      x={x}
+      y={y - 6}
+      textAnchor={textAnchor}
+      fill="#33415a"
+      fontSize={10.5}
+      fontWeight={600}
+    >
+      <tspan x={x} dy="0">
+        {lines[0]}
+      </tspan>
+      <tspan x={x} dy="13">
+        {lines[1]}
+      </tspan>
+    </text>
+  );
+};
+
 export const SolidRadarChart: React.FC<SolidRadarChartProps> = ({ rating }) => {
   const data = [
     { subject: 'S (Đơn trách nhiệm)', score: rating.solidScore.s, fullMark: 10, description: 'Single Responsibility Principle' },
@@ -47,9 +108,19 @@ export const SolidRadarChart: React.FC<SolidRadarChartProps> = ({ rating }) => {
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
       <div style={{ width: '100%', height: '280px' }}>
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="75%" data={data}>
+          <RadarChart
+            cx="50%"
+            cy="50%"
+            outerRadius="55%"
+            margin={{ top: 14, right: 36, bottom: 14, left: 36 }}
+            data={data}
+          >
             <PolarGrid stroke="rgba(11, 18, 32, 0.08)" />
-            <PolarAngleAxis dataKey="subject" stroke="#4d5c76" tick={{ fill: '#33415a', fontSize: 11, fontWeight: 600 }} />
+            <PolarAngleAxis
+              dataKey="subject"
+              stroke="#4d5c76"
+              tick={renderPolarAngleTick}
+            />
             <PolarRadiusAxis angle={30} domain={[0, 10]} stroke="#8695ab" />
             <Radar
               name="Điểm SOLID"
@@ -62,7 +133,7 @@ export const SolidRadarChart: React.FC<SolidRadarChartProps> = ({ rating }) => {
           </RadarChart>
         </ResponsiveContainer>
       </div>
-      <div style={{ marginTop: '8px', display: 'flex', gap: '12px', alignItems: 'center', fontSize: '13px' }}>
+      <div style={{ marginTop: '8px', display: 'flex', gap: '12px', alignItems: 'center', fontSize: '13px', flexWrap: 'wrap', justifyContent: 'center' }}>
         <span style={{ color: 'var(--text-muted)' }}>
           Mã Sạch (Clean Code): <strong style={{ color: 'var(--blue-300)' }}>{rating.cleanCodeScore}/10</strong>
         </span>
