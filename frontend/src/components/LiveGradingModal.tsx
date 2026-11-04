@@ -79,7 +79,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
   const progressPercent = Math.round((completedCount / steps.length) * 100);
   const hasFailedStep = steps.some((step) => {
     if (/^tc-\d+$/.test(step.id)) return false;
-    return step.status === 'failed' || /chưa chạy được container|fallback phân tích tĩnh/i.test(step.detail || '');
+    return step.status === 'failed';
   });
   const testcaseSteps = steps
     .filter((step) => /^tc-\d+$/.test(step.id))

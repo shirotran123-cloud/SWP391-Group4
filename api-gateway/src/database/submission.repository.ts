@@ -18,6 +18,7 @@ export class SubmissionRepository implements OnModuleInit {
   private readonly records: Map<string, SubmissionRecord> = new Map();
   private readonly dataDir: string;
   private readonly dataFile: string;
+  private persistTimer: NodeJS.Timeout | null = null;
 
   constructor(private readonly postgres: PostgresService) {
     const candidateDirs = [
@@ -60,12 +61,18 @@ export class SubmissionRepository implements OnModuleInit {
   }
 
   private persist(): void {
-    try {
-      const recordsArray = Array.from(this.records.values());
-      fs.writeFileSync(this.dataFile, JSON.stringify(recordsArray, null, 2), 'utf-8');
-    } catch (err: any) {
-      this.logger.error(`[SubmissionRepository] Failed to persist submissions store: ${err.message}`);
-    }
+    if (this.persistTimer) return;
+    this.persistTimer = setTimeout(() => {
+      this.persistTimer = null;
+      try {
+        const recordsArray = Array.from(this.records.values()).filter((r) => !String(r.studentId).startsWith('STRESS_') && !String(r.assignmentId).startsWith('ASM-STRESS'));
+        fs.promises.writeFile(this.dataFile, JSON.stringify(recordsArray, null, 2), 'utf-8').catch((err) => {
+          this.logger.error(`[SubmissionRepository] Failed to persist submissions store: ${err.message}`);
+        });
+      } catch (err: any) {
+        this.logger.error(`[SubmissionRepository] Failed to persist submissions store: ${err.message}`);
+      }
+    }, 50);
   }
 
   private async syncWithPostgres(): Promise<void> {
@@ -123,6 +130,7 @@ export class SubmissionRepository implements OnModuleInit {
 
   private async saveToPostgres(r: SubmissionRecord): Promise<void> {
     if (!this.postgres.isAvailable()) return;
+    if (String(r.studentId).startsWith('STRESS_') || String(r.assignmentId).startsWith('ASM-STRESS')) return;
     try {
       await this.postgres.safeQuery(
         `INSERT INTO submissions (
@@ -173,7 +181,7 @@ export class SubmissionRepository implements OnModuleInit {
     this.records.set(newRecord.submissionId, newRecord);
     this.persist();
 
-    await this.saveToPostgres(newRecord);
+    void this.saveToPostgres(newRecord);
     return newRecord;
   }
 
@@ -241,7 +249,7 @@ export class SubmissionRepository implements OnModuleInit {
       existing.queueJobId = jobId;
       existing.updatedAt = new Date();
       this.persist();
-      await this.saveToPostgres(existing);
+      void this.saveToPostgres(existing);
     }
   }
 

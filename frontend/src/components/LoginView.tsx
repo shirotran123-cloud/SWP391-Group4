@@ -432,10 +432,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               {[
                 { email: 'giangvien.edu@gmail.com', name: 'ThS. Giảng Viên AITA', role: 'INSTRUCTOR', note: '👨‍🏫 Giảng Viên • Đã cấu hình đề bài & rubric', strong: true },
                 { email: 'phaithayj@gmail.com', name: 'Nguyễn Hoàng Vinh', role: 'STUDENT', note: '🎓 Sinh Viên • Bài nộp sạch (Pass 100% testcase)', strong: true },
-                { email: 'linhcampochia@gmail.com', name: 'Linh Campochia', role: 'STUDENT', note: '🎓 Sinh Viên • Tài khoản thực nghiệm SE170002' },
+                { email: 'linhcampochia@gmail.com', name: 'Linh Campochia', role: 'STUDENT', note: '🎓 Sinh Viên • Tài khoản thực nghiệm SE170002', strong: true },
                 { email: 'admin.aita@gmail.com', name: 'Quản Trị Viên AITA', role: 'ADMIN', note: '🛡️ Quản Trị Viên • Toàn quyền cấu hình & giám sát', strong: true },
                 { email: 'trungdt@fe.edu.vn', name: 'ThS. Đinh Thành Trung', role: 'INSTRUCTOR', note: '👨‍🏫 Giảng Viên Bộ môn SE' },
+                { email: 'namlh@fe.edu.vn', name: 'TS. Lê Hoàng Nam', role: 'INSTRUCTOR', note: '👨‍🏫 Giảng Viên PRJ301 & PRF192' },
                 { email: 'mochibunnyyy123@gmail.com', name: 'Viktor Wilson', role: 'STUDENT', note: '🎓 Sinh Viên SE170003' },
+                { email: 'admin@aita.fpt.edu.vn', name: 'Quản Trị Viên AITA', role: 'ADMIN', note: '🛡️ Admin Quản Trị (ADMIN001)' },
               ].map((a, i) => (
                 <button
                   key={a.email + i}

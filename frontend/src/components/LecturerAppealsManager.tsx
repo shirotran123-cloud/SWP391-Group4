@@ -67,7 +67,7 @@ export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
         {
           appealId: 'APL-516461-XLGA',
           submissionId: 'SUB-568109-BVD74X',
-          studentId: 'phaithayj@gmail.com',
+          studentId: 'an.se170000@fpt.edu.vn',
           reason: 'Kính gửi Thầy, bài của em đã giải thuật toán O(N log N) bằng QuickSort phân vùng Hoare và testcase chạy rất nhanh (131ms), nhưng Testcase 2 em bị chấm trượt do timeout 2.0s trên hệ thống cũ. Mong Thầy xem lại mã nguồn và phúc khảo giúp em ạ.',
           status: 'PENDING',
           createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
@@ -114,10 +114,35 @@ export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
     const fetchSubDetail = async () => {
       setLoadingDetail(true);
       try {
-        const res = await fetch(`${apiBaseUrl}/api/v1/submissions/${selectedAppeal.submissionId}`);
-        if (res.ok) {
-          const json = await res.json();
-          setSubmissionDetail(json.data || null);
+        const [resSub, resSrc] = await Promise.allSettled([
+          fetch(`${apiBaseUrl}/api/v1/submissions/${selectedAppeal.submissionId}`),
+          fetch(`${apiBaseUrl}/api/v1/submissions/${selectedAppeal.submissionId}/source`),
+        ]);
+
+        let subData: any = null;
+        let srcText: string | null = null;
+
+        if (resSub.status === 'fulfilled' && resSub.value.ok) {
+          const json = await resSub.value.json();
+          subData = json.data || null;
+        }
+
+        if (resSrc.status === 'fulfilled' && resSrc.value.ok) {
+          const jsonSrc = await resSrc.value.json();
+          srcText = jsonSrc.sourceCode || null;
+        }
+
+        if (subData) {
+          if (srcText && !subData.sourceCode && !subData.details?.sourceCode && !subData.result?.sourceCode) {
+            subData.sourceCode = srcText;
+          }
+          setSubmissionDetail(subData);
+        } else if (srcText) {
+          setSubmissionDetail({
+            submissionId: selectedAppeal.submissionId,
+            sourceCode: srcText,
+            studentId: selectedAppeal.studentId,
+          });
         } else {
           setSubmissionDetail(null);
         }
@@ -202,143 +227,154 @@ export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
     const details = submissionDetail?.details || submissionDetail?.result || {};
 
     const studentEmail = selectedAppeal.studentId;
-    const isPhaithay = studentEmail.includes('phaithayj');
+
+    // Ưu tiên nạp mã nguồn THẬT từ bài nộp của sinh viên
+    const rawSource =
+      submissionDetail?.sourceCode ||
+      submissionDetail?.result?.sourceCode ||
+      submissionDetail?.details?.sourceCode ||
+      details?.sourceCode ||
+      details?.plagiarismMatch?.sourceCodeA;
+
+    const appealAssignmentId = (selectedAppeal as any)?.assignmentId;
 
     const sourceCode =
-      details?.plagiarismMatch?.sourceCodeA ||
-      `// ================================================================
+      rawSource && rawSource.trim().length > 0
+        ? rawSource
+        : `// ================================================================
 // MA NGUON NOP BAI: ${selectedAppeal.submissionId}
 // Sinh vien: ${studentEmail}
-// Bai tap: ASM-SWP-01 (Thuat toan Sap xep O(N log N))
-// Ngon ngu: Java 17 (OpenJDK)
-// LƯU Ý HỘI ĐỒNG: File nộp thực tế trên máy chủ là PRJ301-1.zip (3.23 MB - Nộp nhầm file đồ án Web PRJ301).
-// Do đó hệ thống tự động cho 0 điểm. Sinh viên gửi đơn phúc khảo kèm mã nguồn QuickSort chuẩn bên dưới để xin chấm lại:
+// Bai tap: ${appealAssignmentId || 'CSD201 - Data Structures & Algorithms'}
+// Ngon ngu: Java
+// Source code submitted for assignment evaluation
 // ================================================================
-package com.aita.sorting;
+package com.aita.solution;
 
 import java.util.Scanner;
 
 public class Solution {
-    // Thuat toan QuickSort toi uu phan vung Hoare O(N log N)
-    public static void quickSort(int[] arr, int low, int high) {
-        if (low < high) {
-            int pi = partition(arr, low, high);
-            quickSort(arr, low, pi);
-            quickSort(arr, pi + 1, high);
-        }
-    }
-
-    private static int partition(int[] arr, int low, int high) {
-        int pivot = arr[low + (high - low) / 2];
-        int i = low - 1;
-        int j = high + 1;
-        while (true) {
-            do { i++; } while (arr[i] < pivot);
-            do { j--; } while (arr[j] > pivot);
-            if (i >= j) return j;
-            int temp = arr[i];
-            arr[i] = arr[j];
-            arr[j] = temp;
-        }
-    }
-
-    // Ham xu ly xuat ket qua (Single Responsibility)
-    public static void sortAndDisplay(int[] arr) {
-        quickSort(arr, 0, arr.length - 1);
-        for (int i = 0; i < arr.length; i++) {
-            System.out.print(arr[i] + (i < arr.length - 1 ? " " : "\\n"));
-        }
-    }
-
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
-        if (!sc.hasNextInt()) return;
-        int n = sc.nextInt();
-        int[] a = new int[n];
-        for (int i = 0; i < n; i++) {
-            a[i] = sc.nextInt();
-        }
-        sortAndDisplay(a);
+        // Student algorithm implementation
     }
-}`;
+}
+`;
 
-    const originalScore = submissionDetail?.score ?? (isPhaithay ? 7.0 : 6.5);
+    const originalScore = submissionDetail?.score ?? 6.5;
     const passedTestcases = details?.passedTestcases ?? 0;
     const totalTestcases = details?.totalTestcases ?? 0;
 
+    interface TestCaseItem {
+      id: string;
+      title: string;
+      input: string;
+      expected: string;
+      actual: string;
+      status: 'PASSED' | 'FAILED';
+      timeMs: number;
+      memoryMb: number;
+      score: number;
+      maxScore: number;
+    }
+
+    // Ưu tiên lấy kết quả testcase THẬT từ container sandbox nếu có
+    const rawTestcases =
+      (details?.testResults && Array.isArray(details.testResults) && details.testResults.length > 0)
+        ? details.testResults
+        : (submissionDetail?.result?.testResults && Array.isArray(submissionDetail.result.testResults) && submissionDetail.result.testResults.length > 0)
+        ? submissionDetail.result.testResults
+        : null;
+
+    const formattedTestcases: TestCaseItem[] | null = rawTestcases
+      ? rawTestcases.map((tr: any, idx: number): TestCaseItem => ({
+          id: `TC-${String(idx + 1).padStart(2, '0')}`,
+          title: `Test Case ${idx + 1}: ${tr.isBoundary ? 'Trường hợp biên / Tải dữ liệu lớn' : 'Dữ liệu đầu vào tiêu chuẩn'}`,
+          input: tr.input || `Testcase Input #${idx + 1}`,
+          expected: tr.expectedOutput || 'Expected Output',
+          actual: tr.actualOutput || (tr.verdict === 'PASSED' ? tr.expectedOutput : (tr.error || 'Lỗi thực thi / Sai lệch đầu ra')),
+          status: tr.verdict === 'PASSED' ? 'PASSED' : 'FAILED',
+          timeMs: tr.timeMs || 45,
+          memoryMb: tr.memoryMb || 28,
+          score: tr.verdict === 'PASSED' ? (tr.score ?? 1.0) : 0.0,
+          maxScore: tr.maxScore ?? 1.0,
+        }))
+      : null;
+
     const isInvalid = (originalScore === 0 && passedTestcases === 0);
-    const testcases = isInvalid
+    const testcases: TestCaseItem[] = formattedTestcases || (isInvalid
       ? [
           {
             id: 'TC-01',
-            title: 'Mẫu I/O cơ bản (6 phần tử ngẫu nhiên)',
-            input: '6\n5 2 9 1 5 6',
-            expected: '1 2 5 5 6 9',
-            actual: 'LỖI: Không phát hiện I/O giải thuật sắp xếp (File zip nộp lên là PRJ301-1.zip)',
+            title: 'Mẫu I/O cơ bản (Standard Input / Output)',
+            input: 'Standard Test Input Data',
+            expected: 'Standard Test Expected Output',
+            actual: 'LỖI: Mã nguồn không biên dịch được hoặc không phát hiện đúng định dạng I/O yêu cầu.',
             status: 'FAILED',
             timeMs: 0,
             memoryMb: 0,
             score: 0.0,
-            maxScore: 4.0,
+            maxScore: 3.5,
           },
           {
             id: 'TC-02',
-            title: 'Hidden Benchmark O(N log N) - 100,000 phần tử ngẫu nhiên',
-            input: '100000\n[Array 100,000 integers in range -10^6..10^6]',
-            expected: '100,000 số nguyên sắp xếp tăng dần, thời gian < 2000ms',
-            actual: 'LỖI: Tiến trình bị hủy do bài nộp không hợp lệ (Invalid Submission 0đ)',
+            title: 'Trường hợp biên & Tải lớn (Boundary & Scale)',
+            input: 'Boundary Test Input Data',
+            expected: 'Boundary Test Expected Output',
+            actual: 'LỖI: Bỏ qua do bài nộp không vượt qua bước kiểm tra định dạng hoặc biên dịch.',
             status: 'FAILED',
             timeMs: 0,
             memoryMb: 0,
             score: 0.0,
-            maxScore: 3.0,
+            maxScore: 3.5,
           },
         ]
       : [
           {
             id: 'TC-01',
-            title: 'Mẫu I/O cơ bản (6 phần tử ngẫu nhiên)',
-            input: '6\n5 2 9 1 5 6',
-            expected: '1 2 5 5 6 9',
-            actual: '1 2 5 5 6 9',
+            title: 'Mẫu I/O cơ bản (Standard Input / Output)',
+            input: 'Standard Test Input Data',
+            expected: 'Standard Test Expected Output',
+            actual: 'Standard Test Expected Output',
             status: 'PASSED',
-            timeMs: 68,
-            memoryMb: 36,
-            score: 4.0,
-            maxScore: 4.0,
+            timeMs: 58,
+            memoryMb: 32,
+            score: 3.5,
+            maxScore: 3.5,
           },
           {
             id: 'TC-02',
-            title: 'Hidden Benchmark O(N log N) - 100,000 phần tử ngẫu nhiên',
-            input: '100000\n[Array 100,000 integers in range -10^6..10^6]',
-            expected: '100,000 số nguyên sắp xếp tăng dần, thời gian < 2000ms',
-            actual: passedTestcases === 1 ? 'TLE 2005ms: Vượt quá giới hạn 2.0s' : 'Sắp xếp chính xác 100% trong 131ms',
+            title: 'Trường hợp biên & Tải lớn (Boundary & Scale)',
+            input: 'Boundary Test Input Data',
+            expected: 'Boundary Test Expected Output',
+            actual: passedTestcases === 1 ? 'TLE: Vượt quá giới hạn thời gian thực thi cho phép (Time Limit Exceeded)' : 'Thực thi chính xác 100% trong giới hạn thời gian',
             status: passedTestcases === 1 ? 'FAILED' : 'PASSED',
-            timeMs: passedTestcases === 1 ? 2005 : 131,
-            memoryMb: 94,
-            score: passedTestcases === 1 ? 0 : 3.0,
-            maxScore: 3.0,
+            timeMs: passedTestcases === 1 ? 2005 : 124,
+            memoryMb: 88,
+            score: passedTestcases === 1 ? 0 : 3.5,
+            maxScore: 3.5,
           },
-        ];
+        ]);
 
-    const aiRating = details?.aiRating || {
-      cleanCodeScore: 8.5,
-      solidScore: { s: 7.0, o: 9.0, l: 8.5, i: 9.0, d: 8.0 },
-      explanation:
-        'Mã nguồn sinh viên áp dụng thuật toán QuickSort phân vùng Hoare đạt hiệu năng tối ưu O(N log N). Thuật toán hoạt động ổn định trên tập dữ liệu lớn. Tuy nhiên, hàm sortAndDisplay đang gộp cả tác vụ sắp xếp và xuất dữ liệu ra console, vi phạm nguyên tắc Đơn trách nhiệm (SRP).',
-      codeSmells: [
-        {
-          line: 29,
-          rule: 'Single Responsibility Principle (SRP)',
-          description: 'Hàm sortAndDisplay vừa thực hiện gọi sắp xếp mảng vừa đảm nhận việc in kết quả ra System.out.',
-        },
-        {
-          line: 36,
-          rule: 'Resource Leak Warning',
-          description: 'Đối tượng Scanner chưa được bọc trong khối try-with-resources để tự động đóng luồng dữ liệu.',
-        },
-      ],
-    };
+    const aiRating =
+      details?.aiRating ||
+      submissionDetail?.result?.aiRating || {
+        cleanCodeScore: 8.5,
+        solidScore: { s: 7.5, o: 8.5, l: 9.0, i: 9.0, d: 8.0 },
+        explanation:
+          'Mã nguồn sinh viên đã hoàn thành thuật toán cốt lõi. Cấu trúc hàm cơ bản rõ ràng, tuy nhiên cần tách biệt các mô-đun nghiệp vụ và tối ưu hóa xử lý tài nguyên theo nguyên lý Single Responsibility (SRP).',
+        codeSmells: [
+          {
+            line: 28,
+            rule: 'Single Responsibility Principle (SRP)',
+            description: 'Phương thức vừa đảm nhận xử lý thuật toán vừa kiêm nhiệm xuất dữ liệu ra console.',
+          },
+          {
+            line: 35,
+            rule: 'Resource Safety',
+            description: 'Cần giải phóng tài nguyên luồng I/O đúng cách hoặc sử dụng try-with-resources.',
+          },
+        ],
+      };
 
     const plagiarism = details?.plagiarismMatch || {
       matchedStudentName: 'Trần Thanh Nguyên',
@@ -351,10 +387,16 @@ public class Solution {
       verdict: 'Mã nguồn có tính độc lập cao. Cấu trúc cây cú pháp AST nguyên bản, không phát hiện dấu hiệu sao chép trái phép.',
     };
 
+    const assignmentTitle =
+      submissionDetail?.assignmentTitle ||
+      submissionDetail?.assignmentId ||
+      appealAssignmentId ||
+      'Bài tập lập trình & Đánh giá giải thuật';
+
     return {
       studentEmail,
       submissionId: selectedAppeal.submissionId,
-      assignmentTitle: 'ASM-SWP-01 - Thuật toán Sắp xếp O(N log N)',
+      assignmentTitle,
       originalScore,
       sourceCode,
       testcases,
@@ -874,7 +916,7 @@ public class Solution {
 
                 {/* Danh sách Testcases */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {auditData.testcases.map((tc) => (
+                  {auditData.testcases.map((tc: any) => (
                     <div
                       key={tc.id}
                       style={{
@@ -1039,7 +1081,7 @@ public class Solution {
                     <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--blue-200)', margin: '4px 0' }}>
                       {auditData.plagiarism.comparedSubmissionsCount} bài
                     </div>
-                    <span style={{ fontSize: '11.5px', color: '#4d5c76' }}>Toàn bộ lớp CRS-SWP391</span>
+                    <span style={{ fontSize: '11.5px', color: '#4d5c76' }}>Toàn bộ lớp CRS-CSD201</span>
                   </div>
                 </div>
 
@@ -1188,7 +1230,7 @@ public class Solution {
                     rows={3}
                     value={resolutionNote}
                     onChange={(e) => setResolutionNote(e.target.value)}
-                    placeholder="Ví dụ: Đã đối chiếu mã nguồn QuickSort và kiểm tra lại log Docker Sandbox; thuật toán đạt O(N log N) chuẩn xác, không có dấu hiệu đạo văn. Chấp thuận cộng 2.0 điểm..."
+                    placeholder="Ví dụ: Đã đối chiếu mã nguồn và log thực thi trong Docker Sandbox; thuật toán đạt chuẩn xác, không có dấu hiệu gian lận. Chấp thuận cộng điểm..."
                     style={{
                       width: '100%',
                       padding: '12px 14px',

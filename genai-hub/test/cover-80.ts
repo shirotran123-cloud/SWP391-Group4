@@ -23,6 +23,7 @@ import { KeyRotatorService } from "../src/services/key-rotator.service";
 import { adaptSchemaForOpenAI, adaptSchemaForGemini } from "../src/schemas/schema-adapter";
 import { ReviewResponseValidator } from "../src/validation/review-response.validator";
 import { CODE_REVIEW_JSON_SCHEMA } from "../src/schemas/code-review.schema";
+import { AIReviewError } from "../src/errors/ai-review.error";
 
 let passed = 0;
 let failed = 0;
@@ -259,6 +260,48 @@ export async function runCover80(): Promise<boolean> {
   const mock = new MockProvider();
   const diag = await mock.generateCompletion([{ role: "user", content: "Compiler / Runtime Diagnostic: Segmentation fault at line 5" }]);
   gate(diag.model === "aita-mock-explainer-v1", "mock provider diagnostic branch");
+
+
+  // ── 9. Error types, KeyRotator cooldowns, Validator & Plagiarism bands ──
+  const errDefault = new AIReviewError("PROVIDER_UNAVAILABLE", "down");
+  const errCustom = new AIReviewError("INVALID_LLM_OUTPUT", "bad json", ["field x"]);
+  gate(errDefault.details.length === 0 && errCustom.details.length === 1, "AIReviewError default & custom details");
+
+  const bothEmpty = ASTPlagiarismEngine.compareSubmissions(
+    { submissionId: "BE1", sourceCode: "", language: "python" },
+    { submissionId: "BE2", sourceCode: "", language: "python" },
+  );
+  gate(bothEmpty.similarityRate === 0, "plagiarism both-empty returns 0%");
+
+  const midRes = ASTPlagiarismEngine.compareSubmissions(
+    { submissionId: "M1", sourceCode: "def f(a):\n  if a > 0:\n    return a + 1\n  return 0", language: "python" },
+    { submissionId: "M2", sourceCode: "def g(x, y):\n  for i in range(x):\n    y += i\n  if y > 10:\n    return y\n  return -1", language: "python" },
+  );
+  gate(typeof midRes.isFlagged === "boolean", "plagiarism distinct algorithms evaluated");
+
+  const rot = new KeyRotatorService(["kA", "kB"], ["gA"]);
+  rot.getNextKey("openai");
+  rot.reportError("openai", "kA", 429);
+  rot.reportError("openai", "kB", 503);
+  rot.reportError("openai", "unknown", 400);
+  rot.reportError("openai", "kA", 400);
+  const lruKey = rot.getNextKey("openai");
+  rot.reportSuccess("openai", "kA");
+  rot.reportSuccess("openai", "unknown");
+  gate(typeof lruKey === "string", "key rotator all-cooldown LRU & recovery");
+
+  const diagSyntax = await mock.generateCompletion([{ role: "user", content: "Compiler / Runtime Diagnostic: syntax error expected ';'" }]);
+  const diagNull = await mock.generateCompletion([{ role: "user", content: "Compiler / Runtime Diagnostic: NullPointerException" }]);
+  gate(!!diagSyntax.content && !!diagNull.content, "mock provider syntax & nullpointer diagnostic branches");
+
+  const badSmells = ReviewResponseValidator.validate(JSON.stringify({
+    clean_code_score: 8, solid_score: 8, solid_breakdown: { srp: 8, ocp: 8, lsp: 8, isp: 8, dip: 8 },
+    code_smells: "not-an-array", summary: "ok"
+  }));
+  const negScore = ReviewResponseValidator.validate(JSON.stringify({
+    clean_code_score: -1, solid_score: 8, code_smells: []
+  }));
+  gate(!badSmells.valid && !negScore.valid, "validator rejects malformed smells and negative score");
 
   console.log(`---\nCOVER-80 GENAI: ${passed} passed, ${failed} failed`);
   return failed === 0;

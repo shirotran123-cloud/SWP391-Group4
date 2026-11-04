@@ -5,13 +5,12 @@ import { LoginView } from './components/LoginView';
 import { LoginModal } from './components/LoginModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { LecturerDashboard } from './components/LecturerDashboard';
-import { RblBenchmarkView } from './components/RblBenchmarkView';
 import { StudentAppealsView } from './components/StudentAppealsView';
 import { StudentHistoryView } from './components/StudentHistoryView';
 import { PlagiarismDiffModal } from './components/PlagiarismDiffModal';
 import type { Task, GradingStep, AIRating, PlagiarismMatch, User, ScoreBreakdown, PlagiarismCluster, PlagiarismPairItem, CrossClusterIndependence } from './types';
 import { isLecturerRole } from './types';
-import { Terminal, Shield, LogOut, FileCode, Upload, BookOpen, LayoutDashboard, Scale, ArrowLeftRight, Clock, GraduationCap, Check } from 'lucide-react';
+import { Terminal, Shield, LogOut, FileCode, Upload, BookOpen, LayoutDashboard, Scale, Clock, GraduationCap, Check, ChevronDown, Users, Sparkles } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
 
 import { PlagiarismService } from './services/plagiarism.service';
@@ -81,6 +80,12 @@ function detectSubmissionLanguage(
     if (detected === 'dotnet' && (normalizedAllowed.includes('csharp') || normalizedAllowed.includes('cs'))) {
       return 'dotnet';
     }
+    if (detected === 'c' && normalizedAllowed.includes('cpp')) {
+      return 'cpp';
+    }
+    if (detected === 'cpp' && normalizedAllowed.includes('c')) {
+      return 'c';
+    }
     if (!detected && normalizedAllowed.length === 1) {
       return normalizedAllowed[0] === 'csharp' ? 'dotnet' : normalizedAllowed[0];
     }
@@ -90,13 +95,13 @@ function detectSubmissionLanguage(
 }
 
 const mockTask: Task = {
-  id: 'ASM-SWP-01',
-  title: 'Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị',
-  course: 'SWP391 - Đồ Án Phát Triển Phần Mềm (Agile Scrum)',
-  deadline: new Date(Date.now() + 5 * 24 * 3600 * 1000 + 4 * 3600 * 1000).toISOString(),
+  id: 'TASK-PRJ301-A1',
+  title: 'Xây dựng Servlet & Filter Quản lý Sinh viên MVC (PRJ301)',
+  course: 'PRJ301 - Java Web Application Development',
+  deadline: '2026-11-15T23:59:59.000Z',
   maxSizeMb: 10,
   allowedExtensions: ['.zip'],
-  description: 'Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian O(log N) và tuân thủ các nguyên lý SOLID (SRP, DIP).',
+  description: 'Thiết kế và triển khai web application Java theo mô hình MVC 2, sử dụng Servlet xử lý request và Filter xác thực session người dùng.',
 };
 
 const mockSourceCodeStudent = `package com.aita.autograder;
@@ -209,25 +214,39 @@ export function App() {
   // Danh sách môn học sinh viên đang tham gia (nạp từ PostgreSQL qua API)
   const [enrolledCourses, setEnrolledCourses] = useState<Array<{ courseId: string; courseCode: string; courseName: string; semester: string; description?: string }>>([
     {
-      courseId: 'COURSE-SWP391',
-      courseCode: 'SWP391',
-      courseName: 'Application Development Project',
+      courseId: 'CRS-PRO192',
+      courseCode: 'PRO192',
+      courseName: 'Object-Oriented Programming with Java (PRO192)',
       semester: 'Fall 2026',
-      description: 'Dự Án Phát triển phần mềm theo chuẩn Agile Scrum',
-    },
-    {
-      courseId: 'COURSE-PRN211',
-      courseCode: 'PRN211',
-      courseName: 'Basic Cross-Platform .NET Application',
-      semester: 'Fall 2026',
-      description: 'Lập trình ứng dụng đa nền tảng với .NET C#',
+      description: 'Lập trình hướng đối tượng với Java, kế thừa, đa hình và Collection Framework.',
     },
     {
       courseId: 'CRS-CSD201',
       courseCode: 'CSD201',
       courseName: 'Data Structures and Algorithms (CSD201)',
       semester: 'Fall 2026',
-      description: 'Cấu trúc dữ liệu và giải thuật nâng cao (Cây AVL, Dijkstra, Winnowing)',
+      description: 'Cấu trúc dữ liệu và giải thuật nâng cao (Stack, Queue, Tree, Graph, Sorting).',
+    },
+    {
+      courseId: 'CRS-PRJ301',
+      courseCode: 'PRJ301',
+      courseName: 'Java Web Application Development (PRJ301)',
+      semester: 'Fall 2026',
+      description: 'Xây dựng ứng dụng web với Java Servlet, JSP, MVC pattern và JDBC.',
+    },
+    {
+      courseId: 'CRS-PRF192',
+      courseCode: 'PRF192',
+      courseName: 'Programming Fundamentals with C (PRF192)',
+      semester: 'Fall 2026',
+      description: 'Kỹ thuật lập trình cơ bản với ngôn ngữ C: con trỏ, mảng, chuỗi và cấp phát động.',
+    },
+    {
+      courseId: 'COURSE-SWP391',
+      courseCode: 'SWP391',
+      courseName: 'Software Development Project (SWP391)',
+      semester: 'Fall 2026',
+      description: 'Dự án Phát triển Phần mềm Thực chiến, Kiến trúc Clean Code & SOLID.',
     },
   ]);
   const [selectedStudentCourseId, setSelectedStudentCourseId] = useState<string>('ALL');
@@ -244,6 +263,7 @@ export function App() {
             list = data.data || data || [];
           }
         } catch {}
+
 
         // Nạp bổ sung từ tất cả khóa học trên server để sinh viên thấy lớp học phần mới tạo
         try {
@@ -346,6 +366,128 @@ export function App() {
   const socketRef = useRef<Socket | null>(null);
   const lastSubmissionRef = useRef<{ file?: File; task?: Task; lang?: string } | null>(null);
   currentUserRef.current = currentUser;
+
+  // Role Switcher demo state & handler (UI Bug 5)
+  interface DemoPersona {
+    role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
+    key: 'admin' | 'lecturer' | 'student';
+    label: string;
+    shortLabel: string;
+    email: string;
+    fullName: string;
+    userId: string;
+    hotkey: string;
+  }
+
+  const DEMO_PERSONAS: DemoPersona[] = [
+    {
+      role: 'ADMIN',
+      key: 'admin',
+      label: 'Hệ Thống Quản Trị (Admin)',
+      shortLabel: 'Quản trị viên',
+      email: 'admin@aita.fpt.edu.vn',
+      fullName: 'Quản Trị Viên AITA',
+      userId: 'ADMIN001',
+      hotkey: 'Alt + 1',
+    },
+    {
+      role: 'INSTRUCTOR',
+      key: 'lecturer',
+      label: 'Cổng Giảng Viên (GV001)',
+      shortLabel: 'Giảng viên',
+      email: 'trungdt@fe.edu.vn',
+      fullName: 'ThS. Đinh Thành Trung',
+      userId: 'GV001',
+      hotkey: 'Alt + 2',
+    },
+    {
+      role: 'STUDENT',
+      key: 'student',
+      label: 'Cổng Sinh Viên (SE170000)',
+      shortLabel: 'Sinh viên',
+      email: 'linhcampochia@gmail.com',
+      fullName: 'Nguyễn Văn An (Sinh viên)',
+      userId: 'SE170000',
+      hotkey: 'Alt + 3',
+    },
+  ];
+
+  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
+  const [roleToast, setRoleToast] = useState<string | null>(null);
+  const roleDropdownRef = useRef<HTMLDivElement>(null);
+  const toastTimeoutRef = useRef<any>(null);
+
+  const showRoleToast = (msg: string) => {
+    setRoleToast(msg);
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    toastTimeoutRef.current = setTimeout(() => {
+      setRoleToast(null);
+    }, 2800);
+  };
+
+  const handleSwitchPersona = async (persona: DemoPersona) => {
+    setIsRoleDropdownOpen(false);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: persona.email, fullName: persona.fullName }),
+      });
+      const json = await res.json();
+      if (res.ok && json.data?.user && json.data?.token) {
+        localStorage.setItem('aita_token', json.data.token);
+        localStorage.setItem('aita_user', JSON.stringify(json.data.user));
+        setCurrentUser(json.data.user);
+        setActiveView(persona.key);
+        showRoleToast(`Đã chuyển sang vai trò: ${persona.shortLabel} (${persona.fullName})`);
+        return;
+      }
+    } catch (e) {
+      console.warn('[Role Switcher] Fallback local switch:', e);
+    }
+
+    const fallbackUser: User = {
+      userId: persona.userId,
+      email: persona.email,
+      fullName: persona.fullName,
+      role: persona.role,
+    };
+    localStorage.setItem('aita_user', JSON.stringify(fallbackUser));
+    setCurrentUser(fallbackUser);
+    setActiveView(persona.key);
+    showRoleToast(`Đã chuyển sang vai trò: ${persona.shortLabel} (${persona.fullName})`);
+  };
+
+  // Lắng nghe phím tắt toàn cục Alt+1 (Admin), Alt+2 (Giảng viên), Alt+3 (Sinh viên)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && !e.ctrlKey && !e.shiftKey) {
+        if (e.key === '1') {
+          e.preventDefault();
+          void handleSwitchPersona(DEMO_PERSONAS[0]);
+        } else if (e.key === '2') {
+          e.preventDefault();
+          void handleSwitchPersona(DEMO_PERSONAS[1]);
+        } else if (e.key === '3') {
+          e.preventDefault();
+          void handleSwitchPersona(DEMO_PERSONAS[2]);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  // Đóng dropdown khi bấm ra ngoài
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node)) {
+        setIsRoleDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Khởi tạo kết nối Socket.IO
   useEffect(() => {
@@ -481,6 +623,7 @@ export function App() {
     const assignmentId = currentAssignmentIdRef.current;
     if (!user || !assignmentId) return;
 
+    window.dispatchEvent(new Event('aita_submission_completed'));
     const storageKey = `aita_student_submissions_${user.userId}`;
     try {
       const saved = localStorage.getItem(storageKey);
@@ -507,6 +650,7 @@ export function App() {
     } catch (err) {
       console.warn('Không thể cập nhật lịch sử điểm:', err);
     }
+
   };
 
   const handleSubmission = async (
@@ -1013,15 +1157,6 @@ export function App() {
     return <LoginView onLoginSuccess={handleLoginSuccess} />;
   }
 
-  // Phân quyền màn hình: Giảng viên và Sinh viên hoàn toàn độc lập, Admin có thể xem toàn bộ
-  const navTabs = currentUser.role === 'ADMIN'
-    ? [
-        { key: 'admin', label: 'Hệ thống Quản trị', icon: <LayoutDashboard size={14} /> },
-        { key: 'lecturer', label: 'Cổng Giảng Viên', icon: <BookOpen size={14} /> },
-        { key: 'student', label: 'Giao diện Sinh viên', icon: <GraduationCap size={14} /> },
-      ]
-    : [];
-
   const handleRetrySubmission = () => {
     if (lastSubmissionRef.current?.file) {
       void handleSubmission(
@@ -1052,7 +1187,7 @@ export function App() {
         style={{
           padding: '0 24px',
           height: '60px',
-          backgroundColor: 'rgba(255, 255, 255, 0.92)',
+          backgroundColor: 'rgba(255, 255, 255, 0.94)',
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
           borderBottom: '1px solid var(--border-color)',
@@ -1063,9 +1198,9 @@ export function App() {
           alignItems: 'center',
         }}
       >
-        <div className="nav-inner" style={{ maxWidth: '1320px', width: '100%', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+        <div className="nav-inner" style={{ maxWidth: '1360px', width: '100%', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '14px' }}>
           {/* Logo & Tên hệ thống */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0, flexShrink: 0 }}>
             <div
               style={{
                 width: '32px',
@@ -1103,28 +1238,64 @@ export function App() {
             </div>
           </div>
 
-          {/* Center nav tabs (role-based) */}
-          {navTabs.length > 1 && (
-            <div style={{ display: 'flex', gap: 2, background: 'rgba(11, 18, 32, 0.03)', borderRadius: 9, padding: 3, border: '1px solid var(--border-color)' }}>
-              {navTabs.map(tab => (
-                <button key={tab.key}
-                  onClick={() => setActiveView(tab.key as any)}
+          {/* Center nav tabs: THANH CHUYỂN ĐỔI 3 VAI TRÒ NHANH (UI BUG 5 RESOLVED) */}
+          <div
+            className="nav-role-switcher"
+            style={{
+              display: 'flex',
+              gap: 3,
+              background: 'rgba(11, 18, 32, 0.04)',
+              borderRadius: 10,
+              padding: 3,
+              border: '1px solid var(--border-color)',
+            }}
+          >
+            {DEMO_PERSONAS.map((p) => {
+              const isActive = activeView === p.key;
+              const IconComp = p.key === 'admin' ? LayoutDashboard : p.key === 'lecturer' ? BookOpen : GraduationCap;
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  onClick={() => handleSwitchPersona(p)}
+                  title={`Chuyển sang ${p.label} (Phím tắt: ${p.hotkey})`}
                   style={{
-                    padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer',
-                    background: activeView === tab.key ? 'rgba(11, 18, 32, 0.05)' : 'transparent',
-                    color: activeView === tab.key ? 'var(--text-main)' : 'var(--text-muted)',
-                    fontWeight: activeView === tab.key ? 600 : 500,
-                    fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6,
-                    transition: 'background-color .15s ease, color .15s ease',
-                  }}>
-                  {tab.icon} {tab.label}
+                    padding: '6px 13px',
+                    borderRadius: 8,
+                    border: 'none',
+                    cursor: 'pointer',
+                    background: isActive ? 'var(--blue-600)' : 'transparent',
+                    color: isActive ? '#ffffff' : 'var(--text-muted)',
+                    fontWeight: isActive ? 600 : 500,
+                    fontSize: 12.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    transition: 'all .15s ease',
+                    boxShadow: isActive ? '0 1px 3px rgba(37, 99, 235, 0.35)' : 'none',
+                  }}
+                >
+                  <IconComp size={14} />
+                  <span>{p.shortLabel}</span>
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      opacity: isActive ? 0.9 : 0.5,
+                      padding: '1px 4px',
+                      borderRadius: '4px',
+                      backgroundColor: isActive ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.05)',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    {p.hotkey.replace(' ', '')}
+                  </span>
                 </button>
-              ))}
-            </div>
-          )}
+              );
+            })}
+          </div>
 
           {/* Vùng Thông tin Người dùng, Phân quyền & Hành động */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* Trạng thái WebSocket */}
             <div
               title={isSocketConnected ? 'Kết nối tới API Gateway đang hoạt động' : 'Đang thiết lập kết nối realtime'}
@@ -1144,38 +1315,157 @@ export function App() {
 
             <span className="nav-divider" style={{ width: 1, height: 22, background: 'var(--border-color)', flexShrink: 0 }} />
 
-            {/* Quick Demo Role Switcher cho buổi bảo vệ Hội đồng */}
-            <div
-              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-              title="Chuyển đổi vai trò nhanh để thuyết trình trước Hội đồng (không cần đăng xuất)"
-            >
-              <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                <ArrowLeftRight size={12} />
-                <span className="nav-status-label">Vai trò:</span>
-              </span>
-              <select
-                aria-label="Chuyển đổi vai trò demo"
-                value={currentUser.role === 'ADMIN' ? 'ADMIN' : isLecturerRole(currentUser.role) ? 'INSTRUCTOR' : 'STUDENT'}
-                onChange={(e) => switchDemoRole(e.target.value as any)}
+            {/* DROPDOWN CHUYỂN VAI TRÒ NHANH KÈM PHÍM TẮT (DEMO SWITCHER) */}
+            <div ref={roleDropdownRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
+                title="Chuyển đổi vai trò trình diễn (Alt + 1 / 2 / 3)"
                 style={{
-                  fontSize: '11px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 11px',
+                  borderRadius: '8px',
+                  border: `1px solid ${isRoleDropdownOpen ? 'var(--blue-500)' : 'rgba(37, 99, 235, 0.25)'}`,
+                  backgroundColor: isRoleDropdownOpen ? 'rgba(37, 99, 235, 0.12)' : 'rgba(37, 99, 235, 0.06)',
+                  color: 'var(--blue-600)',
+                  fontSize: '12px',
                   fontWeight: 600,
-                  padding: '3px 8px',
-                  borderRadius: '6px',
-                  border: '1px solid var(--border-strong)',
-                  background: 'rgba(11, 18, 32, 0.04)',
-                  color: 'var(--text-main)',
                   cursor: 'pointer',
-                  outline: 'none',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
                 }}
               >
-                <option value="STUDENT">🎓 Sinh viên</option>
-                <option value="INSTRUCTOR">👨‍🏫 Giảng viên</option>
-                <option value="ADMIN">🛡️ Quản trị viên</option>
-              </select>
-            </div>
+                <Users size={13} />
+                <span>
+                  Vai trò: <strong style={{ color: 'var(--text-main)' }}>{roleBadge.text}</strong>
+                </span>
+                <ChevronDown
+                  size={12}
+                  style={{
+                    transform: isRoleDropdownOpen ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 0.2s ease',
+                  }}
+                />
+              </button>
 
-            <span className="nav-divider" style={{ width: 1, height: 22, background: 'var(--border-color)', flexShrink: 0 }} />
+              {/* MENU DROPDOWN */}
+              {isRoleDropdownOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    width: '300px',
+                    backgroundColor: '#ffffff',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: '0 12px 30px -4px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.05)',
+                    padding: '8px',
+                    zIndex: 1000,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '6px 10px 8px',
+                      borderBottom: '1px solid var(--border-soft)',
+                      marginBottom: '6px',
+                    }}
+                  >
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--blue-600)', letterSpacing: '0.04em' }}>
+                      CHUYỂN VAI TRÒ TRÌNH DIỄN
+                    </div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: '2px' }}>
+                      Chuyển đổi trực tiếp không cần đăng xuất
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    {DEMO_PERSONAS.map((p) => {
+                      const isCurrent = activeView === p.key;
+                      const IconComp = p.key === 'admin' ? LayoutDashboard : p.key === 'lecturer' ? BookOpen : GraduationCap;
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => handleSwitchPersona(p)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '9px 10px',
+                            borderRadius: '8px',
+                            border: isCurrent ? '1px solid rgba(37, 99, 235, 0.3)' : '1px solid transparent',
+                            backgroundColor: isCurrent ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            transition: 'all 0.12s ease',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
+                            <div
+                              style={{
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '7px',
+                                backgroundColor: isCurrent ? 'var(--blue-600)' : 'rgba(11, 18, 32, 0.05)',
+                                color: isCurrent ? '#ffffff' : 'var(--text-soft)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              <IconComp size={14} />
+                            </div>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                {p.shortLabel}
+                                {isCurrent && <Check size={13} style={{ color: 'var(--blue-600)' }} />}
+                              </div>
+                              <div style={{ fontSize: '11px', color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {p.fullName}
+                              </div>
+                            </div>
+                          </div>
+
+                          <span
+                            style={{
+                              fontSize: '10.5px',
+                              fontFamily: 'monospace',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              border: '1px solid var(--border-soft)',
+                              color: 'var(--text-muted)',
+                              backgroundColor: 'rgba(0, 0, 0, 0.02)',
+                              flexShrink: 0,
+                              marginLeft: '8px',
+                            }}
+                          >
+                            {p.hotkey}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: '8px',
+                      padding: '7px 9px',
+                      borderRadius: '6px',
+                      backgroundColor: 'rgba(11, 18, 32, 0.03)',
+                      fontSize: '11px',
+                      color: 'var(--text-dim)',
+                      lineHeight: 1.45,
+                    }}
+                  >
+                    💡 <strong>Phím tắt:</strong> Bấm <kbd style={{ padding: '1px 4px', background: '#fff', border: '1px solid var(--border-strong)', borderRadius: '3px' }}>Alt+1</kbd>, <kbd style={{ padding: '1px 4px', background: '#fff', border: '1px solid var(--border-strong)', borderRadius: '3px' }}>Alt+2</kbd>, <kbd style={{ padding: '1px 4px', background: '#fff', border: '1px solid var(--border-strong)', borderRadius: '3px' }}>Alt+3</kbd> để chuyển đổi tức thì.
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Huy hiệu vai trò + thông tin người dùng */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
@@ -1198,7 +1488,7 @@ export function App() {
                 {currentUser.fullName.charAt(0).toUpperCase()}
               </span>
               <div className="nav-user-name" style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.25, minWidth: 0 }}>
-                <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '160px' }}>{currentUser.fullName}</span>
+                <span style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>{currentUser.fullName}</span>
                 <span style={{ fontSize: '11px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   {roleBadge.icon}
                   {roleBadge.text}
@@ -1221,15 +1511,43 @@ export function App() {
         </div>
       </nav>
 
+      {/* TOAST THÔNG BÁO CHUYỂN VAI TRÒ THÀNH CÔNG */}
+      {roleToast && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '70px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999,
+            backgroundColor: 'rgba(15, 23, 42, 0.94)',
+            color: '#ffffff',
+            padding: '9px 20px',
+            borderRadius: '24px',
+            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            fontSize: '12.5px',
+            fontWeight: 600,
+            pointerEvents: 'none',
+          }}
+        >
+          <Sparkles size={14} style={{ color: '#60a5fa' }} />
+          <span>{roleToast}</span>
+        </div>
+      )}
+
       {/* NỘI DUNG CHÍNH (THEO PHÂN QUYỀN & ACTIVE VIEW) */}
       <main style={{ flexGrow: 1, padding: '24px 20px' }}>
         {/* ADMIN VIEW */}
-        {activeView === 'admin' && currentUser.role === 'ADMIN' && (
+        {activeView === 'admin' && (
           <AdminDashboard token={localStorage.getItem('aita_token') || ''} />
         )}
 
         {/* LECTURER VIEW: Dành riêng cho Giảng viên (INSTRUCTOR) */}
-        {(isLecturerRole(currentUser.role) || (activeView === 'lecturer' && currentUser.role === 'ADMIN')) && (
+        {activeView === 'lecturer' && (
           <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
             <LecturerDashboard
               onOpenDiffViewer={(match, candidates, extraData) => {
@@ -1246,7 +1564,7 @@ export function App() {
         )}
 
         {/* STUDENT VIEW: Dành riêng cho Sinh viên (STUDENT) */}
-        {!isLecturerRole(currentUser.role) && currentUser.role !== 'ADMIN' && (
+        {activeView === 'student' && (
           <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
             {/* KHỐI HIỂN THỊ CÁC MÔN HỌC ĐANG THEO HỌC (ENROLLED COURSES) */}
             <section style={{ marginBottom: '22px' }}>

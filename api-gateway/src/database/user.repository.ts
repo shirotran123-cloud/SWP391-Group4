@@ -76,7 +76,7 @@ export class UserRepository implements OnModuleInit {
     try {
       // 1. Tải danh sách người dùng từ PostgreSQL 15
       const dbUsers = await this.postgres.safeQuery<any>(
-        `SELECT user_id, role_id, email, full_name, student_code, role, password_hash, avatar_url, is_active, created_at, updated_at
+        `SELECT user_id, role_id, email, full_name, student_code, role, avatar_url, is_active, created_at, updated_at
          FROM users`,
       );
 
@@ -95,8 +95,7 @@ export class UserRepository implements OnModuleInit {
             email: row.email,
             fullName: row.full_name,
             role: resolvedRole,
-            passwordHash: row.password_hash,
-            avatarUrl: row.avatar_url || undefined,
+                        avatarUrl: row.avatar_url || undefined,
             isActive: row.is_active,
             createdAt: new Date(row.created_at),
             updatedAt: new Date(row.updated_at),
@@ -129,11 +128,10 @@ export class UserRepository implements OnModuleInit {
     if (!this.postgres.isAvailable()) return;
     try {
       const roleId = u.role === 'INSTRUCTOR' ? 'LECTURER' : (u.role || 'STUDENT');
-      const hash = u.passwordHash || '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7';
-
+      
       await this.postgres.safeQuery(
-        `INSERT INTO users (user_id, role_id, email, full_name, student_code, role, password_hash, avatar_url, is_active, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        `INSERT INTO users (user_id, role_id, email, full_name, student_code, role, avatar_url, is_active, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          ON CONFLICT (user_id) DO UPDATE SET
            role_id = EXCLUDED.role_id,
            email = EXCLUDED.email,
@@ -149,7 +147,6 @@ export class UserRepository implements OnModuleInit {
           u.fullName,
           u.studentCode || (u.role === 'STUDENT' ? u.userId : null),
           u.role,
-          hash,
           u.avatarUrl || null,
           u.isActive,
           u.createdAt,

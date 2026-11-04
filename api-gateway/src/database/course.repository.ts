@@ -141,8 +141,8 @@ export class CourseRepository implements OnModuleInit {
       );
       if (lecturerCheck.length === 0) {
         await this.postgres.safeQuery(
-          `INSERT INTO users (user_id, student_code, full_name, email, role_id, role, password_hash)
-           VALUES ($1, $1, 'Giảng Viên Phụ Trách', $2, 'LECTURER', 'INSTRUCTOR', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW')
+          `INSERT INTO users (user_id, student_code, full_name, email, role_id, role)
+           VALUES ($1, $1, 'Giảng Viên Phụ Trách', $2, 'LECTURER', 'INSTRUCTOR')
            ON CONFLICT DO NOTHING`,
           [c.instructorId, `${c.instructorId.toLowerCase()}@fpt.edu.vn`],
         );
@@ -514,8 +514,8 @@ export class CourseRepository implements OnModuleInit {
             } else {
               // Tạo mới sinh viên
               await client.query(
-                `INSERT INTO users (user_id, student_code, full_name, email, role_id, role, password_hash, is_active, created_at, updated_at)
-                 VALUES ($1, $2, $3, $4, 'STUDENT', 'STUDENT', '$2a$10$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW', true, NOW(), NOW())
+                `INSERT INTO users (user_id, student_code, full_name, email, role_id, role, is_active, created_at, updated_at)
+                 VALUES ($1, $2, $3, $4, 'STUDENT', 'STUDENT', true, NOW(), NOW())
                  ON CONFLICT (user_id) DO UPDATE SET
                    student_code = EXCLUDED.student_code,
                    full_name = EXCLUDED.full_name,

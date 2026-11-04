@@ -97,19 +97,19 @@ interface SubmissionViewProps {
 
 const defaultAssignmentPool: StudentTaskItem[] = [
   {
-    id: 'ASM-SWP-01',
-    courseId: 'COURSE-SWP391',
-    courseCode: 'SWP391',
-    course: 'SWP391 - Đồ Án Phát Triển Phần Mềm (Agile Scrum)',
-    title: 'Cài đặt Thuật toán Cây Tìm Kiếm Nhị Phân (BST) & Đồ Thị',
-    description: 'Cài đặt Generic Binary Search Tree trong Java hoặc C++. Tối ưu hóa độ phức tạp thời gian O(log N) và tuân thủ các nguyên lý SOLID (SRP, DIP).',
-    deadline: new Date(Date.now() + 5 * 24 * 3600 * 1000 + 4 * 3600 * 1000).toISOString(),
+    id: 'TASK-PRO192-A1',
+    courseId: 'CRS-PRO192',
+    courseCode: 'PRO192',
+    course: 'PRO192 - Object-Oriented Programming with Java',
+    title: 'Quản lý Đội xe Vận tải hướng đối tượng OOP (PRO192)',
+    description: 'Áp dụng các nguyên lý lập trình hướng đối tượng (Kế thừa, Đóng gói, Đa hình, Trừu tượng) để thiết kế hệ thống quản lý phương tiện giao thông và đội xe logistics.',
+    deadline: '2026-10-18T23:59:59.000Z',
     timeLimitMs: 2000,
     memoryLimitMb: 512,
-    allowedLanguages: ['java', 'python', 'cpp'],
+    allowedLanguages: ['java'],
     allowedExtensions: ['.zip'],
     maxSizeMb: 10,
-    testCasesCount: 7,
+    testCasesCount: 3,
     status: 'PUBLISHED',
     rubrics: [
       { criterion: 'Tính đúng đắn thuật toán & Vượt qua Testcases', maxScore: 5.0, description: 'Pass 100% testcases chuẩn và biên' },
@@ -117,284 +117,100 @@ const defaultAssignmentPool: StudentTaskItem[] = [
       { criterion: 'Thiết kế Hướng đối tượng & SOLID', maxScore: 2.5, description: 'Tuân thủ Single Responsibility và Dependency Inversion' },
     ],
     technicalRequirements: {
-      problemContext: 'Xây dựng cấu trúc cây tìm kiếm nhị phân Generic BST<T extends Comparable<T>> quản lý danh mục sản phẩm. Hỗ trợ các thao tác chèn (Insert), xóa (Delete), tìm kiếm (Search) và duyệt cây In-Order / Pre-Order.',
-      inputFormat: [
-        'Dòng 1: Số lượng thao tác Q (1 ≤ Q ≤ 50,000).',
-        'Q dòng tiếp theo: Mỗi dòng chứa lệnh INSERT x, DELETE x hoặc SEARCH x.',
-      ],
-      outputFormat: [
-        'Với thao tác SEARCH x: In ra FOUND hoặc NOT_FOUND trên một dòng.',
-        'Kết thúc toàn bộ thao tác: In ra chuỗi duyệt In-Order của cây.',
-      ],
-      constraints: [
-        '1 ≤ Q ≤ 50,000 thao tác.',
-        'Giá trị phần tử: -10^6 ≤ x ≤ 10^6.',
-        'Thời gian chạy tối đa: 2000 ms, RAM 512MB.',
-      ],
-      complexityRequirements: [
-        'Tìm kiếm, chèn, xóa trung bình: O(log N).',
-        'Duyệt cây: O(N).',
-      ],
-      solidGuidelines: [
-        'Tách Node class thành Generic class riêng biệt.',
-        'Sử dụng Interface IBstTree<T> để đóng gói các hành vi của cây.',
-      ],
+      problemContext: 'Xây dựng hệ thống quản lý phương tiện vận tải áp dụng tính kế thừa và đa hình trong Java.',
+      inputFormat: ['Dòng 1: Số lượng phương tiện N.', 'N dòng tiếp theo: Thông tin xe tải, xe hơi hoặc xe buýt.'],
+      outputFormat: ['In danh sách phương tiện sắp xếp theo tải trọng giảm dần.'],
+      constraints: ['1 ≤ N ≤ 10,000.', 'Bộ nhớ tối đa 512MB RAM.'],
+      complexityRequirements: ['Thời gian thực thi tối đa 2.0s.'],
+      solidGuidelines: ['Tách biệt class Controller và Service.', 'Áp dụng Interface Segregation.'],
     },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Thao Tác Chèn & Duyệt In-Order)',
-        input: '5\\nINSERT 20\\nINSERT 10\\nINSERT 30\\nINSERT 25\\nSEARCH 30',
-        expectedOutput: 'FOUND\\n10 20 25 30',
-        explanation: 'Chèn các nút vào cây BST, tìm thấy 30 in FOUND, sau đó duyệt In-Order thu được dãy tăng dần 10 20 25 30.',
-      },
-    ],
   },
   {
-    id: 'ASM-SWP-02',
-    courseId: 'COURSE-SWP391',
-    courseCode: 'SWP391',
-    course: 'SWP391 - Đồ Án Phát Triển Phần Mềm (Agile Scrum)',
-    title: 'Thuật toán Sắp xếp & Tối ưu O(N log N) 3-Way Partitioning',
-    description: 'Cài đặt giải thuật QuickSort tối ưu hóa phân hoạch 3 phần (3-Way Partitioning) nhằm triệt tiêu hoàn toàn trường hợp suy biến trên tập dữ liệu trùng lặp.',
-    deadline: new Date(Date.now() + 18 * 3600 * 1000 + 30 * 60 * 1000).toISOString(),
-    timeLimitMs: 1500,
-    memoryLimitMb: 256,
-    allowedLanguages: ['java', 'python', 'cpp'],
-    allowedExtensions: ['.zip'],
-    maxSizeMb: 10,
-    testCasesCount: 5,
-    status: 'PUBLISHED',
-    rubrics: [
-      { criterion: 'Đúng đắn Testcases & O(N log N)', maxScore: 7.0, description: 'Vượt qua bộ testcases biên và bão hòa' },
-      { criterion: 'Clean Code & SOLID SRP', maxScore: 3.0, description: 'Tách biệt thuật toán và hàm tiện ích' },
-    ],
-    technicalRequirements: {
-      problemContext: 'Khi mảng có nhiều phần tử trùng lặp (ví dụ: mảng toàn số 1 và 0), thuật toán QuickSort truyền thống sẽ suy biến thành O(N^2). Sinh viên cần triển khai giải thuật phân hoạch 3 đoạn (Dutch National Flag Algorithm) chia mảng thành: nhỏ hơn pivot, bằng pivot và lớn hơn pivot, đảm bảo O(N log N) ngay cả khi tất cả phần tử đều bằng nhau.',
-      inputFormat: [
-        'Dòng 1: Số nguyên dương N (1 ≤ N ≤ 200,000).',
-        'Dòng 2: N số nguyên cách nhau bởi khoảng trắng.',
-      ],
-      outputFormat: [
-        'In ra mảng sau khi sắp xếp tăng dần trên một dòng.',
-      ],
-      constraints: [
-        '1 ≤ N ≤ 200,000.',
-        'Thời gian thực thi tối đa: 1500 ms.',
-      ],
-      complexityRequirements: [
-        'Độ phức tạp thời gian: O(N log N) trong mọi trường hợp trùng lặp.',
-      ],
-      solidGuidelines: [
-        'Tách logic phân hoạch (PartitionEngine) độc lập với hàm sắp xếp đệ quy.',
-      ],
-    },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Trùng Lặp Cao)',
-        input: '7\\n2 1 2 0 1 2 0',
-        expectedOutput: '0 0 1 1 2 2 2',
-        explanation: 'Phân hoạch 3 phần sắp xếp chính xác trong O(N) khi số lượng giá trị phân biệt nhỏ.',
-      },
-    ],
-  },
-  {
-    id: 'ASM-CSD-01',
-    courseId: 'COURSE-CSD201',
+    id: 'TASK-CSD201-A1',
+    courseId: 'CRS-CSD201',
     courseCode: 'CSD201',
-    course: 'CSD201 - Cấu Trúc Dữ Liệu & Giải Thuật Nâng Cao',
-    title: 'Cài Đặt Cây AVL Tự Cân Bằng (Self-Balancing Tree)',
-    description: 'Triển khai cây AVL với các phép xoay đơn (Left/Right) và xoay kép (Left-Right/Right-Left). Kiểm tra tính cân bằng với 1,000 thao tác chèn/xóa.',
-    deadline: new Date(Date.now() + 8 * 24 * 3600 * 1000).toISOString(),
-    timeLimitMs: 2000,
-    memoryLimitMb: 512,
-    allowedLanguages: ['java', 'cpp'],
-    allowedExtensions: ['.zip'],
-    maxSizeMb: 10,
-    testCasesCount: 6,
-    status: 'PUBLISHED',
-    rubrics: [
-      { criterion: 'Cân bằng cây AVL & Phép xoay chuẩn', maxScore: 6.0, description: 'Thực hiện chính xác hệ số cân bằng Balance Factor' },
-      { criterion: 'Độ phức tạp O(log N)', maxScore: 4.0, description: 'Đảm bảo chiều cao cây không vượt quá 1.44 log2(N)' },
-    ],
-    technicalRequirements: {
-      problemContext: 'Cài đặt cây nhị phân tìm kiếm tự cân bằng AVL Tree. Mỗi nút lưu trữ giá trị và chiều cao (height). Sau mỗi thao tác chèn hoặc xóa, tính toán hệ số cân bằng Balance Factor = height(left) - height(right). Nếu Balance Factor không thuộc {-1, 0, 1}, phải kích hoạt phép xoay tương ứng (Left Rotation, Right Rotation, Left-Right Rotation, Right-Left Rotation).',
-      inputFormat: [
-        'Dòng 1: Số nguyên dương N là số lượng thao tác (1 ≤ N ≤ 50,000).',
-        'N dòng tiếp theo: Mỗi dòng là lệnh INSERT x hoặc DELETE x.',
-      ],
-      outputFormat: [
-        'Dòng 1: Duyệt cây theo thứ tự In-Order sau khi hoàn tất chuỗi thao tác.',
-        'Dòng 2: In ra thông tin gốc và chiều cao dạng "Root: X | Height: Y".',
-      ],
-      constraints: [
-        '1 ≤ N ≤ 50,000.',
-        'Giá trị nút: -10^6 ≤ x ≤ 10^6.',
-        'Thời gian chạy tối đa: 2000 ms, RAM 512MB.',
-        'Không được dùng thư viện có sẵn như std::map hay java.util.TreeMap.',
-      ],
-      complexityRequirements: [
-        'Thời gian chèn/xóa/tìm kiếm: O(log N) nghiêm ngặt.',
-        'Không gian bộ nhớ: O(N).',
-      ],
-      solidGuidelines: [
-        'Node class lưu trữ height và các con trỏ.',
-        'Tách logic xoay (rotateLeft, rotateRight) thành các hàm helper sạch sẽ.',
-      ],
-    },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Xoay Kép Left-Right)',
-        input: '3\\nINSERT 30\\nINSERT 10\\nINSERT 20',
-        expectedOutput: '10 20 30\\nRoot: 20 | Height: 2',
-        explanation: 'Chèn 30 -> 10 -> 20 tạo thành thế mất cân bằng LR tại nút 30. Thực hiện xoay kép đưa 20 lên làm gốc, chiều cao đạt 2.',
-      },
-    ],
-  },
-  {
-    id: 'ASM-CSD-02',
-    courseId: 'COURSE-CSD201',
-    courseCode: 'CSD201',
-    course: 'CSD201 - Cấu Trúc Dữ Liệu & Giải Thuật Nâng Cao',
-    title: 'Tìm Đường Đi Ngắn Nhất Đồ Thị Dijkstra & Min-Heap',
-    description: 'Cài đặt thuật toán Dijkstra tìm đường đi ngắn nhất đồ thị có trọng số dương sử dụng Min-Heap Priority Queue. Tuân thủ nguyên lý Đơn trách nhiệm (SRP).',
-    deadline: new Date(Date.now() + 12 * 24 * 3600 * 1000).toISOString(),
-    timeLimitMs: 2500,
-    memoryLimitMb: 512,
-    allowedLanguages: ['java', 'python', 'cpp'],
-    allowedExtensions: ['.zip'],
-    maxSizeMb: 10,
-    testCasesCount: 8,
-    status: 'PUBLISHED',
-    rubrics: [
-      { criterion: 'Đúng đắn Dijkstra O((V+E)log V)', maxScore: 7.0, description: 'Vượt qua 100% testcases đồ thị lớn' },
-      { criterion: 'Thiết kế Hướng đối tượng', maxScore: 3.0, description: 'Đóng gói Graph, Vertex, Edge tách bạch' },
-    ],
-    technicalRequirements: {
-      problemContext: 'Cho đồ thị có hướng G = (V, E) với trọng số các cạnh w ≥ 0 đại diện cho mạng lưới các trung tâm định tuyến dữ liệu. Tìm độ dài đường đi ngắn nhất từ đỉnh xuất phát S đến tất cả các đỉnh còn lại trong đồ thị. Bắt buộc sử dụng hàng đợi ưu tiên Min-Heap để tối ưu độ phức tạp thời gian đạt O((V + E) log V).',
-      inputFormat: [
-        'Dòng 1: Ba số nguyên V (số đỉnh), E (số cạnh), S (đỉnh nguồn) (1 ≤ V ≤ 10,000; 1 ≤ E ≤ 100,000; 1 ≤ S ≤ V).',
-        'E dòng tiếp theo: Mỗi dòng gồm 3 số nguyên u, v, w biểu diễn cạnh có hướng từ u đến v với trọng số w (1 ≤ w ≤ 10^6).',
-      ],
-      outputFormat: [
-        'In ra trên một dòng khoảng cách ngắn nhất từ S đến lần lượt các đỉnh 1, 2, ..., V, cách nhau bởi khoảng trắng. Nếu không có đường đi đến đỉnh i, in ra -1.',
-      ],
-      constraints: [
-        '1 ≤ V ≤ 10,000 đỉnh.',
-        '1 ≤ E ≤ 100,000 cạnh.',
-        'Trọng số w không âm: 0 ≤ w ≤ 1,000,000.',
-        'Thời gian thực thi tối đa: 2500 ms.',
-      ],
-      complexityRequirements: [
-        'Thời gian: O((V + E) log V) sử dụng Min-Heap.',
-        'Bộ nhớ: O(V + E) danh sách kề.',
-      ],
-      solidGuidelines: [
-        'Đóng gói riêng các class: Edge, NodeDistance, Graph, DijkstraSolver.',
-      ],
-    },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Đồ Thị 4 Đỉnh Có Hướng)',
-        input: '4 4 1\\n1 2 2\\n1 3 5\\n2 3 1\\n3 4 3',
-        expectedOutput: '0 2 3 6',
-        explanation: 'Đường đi từ 1: Đến 1 là 0, đến 2 là 2, đến 3 là 1->2->3 = 3, đến 4 là 1->2->3->4 = 6.',
-      },
-    ],
-  },
-  {
-    id: 'ASM-49243',
-    courseId: 'COURSE-CSD201',
-    courseCode: 'CSD201',
-    course: 'CSD201 - Cấu Trúc Dữ Liệu & Giải Thuật Nâng Cao',
-    title: 'Hệ thống Quản lý Edge CDN - Định tuyến Lát cắt Video thông minh với Cây AVL',
-    description: 'Trong hạ tầng Cloud & CDN Streaming toàn cầu, việc duy trì độ trễ thấp cho hàng triệu người xem đồng thời yêu cầu phân phối các lát cắt video đến các Edge Node tối ưu. Triển khai cây AVL tự cân bằng lưu trữ tải trọng băng thông máy chủ theo thời gian thực.',
-    deadline: new Date(Date.now() + 12 * 24 * 3600 * 1000 + 16 * 3600 * 1000).toISOString(),
+    course: 'CSD201 - Data Structures and Algorithms',
+    title: 'Thuật toán Cấu trúc Dữ liệu & Đồ thị Dijkstra (CSD201)',
+    description: 'Cài đặt giải thuật Dijkstra với PriorityQueue tìm đường đi ngắn nhất trên đồ thị có trọng số và phân tích độ phức tạp O(E log V).',
+    deadline: '2026-10-20T23:59:59.000Z',
     timeLimitMs: 2000,
     memoryLimitMb: 512,
     allowedLanguages: ['java', 'cpp', 'python'],
     allowedExtensions: ['.zip'],
     maxSizeMb: 10,
-    testCasesCount: 6,
+    testCasesCount: 3,
     status: 'PUBLISHED',
     rubrics: [
-      { criterion: 'Cân bằng AVL & Định tuyến O(log N)', maxScore: 6.0, description: 'Phân phối lát cắt video đúng Edge Server tối ưu' },
-      { criterion: 'Cập nhật tải trọng động & Clean Architecture', maxScore: 4.0, description: 'Cập nhật tải server và tái cân bằng cây tức thời' },
+      { criterion: 'Tính đúng đắn thuật toán & Vượt qua Testcases', maxScore: 5.0, description: 'Pass 100% testcases Dijkstra' },
+      { criterion: 'Độ phức tạp O(E log V) và Tối ưu Heap', maxScore: 2.5, description: 'Sử dụng Min-Heap PriorityQueue' },
+      { criterion: 'Clean Code & Xử lý ngoại lệ', maxScore: 2.5, description: 'Đóng gói class Graph và Vertex chuẩn mực' },
     ],
     technicalRequirements: {
-      problemContext: 'Xây dựng mô đun định tuyến Edge CDN Server cho hệ thống live-streaming. Mỗi Edge Server có ServerID và Capacity khả dụng. Yêu cầu sinh viên duy trì một cây AVL có khóa là Capacity để khi có yêu cầu truyền lát cắt video dung lượng S (MB), hệ thống sẽ tìm kiếm Edge Server có Capacity nhỏ nhất thỏa mãn Capacity ≥ S trong thời gian O(log N). Sau đó trừ dung lượng đã cấp và tái cân bằng cây.',
-      inputFormat: [
-        'Dòng 1: Số nguyên dương N là số lượng thao tác (1 ≤ N ≤ 50,000).',
-        'N dòng tiếp theo: Chứa câu lệnh ADD_SERVER id capacity, ALLOCATE size hoặc RELEASE id size.',
-      ],
-      outputFormat: [
-        'Với mỗi lệnh ALLOCATE: In ra ServerID được chọn. Nếu không có server nào đủ dung lượng, in ra REJECT.',
-      ],
-      constraints: [
-        '1 ≤ N ≤ 50,000.',
-        'Thời gian thực thi tối đa: 2000 ms, RAM 512MB.',
-      ],
-      complexityRequirements: [
-        'Truy vấn định tuyến & cập nhật tải: O(log N).',
-      ],
-      solidGuidelines: [
-        'Áp dụng Factory Pattern hoặc Strategy Pattern trong việc lựa chọn thuật toán định tuyến.',
-      ],
+      problemContext: 'Tìm đường đi ngắn nhất từ đỉnh nguồn S đến mọi đỉnh trên đồ thị có hướng trọng số không âm.',
+      inputFormat: ['Dòng 1: V và E (số đỉnh và số cạnh).', 'E dòng tiếp theo: u, v, w (cạnh từ u đến v với trọng số w).'],
+      outputFormat: ['Khoảng cách ngắn nhất từ nguồn S đến tất cả các đỉnh.'],
+      constraints: ['1 ≤ V ≤ 10,000, 1 ≤ E ≤ 100,000.'],
+      complexityRequirements: ['Thời gian thực thi O((V + E) log V).'],
+      solidGuidelines: ['Tách biệt biểu diễn đồ thị (Adjacency List) và thuật toán Dijkstra.'],
     },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Định Tuyến Cắt Video)',
-        input: '4\\nADD_SERVER S1 100\\nADD_SERVER S2 200\\nALLOCATE 150\\nALLOCATE 200',
-        expectedOutput: 'S2\\nREJECT',
-        explanation: 'S1 có 100, S2 có 200. Yêu cầu 150 chọn S2 (còn lại 50). Yêu cầu tiếp theo 200 bị REJECT vì không server nào đủ dung lượng.',
-      },
-    ],
   },
   {
-    id: 'ASM-PRN-01',
-    courseId: 'COURSE-PRN211',
-    courseCode: 'PRN211',
-    course: 'PRN211 - Lập Trình Ứng Dụng Đa Nền Tảng .NET',
-    title: 'Xử lý Luồng Dữ liệu Bất Đồng Bộ (.NET C# Async/Await & Task Parallel)',
-    description: 'Xây dựng ứng dụng .NET C# xử lý hàng loạt tác vụ phân tích dữ liệu đa luồng bất đồng bộ (async/await, Task.WhenAll) và truy vấn LINQ tối ưu bộ nhớ.',
-    deadline: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(),
+    id: 'TASK-PRJ301-A1',
+    courseId: 'CRS-PRJ301',
+    courseCode: 'PRJ301',
+    course: 'PRJ301 - Java Web Application Development',
+    title: 'Xây dựng Servlet & Filter Quản lý Sinh viên MVC (PRJ301)',
+    description: 'Thiết kế và triển khai web application Java theo mô hình MVC 2, sử dụng Servlet xử lý request và Filter xác thực session người dùng.',
+    deadline: '2026-11-15T23:59:59.000Z',
     timeLimitMs: 2000,
     memoryLimitMb: 512,
-    allowedLanguages: ['dotnet', 'csharp', 'java'],
+    allowedLanguages: ['java', 'cpp', 'python'],
     allowedExtensions: ['.zip'],
     maxSizeMb: 10,
-    testCasesCount: 5,
+    testCasesCount: 3,
     status: 'PUBLISHED',
     rubrics: [
-      { criterion: 'Tính đúng đắn đa luồng & Không Deadlock', maxScore: 6.0, description: 'Sử dụng Task.WhenAll và CancellationToken hợp lệ' },
-      { criterion: 'Tối ưu LINQ & Garbage Collection', maxScore: 4.0, description: 'Sử dụng IAsyncEnumerable và hạn chế cấp phát bộ nhớ rác' },
+      { criterion: 'Kiến trúc MVC 2 & Triển khai Servlet', maxScore: 4.0, description: 'Điều hướng Controller và View rõ ràng' },
+      { criterion: 'Authentication Filter & Bảo mật', maxScore: 3.0, description: 'Chặn truy cập trái phép bằng HttpFilter' },
+      { criterion: 'Database Connection Pool & DAO', maxScore: 3.0, description: 'Sử dụng HikariCP kết nối CSDL PostgreSQL/SQL Server' },
     ],
     technicalRequirements: {
-      problemContext: 'Xây dựng dịch vụ phân tích dữ liệu tổng hợp từ nhiều nguồn API song song trong ứng dụng .NET Core. Yêu cầu triển khai xử lý bất đồng bộ không gây nghẽn ThreadPool (Non-blocking I/O), xử lý ngoại lệ AggregateException chuẩn mực.',
-      inputFormat: [
-        'Dòng 1: Số nguyên N tác vụ cần xử lý.',
-        'N dòng tiếp theo: Tên tác vụ và thời gian trễ mô phỏng.',
-      ],
-      outputFormat: [
-        'In ra danh sách tác vụ hoàn thành theo thứ tự thời gian và tổng thời gian xử lý.',
-      ],
-      constraints: [
-        'Thời gian chạy tối đa: 2000 ms, RAM 512MB.',
-      ],
-      complexityRequirements: [
-        'Xử lý song song N tác vụ với Task.WhenAll.',
-      ],
-      solidGuidelines: [
-        'Dependency Injection với IDataProcessor service.',
-      ],
+      problemContext: 'Xây dựng phân hệ quản lý sinh viên với đầy đủ chức năng CRUD, áp dụng Filter phân quyền Role-Based Access Control.',
+      inputFormat: ['Request HTTP method GET/POST và tham số session/form data.'],
+      outputFormat: ['Response HTTP 200/201 kèm payload JSON hoặc View forward.'],
+      constraints: ['Tuân thủ chuẩn Jakarta Servlet / Java EE.'],
+      complexityRequirements: ['Thời gian phản hồi API < 500ms.'],
+      solidGuidelines: ['Áp dụng Data Access Object (DAO) Pattern và Service Layer.'],
     },
-    sampleTestCases: [
-      {
-        name: 'Testcase Mẫu 1 (Xử Lý Song Song)',
-        input: '3\\nTaskA 100\\nTaskB 50\\nTaskC 80',
-        expectedOutput: 'COMPLETED: TaskB, TaskC, TaskA\\nTOTAL_ELAPSED: ~100ms',
-        explanation: '3 tác vụ chạy đồng thời, TaskB hoàn thành nhanh nhất (50ms), tiếp theo là TaskC (80ms) và TaskA (100ms).',
-      },
+  },
+  {
+    id: 'TASK-PRF192-A1',
+    courseId: 'CRS-PRF192',
+    courseCode: 'PRF192',
+    course: 'PRF192 - Programming Fundamentals with C',
+    title: 'Thuật toán Xử lý Mảng và Quản lý Con trỏ Bộ nhớ Động (PRF192)',
+    description: 'Lập trình C giải quyết bài toán chuẩn hóa chuỗi ký tự, sắp xếp mảng động và sử dụng con trỏ quản lý bộ nhớ malloc/free.',
+    deadline: '2026-11-20T23:59:59.000Z',
+    timeLimitMs: 2000,
+    memoryLimitMb: 512,
+    allowedLanguages: ['cpp', 'c', 'java'],
+    allowedExtensions: ['.zip'],
+    maxSizeMb: 10,
+    testCasesCount: 3,
+    status: 'PUBLISHED',
+    rubrics: [
+      { criterion: 'Tính đúng đắn thuật toán mảng & chuỗi', maxScore: 5.0, description: 'Vượt qua 100% test cases chuẩn và chuỗi rỗng/đặc biệt' },
+      { criterion: 'Quản lý bộ nhớ con trỏ & malloc/free', maxScore: 3.0, description: 'Không phát sinh rò rỉ bộ nhớ (memory leak)' },
+      { criterion: 'Phong cách lập trình C & Modular', maxScore: 2.0, description: 'Chia hàm rõ ràng, không dùng biến toàn cục bừa bãi' },
     ],
+    technicalRequirements: {
+      problemContext: 'Chuẩn hóa chuỗi văn bản (xóa khoảng trắng thừa, viết hoa chữ cái đầu từ) và sắp xếp mảng động bằng con trỏ.',
+      inputFormat: ['Dòng 1: Chuỗi văn bản đầu vào dài tối đa 10,000 ký tự.'],
+      outputFormat: ['Chuỗi văn bản sau khi chuẩn hóa theo đúng quy tắc.'],
+      constraints: ['Độ dài chuỗi 1 ≤ L ≤ 10,000 ký tự.'],
+      complexityRequirements: ['Xử lý trong thời gian O(N).'],
+      solidGuidelines: ['Giải phóng toàn bộ con trỏ đã cấp phát trước khi kết thúc hàm main.'],
+    },
   },
 ];
 
@@ -449,7 +265,7 @@ const getEffectiveRequirements = (task: StudentTaskItem): TechnicalRequirement =
   }
 
   return {
-    problemContext: `Đề bài yêu cầu sinh viên xây dựng giải thuật xử lý dữ liệu chuẩn hóa trong dự án phần mềm (${task.courseCode || 'SWP391'}). Mã nguồn phải được đóng gói theo chuẩn Clean Code, áp dụng các nguyên lý SOLID và đảm bảo vượt qua các trường hợp kiểm thử biên trong môi trường Docker Sandbox.`,
+    problemContext: `Đề bài yêu cầu sinh viên xây dựng giải thuật xử lý dữ liệu chuẩn hóa trong dự án phần mềm (${task.courseCode || 'PRO192'}). Mã nguồn phải được đóng gói theo chuẩn Clean Code, áp dụng các nguyên lý SOLID và đảm bảo vượt qua các trường hợp kiểm thử biên trong môi trường Docker Sandbox.`,
     inputFormat: [
       'Dòng 1: Số nguyên dương N biểu diễn số lượng phần tử trong tập dữ liệu (1 ≤ N ≤ 100,000).',
       'Dòng 2: Gồm N số nguyên A[1], A[2], ..., A[N] cách nhau bởi khoảng trắng (-10^9 ≤ A[i] ≤ 10^9).',
@@ -666,6 +482,35 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     setDetailModalOpen(true);
   };
 
+  // Nạp testcase mẫu từ PostgreSQL cho bài tập nếu có
+  useEffect(() => {
+    if (!selectedTask || (selectedTask.sampleTestCases && selectedTask.sampleTestCases.length > 0)) return;
+    const fetchSampleCases = async () => {
+      try {
+        const res = await fetch(`${apiBaseUrl}/api/v1/test-cases/assignment/${encodeURIComponent(selectedTask.id)}`);
+        if (res.ok) {
+          const json = await res.json();
+          const list = json.data || json || [];
+          if (Array.isArray(list) && list.length > 0) {
+            const publicCases = list.filter((tc: any) => !tc.isHidden && tc.expectedOutput !== null);
+            if (publicCases.length > 0) {
+              const samples: SampleTestCase[] = publicCases.map((tc: any, idx: number) => ({
+                name: `Testcase Mẫu ${idx + 1} (Công Khai)`,
+                input: tc.inputData,
+                expectedOutput: tc.expectedOutput,
+                explanation: `Trọng số: ${tc.weight || 1.0}đ. Giới hạn thời gian: ${tc.timeLimitMs || 2000}ms.`,
+              }));
+              setSelectedTask((prev) => (prev && prev.id === selectedTask.id ? { ...prev, sampleTestCases: samples } : prev));
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+    void fetchSampleCases();
+  }, [selectedTask?.id, apiBaseUrl]);
+
   useEffect(() => {
     if (!selectedTask) return;
     const fetchTaskSubmissions = async () => {
@@ -695,170 +540,117 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   const [selectedLanguage, setSelectedLanguage] = useState<string>('auto');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Tải danh sách bài tập đã xuất bản (Đồng bộ thời gian thực 100% với Giảng viên & Backend CSDL)
-  useEffect(() => {
-    loadAssignmentsAndSubmissions();
-
-    const handleSync = () => {
-      loadAssignmentsAndSubmissions();
-    };
-
-    window.addEventListener('storage', handleSync);
-    window.addEventListener('aita_published_assignments_updated', handleSync);
-    window.addEventListener('aita_student_submissions_updated', handleSync);
-
-    return () => {
-      window.removeEventListener('storage', handleSync);
-      window.removeEventListener('aita_published_assignments_updated', handleSync);
-      window.removeEventListener('aita_student_submissions_updated', handleSync);
-    };
-  }, [studentId]);
-
-  const loadAssignmentsAndSubmissions = () => {
-    let listToDisplay: StudentTaskItem[] = [];
-
+  // 1. Tải danh sách bài tập trực tiếp từ PostgreSQL 15 (Single Source of Truth - 100% Database)
+  const fetchBackendAssignments = async () => {
     try {
-      const savedPublished = localStorage.getItem('aita_published_assignments');
-      let publishedList: any[] = [];
-      if (savedPublished) {
-        try {
-          publishedList = JSON.parse(savedPublished);
-        } catch {
-          publishedList = [];
-        }
-      }
-
-      // Nếu chưa có trong localStorage, sử dụng defaultAssignmentPool làm nguồn chuẩn ban đầu
-      if (!Array.isArray(publishedList) || publishedList.length === 0) {
-        publishedList = defaultAssignmentPool;
-        try {
-          localStorage.setItem('aita_published_assignments', JSON.stringify(defaultAssignmentPool));
-        } catch {
-          // ignore
-        }
-      }
-
-      // Đồng bộ trực tiếp từ danh sách bài tập Giảng viên đã giao
-      listToDisplay = publishedList.map((item) => {
-        const matchedTemplate = defaultAssignmentPool.find(
-          (t) => t.id === item.id || t.title.toLowerCase().trim() === (item.title || '').toLowerCase().trim()
-        );
-        const courseId = item.courseId || 'COURSE-SWP391';
-        const courseCode = item.courseCode || courseId.replace('COURSE-', '').replace('CRS-', '');
-        const actualTestCases = Array.isArray(item.testCases)
-          ? item.testCases
-          : (Array.isArray(item.configuredTestCases) ? item.configuredTestCases : undefined);
-
-        return {
-          id: item.id || `ASM-${Date.now()}`,
-          courseId: courseId,
-          courseCode: courseCode,
-          course: item.course || `${courseCode} - Bài Tập Học Phần`,
-          title: item.title,
-          description: item.description,
-          deadline: item.deadline ? (item.deadline.includes('T') ? item.deadline : `${item.deadline}T23:59:00`) : new Date(Date.now() + 7 * 86400000).toISOString(),
-          timeLimitMs: item.timeLimitMs || matchedTemplate?.timeLimitMs || 2000,
-          memoryLimitMb: item.memoryLimitMb || matchedTemplate?.memoryLimitMb || 512,
-          allowedLanguages: item.allowedLanguages || matchedTemplate?.allowedLanguages || ['java', 'python', 'cpp', 'dotnet'],
-          allowedExtensions: item.allowedExtensions || ['.zip'],
-          maxSizeMb: item.maxSizeMb || 10,
-          testCasesCount: actualTestCases ? actualTestCases.length : (matchedTemplate?.testCasesCount || 5),
-          configuredTestCases: actualTestCases,
-          testCases: actualTestCases,
-          rubrics: item.rubrics && item.rubrics.length > 0 ? item.rubrics : matchedTemplate?.rubrics,
-          technicalRequirements: item.technicalRequirements || matchedTemplate?.technicalRequirements,
-          sampleTestCases: item.sampleTestCases || (actualTestCases ? undefined : matchedTemplate?.sampleTestCases),
-          status: item.status || 'PUBLISHED',
-        };
-      });
-    } catch (e) {
-      console.warn('Không thể đọc aita_published_assignments:', e);
-      listToDisplay = [...defaultAssignmentPool];
-    }
-
-    setAssignmentList(listToDisplay);
-
-    // Đồng bộ trực tiếp từ Backend API để cập nhật bài tập cho các lớp học phần mới tạo
-    const effectiveBaseUrl = apiBaseUrl || API_BASE_URL || 'http://localhost:3000';
-    fetch(`${effectiveBaseUrl}/api/v1/assignments`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((json) => {
-        if (!json) return;
-        const remoteItems = json.data || json || [];
-        if (!Array.isArray(remoteItems) || remoteItems.length === 0) return;
-
-        setAssignmentList((prevList) => {
-          const map = new Map<string, StudentTaskItem>();
-          // Đặt danh sách bài tập hiện có vào map
-          prevList.forEach((it) => map.set(it.id, it));
-
-          // Hợp nhất các bài tập từ server
-          remoteItems.forEach((r: any) => {
-            const asmId = r.assignmentId || r.id;
-            if (!asmId) return;
-
-            const courseId = r.courseId || 'CRS-SWP391';
-            const courseCode = (r.courseCode || courseId).replace('COURSE-', '').replace('CRS-', '');
-            const existing = map.get(asmId);
-
+      const res = await fetch(`${apiBaseUrl}/api/v1/assignments`);
+      if (res.ok) {
+        const json = await res.json();
+        const serverAsms = json.data || json || [];
+        if (Array.isArray(serverAsms) && serverAsms.length > 0) {
+          const mapped: StudentTaskItem[] = serverAsms.map((sa: any) => {
             const matchedTemplate = defaultAssignmentPool.find(
-              (t) => t.id === asmId || t.title.toLowerCase().trim() === (r.title || '').toLowerCase().trim()
+              (t) => t.id === sa.assignmentId || t.title.toLowerCase().trim() === (sa.title || '').toLowerCase().trim()
             );
+            const courseCode = (sa.courseId || '').replace('CRS-', '').replace('COURSE-', '') || 'PRF192';
 
-            const preservedTestCases = existing?.testCases || existing?.configuredTestCases || (Array.isArray(r.testCases) ? r.testCases : undefined);
-
-            const merged: StudentTaskItem = {
-              id: asmId,
-              courseId: courseId,
+            return {
+              id: sa.assignmentId,
+              courseId: sa.courseId,
               courseCode: courseCode,
-              course: existing?.course || r.course || `${courseCode} - Bài Tập Học Phần`,
-              title: r.title || existing?.title || 'Bài tập mới',
-              description: r.description || existing?.description || '',
-              deadline: r.deadline ? (r.deadline.includes('T') ? r.deadline : `${r.deadline}T23:59:00`) : existing?.deadline || new Date(Date.now() + 7 * 86400000).toISOString(),
-              timeLimitMs: r.timeLimitMs || existing?.timeLimitMs || 2000,
-              memoryLimitMb: r.memoryLimitMb || existing?.memoryLimitMb || 512,
-              allowedLanguages: r.allowedLanguages || existing?.allowedLanguages || ['java', 'python', 'cpp', 'dotnet'],
-              allowedExtensions: existing?.allowedExtensions || ['.zip'],
-              maxSizeMb: existing?.maxSizeMb || 10,
-              testCasesCount: preservedTestCases ? preservedTestCases.length : (r.testcasesCount || existing?.testCasesCount || (matchedTemplate?.testCasesCount || 2)),
-              testCases: preservedTestCases,
-              configuredTestCases: preservedTestCases,
-              rubrics: existing?.rubrics || matchedTemplate?.rubrics,
-              technicalRequirements: existing?.technicalRequirements || matchedTemplate?.technicalRequirements,
-              sampleTestCases: existing?.sampleTestCases || matchedTemplate?.sampleTestCases,
-              status: r.status || (r.isActive !== false ? 'PUBLISHED' : 'CLOSED'),
+              course: `${courseCode} - Bài Tập Chuẩn Hóa`,
+              title: sa.title,
+              description: sa.description || '',
+              deadline: typeof sa.deadline === 'string'
+                ? (sa.deadline.includes('T') ? sa.deadline : `${sa.deadline}T23:59:00`)
+                : new Date(Date.now() + 7 * 86400000).toISOString(),
+              timeLimitMs: sa.timeLimitMs || matchedTemplate?.timeLimitMs || 2000,
+              memoryLimitMb: sa.memoryLimitMb || matchedTemplate?.memoryLimitMb || 512,
+              allowedLanguages: sa.allowedLanguages || matchedTemplate?.allowedLanguages || ['java', 'python', 'cpp'],
+              allowedExtensions: ['.zip'],
+              maxSizeMb: 10,
+              testCasesCount: sa.testcasesCount || (matchedTemplate?.testCasesCount || 5),
+              rubrics: matchedTemplate?.rubrics,
+              technicalRequirements: matchedTemplate?.technicalRequirements,
+              sampleTestCases: matchedTemplate?.sampleTestCases,
+              status: sa.isActive ? 'PUBLISHED' : 'CLOSED',
             };
-
-            map.set(asmId, merged);
           });
 
-          const finalList = Array.from(map.values());
-          try {
-            localStorage.setItem('aita_published_assignments', JSON.stringify(finalList));
-          } catch {}
-          return finalList;
-        });
-      })
-      .catch((err) => {
-        console.warn('[SubmissionView] Backend assignments fetch fallback:', err);
-      });
+          setAssignmentList(mapped);
 
-    // Đọc lịch sử nộp bài của sinh viên
-    try {
-      const savedSubmissions = localStorage.getItem(`aita_student_submissions_${studentId}`);
-      if (savedSubmissions) {
-        setSubmissionHistory(JSON.parse(savedSubmissions));
+          if (task) {
+            const matched = mapped.find((t: StudentTaskItem) => t.id === task.id);
+            setSelectedTask(matched || { ...task, allowedExtensions: ['.zip'], maxSizeMb: 10 });
+          }
+          return;
+        }
       }
     } catch (e) {
-      console.warn('Không thể đọc lịch sử nộp bài:', e);
+      console.warn('[SubmissionView] Lỗi đọc bài tập từ PostgreSQL, dùng template dự phòng:', e);
     }
 
-    // Nếu props task được truyền vào cụ thể ban đầu, mở nó
+    setAssignmentList([...defaultAssignmentPool]);
     if (task) {
-      const matched = listToDisplay.find((t: StudentTaskItem) => t.id === task.id);
+      const matched = defaultAssignmentPool.find((t: StudentTaskItem) => t.id === task.id);
       setSelectedTask(matched || { ...task, allowedExtensions: ['.zip'], maxSizeMb: 10 });
     }
   };
+
+  // 2. Tải lịch sử nộp bài của sinh viên trực tiếp từ PostgreSQL 15 (Single Source of Truth)
+  const fetchStudentSubmissions = async () => {
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/v1/submissions?studentId=${encodeURIComponent(studentId)}`);
+      if (res.ok) {
+        const json = await res.json();
+        const list = json.data || json || [];
+        if (Array.isArray(list)) {
+          const historyMap: Record<string, StudentSubmissionRecord> = {};
+          list.forEach((sub: any) => {
+            const existing = historyMap[sub.assignmentId];
+            if (!existing || new Date(sub.createdAt) > new Date(existing.submittedAt)) {
+              historyMap[sub.assignmentId] = {
+                assignmentId: sub.assignmentId,
+                submissionId: sub.submissionId,
+                submittedAt: sub.createdAt,
+                fileName: sub.fileName || 'Solution.zip',
+                fileSizeMb: sub.fileSizeBytes ? Number((sub.fileSizeBytes / (1024 * 1024)).toFixed(2)) : 0.05,
+                sha256: sub.sha256Hash,
+                status: sub.status,
+                score: sub.score,
+              };
+            }
+          });
+          setSubmissionHistory(historyMap);
+        }
+      }
+    } catch (e) {
+      console.warn('[SubmissionView] Lỗi đọc lịch sử nộp bài từ PostgreSQL:', e);
+    }
+  };
+
+  const handleRefreshAll = () => {
+    void fetchBackendAssignments();
+    void fetchStudentSubmissions();
+  };
+
+  useEffect(() => {
+    void fetchBackendAssignments();
+    void fetchStudentSubmissions();
+
+    const handleSync = () => {
+      void fetchBackendAssignments();
+      void fetchStudentSubmissions();
+    };
+
+    window.addEventListener('aita_assignment_changed', handleSync);
+    window.addEventListener('aita_submission_completed', handleSync);
+
+    return () => {
+      window.removeEventListener('aita_assignment_changed', handleSync);
+      window.removeEventListener('aita_submission_completed', handleSync);
+    };
+  }, [studentId, apiBaseUrl]);
 
   // Tính toán thời gian còn lại và độ khẩn cấp của Deadline
   const getDeadlineMetadata = (deadlineStr: string) => {
@@ -985,6 +777,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         return itemCode === filterCode;
       });
     }
+
 
     let total = relevant.length;
     let submitted = 0;
@@ -1149,11 +942,11 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
       const updated = { ...submissionHistory, [currentTask.id]: newRecord };
       setSubmissionHistory(updated);
-      try {
-        localStorage.setItem(`aita_student_submissions_${studentId}`, JSON.stringify(updated));
-      } catch (e) {
-        console.warn('Không thể lưu kết quả nộp bài:', e);
-      }
+// Lưu trữ trực tiếp lên PostgreSQL thông qua API Gateway
+
+
+
+
 
       onSubmit(selectedFile, currentTask, selectedLanguage);
     }
@@ -1266,7 +1059,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             <div style={{ flex: 1, minWidth: '300px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '9px', flexWrap: 'wrap' }}>
                 <span className="chip chip-blue chip-mono" style={{ textTransform: 'uppercase' }}>
-                  {selectedTask.courseCode || 'SWP391'}
+                  {selectedTask.courseCode || 'PRO192'}
                 </span>
                 <span style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
                   {selectedTask.id}
@@ -2428,7 +2221,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
           <button
             type="button"
-            onClick={loadAssignmentsAndSubmissions}
+            onClick={handleRefreshAll}
             title="Làm mới danh sách từ giảng viên"
             style={{
               padding: '8px 14px',
@@ -2664,7 +2457,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                         border: '1px solid rgba(59, 130, 246, 0.24)',
                       }}
                     >
-                      {assignment.courseCode || 'SWP391'}
+                      {assignment.courseCode || 'PRO192'}
                     </span>
                     <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                       Mã: {assignment.id}

@@ -158,39 +158,66 @@ export class AssignmentRepository implements OnModuleInit {
   }
 
   private seedInitialAssignments(): void {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + 14);
-
     const defaultAssignments: AssignmentRecord[] = [
       {
-        assignmentId: 'TASK-SWP391-SPRINT2',
-        courseId: 'COURSE-SWP391',
-        title: 'Thuật toán Sắp xếp & Tối ưu hóa Bộ nhớ (Milestone 2)',
-        description: 'Xây dựng thuật toán sắp xếp mảng 100,000 phần tử, tối ưu O(N log N) và tuân thủ các nguyên lý SOLID.',
-        allowedLanguages: ['java', 'python', 'cpp', 'dotnet'],
+        assignmentId: 'TASK-PRO192-A1',
+        courseId: 'CRS-PRO192',
+        title: 'Quản lý Đội xe Vận tải hướng đối tượng OOP (PRO192)',
+        description: 'Áp dụng các nguyên lý lập trình hướng đối tượng (Kế thừa, Đóng gói, Đa hình, Trừu tượng) để thiết kế hệ thống quản lý phương tiện giao thông và đội xe logistics.',
+        allowedLanguages: ['java'],
         maxScore: 10.0,
-        deadline: futureDate,
+        deadline: new Date('2026-10-18T23:59:59.000Z'),
         timeLimitMs: 2000,
         memoryLimitMb: 512,
-        testcasesCount: 2,
-        isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        testcasesCount: 3,
+        isActive: false,
+        createdAt: new Date('2026-10-10T00:00:00.000Z'),
+        updatedAt: new Date('2026-10-18T23:59:59.000Z'),
       },
       {
-        assignmentId: 'TASK-PRN211-M1',
-        courseId: 'COURSE-PRN211',
-        title: 'Lập trình Cấu trúc dữ liệu & Thuật toán C# .NET',
-        description: 'Cài đặt Generic Binary Search Tree và xử lý ngoại lệ trong .NET 8.',
-        allowedLanguages: ['dotnet', 'java'],
+        assignmentId: 'TASK-CSD201-A1',
+        courseId: 'CRS-CSD201',
+        title: 'Thuật toán Cấu trúc Dữ liệu & Đồ thị Dijkstra (CSD201)',
+        description: 'Cài đặt giải thuật Dijkstra với PriorityQueue tìm đường đi ngắn nhất trên đồ thị có trọng số và phân tích độ phức tạp O(E log V).',
+        allowedLanguages: ['java', 'cpp', 'python'],
         maxScore: 10.0,
-        deadline: futureDate,
+        deadline: new Date('2026-10-20T23:59:59.000Z'),
+        timeLimitMs: 2000,
+        memoryLimitMb: 512,
+        testcasesCount: 3,
+        isActive: false,
+        createdAt: new Date('2026-10-12T00:00:00.000Z'),
+        updatedAt: new Date('2026-10-20T23:59:59.000Z'),
+      },
+      {
+        assignmentId: 'TASK-PRJ301-A1',
+        courseId: 'CRS-PRJ301',
+        title: 'Xây dựng Servlet & Filter Quản lý Sinh viên MVC (PRJ301)',
+        description: 'Thiết kế và triển khai web application Java theo mô hình MVC 2, sử dụng Servlet xử lý request và Filter xác thực session người dùng.',
+        allowedLanguages: ['java', 'cpp', 'python'],
+        maxScore: 10.0,
+        deadline: new Date('2026-11-15T23:59:59.000Z'),
         timeLimitMs: 2000,
         memoryLimitMb: 512,
         testcasesCount: 3,
         isActive: true,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        createdAt: new Date('2026-10-20T00:00:00.000Z'),
+        updatedAt: new Date('2026-10-25T03:00:00.000Z'),
+      },
+      {
+        assignmentId: 'TASK-PRF192-A1',
+        courseId: 'CRS-PRF192',
+        title: 'Thuật toán Xử lý Mảng và Quản lý Con trỏ Bộ nhớ Động (PRF192)',
+        description: 'Lập trình C giải quyết bài toán chuẩn hóa chuỗi ký tự, sắp xếp mảng động và sử dụng con trỏ quản lý bộ nhớ malloc/free.',
+        allowedLanguages: ['cpp', 'c', 'java'],
+        maxScore: 10.0,
+        deadline: new Date('2026-11-20T23:59:59.000Z'),
+        timeLimitMs: 2000,
+        memoryLimitMb: 512,
+        testcasesCount: 3,
+        isActive: true,
+        createdAt: new Date('2026-10-20T00:00:00.000Z'),
+        updatedAt: new Date('2026-10-25T03:00:00.000Z'),
       },
     ];
 
@@ -198,7 +225,7 @@ export class AssignmentRepository implements OnModuleInit {
       this.records.set(a.assignmentId, a);
     }
     this.persist();
-    this.logger.log(`[AssignmentRepository] Seeded ${defaultAssignments.length} default assignments.`);
+    this.logger.log(`[AssignmentRepository] Seeded ${defaultAssignments.length} canonical assignments.`);
   }
 
   private persist(): void {

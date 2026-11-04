@@ -44,7 +44,7 @@
 
 ---
 
-### 🚨 Bug 3: Giao diện Sinh viên đọc danh sách đề bài từ LocalStorage
+### ✅ Bug 3: Giao diện Sinh viên đọc danh sách đề bài từ LocalStorage [ĐÃ GIẢI QUYẾT TRIỆT ĐỂ]
 * **Vị trí code:** [`frontend/src/components/SubmissionView.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/SubmissionView.tsx#L634)
   ```typescript
   const savedPublished = localStorage.getItem('aita_published_assignments');
@@ -230,7 +230,7 @@ So chiếu với tài liệu [`RBL_Syllabus_AITA_10Weeks.md`](file:///c:/Users/A
 
 ---
 
-### 🖥️ UI Bug 5: Thiếu thanh chuyển vai trò nhanh (Role Switcher) khi trình diễn
+### 🖥️ UI Bug 5: Thiếu thanh chuyển vai trò nhanh (Role Switcher) khi trình diễn (ĐÃ KHẮC PHỤC ✅)
 * **Vị trí code:** [`frontend/src/App.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/App.tsx#L559-L564)
   ```tsx
   const navTabs = currentUser.role === 'ADMIN'
@@ -248,7 +248,7 @@ So chiếu với tài liệu [`RBL_Syllabus_AITA_10Weeks.md`](file:///c:/Users/A
 
 ---
 
-### 🖥️ UI Bug 6: Comment lộ liễu và Mock Testcase cố định trong Quản lý Phúc khảo
+### 🖥️ UI Bug 6: Comment lộ liễu và Mock Testcase cố định trong Quản lý Phúc khảo (ĐÃ KHẮC PHỤC ✅)
 * **Vị trí code:** [`frontend/src/components/LecturerAppealsManager.tsx`](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/LecturerAppealsManager.tsx#L208-L215) & [L270-L320](file:///c:/Users/ADMIN/Documents/GitHub/SWP391-Group4/frontend/src/components/LecturerAppealsManager.tsx#L270-L320)
   ```tsx
   // LƯU Ý HỘI ĐỒNG: File nộp thực tế trên máy chủ là PRJ301-1.zip (3.23 MB - Nộp nhầm file đồ án Web PRJ301).

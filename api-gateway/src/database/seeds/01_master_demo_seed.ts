@@ -15,6 +15,52 @@ export async function seed(knex: Knex): Promise<void> {
     { role_id: 'STUDENT', role_name: 'Enrolled Student', description: 'Sinh viên nộp bài, xem live score, gửi appeal' },
   ]).onConflict('role_id').ignore();
 
+  await knex.raw(`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS role_id VARCHAR(32) DEFAULT 'STUDENT';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255) DEFAULT '';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS student_code VARCHAR(32);
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(32) DEFAULT 'STUDENT';
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+    CREATE TABLE IF NOT EXISTS teamwork_metrics (
+      metric_id VARCHAR(64) PRIMARY KEY,
+      class_id VARCHAR(64) NOT NULL REFERENCES classes(class_id) ON DELETE CASCADE,
+      student_id VARCHAR(64) NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+      commit_count INT NOT NULL DEFAULT 0,
+      lines_added INT NOT NULL DEFAULT 0,
+      lines_deleted INT NOT NULL DEFAULT 0,
+      contribution_pct NUMERIC(5, 2) NOT NULL DEFAULT 0.0,
+      is_free_rider BOOLEAN NOT NULL DEFAULT FALSE,
+      analyzed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT unique_class_student_metric UNIQUE (class_id, student_id)
+    );
+    CREATE TABLE IF NOT EXISTS dead_letter_jobs (
+      dlq_id VARCHAR(64) PRIMARY KEY,
+      queue_name VARCHAR(64) NOT NULL DEFAULT 'submission-grading-queue',
+      original_job_id VARCHAR(128) NOT NULL,
+      submission_id VARCHAR(64),
+      payload JSONB NOT NULL,
+      failed_reason TEXT NOT NULL,
+      attempts_made INT NOT NULL DEFAULT 3,
+      stacktrace TEXT,
+      status VARCHAR(32) NOT NULL DEFAULT 'FAILED',
+      failed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      retried_at TIMESTAMP WITH TIME ZONE
+    );
+    CREATE TABLE IF NOT EXISTS ai_prompt_templates (
+      template_id VARCHAR(64) PRIMARY KEY,
+      template_code VARCHAR(50) NOT NULL UNIQUE,
+      version INT NOT NULL DEFAULT 1,
+      description VARCHAR(255),
+      system_prompt TEXT NOT NULL,
+      user_prompt_template TEXT NOT NULL,
+      temperature NUMERIC(2, 1) NOT NULL DEFAULT 0.2,
+      json_schema JSONB NOT NULL,
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   // ==========================================================================
   // 2. USERS (Admin, HOD, 4 Giảng viên, 50 Sinh viên)
   // ==========================================================================
@@ -103,22 +149,23 @@ export async function seed(knex: Knex): Promise<void> {
   }));
 
   for (const u of allUsers) {
+    // Giải phóng email hoặc student_code nếu đang bị giữ bởi user_id cũ khác
+    await knex('users')
+      .where({ email: u.email })
+      .whereNot({ user_id: u.user_id })
+      .update({ email: `legacy_${Date.now()}_${u.email}` })
+      .catch(() => {});
+    if (u.student_code) {
+      await knex('users')
+        .where({ student_code: u.student_code })
+        .whereNot({ user_id: u.user_id })
+        .update({ student_code: null })
+        .catch(() => {});
+    }
     await knex('users')
       .insert(u)
       .onConflict('user_id')
-      .merge()
-      .catch(async () => {
-        // Nếu trùng email với user_id khác, cập nhật thông tin theo email
-        await knex('users')
-          .where({ email: u.email })
-          .update({
-            full_name: u.full_name,
-            role: u.role,
-            role_id: u.role_id,
-            is_active: u.is_active,
-          })
-          .catch(() => {});
-      });
+      .merge();
   }
 
   // ==========================================================================

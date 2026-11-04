@@ -90,9 +90,9 @@ export class SubmissionsService {
       }
 
       if (assignment.allowedLanguages && assignment.allowedLanguages.length > 0) {
-        const isAllowed = assignment.allowedLanguages.some(
-          (lang) => lang.toLowerCase() === language,
-        );
+        const normLangs = assignment.allowedLanguages.map((l) => l.toLowerCase());
+        const isCOrCpp = (language === 'c' || language === 'cpp') && (normLangs.includes('c') || normLangs.includes('cpp'));
+        const isAllowed = isCOrCpp || normLangs.includes(language);
         if (!isAllowed) {
           throw new BadRequestException(
             `Ngôn ngữ '${language}' không nằm trong danh sách được phép (${assignment.allowedLanguages.join(', ')})!`,
@@ -137,7 +137,7 @@ export class SubmissionsService {
     // 5. Save file to disk
     const savedFileName = `${submissionId}.zip`;
     const destinationPath = path.join(this.uploadDir, savedFileName);
-    fs.writeFileSync(destinationPath, file.buffer);
+    await fs.promises.writeFile(destinationPath, file.buffer);
 
     // 6. Store record in SUBMISSIONS database table
     const record = await this.submissionRepo.create({

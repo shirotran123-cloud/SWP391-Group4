@@ -31,9 +31,9 @@ You must generate:
     const userPrompt = `GENERATE_EXAM
 Course: ${courseCode}
 Topic: ${topic}
-Target Difficulty: ${difficulty}
+Target Difficulty: ${difficulty || "Medium"}
 Programming Language: ${language}
-Target Learning Outcomes: ${learningOutcomes.join(", ")}
+Target Learning Outcomes: ${(learningOutcomes && Array.isArray(learningOutcomes) ? learningOutcomes : []).join(", ") || "General Problem Solving"}
 Requested Test Cases: ${numTestCases}
 
 Ensure output conforms strictly to the provided JSON schema.`;

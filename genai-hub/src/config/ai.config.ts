@@ -29,10 +29,10 @@ const parseKeys = (raw?: string): string[] => {
 };
 
 export const aiConfig: AIConfig = {
-  defaultProvider: (process.env.DEFAULT_LLM_PROVIDER as "gemini" | "openai" | "mock") || "mock",
+  defaultProvider: (process.env.DEFAULT_LLM_PROVIDER as "gemini" | "openai" | "mock") || "gemini",
   gemini: {
-    keys: parseKeys(process.env.GEMINI_API_KEYS),
-    model: process.env.GEMINI_MODEL || "gemini-3.8-flash",
+    keys: parseKeys(process.env.GEMINI_API_KEYS || ""),
+    model: process.env.GEMINI_MODEL || "gemini-flash-lite-latest",
   },
   openai: {
     keys: parseKeys(process.env.OPENAI_API_KEYS),

@@ -1,3 +1,4 @@
+import { SHARED_GEMINI_API_KEY, getSharedGeminiApiKey, hasSharedGeminiApiKey } from '../config/ai.config';
 import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
 import React, { useState, useEffect, useMemo } from 'react';
 import JSZip from 'jszip';
@@ -63,6 +64,10 @@ interface LecturerDashboardProps {
     }
   ) => void;
 }
+
+// Re-export từ Trung tâm cấu hình AI dùng chung (Single Source of Truth)
+export const EMBEDDED_GEMINI_API_KEY = SHARED_GEMINI_API_KEY;
+
 
 interface CourseItem {
   courseId: string;
@@ -908,6 +913,36 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   useEffect(() => {
     void fetchRealSubmissions();
+    const fetchBackendAssignments = async () => {
+      try {
+        const res = await fetch('http://localhost:3000/api/v1/assignments');
+        if (res.ok) {
+          const json = await res.json();
+          const serverAsms = json.data || json || [];
+          if (Array.isArray(serverAsms) && serverAsms.length > 0) {
+            const mapped: PublishedAssignment[] = serverAsms.map((sa: any) => ({
+              id: sa.assignmentId,
+              courseId: sa.courseId,
+              title: sa.title,
+              description: sa.description || '',
+              deadline: typeof sa.deadline === 'string' ? sa.deadline.slice(0, 16) : '2026-11-20T23:59',
+              timeLimitMs: sa.timeLimitMs || 2000,
+              memoryLimitMb: sa.memoryLimitMb || 512,
+              allowedLanguages: sa.allowedLanguages || ['java', 'cpp', 'python'],
+              testCases: [],
+              rubrics: [],
+              createdAt: typeof sa.createdAt === 'string' ? new Date(sa.createdAt).toLocaleString('vi-VN') : new Date().toLocaleString('vi-VN'),
+              status: sa.isActive ? 'PUBLISHED' : 'CLOSED',
+              submissionCount: 0,
+            }));
+            setPublishedAssignments(mapped);
+          }
+        }
+      } catch (err) {
+        console.warn('[LecturerDashboard] Lỗi đọc bài tập từ PostgreSQL:', err);
+      }
+    };
+    void fetchBackendAssignments();
   }, []);
 
   const handleDownloadZip = async (subId: string, preferredFileName?: string) => {
@@ -1109,6 +1144,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   // Môn học đang xem chi tiết (nếu null thì hiện danh sách tất cả môn học)
   const [selectedCourseDetailId, setSelectedCourseDetailId] = useState<string | null>(null);
+  const [isPublishingAssignment, setIsPublishingAssignment] = useState<boolean>(false);
 
   // Modal xem chi tiết đề bài đã giao
   const [previewAssignment, setPreviewAssignment] = useState<PublishedAssignment | null>(null);
@@ -1127,29 +1163,41 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [timeLimitMs, setTimeLimitMs] = useState(2000);
   const [memoryLimitMb, setMemoryLimitMb] = useState(512);
   const [testCases, setTestCases] = useState<Array<{ input: string; output: string; weight: number; isHidden: boolean }>>([
-    { input: '5\n4 2 5 1 3', output: '1 2 3 4 5', weight: 3.5, isHidden: false },
-    { input: '3\n10 0 -5', output: '-5 0 10', weight: 3.5, isHidden: true },
+    { input: '5\n4 2 5 1 3', output: '1 2 3 4 5', weight: 1, isHidden: false },
+    { input: '3\n10 0 -5', output: '-5 0 10', weight: 1, isHidden: true },
   ]);
   const [createSuccessMsg, setCreateSuccessMsg] = useState<string | null>(null);
 
   // Tính tổng trọng số testcases hiện tại (xử lý trường hợp tổng khác 10 hoặc bằng 14, 20...)
   const totalTestcaseWeight = testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0);
 
-  // Chuẩn hóa tỷ lệ điểm các testcases về thang mong muốn (10.0đ hoặc 7.0đ theo Barem)
-  const handleNormalizeTestcases = (targetScore: number) => {
-    if (totalTestcaseWeight <= 0 || testCases.length === 0) return;
+  // Tiện ích tùy chọn: Chia lại tỷ lệ điểm các testcases về thang 7.0đ nếu giảng viên muốn
+  const handleNormalizeTestcases = (targetScore = 7.0) => {
+    if (testCases.length === 0) return;
+    const currentSum = testCases.reduce((sum, tc) => sum + (Number(tc.weight) || 0), 0);
+    if (currentSum <= 0) return;
     let accumulated = 0;
     const normalized = testCases.map((tc, idx) => {
       if (idx === testCases.length - 1) {
         const finalWeight = Math.max(0.5, Math.round((targetScore - accumulated) * 10) / 10);
         return { ...tc, weight: finalWeight };
       }
-      const rawW = (tc.weight / totalTestcaseWeight) * targetScore;
+      const rawW = (tc.weight / currentSum) * targetScore;
       const roundedW = Math.max(0.5, Math.round(rawW * 10) / 10);
       accumulated += roundedW;
       return { ...tc, weight: roundedW };
     });
     setTestCases(normalized);
+  };
+
+  // Thêm test case mới (mỗi testcase ban đầu là 1 điểm)
+  const handleAddTestCase = () => {
+    setTestCases([...testCases, { input: '', output: '', weight: 1, isHidden: false }]);
+  };
+
+  // Xóa test case (giữ nguyên trọng số các testcase còn lại)
+  const handleDeleteTestCase = (deleteIdx: number) => {
+    setTestCases(testCases.filter((_, i) => i !== deleteIdx));
   };
 
   // Chia đều điểm số ngang nhau cho tất cả testcases (mỗi testcase có điểm số bằng nhau)
@@ -1169,22 +1217,14 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setTestCases(updated);
   };
 
-  // Gemini AI Real State
-  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => {
-    return (
-      (import.meta as any).env?.VITE_GEMINI_API_KEY ||
-      localStorage.getItem('aita_gemini_api_key') ||
-      ''
-    );
-  });
+  // Gemini AI Real State: Tự động nạp trực tiếp từ cấu hình hệ thống SSOT (ai.config.ts)
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(() => getSharedGeminiApiKey());
   const [selectedAiModel, setSelectedAiModel] = useState<string>('auto');
   const [availableModelList, setAvailableModelList] = useState<string[]>([]);
   const [desiredTestCount, setDesiredTestCount] = useState<number>(5);
   const [lecturerPrompt, setLecturerPrompt] = useState<string>(
     'Tạo bài tập về Thuật toán Dijkstra tìm đường đi ngắn nhất, có tối ưu bằng Hàng đợi ưu tiên PriorityQueue, sinh viên phải áp dụng nguyên lý SOLID Single Responsibility (SRP).'
   );
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-  const [tempApiKey, setTempApiKey] = useState(geminiApiKey);
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [aiTimerSeconds, setAiTimerSeconds] = useState(0);
   const [aiErrorMsg, setAiErrorMsg] = useState<string | null>(null);
@@ -1194,12 +1234,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [referenceSolution, setReferenceSolution] = useState<string>('');
   const [showSolutionModal, setShowSolutionModal] = useState(false);
 
-  // Ping Key status
-  const [pingStatus, setPingStatus] = useState<{ loading: boolean; message: string | null; success: boolean | null }>({
-    loading: false,
-    message: null,
-    success: null,
-  });
 
   // Excel / CSV state
   const [excelStatus, setExcelStatus] = useState<string | null>(null);
@@ -1209,38 +1243,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [parsedCsvStudents, setParsedCsvStudents] = useState<Array<{ studentCode: string; fullName: string; email: string }>>([]);
   const [csvParseError, setCsvParseError] = useState<string | null>(null);
 
-  // Lưu API Key vào LocalStorage
-  const handleSaveApiKey = () => {
-    const trimmed = tempApiKey.trim();
-    setGeminiApiKey(trimmed);
-    localStorage.setItem('aita_gemini_api_key', trimmed);
-    setIsConfigModalOpen(false);
-    setAiErrorMsg(null);
-  };
-
-  // Ping kiểm tra kết nối API Key với Google Gemini
-  const handleTestApiKey = async () => {
-    if (!tempApiKey.trim()) {
-      setPingStatus({ loading: false, message: 'Vui lòng nhập API Key trước khi kiểm tra.', success: false });
-      return;
-    }
-    setPingStatus({ loading: true, message: 'Đang kết nối tới máy chủ Google Gemini (ModelService.ListModels)...', success: null });
-    const res = await GeminiAIService.pingKey(tempApiKey, selectedAiModel === 'auto' ? undefined : selectedAiModel);
-    setPingStatus({
-      loading: false,
-      message: res.message + (res.latencyMs ? ` (Độ trễ: ${res.latencyMs}ms)` : ''),
-      success: res.success,
-    });
-    if (res.availableModels && res.availableModels.length > 0) {
-      setAvailableModelList(res.availableModels);
-      if (selectedAiModel === 'auto' || !res.availableModels.includes(selectedAiModel) || selectedAiModel.includes('tts')) {
-        const best = res.availableModels.find((m) => m.includes('flash') && !m.includes('tts')) || res.availableModels[0];
-        setSelectedAiModel(best);
-      }
-    }
-  };
-
-  // Cập nhật học phần và tự động đồng bộ mã môn trên tiêu đề đề bài lẫn mô tả
+  // Cập nhật học phần và tự động đồng bộ mã môn trên tiêu đề đề bài
   const handleCourseSelectChange = (newCourseId: string) => {
     setSelectedCourse(newCourseId);
     const targetObj = courses.find(
@@ -1273,11 +1276,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     setCreateSuccessMsg(null);
     setAiSuccessBadge(null);
 
-    // Nếu chưa có API Key, mở modal cấu hình để người dùng nhập
-    if (!geminiApiKey.trim()) {
-      setTempApiKey('');
-      setIsConfigModalOpen(true);
-      setAiErrorMsg('Bạn cần cung cấp Google Gemini API Key để hệ thống kết nối AI tạo đề bài.');
+    const activeKey = geminiApiKey.trim() || getSharedGeminiApiKey();
+
+    // Nếu chưa có API Key trong mã nguồn hoặc môi trường, mở modal để người dùng nhập
+    if (!activeKey) {
+      setAiErrorMsg('Hệ thống chưa được cấu hình Google Gemini API Key. Vui lòng kiểm tra file frontend/src/config/ai.config.ts.');
       return;
     }
 
@@ -1310,7 +1313,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         }
       }
 
-      const result = await GeminiAIService.generateAssignment(geminiApiKey, {
+      const result = await GeminiAIService.generateAssignment(activeKey, {
         courseName,
         courseCode,
         topicPrompt: topicToUse,
@@ -1330,7 +1333,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           result.testCases.map((tc) => ({
             input: tc.input,
             output: tc.output,
-            weight: tc.weight,
+            weight: 1,
             isHidden: tc.isHidden,
           }))
         );
@@ -1363,13 +1366,15 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
-  // Lưu & Xuất bản đề bài tập: Lưu vào danh sách môn học và TỰ ĐỘNG ĐIỀU HƯỚNG sang trang môn học đó
+  // Lưu & Xuất bản đề bài tập: Đồng bộ PostgreSQL 15 và tự động điều hướng sang trang môn học
   const handleSaveAssignment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!assignmentTitle.trim()) {
       setAiErrorMsg('Vui lòng nhập Tiêu đề bài tập trước khi xuất bản.');
       return;
     }
+    setIsPublishingAssignment(true);
+    setAiErrorMsg(null);
     const courseObj = courses.find(
       (c) =>
         c.courseId === selectedCourse ||
@@ -1452,12 +1457,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
     const updatedAsms = [newAsm, ...publishedAssignments.filter(a => a.id !== newAsm.id)];
     setPublishedAssignments(updatedAsms);
-    try {
-      localStorage.setItem('aita_published_assignments', JSON.stringify(updatedAsms));
-      window.dispatchEvent(new Event('aita_published_assignments_updated'));
-    } catch {
-      // ignore
-    }
+    window.dispatchEvent(new Event('aita_assignment_changed'));
 
     // Tăng số lượng bài tập của khóa học
     setCourses((prevCourses) =>
@@ -1473,6 +1473,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       : `Đã xuất bản thành công: Bài tập "${assignmentTitle}" (${validTestCases.length} testcases) đã giao cho lớp ${courseCode}!`;
     setPublishSuccessToast(toastMsg);
     setCreateSuccessMsg(toastMsg);
+    setIsPublishingAssignment(false);
 
     // TỰ ĐỘNG ĐIỀU HƯỚNG SANG TRANG CỦA MÔN HỌC ĐÓ
     setSelectedCourseDetailId(actualCourseId);
@@ -1484,46 +1485,63 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
   };
 
-  // Đóng hoặc mở lại bài tập
-  const handleToggleAssignmentStatus = (asmId: string) => {
+  // Đóng hoặc mở lại bài tập (Đồng bộ PostgreSQL 15)
+  const handleToggleAssignmentStatus = async (asmId: string) => {
+    const target = publishedAssignments.find((a) => a.id === asmId);
+    const newStatus = target && target.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED';
+
+    try {
+      await fetch(`${API_BASE_URL}/api/v1/assignments/${encodeURIComponent(asmId)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: newStatus === 'PUBLISHED' }),
+      });
+    } catch (err) {
+      console.warn('[LecturerDashboard] Lỗi khi cập nhật trạng thái bài tập:', err);
+    }
+
     const updated = publishedAssignments.map((a) =>
-      a.id === asmId ? { ...a, status: (a.status === 'PUBLISHED' ? 'CLOSED' : 'PUBLISHED') as 'PUBLISHED' | 'CLOSED', isNewlyCreated: false } : a
+      a.id === asmId ? { ...a, status: newStatus as 'PUBLISHED' | 'CLOSED', isNewlyCreated: false } : a
     );
     setPublishedAssignments(updated);
-    try {
-      localStorage.setItem('aita_published_assignments', JSON.stringify(updated));
-      window.dispatchEvent(new Event('aita_published_assignments_updated'));
-    } catch {
-      // ignore
-    }
+    window.dispatchEvent(new Event('aita_assignment_changed'));
   };
 
-  // Xóa bài tập khỏi lớp
-  const handleDeleteAssignment = (asmId: string, courseId: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa bài tập này khỏi lớp học?')) return;
+  // Xóa bài tập khỏi lớp và đồng bộ xóa triệt để khỏi PostgreSQL 15
+  const handleDeleteAssignment = async (asmId: string, courseId: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa bài tập này khỏi lớp học và máy chủ?')) return;
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/assignments/${encodeURIComponent(asmId)}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        console.log(`[LecturerDashboard] Đã xóa bài tập ${asmId} khỏi PostgreSQL.`);
+      } else {
+        console.warn(`[LecturerDashboard] Lỗi máy chủ khi xóa bài tập (Status ${res.status})`);
+      }
+    } catch (err) {
+      console.warn('[LecturerDashboard] Lỗi mạng khi gọi DELETE assignment:', err);
+    }
+
     const updated = publishedAssignments.filter((a) => a.id !== asmId);
     setPublishedAssignments(updated);
-    try {
-      localStorage.setItem('aita_published_assignments', JSON.stringify(updated));
-      window.dispatchEvent(new Event('aita_published_assignments_updated'));
-    } catch {
-      // ignore
-    }
+    window.dispatchEvent(new Event('aita_assignment_changed'));
     setCourses((prev) =>
       prev.map((c) => (c.courseId === courseId ? { ...c, assignmentCount: Math.max(0, c.assignmentCount - 1) } : c))
     );
+    setPublishSuccessToast(`Đã xóa bài tập ${asmId} khỏi hệ thống thành công.`);
   };
-
   // State và modal tạo khóa học mới
   const [isCreateCourseModalOpen, setIsCreateCourseModalOpen] = useState(false);
-  const [newCourseCode, setNewCourseCode] = useState('PRN211');
+  const [newCourseCode, setNewCourseCode] = useState('PRJ301');
   const [newCourseName, setNewCourseName] = useState('Cross-Platform Application Development with .NET');
   const [newCourseSemester, setNewCourseSemester] = useState('Học kỳ Thu 2026');
   const [newCourseDesc, setNewCourseDesc] = useState('Lập trình ứng dụng đa nền tảng với .NET Core & Clean Architecture');
   const [createCourseLoading, setCreateCourseLoading] = useState(false);
 
   // State cho việc nạp Roster Excel vào lớp
-  const [targetCourseId, setTargetCourseId] = useState<string>('CRS-SWP391');
+  const [targetCourseId, setTargetCourseId] = useState<string>('CRS-PRO192');
   const [courseStudents, setCourseStudents] = useState<Array<{ userId: string; studentCode: string; fullName: string; email: string }>>([]);
   const [showCourseStudents, setShowCourseStudents] = useState<boolean>(false);
   const [loadingCourseStudents, setLoadingCourseStudents] = useState<boolean>(false);
@@ -1547,9 +1565,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             assignmentCount: 2,
           }));
           setCourses(mapped);
-          try {
-            localStorage.setItem('aita_cached_courses', JSON.stringify(mapped));
-          } catch {}
           if (mapped.length > 0 && !targetCourseId) {
             setTargetCourseId(mapped[0].courseId);
           }
@@ -1656,9 +1671,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       setCourses((prev) => {
         const updated = [newCourseObj, ...prev.filter((c) => c.courseId !== generatedId)];
-        try {
-          localStorage.setItem('aita_cached_courses', JSON.stringify(updated));
-        } catch {}
         return updated;
       });
       setSelectedCourse(generatedId);
@@ -1694,7 +1706,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   // 2. Xuất danh sách sinh viên thực tế đang học lớp được chọn từ CSDL
   const handleExportCourseRoster = async () => {
-    const courseIdToFetch = targetCourseId || 'CRS-SWP391';
+    const courseIdToFetch = targetCourseId || 'CRS-PRO192';
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/courses/${courseIdToFetch}/students`);
       if (res.ok) {
@@ -1725,7 +1737,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   // 3. Tải danh sách sinh viên hiện tại trong lớp để quản lý
   const handleLoadCourseStudents = async (cId?: string) => {
-    const courseIdToFetch = cId || targetCourseId || 'CRS-SWP391';
+    const courseIdToFetch = cId || targetCourseId || 'CRS-PRO192';
     setLoadingCourseStudents(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/courses/${courseIdToFetch}/students`);
@@ -1747,6 +1759,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     try {
       const courseIdToFetch = targetCourseId || 'CRS-SWP391';
       const res = await fetch(`${API_BASE_URL}/api/v1/courses/${courseIdToFetch}/students/${studentId}`, {
+
         method: 'DELETE',
       });
       if (res.ok) {
@@ -1912,11 +1925,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
 
     try {
-      const courseIdToUse = targetCourseId || 'CRS-SWP391';
+      const courseIdToUse = targetCourseId || 'CRS-PRO192';
       const targetCourseObj = courses.find((c) => c.courseId === courseIdToUse);
       const courseLabel = targetCourseObj ? `${targetCourseObj.courseCode} (${targetCourseObj.courseName})` : courseIdToUse;
 
       const res = await fetch(`${API_BASE_URL}/api/v1/courses/${courseIdToUse}/bulk-import`, {
+
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ students: studentsToImport }),
@@ -1972,17 +1986,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button
-            type="button"
-            className="btn btn-secondary btn-sm"
-            onClick={() => {
-              setTempApiKey(geminiApiKey);
-              setIsConfigModalOpen(true);
-            }}
-          >
-            <Key size={13} />
-            {geminiApiKey ? 'Đã cấu hình AI key' : 'Nhập Gemini AI key'}
-          </button>
 
           <button
             type="button"
@@ -2545,7 +2548,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     border: `1px solid ${geminiApiKey ? 'rgba(37, 99, 235, 0.14)' : 'rgba(37, 99, 235, 0.14)'}`,
                   }}
                 >
-                  {geminiApiKey ? 'AI Thật Đã Kích Hoạt' : 'Chưa Cấu Hình Key'}
+                  <Sparkles size={13} style={{ marginRight: '4px', verticalAlign: 'middle' }} /> AI Gemini Sẵn Sàng (Dùng Chung Toàn Hệ Thống)
                 </span>
               </div>
               <p style={{ color: 'var(--text-muted)', fontSize: '14px', marginTop: '4px' }}>
@@ -2554,28 +2557,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             </div>
 
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setTempApiKey(geminiApiKey);
-                  setIsConfigModalOpen(true);
-                }}
-                style={{
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(11, 18, 32, 0.08)',
-                  backgroundColor: 'rgba(11, 18, 32, 0.035)',
-                  color: 'var(--text-main)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: 'pointer',
-                }}
-              >
-                <Settings size={16} /> Cấu Hình Key
-              </button>
 
               <button
                 type="button"
@@ -2820,13 +2801,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 <AlertCircle size={18} />
                 <span>{aiErrorMsg}</span>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsConfigModalOpen(true)}
-                style={{ padding: '4px 10px', borderRadius: '6px', border: '1px solid #ffffff', backgroundColor: 'transparent', color: 'var(--text-main)', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-              >
-                Nhập Key Ngay
-              </button>
             </div>
           )}
 
@@ -3038,103 +3012,59 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Layers size={16} color="var(--accent-primary)" /> Bộ Test Cases Tự Động (StdIn / StdOut) - Tổng {testCases.length} Test
+                    <Layers size={16} color="var(--accent-primary)" /> Bộ Test Cases Tự Động ({testCases.length} Test - Mỗi test 1 điểm)
                   </h4>
                   <span
                     style={{
-                      fontSize: '12px',
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      backgroundColor: totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? 'rgba(37, 99, 235, 0.08)' : 'rgba(37, 99, 235, 0.08)',
-                      color: totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? '#1d4ed8' : '#1e40af',
-                      fontWeight: 700,
-                      border: `1px solid ${totalTestcaseWeight === 10 || totalTestcaseWeight === 7 ? 'rgba(37, 99, 235, 0.14)' : 'rgba(37, 99, 235, 0.14)'}`,
-                    }}
-                  >
-                    Tổng Điểm TC: {totalTestcaseWeight.toFixed(1)}đ {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 ? '(Tùy chỉnh tỷ lệ)' : 'Chuẩn'}
-                  </span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                  <button
-                    type="button"
-                    onClick={() => handleDistributeEqually(7)}
-                    style={{
+                      fontSize: '11px',
                       padding: '4px 10px',
                       borderRadius: '6px',
                       backgroundColor: 'rgba(16, 185, 129, 0.08)',
-                      border: '1px solid rgba(16, 185, 129, 0.3)',
                       color: '#059669',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
+                      fontWeight: 600,
+                      border: '1px solid rgba(16, 185, 129, 0.2)',
                     }}
                     title="Chia đều điểm 7.0đ cho mọi testcase (mỗi testcase có điểm số ngang nhau theo quy chế chấm điểm)"
                   >
-                    Chia đều điểm (7.0đ Barem)
-                  </button>
-                  {totalTestcaseWeight !== 7 && (
-                    <button
-                      type="button"
-                      onClick={() => handleNormalizeTestcases(7)}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        backgroundColor: 'rgba(37, 99, 235, 0.08)',
-                        border: '1px solid var(--accent-cyan)',
-                        color: 'var(--blue-200)',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                      title="Quy đổi về 7.0đ (theo Barem chuẩn AITA: 7đ Testcase + 3đ Clean Code & SOLID)"
-                    >
-                      Quy đổi về 7.0đ
-                    </button>
-                  )}
-                  {totalTestcaseWeight !== 10 && (
-                    <button
-                      type="button"
-                      onClick={() => handleNormalizeTestcases(10)}
-                      style={{
-                        padding: '4px 10px',
-                        borderRadius: '6px',
-                        backgroundColor: 'rgba(59, 130, 246, 0.09)',
-                        border: '1px solid var(--accent-primary)',
-                        color: 'var(--text-main)',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                      title="Tự động chuẩn hóa chia lại tỷ lệ để tổng điểm các testcases đúng bằng 10.0đ"
-                    >
-                      Quy đổi về 10.0đ
-                    </button>
-                  )}
+                    Barem: (Số test đạt / {testCases.length || 1}) × 7.0đ
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button
                     type="button"
-                    onClick={() => setTestCases([...testCases, { input: '', output: '', weight: Math.round((7.0 / Math.max(1, testCases.length + 1)) * 10) / 10, isHidden: false }])}
+                    onClick={handleAddTestCase}
                     style={{
-                      padding: '4px 10px',
+                      padding: '5px 12px',
                       borderRadius: '6px',
-                      backgroundColor: 'transparent',
-                      border: '1px solid rgba(11, 18, 32, 0.08)',
+                      backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                      border: '1px solid var(--accent-cyan)',
                       color: 'var(--blue-200)',
                       fontSize: '12px',
                       fontWeight: 700,
                       cursor: 'pointer',
                     }}
+                    title="Thêm test case mới (mỗi testcase ban đầu là 1 điểm)"
                   >
-                    + Thêm Test Case
+                    + Thêm Test Case (1đ)
                   </button>
                 </div>
               </div>
 
-              {totalTestcaseWeight !== 10 && totalTestcaseWeight !== 7 && (
-                <div style={{ marginBottom: '10px', padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.1)', fontSize: '12px', color: '#1e40af' }}>
-                  <strong>Tổng điểm các testcase hiện là {totalTestcaseWeight.toFixed(1)}đ (khác 10đ):</strong> Khi chấm bài, hệ thống tự động chuẩn hóa theo tỷ lệ: <code>Điểm đạt = (Tổng điểm TC Pass / {totalTestcaseWeight.toFixed(1)}) × Thang Điểm Barem</code>. Hoặc Giảng viên có thể bấm nút <em>"Chia đều điểm (7.0đ Barem)"</em> hoặc <em>"Quy đổi về 7.0đ"</em> ở trên.
+              <div style={{ marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', backgroundColor: 'rgba(37, 99, 235, 0.05)', border: '1px solid rgba(37, 99, 235, 0.12)', fontSize: '12px', color: '#1e40af', lineHeight: '1.6' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, marginBottom: '4px' }}>
+                  <Award size={15} color="var(--accent-primary)" /> Quy tắc chấm điểm Test Cases: Hệ số phần trăm × 7.0đ
                 </div>
-              )}
+                <div>
+                  Mỗi test case mặc định tính <strong>1 điểm</strong> (tổng hiện tại: <strong>{testCases.length} test = {testCases.length} điểm</strong>). Khi sinh viên nộp bài, điểm phần test case được tính theo phần trăm số test case đạt nhân với 7.0đ:
+                </div>
+                <div style={{ marginTop: '5px', padding: '6px 12px', borderRadius: '6px', backgroundColor: '#ffffff', border: '1px solid rgba(37, 99, 235, 0.15)', fontFamily: 'var(--font-mono)', fontSize: '11.5px', color: '#1d4ed8' }}>
+                  Điểm Test Case = (Số test case đạt / {testCases.length > 0 ? testCases.length : 'N'}) × 7.0đ
+                </div>
+                <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  (Ví dụ: Sinh viên đạt 4/5 test case = 80% × 7.0đ = 5.6đ. Điểm này cộng với tối đa 3.0đ AI Clean Code & SOLID để ra điểm tổng kết 10.0đ).
+                </div>
+              </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {testCases.map((tc, idx) => (
@@ -3209,9 +3139,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
                     <button
                       type="button"
-                      onClick={() => setTestCases(testCases.filter((_, i) => i !== idx))}
+                      onClick={() => handleDeleteTestCase(idx)}
                       style={{ background: 'none', border: 'none', color: 'var(--accent-rose)', cursor: 'pointer', fontSize: '18px', fontWeight: 700 }}
-                      title="Xóa test case"
+                      title="Xóa test case và tự động cân bằng các testcase còn lại luôn đúng 7.0đ"
                     >
                       ×
                     </button>
@@ -3264,19 +3194,29 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '10px' }}>
               <button
                 type="submit"
+                disabled={isPublishingAssignment}
                 className="btn-primary"
                 style={{
                   padding: '12px 28px',
                   borderRadius: '10px',
                   fontWeight: 700,
                   fontSize: '15px',
-                  cursor: 'pointer',
+                  cursor: isPublishingAssignment ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
+                  opacity: isPublishingAssignment ? 0.7 : 1,
                 }}
               >
-                <CheckCircle2 size={18} /> Lưu & Xuất Bản Đề Bài Tập Cho Lớp
+                {isPublishingAssignment ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" /> Đang Lưu & Xuất Bản Lên PostgreSQL...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={18} /> Lưu & Xuất Bản Đề Bài Tập Cho Lớp
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -4810,156 +4750,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       )}
 
 
-      {/* MODAL CẤU HÌNH GOOGLE GEMINI AI KEY (DÙNG AI THẬT) */}
-      {isConfigModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(11, 18, 32, 0.45)', backdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '580px', padding: '32px', borderRadius: '12px', border: '1px solid rgba(11, 18, 32, 0.08)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--blue-200)' }}>
-                  <Key size={22} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)' }}>Cấu Hình Trí Tuệ Nhân Tạo Thật (Google Gemini AI)</h3>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Kết nối trực tiếp tới Google Generative AI để sinh đề và testcases</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsConfigModalOpen(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div style={{ marginBottom: '18px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#0b1220', marginBottom: '6px' }}>
-                Google Gemini API Key *
-              </label>
-              <input
-                type="password"
-                value={tempApiKey}
-                onChange={(e) => setTempApiKey(e.target.value)}
-                placeholder="Dán API Key của bạn (bắt đầu bằng AIzaSy...)"
-                style={{
-                  width: '100%',
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  backgroundColor: '#f7f9fc',
-                  border: '1px solid rgba(11, 18, 32, 0.08)',
-                  color: 'var(--text-main)',
-                  fontSize: '14px',
-                  fontFamily: 'var(--font-mono)',
-                  outline: 'none',
-                }}
-              />
-              <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>Chưa có khóa? Lấy miễn phí 100% trong 30 giây tại:</span>
-                <a
-                  href="https://aistudio.google.com/app/apikey"
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{ color: 'var(--blue-200)', textDecoration: 'none', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-                >
-                  Google AI Studio <ExternalLink size={11} />
-                </a>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#0b1220', marginBottom: '6px' }}>
-                Lựa Chọn Mô Hình AI (Model)
-              </label>
-              <select
-                value={selectedAiModel}
-                onChange={(e) => setSelectedAiModel(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  backgroundColor: '#f7f9fc',
-                  border: '1px solid rgba(11, 18, 32, 0.08)',
-                  color: 'var(--text-main)',
-                  fontSize: '13px',
-                }}
-              >
-                <option value="auto">Tự động chọn mô hình Flash Nhanh Nhất (Khuyên Dùng - Auto Detect)</option>
-                {availableModelList.length > 0 ? (
-                  availableModelList.map((m) => (
-                    <option key={m} value={m}>
-                      {m} {m.includes('flash') ? '(Siêu tốc 1-2s)' : '(Chuyên sâu)'}
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value="gemini-2.0-flash">gemini-2.0-flash (Thế hệ Flash 2.0)</option>
-                    <option value="gemini-1.5-flash-latest">gemini-1.5-flash-latest (Bản Flash mới nhất)</option>
-                    <option value="gemini-1.5-pro">gemini-1.5-pro (Mô hình chuyên sâu)</option>
-                  </>
-                )}
-              </select>
-            </div>
-
-            {/* Trạng thái Ping */}
-            {pingStatus.message && (
-              <div
-                style={{
-                  marginBottom: '18px',
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  backgroundColor: pingStatus.success ? 'rgba(37, 99, 235, 0.08)' : 'rgba(11, 18, 32, 0.06)',
-                  border: `1px solid ${pingStatus.success ? 'rgba(37, 99, 235, 0.14)' : 'rgba(11, 18, 32, 0.1)'}`,
-                  color: pingStatus.success ? '#2563eb' : 'var(--text-main)',
-                  fontSize: '13px',
-                }}
-              >
-                {pingStatus.message}
-              </div>
-            )}
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
-              <button
-                type="button"
-                onClick={handleTestApiKey}
-                disabled={pingStatus.loading}
-                style={{
-                  padding: '10px 16px',
-                  borderRadius: '10px',
-                  border: '1px solid rgba(11, 18, 32, 0.1)',
-                  backgroundColor: 'rgba(11, 18, 32, 0.035)',
-                  color: 'var(--text-main)',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  cursor: pingStatus.loading ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                {pingStatus.loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-                Kiểm Tra Kết Nối AI (Ping Gemini)
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSaveApiKey}
-                className="btn-primary"
-                style={{
-                  padding: '10px 22px',
-                  borderRadius: '10px',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                }}
-              >
-                Lưu Khóa & Áp Dụng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* MODAL XEM MÃ NGUỒN KHỞI TẠO & LỜI GIẢI MẪU DO AI TẠO RA */}
       {showSolutionModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(11, 18, 32, 0.45)', backdropFilter: 'blur(8px)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -5323,7 +5113,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   type="text"
                   value={newCourseCode}
                   onChange={(e) => setNewCourseCode(e.target.value.toUpperCase())}
-                  placeholder="Ví dụ: PRN211, PRO192, SWP391"
+                  placeholder="Ví dụ: PRO192, CSD201, PRJ301, PRF192"
                   required
                   style={{
                     width: '100%',

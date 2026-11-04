@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS users (
     full_name VARCHAR(128) NOT NULL,
     student_code VARCHAR(32) UNIQUE,
     role VARCHAR(32) NOT NULL DEFAULT 'STUDENT', -- Backward compatibility alias
-    password_hash VARCHAR(255) NOT NULL,
+    -- password_hash dropped for pure Google OAuth 2.0 SSO
     avatar_url TEXT,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -321,8 +321,9 @@ CREATE TABLE IF NOT EXISTS ai_prompt_templates (
 
 CREATE INDEX IF NOT EXISTS idx_ai_prompt_templates_code ON ai_prompt_templates(template_code, is_active);
 
+
 -- ============================================================================
--- SEED DATA (Ready-to-use for Testing & SRS Demonstration)
+-- SEED DATA (Synchronized & Canonical for Pure Google OAuth 2.0 & Coding Courses)
 -- ============================================================================
 
 -- 1. Seed Roles
@@ -334,95 +335,146 @@ VALUES
     ('STUDENT', 'Enrolled Student', 'Sinh viên nộp bài, xem live score, gửi appeal')
 ON CONFLICT (role_id) DO NOTHING;
 
--- 2. Seed Users
-INSERT INTO users (user_id, role_id, email, full_name, student_code, role, password_hash, is_active)
+-- 2. Seed Users (Pure Google OAuth 2.0 SSO - No password_hash column)
+INSERT INTO users (user_id, role_id, email, full_name, student_code, role, is_active)
 VALUES 
-    ('ADMIN001', 'ADMIN', 'admin@aita.fpt.edu.vn', 'Hệ Thống Quản Trị AITA', NULL, 'ADMIN', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
-    ('GV001', 'LECTURER', 'trungdt.teacher@aita.fpt.edu.vn', 'ThS. Đinh Thành Trung (Giảng viên)', NULL, 'LECTURER', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
-    ('SE170000', 'STUDENT', 'trungdt.student@aita.fpt.edu.vn', 'Đinh Thành Trung (Sinh viên)', 'SE170000', 'STUDENT', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
-    ('SE170123', 'STUDENT', 'nguyentt@aita.fpt.edu.vn', 'Trần Thanh Nguyên', 'SE170123', 'STUDENT', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE),
-    ('SE170456', 'STUDENT', 'vinhtt@aita.fpt.edu.vn', 'Nguyễn Hoàng Vinh', 'SE170456', 'STUDENT', '$2a$10$e7mK8Z2oW2b2tqG9yT6kcuo2g1l6a7p8r9s0t1u2v3w4x5y6z7', TRUE)
-ON CONFLICT (user_id) DO NOTHING;
+    ('ADMIN001', 'ADMIN', 'admin@aita.fpt.edu.vn', 'Hệ Thống Quản Trị AITA', NULL, 'ADMIN', TRUE),
+    ('HOD001', 'HOD', 'truongbm@fe.edu.vn', 'TS. Nguyễn Văn Hùng (Trưởng Bộ Môn)', NULL, 'HOD', TRUE),
+    ('GV001', 'LECTURER', 'trungdt@fe.edu.vn', 'ThS. Đinh Thành Trung (Giảng viên)', NULL, 'LECTURER', TRUE),
+    ('GV002', 'LECTURER', 'namlh@fe.edu.vn', 'TS. Lê Hoàng Nam (Giảng viên)', NULL, 'LECTURER', TRUE),
+    ('SE170000', 'STUDENT', 'linhcampochia@gmail.com', 'Nguyễn Văn An', 'SE170000', 'STUDENT', TRUE),
+    ('SE170001', 'STUDENT', 'huy.se170001@fpt.edu.vn', 'Trần Thành Huy', 'SE170001', 'STUDENT', TRUE)
+ON CONFLICT (user_id) DO UPDATE SET
+    email = EXCLUDED.email,
+    full_name = EXCLUDED.full_name,
+    role = EXCLUDED.role,
+    is_active = EXCLUDED.is_active;
 
--- 3. Seed Classes
+-- 3. Seed Classes (Exactly 2 Coding Courses per Lecturer)
 INSERT INTO classes (class_id, lecturer_id, class_code, class_name, semester, description, is_active)
 VALUES 
-    ('CRS-SWP391', 'GV001', 'SE1701-SWP391', 'Application Development Project (SWP391)', 'Fall 2026', 'Dự án Phát triển phần mềm theo chuẩn Agile Scrum', TRUE),
-    ('CRS-PRO192', 'GV001', 'SE1702-PRO192', 'Object-Oriented Programming (PRO192)', 'Fall 2026', 'Lập trình hướng đối tượng với Java và Design Patterns', TRUE),
-    ('CRS-CSD201', 'GV001', 'SE1703-CSD201', 'Data Structures and Algorithms (CSD201)', 'Fall 2026', 'Cấu trúc dữ liệu và giải thuật nâng cao', TRUE)
-ON CONFLICT (class_id) DO NOTHING;
+    ('CRS-PRO192', 'GV001', 'SE1701-PRO192', 'Object-Oriented Programming with Java (PRO192)', 'Fall 2026', 'Lập trình hướng đối tượng với Java, kế thừa, đa hình và Collection Framework.', TRUE),
+    ('CRS-CSD201', 'GV001', 'SE1702-CSD201', 'Data Structures and Algorithms (CSD201)', 'Fall 2026', 'Cấu trúc dữ liệu và giải thuật nâng cao (Stack, Queue, Tree, Graph, Sorting).', TRUE),
+    ('CRS-PRJ301', 'GV002', 'SE1703-PRJ301', 'Java Web Application Development (PRJ301)', 'Fall 2026', 'Xây dựng ứng dụng web với Java Servlet, JSP, MVC pattern và JDBC.', TRUE),
+    ('CRS-PRF192', 'GV002', 'SE1704-PRF192', 'Programming Fundamentals with C (PRF192)', 'Fall 2026', 'Kỹ thuật lập trình cơ bản với ngôn ngữ C: con trỏ, mảng, chuỗi và cấp phát động.', TRUE)
+ON CONFLICT (class_id) DO UPDATE SET
+    lecturer_id = EXCLUDED.lecturer_id,
+    class_code = EXCLUDED.class_code,
+    class_name = EXCLUDED.class_name,
+    is_active = EXCLUDED.is_active;
 
--- 4. Seed Class Members
+-- 4. Seed Class Members (All Students Enrolled in all 4 Coding Courses)
 INSERT INTO class_members (member_id, class_id, user_id, status)
 VALUES
-    ('MB-001', 'CRS-SWP391', 'SE170000', 'ACTIVE'),
-    ('MB-002', 'CRS-SWP391', 'SE170123', 'ACTIVE'),
-    ('MB-003', 'CRS-SWP391', 'SE170456', 'ACTIVE'),
-    ('MB-004', 'CRS-CSD201', 'SE170000', 'ACTIVE'),
-    ('MB-005', 'CRS-CSD201', 'SE170123', 'ACTIVE'),
-    ('MB-006', 'CRS-CSD201', 'SE170456', 'ACTIVE')
+    ('MB-001', 'CRS-PRO192', 'SE170000', 'ACTIVE'),
+    ('MB-002', 'CRS-PRO192', 'SE170001', 'ACTIVE'),
+    ('MB-003', 'CRS-CSD201', 'SE170000', 'ACTIVE'),
+    ('MB-004', 'CRS-CSD201', 'SE170001', 'ACTIVE'),
+    ('MB-005', 'CRS-PRJ301', 'SE170000', 'ACTIVE'),
+    ('MB-006', 'CRS-PRJ301', 'SE170001', 'ACTIVE'),
+    ('MB-007', 'CRS-PRF192', 'SE170000', 'ACTIVE'),
+    ('MB-008', 'CRS-PRF192', 'SE170001', 'ACTIVE')
 ON CONFLICT (class_id, user_id) DO NOTHING;
 
--- 5. Seed Assignments
-INSERT INTO assignments (assignment_id, class_id, course_id, title, description, language, allowed_languages, time_limit_sec, time_limit_ms, memory_limit_mb, due_date, deadline, max_score, testcases_count, is_active)
-VALUES 
+-- 5. Seed Assignments (1 Assignment per Course: 2 Expired, 2 Active)
+INSERT INTO assignments (
+    assignment_id, class_id, course_id, title, description, language,
+    allowed_languages, time_limit_sec, time_limit_ms, memory_limit_mb,
+    due_date, deadline, max_score, testcases_count, is_active
+) VALUES 
     (
-        'TASK-SWP391-SPRINT2',
-        'CRS-SWP391',
-        'CRS-SWP391',
-        'Thuật toán Sắp xếp & Tối ưu hóa Bộ nhớ (Milestone 2)',
-        'Xây dựng thuật toán sắp xếp mảng 100,000 phần tử, tối ưu O(N log N) và tuân thủ các nguyên lý SOLID.',
+        'TASK-PRO192-A1',
+        'CRS-PRO192',
+        'CRS-PRO192',
+        'Quản lý Đội xe Vận tải hướng đối tượng OOP (PRO192)',
+        'Áp dụng các nguyên lý lập trình hướng đối tượng (Kế thừa, Đóng gói, Đa hình, Trừu tượng) để thiết kế hệ thống quản lý phương tiện giao thông và đội xe logistics.',
         'java',
-        '["java", "python", "cpp", "dotnet"]'::jsonb,
+        '["java"]'::jsonb,
         2.0,
         2000,
         512,
-        CURRENT_TIMESTAMP + INTERVAL '14 days',
-        CURRENT_TIMESTAMP + INTERVAL '14 days',
+        '2026-10-18 23:59:59+07',
+        '2026-10-18 23:59:59+07',
         10.00,
-        2,
+        3,
+        FALSE
+    ),
+    (
+        'TASK-CSD201-A1',
+        'CRS-CSD201',
+        'CRS-CSD201',
+        'Thuật toán Cấu trúc Dữ liệu & Đồ thị Dijkstra (CSD201)',
+        'Cài đặt giải thuật Dijkstra với PriorityQueue tìm đường đi ngắn nhất trên đồ thị có trọng số và phân tích độ phức tạp O(E log V).',
+        'java',
+        '["java", "cpp", "python"]'::jsonb,
+        2.0,
+        2000,
+        512,
+        '2026-10-20 23:59:59+07',
+        '2026-10-20 23:59:59+07',
+        10.00,
+        3,
+        FALSE
+    ),
+    (
+        'TASK-PRJ301-A1',
+        'CRS-PRJ301',
+        'CRS-PRJ301',
+        'Xây dựng Servlet & Filter Quản lý Sinh viên MVC (PRJ301)',
+        'Thiết kế và triển khai web application Java theo mô hình MVC 2, sử dụng Servlet xử lý request và Filter xác thực session người dùng.',
+        'java',
+        '["java", "cpp", "python"]'::jsonb,
+        2.0,
+        2000,
+        512,
+        '2026-11-15 23:59:59+07',
+        '2026-11-15 23:59:59+07',
+        10.00,
+        3,
+        TRUE
+    ),
+    (
+        'TASK-PRF192-A1',
+        'CRS-PRF192',
+        'CRS-PRF192',
+        'Thuật toán Xử lý Mảng và Quản lý Con trỏ Bộ nhớ Động (PRF192)',
+        'Lập trình C giải quyết bài toán chuẩn hóa chuỗi ký tự, sắp xếp mảng động và sử dụng con trỏ quản lý bộ nhớ malloc/free.',
+        'cpp',
+        '["cpp", "c", "java"]'::jsonb,
+        2.0,
+        2000,
+        512,
+        '2026-11-20 23:59:59+07',
+        '2026-11-20 23:59:59+07',
+        10.00,
+        3,
         TRUE
     )
-ON CONFLICT (assignment_id) DO NOTHING;
+ON CONFLICT (assignment_id) DO UPDATE SET
+    class_id = EXCLUDED.class_id,
+    course_id = EXCLUDED.course_id,
+    title = EXCLUDED.title,
+    description = EXCLUDED.description,
+    due_date = EXCLUDED.due_date,
+    deadline = EXCLUDED.deadline,
+    is_active = EXCLUDED.is_active;
 
--- 6. Seed Test Cases
+-- 6. Seed Test Cases (3 Test Cases per Assignment)
 INSERT INTO test_cases (test_case_id, assignment_id, input_data, expected_output, is_hidden, weight, time_limit_ms)
 VALUES
-    ('TC-SWP-01', 'TASK-SWP391-SPRINT2', '5\n4 2 5 1 3\n', '1 2 3 4 5', FALSE, 1.0, 2000),
-    ('TC-SWP-02', 'TASK-SWP391-SPRINT2', '3\n10 0 -5\n', '-5 0 10', TRUE, 1.0, 2000)
-ON CONFLICT (test_case_id) DO NOTHING;
+    ('TC-TASK-PRO192-A1-01', 'TASK-PRO192-A1', '5\n4 2 5 1 3', '1 2 3 4 5', FALSE, 1.0, 2000),
+    ('TC-TASK-PRO192-A1-02', 'TASK-PRO192-A1', '10\n10 9 8 7 6 5 4 3 2 1', '1 2 3 4 5 6 7 8 9 10', TRUE, 1.0, 2000),
+    ('TC-TASK-PRO192-A1-03', 'TASK-PRO192-A1', '3\n-5 0 10', '-5 0 10', TRUE, 1.0, 2000),
 
--- 7. Seed Prompt Templates
-INSERT INTO ai_prompt_templates (template_code, version, description, system_prompt, user_prompt_template, temperature, json_schema, is_active)
-VALUES 
-(
-    'CLEAN_CODE_SOLID_V1',
-    1,
-    'Deterministic Clean Code & SOLID principles reviewer with strict JSON schema',
-    'You are the Lead Code Reviewer and Architectural Evaluator for the AITA Autograding System. Evaluate student code for Clean Code quality and SOLID principles deterministically.',
-    'Evaluate the submission for {{language}}. Context: {{topic}}. Learning Outcomes: {{learningOutcomes}}. Student Code:\n{{code}}',
-    0.2,
-    '{"type": "object", "properties": {"clean_code_score": {"type": "number"}, "solid_score": {"type": "number"}, "code_smells": {"type": "array"}}, "required": ["clean_code_score", "solid_score", "code_smells"]}'::jsonb,
-    TRUE
-),
-(
-    'EXAM_RUBRIC_V1',
-    1,
-    'Automated exam question, test cases, and multi-level rubric generator for lecturers (UC-08)',
-    'You are an expert Computer Science Professor and Curriculum Designer for the AITA Autograding System. Generate rigorous programming assignments with test cases and rubrics.',
-    'Generate an assignment for course {{courseCode}}, topic {{topic}}, difficulty {{difficulty}}, language {{language}}.',
-    0.3,
-    '{"type": "object", "properties": {"title": {"type": "string"}, "sampleTestCases": {"type": "array"}, "rubric": {"type": "array"}}, "required": ["title", "sampleTestCases", "rubric"]}'::jsonb,
-    TRUE
-),
-(
-    'COMPILER_EXPLAIN_V1',
-    1,
-    'Pedagogical Socratic compiler & runtime crash explanation engine',
-    'You are a supportive, pedagogical programming teaching assistant. Explain compiler and runtime crashes clearly without revealing full solutions.',
-    'Language: {{language}}. Error log:\n{{compilerOutput}}',
-    0.2,
-    '{"type": "object", "properties": {"errorType": {"type": "string"}, "simpleExplanation": {"type": "string"}, "actionableHints": {"type": "array"}}, "required": ["errorType", "simpleExplanation", "actionableHints"]}'::jsonb,
-    TRUE
-)
-ON CONFLICT (template_code) DO NOTHING;
+    ('TC-TASK-CSD201-A1-01', 'TASK-CSD201-A1', '5\n4 2 5 1 3', '1 2 3 4 5', FALSE, 1.0, 2000),
+    ('TC-TASK-CSD201-A1-02', 'TASK-CSD201-A1', '10\n10 9 8 7 6 5 4 3 2 1', '1 2 3 4 5 6 7 8 9 10', TRUE, 1.0, 2000),
+    ('TC-TASK-CSD201-A1-03', 'TASK-CSD201-A1', '3\n-5 0 10', '-5 0 10', TRUE, 1.0, 2000),
+
+    ('TC-TASK-PRJ301-A1-01', 'TASK-PRJ301-A1', 'GET /api/v1/students HTTP/1.1\nHost: localhost', 'HTTP/1.1 200 OK\nContent-Type: application/json', FALSE, 1.0, 2000),
+    ('TC-TASK-PRJ301-A1-02', 'TASK-PRJ301-A1', 'POST /api/v1/students HTTP/1.1\n{"studentId":"SE170001"}', 'HTTP/1.1 201 Created', TRUE, 1.0, 2000),
+    ('TC-TASK-PRJ301-A1-03', 'TASK-PRJ301-A1', 'GET /api/v1/admin/grades HTTP/1.1\nHost: localhost', 'HTTP/1.1 401 Unauthorized', TRUE, 1.0, 2000),
+
+    ('TC-TASK-PRF192-A1-01', 'TASK-PRF192-A1', '5\n12 45 7 23 89', '7 12 23 45 89', FALSE, 1.0, 2000),
+    ('TC-TASK-PRF192-A1-02', 'TASK-PRF192-A1', '6\n  hello   world  fpt  university  ', 'Hello World Fpt University', TRUE, 1.0, 2000),
+    ('TC-TASK-PRF192-A1-03', 'TASK-PRF192-A1', '4\n-10 -20 0 15', '-20 -10 0 15', TRUE, 1.0, 2000)
+ON CONFLICT (test_case_id) DO NOTHING;

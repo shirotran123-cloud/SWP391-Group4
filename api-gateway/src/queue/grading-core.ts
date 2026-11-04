@@ -66,7 +66,9 @@ export function validateSubmissionFile(
   }
   const lang = (language || '').toLowerCase();
   if (allowedLanguages && allowedLanguages.length > 0) {
-    const isAllowed = allowedLanguages.some((l) => l.toLowerCase() === lang);
+    const normalizedAllowed = allowedLanguages.map((l) => l.toLowerCase());
+    const isCOrCppAllowed = (lang === 'c' || lang === 'cpp') && (normalizedAllowed.includes('c') || normalizedAllowed.includes('cpp'));
+    const isAllowed = isCOrCppAllowed || normalizedAllowed.includes(lang);
     if (!isAllowed) {
       return {
         code: 'LANGUAGE_NOT_ALLOWED',
@@ -92,7 +94,7 @@ export const SORT_PATTERNS = {
   hasLoop: [/for\s*\(|while\s*\(|for\s+\w/],
   hasComparison: [/[<>]=?\s*[a-zA-Z_]|[a-zA-Z_]\s*[<>]=?/],
   hasOutput: [/System\.out|print|cout|Console\./i],
-  hasInput: [/Scanner|input\(\)|cin|Console\.Read/i],
+  hasInput: [/Scanner|input\(\)|cin|Console\.Read|fgets|scanf|getchar/i],
   srpViolation: [/sortAnd|andPrint|andSave|AndDisplay|AndOutput/i],
 };
 

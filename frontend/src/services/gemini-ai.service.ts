@@ -1,4 +1,5 @@
-export interface GeneratedTestCase {
+import { getSharedGeminiApiKey } from '../config/ai.config';
+﻿export interface GeneratedTestCase {
   input: string;
   output: string;
   weight: number;
@@ -152,7 +153,7 @@ export class GeminiAIService {
   ): Promise<{ success: boolean; message: string; latencyMs: number; availableModels?: string[] }> {
     const startTime = Date.now();
     try {
-      const cleanKey = apiKey.trim();
+      const cleanKey = (apiKey && apiKey.trim()) || getSharedGeminiApiKey();
       if (!cleanKey) {
         return { success: false, message: 'Khóa API Key không được để trống.', latencyMs: 0 };
       }
@@ -231,7 +232,7 @@ export class GeminiAIService {
     }
   ): Promise<GeneratedAssignmentResult> {
     const startTime = Date.now();
-    const cleanKey = apiKey.trim();
+    const cleanKey = (apiKey && apiKey.trim()) || getSharedGeminiApiKey();
 
     if (!cleanKey) {
       throw new Error('Chưa cung cấp Google Gemini API Key. Vui lòng bấm "Nhập Key Ngay" để cấu hình.');
@@ -249,9 +250,38 @@ export class GeminiAIService {
 
     // 1. Chọn các mô hình văn bản siêu tốc hiện hành từ Google Gemini API
     let modelsToTry: string[] = [];
-    if (options.model && isPureTextModel(options.model)) {
-      const cleanReq = options.model.startsWith('models/') ? options.model : `models/${options.model}`;
-      modelsToTry.push(cleanReq);
+    try {
+      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        // LỌC TRIỆT ĐỂ: Chỉ giữ lại các mô hình thuần văn bản (isPureTextModel)
+        const availableFromGoogle: string[] = (listData.models || [])
+          .filter((m: any) => isPureTextModel(m))
+          .map((m: any) => m.name as string);
+
+        if (availableFromGoogle.length > 0) {
+          const rawRequested = options.model || '';
+          const cleanedRequested = rawRequested.replace('models/', '');
+
+          let primaryChoice = '';
+          if (cleanedRequested && isPureTextModel(cleanedRequested)) {
+            const exactMatch = availableFromGoogle.find(m => m === `models/${cleanedRequested}` || m === cleanedRequested);
+            if (exactMatch) primaryChoice = exactMatch;
+          }
+
+          if (!primaryChoice) {
+            const bestName = pickBestTextModel(availableFromGoogle);
+            primaryChoice = availableFromGoogle.find(m => m.replace('models/', '') === bestName) || availableFromGoogle[0];
+          }
+
+          modelsToTry = [
+            primaryChoice,
+            ...availableFromGoogle.filter(m => m !== primaryChoice)
+          ];
+        }
+      }
+    } catch (listErr) {
+      console.warn('Không thể tự động liệt kê models từ Google, sử dụng danh sách phổ biến:', listErr);
     }
     const candidateModels = [
       'models/gemini-flash-lite-latest',
@@ -269,7 +299,7 @@ Nhiệm vụ: Soạn thảo đề thi lập trình chi tiết, phong phú, độ
 BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (không dùng markdown backticks \`\`\`json, không viết bất kỳ văn bản nào ngoài JSON) theo đúng cấu trúc:
 {
   "title": "Tên bài tập ngắn gọn, súc tích mang tính ứng dụng cao",
-  "description": "Mô tả bài toán chi tiết, có cấu trúc rõ ràng: Bối cảnh nghiệp vụ thực tế; Yêu cầu kỹ thuật; Định dạng Đầu vào (StdIn); Định dạng Đầu ra (StdOut); Ràng buộc.",
+  "description": "Mô tả bài toán chi tiết, có cấu trúc rõ ràng: Bối cảnh nghiệp vụ thực tế; Yêu cầu kỹ thuật: 1. 2. 3.; Định dạng Đầu vào (StdIn): - Dòng 1...; Định dạng Đầu ra (StdOut): - In ra...; Ràng buộc: - 1 <= N <= ... Tuyệt đối không viết dồn cục thành một đoạn văn duy nhất.",
   "timeLimitMs": 2000,
   "memoryLimitMb": 512,
   "testCases": [
@@ -277,14 +307,14 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
     // Mỗi phần tử có:
     // "input": "chuỗi dữ liệu đầu vào chuẩn (StdIn)",
     // "output": "kết quả đầu ra chuẩn kỳ vọng (StdOut)",
-    // "weight": trọng số điểm,
-    // "isHidden": boolean,
+    // "weight": 1 (mỗi testcase mặc định tính 1 điểm),
+    // "isHidden": boolean (test công khai hoặc test ẩn kiểm tra biên),
     // "explanation": "mục đích của test case này"
   ],
   "rubric": [
-    { "criterion": "Tính đúng đắn thuật toán & Vượt qua Testcases", "maxScore": 5.0, "description": "Pass 100% testcases theo yêu cầu" },
-    { "criterion": "Clean Code & Tối ưu O(N log N)", "maxScore": 2.5, "description": "Mã nguồn rõ ràng, đặt tên biến chuẩn, tối ưu thời gian" },
-    { "criterion": "Thiết kế Hướng đối tượng & SOLID", "maxScore": 2.5, "description": "Tuân thủ nguyên lý Single Responsibility (SRP)" }
+    { "criterion": "Tính đúng đắn thuật toán & Vượt qua Testcases", "maxScore": 7.0, "description": "Pass 100% testcases theo yêu cầu" },
+    { "criterion": "Clean Code & Tối ưu O(N log N)", "maxScore": 1.5, "description": "Mã nguồn rõ ràng, đặt tên biến chuẩn, tối ưu thời gian" },
+    { "criterion": "Thiết kế Hướng đối tượng & SOLID", "maxScore": 1.5, "description": "Tuân thủ nguyên lý Single Responsibility (SRP)" }
   ],
   "starterCode": "// Khung mã nguồn khởi tạo cho sinh viên",
   "referenceSolution": "// Lời giải tham chiếu chuẩn xác"
@@ -299,28 +329,43 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
 - Môn học: ${options.courseCode} (${options.courseName})
 - ${promptDetails}
 - Ngôn ngữ cho phép: ${(options.allowedLanguages || ['java', 'python', 'cpp']).join(', ')}
-- Số lượng testcases yêu cầu: ĐÚNG CHÍNH XÁC ${targetTestCount} bộ testcases bao quát biên (cực tiểu N=1, trường hợp thông thường, và trường hợp biên lớn).
-- Lĩnh vực bài toán cho đề thi: "${chosenDomain}".
-- Hãy lồng ghép nghiệp vụ thực tế của lĩnh vực "${chosenDomain}" vào cốt truyện đề bài.`;
+- MA TRẬN TESTCASES BẮT BUỘC (BAO QUÁT 100% CÁC RANH GIỚI BIÊN CỦA CODE):
+  Sinh ĐÚNG CHÍNH XÁC ${targetTestCount} bộ testcases, phân bổ bắt buộc bao quát đầy đủ 5 tầng ranh giới sau:
+  1. Testcases Cơ bản / Thông thường (Happy Path) [khoảng 40%]: Luồng hoạt động chuẩn, dữ liệu mẫu kích thước vừa (N từ 3 đến 8) để sinh viên debug và kiểm tra logic cơ bản.
+  2. Testcases Ranh giới Cực tiểu (Corner / Minimal Boundary) [khoảng 20%]:
+     - Kích thước tiệm cận biên dưới: N = 1 (chỉ duy nhất 1 phần tử), N = 0 (tập dữ liệu rỗng), chuỗi rỗng.
+     - Giá trị số 0, số âm, hoặc giá trị nhỏ nhất của kiểu dữ liệu.
+  3. Testcases Ranh giới Suy biến & Bẫy thuật toán (Degenerate / Adversarial Cases) [khoảng 20%]:
+     - Toàn bộ các phần tử đầu vào trùng khớp nhau hoàn toàn (All identical values).
+     - Dữ liệu đã sắp xếp sẵn theo thứ tự tăng dần hoặc giảm dần (Sorted / Reversed input) nhằm bẫy thuật toán O(N^2) (ví dụ QuickSort suy biến nếu không chọn pivot tốt).
+     - Với Cấu trúc Cây (Tree): Dữ liệu làm cây bị lệch 1 nhánh thành danh sách liên kết (Skewed Tree) nhằm kiểm tra đệ quy tràn Call Stack.
+     - Với Đồ thị (Graph): Đồ thị không liên thông, đỉnh cô lập hoặc có chu trình.
+  4. Testcases Ranh giới Cực đại & Chống tràn số (Stress Scale & Overflow) [khoảng 20%]:
+     - Kích thước chạm ngưỡng giới hạn trên của bài toán (N lớn) nhằm kiểm tra thời gian thực thi (chống TLE - Time Limit Exceeded) và bộ nhớ (chống MLE).
+     - Giá trị số lớn vượt quá 2^31 - 1 để kiểm tra việc sử dụng biến 64-bit (long / BigInt) tránh tràn số nguyên.
+  5. Testcases Thao tác Không tồn tại / Xử lý ngoại lệ:
+     - Yêu cầu tìm kiếm hoặc xóa một phần tử KHÔNG tồn tại trong cấu trúc dữ liệu.
+- MỤC GIẢI THÍCH (explanation): Trong mỗi testcase, trường "explanation" BẮT BUỘC ghi rõ mục đích kiểm tra biên (Ví dụ: "Biên cực tiểu N=1", "Biên bẫy suy biến dữ liệu trùng lặp", "Biên cực đại chống TLE", "Thao tác phần tử không tồn tại").
+- TRỌNG SỐ ĐIỂM: Tổng trọng số điểm của tất cả testcase BẮT BUỘC luôn luôn bằng đúng 7.0đ (theo Barem chuẩn AITA: 7.0đ Testcases + 3.0đ Clean Code & SOLID = 10.0đ). Phân bổ trọng số từng testcase theo độ khó (ví dụ test cơ bản từ 0.5đ - 1.0đ, test biên nâng cao 1.5đ - 2.0đ, đảm bảo tổng toàn bộ testcases = 7.0đ).
+- BỐI CẢNH THỰC TẾ BẮT BUỘC (ĐA DẠNG HÓA):
+  + Lĩnh vực bài toán cho đề thi này: "${chosenDomain}".
+  + ĐẶC BIỆT CẤM: TUYỆT ĐỐI KHÔNG lặp lại các mô-típ Drone y tế, máy bay cứu hộ khẩn cấp hay giao thuốc cấp cứu (trừ phi giảng viên yêu cầu đích danh từ khóa này).
+  + Hãy lồng ghép nghiệp vụ thực tế của lĩnh vực "${chosenDomain}" vào cốt truyện đề bài, sử dụng thuật ngữ nghiệp vụ chân thực để bài toán lập trình sống động và hấp dẫn.`;
 
     let lastError: Error | null = null;
     let successfulModel = '';
     let parsedData: any = null;
 
-    // 2. GỌI TRỰC TIẾP LÊN MÁY CHỦ GOOGLE GEMINI AI VỚI TIMEOUT BẢO VỆ 6 GIÂY/CALL
-    for (const modelToTry of modelsToTry.slice(0, 2)) {
+    // 2. GỌI TRỰC TIẾP LÊN MÁY CHỦ GOOGLE GEMINI AI
+    for (const modelToTry of modelsToTry) {
       if (!isPureTextModel(modelToTry)) continue;
 
       const endpoint = modelToTry.startsWith('models/') ? modelToTry : `models/${modelToTry}`;
       const url = `https://generativelanguage.googleapis.com/v1beta/${endpoint}:generateContent?key=${cleanKey}`;
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-
       try {
         const response = await fetch(url, {
           method: 'POST',
-          signal: controller.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [
@@ -331,12 +376,11 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
             ],
             generationConfig: {
               responseMimeType: 'application/json',
-              temperature: 0.4, // Giảm temperature để sinh token nhanh và chuẩn xác hơn
-              maxOutputTokens: 2048,
+              temperature: 0.88, // Tăng độ đa dạng sáng tạo cho AI
+              maxOutputTokens: 4096,
             },
           }),
         });
-        clearTimeout(timeoutId);
 
         if (!response.ok) {
           const errText = await response.text();
@@ -371,13 +415,12 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
 
         parsedData = JSON.parse(cleaned);
         successfulModel = modelToTry.replace('models/', '');
-        break; // Gọi AI thành công!
+        break; // Gọi AI thành công 100%!
       } catch (err: any) {
-        clearTimeout(timeoutId);
         lastError = err;
         console.warn(`Lỗi khi gọi model ${modelToTry}:`, err.message);
 
-        // Dừng ngay nếu API Key không hợp lệ
+        // CHỈ dừng ngay lập tức nếu API Key không hợp lệ hoặc bị cấm
         const errMsg = (err.message || '').toLowerCase();
         if (
           errMsg.includes('api_key_invalid') ||
@@ -385,29 +428,34 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
           errMsg.includes('api key expired') ||
           errMsg.includes('forbidden')
         ) {
-          break;
+          throw err;
         }
+
+        // Với các lỗi model khác (như 400 modality, 404 model not found, 429 quota per model, 503...):
+        // TIẾP TỤC thử model văn bản tiếp theo trong danh sách modelsToTry!
       }
     }
 
-    // NẾU GOOGLE GEMINI QUÁ 6-8s, BỊ GIỚI HẠN QUOTA HOẶC LỖI MẠNG:
-    // TỰ ĐỘNG CHUYỂN SANG BỘ SINH ĐỀ THÔNG MINH SIÊU TỐC (SMART ENGINE)
-    // ĐẢM BẢO GIẢNG VIÊN KHÔNG BAO GIỜ BỊ CHỜ ĐỢI QUÁ 10s
+    // NẾU TẤT CẢ MODEL ĐỀU LỖI: QUĂNG LỖI THẬT TỪ GOOGLE, TUYỆT ĐỐI KHÔNG DÙNG ĐỀ MẪU HARDCODE
     if (!parsedData) {
-      console.info('[GeminiAIService] Kích hoạt Bộ Sinh Đề Thông Minh Tối Ưu Tốc Độ cho chủ đề:', options.topicPrompt);
-      return GeminiAIService.generateSmartFallback(options, targetTestCount, startTime);
+      throw new Error(
+        lastError?.message ||
+        'Không thể kết nối tới máy chủ Google Gemini AI. Vui lòng kiểm tra lại API Key hoặc hạn mức Quota của tài khoản.'
+      );
     }
 
     const latencyMs = Date.now() - startTime;
-    const testCasesList: GeneratedTestCase[] = Array.isArray(parsedData.testCases)
-      ? parsedData.testCases.map((tc: any) => ({
+    let testCasesList: GeneratedTestCase[] = Array.isArray(parsedData.testCases)
+      ? parsedData.testCases.map((tc: any, idx: number) => ({
           input: String(tc.input ?? ''),
           output: String(tc.output ?? ''),
-          weight: Number(tc.weight) || 1.0,
+          weight: 1,
           isHidden: Boolean(tc.isHidden),
           explanation: tc.explanation ? String(tc.explanation) : undefined,
         }))
       : [];
+
+    // Giữ nguyên trọng số gốc do AI hoặc giảng viên thiết lập (hệ thống sẽ tự động quy đổi sang hệ 7.0đ khi chấm bài)
 
     return {
       title: parsedData.title || `Bài Tập Lập Trình (${options.courseCode})`,
@@ -419,7 +467,7 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
       rubric: Array.isArray(parsedData.rubric) ? parsedData.rubric : [],
       starterCode: parsedData.starterCode || '',
       referenceSolution: parsedData.referenceSolution || '',
-      modelUsed: successfulModel || 'gemini-flash',
+      modelUsed: successfulModel,
       latencyMs,
       isFallback: false,
     };
@@ -581,4 +629,3 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
     };
   }
 }
-

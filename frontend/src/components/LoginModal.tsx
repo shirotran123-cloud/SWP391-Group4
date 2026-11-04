@@ -42,10 +42,12 @@ const GoogleIcon = () => (
 );
 
 const PRESET_ACCOUNTS = [
-  { email: 'trungse170000@fpt.edu.vn', name: 'Đinh Thành Trung', role: 'STUDENT' as const, label: 'Sinh viên FPT', color: 'var(--blue-300)' },
-  { email: 'giangvien.edu@gmail.com', name: 'ThS. Giảng Viên AITA', role: 'INSTRUCTOR' as const, label: 'Giảng viên AITA', color: 'var(--blue-300)' },
-  { email: 'admin@aita.fpt.edu.vn', name: 'Quản trị viên Hệ thống', role: 'ADMIN' as const, label: 'Admin', color: 'var(--blue-200)' },
-  { email: 'vthaitrung2k6@gmail.com', name: 'Vũ Thái Trung', role: 'STUDENT' as const, label: 'Gmail Cá Nhân', color: 'var(--blue-300)' },
+  { email: 'linhcampochia@gmail.com', name: 'Nguyễn Văn An (SE170000)', role: 'STUDENT' as const, label: 'Tài khoản của bạn • Student', color: 'var(--blue-300)' },
+  { email: 'huy.se170001@fpt.edu.vn', name: 'Trần Thành Huy (SE170001)', role: 'STUDENT' as const, label: 'Sinh viên SE170001', color: 'var(--blue-300)' },
+  { email: 'trungdt@fe.edu.vn', name: 'ThS. Đinh Thành Trung', role: 'INSTRUCTOR' as const, label: 'Giảng viên (PRO192 & CSD201)', color: 'var(--blue-300)' },
+  { email: 'namlh@fe.edu.vn', name: 'TS. Lê Hoàng Nam', role: 'INSTRUCTOR' as const, label: 'Giảng viên (PRJ301 & PRF192)', color: 'var(--blue-300)' },
+  { email: 'truongbm@fe.edu.vn', name: 'TS. Nguyễn Văn Hùng', role: 'HOD' as const, label: 'Trưởng Bộ Môn (HOD)', color: 'var(--blue-200)' },
+  { email: 'admin@aita.fpt.edu.vn', name: 'Hệ Thống Quản Trị AITA', role: 'ADMIN' as const, label: 'Admin Quản Trị', color: 'var(--blue-200)' },
 ];
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onLoginSuccess }) => {

@@ -130,6 +130,15 @@ export class DockerSandboxRunner {
           compile: 'g++ -O2 -std=c++17 /sandbox/solution.cpp -o /build/a.out',
           run: '/build/a.out',
         };
+      case 'dotnet':
+      case 'csharp':
+      case 'cs':
+        return {
+          image: 'mono:latest',
+          filename: 'Program.cs',
+          compile: 'mcs -out:/build/Program.exe /sandbox/Program.cs',
+          run: 'mono /build/Program.exe',
+        };
       case 'javascript':
       case 'node':
       case 'typescript':
