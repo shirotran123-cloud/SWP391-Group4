@@ -166,6 +166,9 @@ export class PlagiarismService {
       winnowingContainment: result.matchedTokensJson.winnowingContainment,
       astStructuralSimilarity: result.matchedTokensJson.astStructuralSimilarity,
       status: result.status,
+      matchedQuirks: result.matchedQuirks || result.matchedTokensJson?.matchedQuirks,
+      boilerplateFingerprintsFiltered: result.matchedTokensJson?.boilerplateFingerprintsFiltered,
+      isShortSubmission: result.matchedTokensJson?.isShortSubmission,
     };
   }
 }

@@ -35,6 +35,10 @@ export class TestCasesService {
     if (!assignment) {
       throw new NotFoundException(`Không tìm thấy bài tập với ID: ${dto.assignmentId}`);
     }
+    // Tự động chuẩn hóa trọng số nếu truyền dạng tỷ lệ phần trăm (ví dụ: 30% -> 3.0, 35% -> 3.5)
+    if (typeof dto.weight === 'number' && dto.weight > 10 && dto.weight <= 100) {
+      dto.weight = Number((dto.weight / 10).toFixed(2));
+    }
     this.validateFields(dto.inputData, dto.expectedOutput, dto.weight, dto.timeLimitMs);
     const duplicate = await this.testCaseRepo.findDuplicate(dto.assignmentId, dto.inputData, dto.expectedOutput);
     if (duplicate) {

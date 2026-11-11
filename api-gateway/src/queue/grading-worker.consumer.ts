@@ -618,6 +618,9 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
           jaccardSimilarity: top.jaccardSimilarity,
           winnowingContainment: top.winnowingContainment,
           astStructuralSimilarity: top.astStructuralSimilarity,
+          matchedQuirks: top.matchedQuirks,
+          boilerplateFingerprintsFiltered: top.boilerplateFingerprintsFiltered,
+          isShortSubmission: top.isShortSubmission,
           // Carries the self-overlap classification (resubmission / same-course reuse /
           // cross-course self-plagiarism) so the client and the scoring step can tell them
           // apart without re-deriving the relationship.
@@ -725,11 +728,42 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    // Khi tỷ lệ tương đồng >= 80% (với bài của sinh viên khác hoặc cross-course), lập tức cho 0 điểm
+    // Chỉ kích hoạt phạt 0 điểm khi:
+    //   - ASTPlagiarismEngine xác nhận FLAGGED_PLAGIARISM (>= 80% trên bài > 20 dòng, hoặc bài ngắn có >= 2 dấu vết trình bày trùng khớp)
+    //   - Không thuộc diện miễn trừ (Teacher Baseline, nộp lại cùng bài, tái sử dụng cùng môn)
+    // Nếu bài quá ngắn (<= 20 dòng, không đủ dữ liệu tự triển khai) -> Engine trả status === 'SUSPECTED':
+    // Tạm giữ điểm & gắn trạng thái NGHI VẤN để Giảng viên kiểm tra trực tiếp.
+    const linesCount = (sourceCode || '').split('\n').filter((l) => l.trim().length > 0).length;
+    const matchedNameLower = (plagiarismMatch?.matchedStudentName || '').toLowerCase();
+    const isTeacherBaselineMatch =
+      matchedNameLower.includes('thầy') ||
+      matchedNameLower.includes('teacher') ||
+      matchedNameLower.includes('giảng viên');
+    const isExemptOverlap =
+      isTeacherBaselineMatch ||
+      plagiarismMatch?.status === 'SELF_RESUBMISSION' ||
+      selfKind === 'SAME_ASSIGNMENT' ||
+      selfKind === 'CROSS_ASSIGNMENT';
+
+    const matchStatus = plagiarismMatch?.status;
+    const isShortSubmissionPendingReview =
+      !isExemptOverlap &&
+      ((matchStatus === 'SUSPECTED' && plagiarismRate >= 70.0) ||
+        (!matchStatus && linesCount <= 20 && plagiarismRate >= 50.0));
+
+    const hasConfirmedEngineFlag =
+      matchStatus === 'FLAGGED_PLAGIARISM' ||
+      (!matchStatus && linesCount > 20 && plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD);
+
     const isConfirmedPlagiarism =
-      selfKind === 'CROSS_COURSE'
+      !isTeacherBaselineMatch &&
+      matchStatus !== 'SELF_RESUBMISSION' &&
+      matchStatus !== 'CLEAN' &&
+      matchStatus !== 'SUSPECTED' &&
+      hasConfirmedEngineFlag &&
+      (selfKind === 'CROSS_COURSE'
         ? plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD
-        : !isSelfMatch && plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD;
+        : !isSelfMatch && selfKind !== 'CROSS_ASSIGNMENT' && plagiarismRate >= CONFIRMED_PLAGIARISM_THRESHOLD);
 
     let finalScore = computedScore;
     let scoreBreakdown: ScoreBreakdown = {
@@ -739,6 +773,12 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       solid: solidPart,
       total: computedScore,
     };
+
+    if (isShortSubmissionPendingReview && plagiarismRate >= 50) {
+      this.logger.warn(
+        `[BR-03] Submission ${submissionId}: tương đồng ${plagiarismRate}% nhưng bài quá ngắn (${linesCount} dòng ≤ 20) — chưa đủ dữ liệu tự triển khai để kết tội tự động. Tạm giữ điểm ${computedScore}/10, chuyển Giảng viên kiểm tra trực tiếp.`,
+      );
+    }
 
     if (isConfirmedPlagiarism) {
       finalScore = 0;
@@ -761,6 +801,20 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       });
     }
 
+    const plagiarismStatus: 'AN TOÀN' | 'NGHI VẤN' | 'ĐẠO VĂN' =
+      isTeacherBaselineMatch || matchStatus === 'SELF_RESUBMISSION' || matchStatus === 'CLEAN'
+        ? 'AN TOÀN'
+        : selfKind === 'CROSS_ASSIGNMENT'
+          ? (plagiarismRate >= 50 ? 'NGHI VẤN' : 'AN TOÀN')
+          : matchStatus === 'FLAGGED_PLAGIARISM' || matchStatus === 'FLAGGED_HIGH'
+            ? 'ĐẠO VĂN'
+            : matchStatus === 'SUSPECTED' || isShortSubmissionPendingReview
+              ? 'NGHI VẤN'
+              : plagiarismRate >= 70
+                ? 'ĐẠO VĂN'
+                : plagiarismRate >= 50
+                  ? 'NGHI VẤN'
+                  : 'AN TOÀN';
 
     // Quy tắc đạt: phải pass TOÀN BỘ testcase mới PASSED (rớt 1 = FAILED toàn bài).
     // Nếu bị xác nhận đạo văn >= 80% (isConfirmedPlagiarism), lập tức FAILED và 0.0 điểm toàn bài!
@@ -789,13 +843,9 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
         explanation: liveAiRating.explanation,
       },
       plagiarismMatch,
-      // Ngưỡng hiển thị BR-03: >= 70% là đạo văn (gắn cờ), >= 50% là nghi vấn (danh sách cảnh báo), còn lại là an toàn.
+      // Ngưỡng hiển thị BR-03: Đồng bộ trạng thái từ AST Engine & chính sách kiểm tra bài quá ngắn
       similarityRate: plagiarismRate,
-      plagiarismStatus: (plagiarismRate >= 70
-        ? 'ĐẠO VĂN'
-        : plagiarismRate >= 50
-          ? 'NGHI VẤN'
-          : 'AN TOÀN') as 'AN TOÀN' | 'NGHI VẤN' | 'ĐẠO VĂN',
+      plagiarismStatus,
       // BR-03: cờ cho client biết điểm đã bị đặt về 0 do đạo văn đã xác nhận (>= 80%).
       confirmedPlagiarism: isConfirmedPlagiarism,
       computedScoreBeforePenalty: computedScore,

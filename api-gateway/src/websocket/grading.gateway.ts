@@ -99,6 +99,9 @@ export interface GradingCompletedPayload {
     jaccardSimilarity?: number;
     winnowingContainment?: number;
     astStructuralSimilarity?: number;
+    matchedQuirks?: Array<{ type: string; signature: string; description: string; lineA: number; lineB: number }>;
+    boilerplateFingerprintsFiltered?: number;
+    isShortSubmission?: boolean;
     /**
      * Set when the matched submission belongs to the same student. Distinguishes a
      * resubmission (never penalised) from reuse in another task (warn) and from

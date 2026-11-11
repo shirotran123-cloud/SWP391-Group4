@@ -29,7 +29,10 @@ async function assertOk(response: Response, action: string): Promise<void> {
 }
 
 export async function syncAssignmentTestCases(assignment: AssignmentTestCaseConfig): Promise<void> {
-  if (assignment.testCases.length === 0 || assignment.testCases.some((tc) => !tc.input.trim() || !tc.output.trim())) {
+  if (
+    assignment.testCases.length === 0 ||
+    assignment.testCases.some((tc) => !String(tc.input ?? '').trim() || !String(tc.output ?? '').trim())
+  ) {
     throw new Error('Bài tập cần có testcase với đầu vào và kết quả mong đợi đầy đủ.');
   }
 
@@ -79,10 +82,9 @@ export async function syncAssignmentTestCases(assignment: AssignmentTestCaseConf
     savedTestCases.length === assignment.testCases.length &&
     assignment.testCases.every((configured) =>
       savedTestCases.some((saved: any) =>
-        saved.inputData === configured.input &&
-        saved.expectedOutput === configured.output &&
-        Boolean(saved.isHidden) === configured.isHidden &&
-        Number(saved.weight) === Number(configured.weight),
+        String(saved.inputData ?? '').trim() === String(configured.input ?? '').trim() &&
+        String(saved.expectedOutput ?? '').trim() === String(configured.output ?? '').trim() &&
+        Boolean(saved.isHidden) === Boolean(configured.isHidden),
       ),
     );
 
@@ -95,16 +97,25 @@ export async function syncAssignmentTestCases(assignment: AssignmentTestCaseConf
     }
 
     for (const [index, testCase] of assignment.testCases.entries()) {
+      let safeWeight = Number(String(testCase.weight ?? '').replace('%', '').trim());
+      if (isNaN(safeWeight) || safeWeight <= 0) {
+        safeWeight = 1.0;
+      } else if (safeWeight > 10) {
+        // Tự động quy đổi tỷ lệ phần trăm (30% -> 3.0, 35% -> 3.5) về thang điểm (0, 10]
+        safeWeight = Math.min(10, Math.round((safeWeight / 10) * 10) / 10);
+        if (safeWeight <= 0) safeWeight = 1.0;
+      }
+
       const response = await fetch(`${baseUrl}/test-cases`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           assignmentId: assignment.id,
-          inputData: testCase.input,
-          expectedOutput: testCase.output,
-          weight: Number(testCase.weight),
-          isHidden: testCase.isHidden,
-          timeLimitMs: assignment.timeLimitMs,
+          inputData: String(testCase.input ?? ''),
+          expectedOutput: String(testCase.output ?? ''),
+          weight: safeWeight,
+          isHidden: Boolean(testCase.isHidden),
+          timeLimitMs: assignment.timeLimitMs || 2000,
         }),
       });
       await assertOk(response, `Không thể lưu testcase ${index + 1}`);
@@ -152,9 +163,8 @@ export async function verifyAssignmentTestCases(assignment: AssignmentTestCaseCo
     publicSaved.length === publicConfigured.length &&
     publicConfigured.every((configured) =>
       publicSaved.some((saved: any) =>
-        saved.inputData === configured.input &&
-        saved.expectedOutput === configured.output &&
-        Number(saved.weight) === Number(configured.weight),
+        String(saved.inputData ?? '').trim() === String(configured.input ?? '').trim() &&
+        String(saved.expectedOutput ?? '').trim() === String(configured.output ?? '').trim(),
       ),
     );
   if (!publicCasesMatch) {

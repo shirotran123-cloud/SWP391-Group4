@@ -1,12 +1,3 @@
-/**
- * AST Normalizer Module - RBL Research Core (AITA Autograding Engine)
- *
- * Strips all variable names, function names, parameter names, comments, and literal values
- * from raw source code (Python, TypeScript/JavaScript, C/C++, Java), replacing them with
- * standardized structural AST tokens (e.g. VAR_DECL, FUNC_DEF, LOOP_STMT, COND_STMT) to counter
- * source code obfuscation (renaming, comment injection, variable camouflage).
- */
-
 export type NormalizedTokenType =
   | "FUNC_DEF"
   | "PARAM_DECL"
@@ -34,17 +25,22 @@ export interface NormalizedToken {
   originalSnippet?: string;
 }
 
+export interface CodeQuirk {
+  type: 'FORMATTING_ANOMALY' | 'MAGIC_NUMBER' | 'INVERTED_CONDITION' | 'REDUNDANT_EXPR' | 'IDIOSYNCRATIC_LOOP';
+  signature: string; // Chuỗi đại diện dấu vết trình bày dùng bổ trợ đối soát
+  description: string;
+  line: number;
+}
+
 export interface NormalizationResult {
   tokens: NormalizedToken[];
   normalizedString: string;
   totalLines: number;
   totalOriginalTokensCount: number;
+  quirks?: CodeQuirk[];
 }
 
 export class ASTNormalizer {
-  /**
-   * Main entrypoint to normalize source code into structural AST tokens.
-   */
   public static normalize(code: string, language: string = "python"): NormalizationResult {
     const langLower = language.toLowerCase();
 
@@ -57,9 +53,6 @@ export class ASTNormalizer {
     }
   }
 
-  /**
-   * Normalizer implementation for Python code structures
-   */
   private static normalizePython(code: string): NormalizationResult {
     const lines = code.split(/\r?\n/);
     const tokens: NormalizedToken[] = [];
@@ -70,7 +63,6 @@ export class ASTNormalizer {
       let line = lines[lIndex];
       const lineNumber = lIndex + 1;
 
-      // Handle multiline docstrings (''' or """)
       if (line.includes('"""') || line.includes("'''")) {
         const count = (line.match(/"""|'''/g) || []).length;
         if (count % 2 !== 0) {
@@ -80,7 +72,6 @@ export class ASTNormalizer {
       }
       if (insideDocstring) continue;
 
-      // Strip single-line comments (# or //)
       const hashIdx = line.indexOf("#");
       if (hashIdx !== -1) {
         line = line.substring(0, hashIdx);
@@ -104,11 +95,8 @@ export class ASTNormalizer {
     };
   }
 
-  /**
-   * Tokenizes a single line of Python code into canonical AST tokens
-   */
   private static tokenizePythonLine(line: string, lineNum: number, outTokens: NormalizedToken[]) {
-    const regex = /\b(def|class|if|elif|else|for|while|return|break|continue|try|except|finally|import|from|as|in|is|and|or|not|with|yield|pass|raise|lambda)\b|([0-9]+\.?[0-9]*|"[^"]*"|'[^']*')|([a-zA-Z_][a-zA-Z0-9_]*)|(\+=|-=|\*=|\/=|==|!=|<=|>=|\|\||&&|=|\+|\-|\*|\/|%|<|>|\(|\)|\[\]|\{|\}|:|,)/g;
+    const regex = /\b(def|class|if|elif|else|for|while|return|break|continue|try|except|finally|import|from|as|in|is|and|or|not|with|yield|pass|raise|lambda)\b|([0-9]+\.?[0-9]*|"[^"]*"|'[^']*')|([a-zA-Z_][a-zA-Z0-9_]*)|(\+=|-=|\*=|\/=|==|!=|<=|>=|\|\||&&|=|\+|-|\*|\/|%|<|>|\(|\)|\[\]|\{|\}|:|,)/g;
 
     let match: RegExpExecArray | null;
     let expectingFuncName = false;
@@ -195,10 +183,7 @@ export class ASTNormalizer {
     }
   }
 
-  /**
-   * Normalizer implementation for C-Style (C/C++, Java, JS/TS) code structures
-   */
-  private static normalizeCStyle(code: string, isJsTs: boolean): NormalizationResult {
+  private static normalizeCStyle(code: string, _isJsTs: boolean): NormalizationResult {
     const lines = code.split(/\r?\n/);
     const tokens: NormalizedToken[] = [];
 
@@ -238,7 +223,7 @@ export class ASTNormalizer {
   }
 
   private static tokenizeCStyleLine(line: string, lineNum: number, outTokens: NormalizedToken[]) {
-    const regex = /\b(function|def|class|public|private|protected|static|void|int|double|float|char|boolean|let|var|const|if|else|for|while|do|return|break|continue|try|catch|finally)\b|([0-9]+\.?[0-9]*|"[^"]*"|'[^']*')|([a-zA-Z_][a-zA-Z0-9_]*)|(\+=|-=|\*=|\/=|==|!=|<=|>=|&&|\|\||=|\+|\-|\*|\/|%|<|>|\{|\}|\(|\)|\[\]|;)/g;
+    const regex = /\b(function|def|class|public|private|protected|static|void|int|double|float|char|boolean|let|var|const|if|else|for|while|do|return|break|continue|try|catch|finally)\b|([0-9]+\.?[0-9]*|"[^"]*"|'[^']*')|([a-zA-Z_][a-zA-Z0-9_]*)|(\+=|-=|\*=|\/=|==|!=|<=|>=|&&|\|\||=|\+|-|\*|\/|%|<|>|\{|\}|\(|\)|\[\]|;)/g;
 
     let match: RegExpExecArray | null;
     let expectingFuncName = false;
@@ -315,5 +300,87 @@ export class ASTNormalizer {
         }
       }
     }
+  }
+
+  /**
+   * Trích xuất các dấu vết trình bày / lỗi gõ hình thức nhỏ vô hại (;;,  ;, ((...)), khoảng trắng kép quanh toán tử).
+   * KHÔNG chấm các tiêu chuẩn Clean Code / SOLID (biến thừa, hằng số, +0, ? true : false) vì đã do AI Review chấm.
+   * Chỉ dùng làm tín hiệu bổ trợ khi độ tương đồng AST >= 70% trên bài quá ngắn (<= 20 dòng).
+   */
+  public static extractQuirks(sourceCode: string, language = 'java'): CodeQuirk[] {
+    const quirks: CodeQuirk[] = [];
+    if (!sourceCode) return quirks;
+
+    const isPython = language.toLowerCase().includes('py');
+    const noBlockComments = sourceCode
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+      .replace(/("""[\s\S]*?"""|'''[\s\S]*?''')/g, (m) => m.replace(/[^\n]/g, ' '));
+
+    const lines = noBlockComments.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+      let cleaned = lines[i]
+        .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+        .replace(/'(?:[^'\\]|\\.)*'/g, "''")
+        .replace(/\/\/[^\n]*/g, '');
+      if (isPython) {
+        cleaned = cleaned.replace(/#[^\n]*/g, '');
+      }
+      cleaned = cleaned.trimStart();
+
+      if (!cleaned) continue;
+      const lineNum = i + 1;
+
+      if (/;{2,}/.test(cleaned) && !/\bfor\s*\([^)]*;;/.test(cleaned)) {
+        quirks.push({
+          type: 'FORMATTING_ANOMALY',
+          signature: 'DOUBLE_SEMICOLON',
+          description: 'Dấu chấm phẩy kép thừa (;;) cuối lệnh',
+          line: lineNum,
+        });
+      }
+
+      if (/[A-Za-z0-9_)\]]\s+;/.test(cleaned) && !/\bfor\s*\([^)]*;/.test(cleaned)) {
+        quirks.push({
+          type: 'FORMATTING_ANOMALY',
+          signature: 'SPACED_SEMICOLON',
+          description: 'Khoảng trắng bất thường trước dấu chấm phẩy ( ;)',
+          line: lineNum,
+        });
+      }
+
+      if (/\(\(\s*[A-Za-z0-9_]+(\s*[%+\-*/]\s*[A-Za-z0-9_]+)?\s*(==|!=|>=|<=|>|<)\s*[A-Za-z0-9_]+\s*\)\)/.test(cleaned)) {
+        quirks.push({
+          type: 'FORMATTING_ANOMALY',
+          signature: 'EXCESSIVE_PARENS',
+          description: 'Cặp ngoặc đơn lồng dư thừa ((...))',
+          line: lineNum,
+        });
+      }
+
+      if (/[A-Za-z0-9_)\]]\s{2,}(=|==|!=|<=|>=|\+=|-=|\*=|\/=)\s|\s(=|==|!=|<=|>=|\+=|-=|\*=|\/=)\s{2,}[A-Za-z0-9_(\[]/.test(cleaned)) {
+        quirks.push({
+          type: 'FORMATTING_ANOMALY',
+          signature: 'MULTI_SPACE_STMT',
+          description: 'Khoảng trắng kép bất thường quanh toán tử',
+          line: lineNum,
+        });
+      }
+    }
+
+    return quirks;
+  }
+
+  /**
+   * Xóa sạch comment và string literal để gửi an toàn cho LLM (chống Prompt Injection)
+   */
+  public static sanitizeForAI(sourceCode: string): string {
+    if (!sourceCode) return '';
+    return sourceCode
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/\/\/[^\n]*/g, ' ')
+      .replace(/#[^\n]*/g, ' ')
+      .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+      .replace(/'(?:[^'\\]|\\.)*'/g, "''");
   }
 }
