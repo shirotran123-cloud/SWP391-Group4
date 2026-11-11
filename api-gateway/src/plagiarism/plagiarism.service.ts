@@ -63,6 +63,9 @@ export interface PlagiarismDetectionResult {
     jaccardSimilarity: number;
     winnowingContainment: number;
     astStructuralSimilarity: number;
+    matchedQuirks?: Array<{ type: string; signature: string; description: string; lineA: number; lineB: number }>;
+    boilerplateFingerprintsFiltered?: number;
+    isShortSubmission?: boolean;
     /** Set when the matched submission belongs to the SAME student. */
     selfOverlap?: SelfOverlapInfo;
   } | null;
@@ -88,6 +91,7 @@ export interface AssignmentMatrixResult {
   submissionsList: { id: string; name?: string; studentId?: string; sourceCode?: string; language?: string }[];
   flaggedReports: unknown[];
   clusters: PlagiarismCluster[];
+  teacherBaselinePairs?: unknown[];
   independentSubmissions: { id: string; name?: string; studentId?: string }[];
   crossClusterIndependence: CrossClusterIndependence[];
   totalExecutionTimeMs: number;
@@ -213,9 +217,30 @@ export class PlagiarismService {
     }
 
     // 5) Top match = highest-similarity pair that actually involves the current submission.
+    // Ưu tiên các cặp có dấu hiệu đạo văn / tương đồng đáng kể (>= 50%) giữa sinh viên với nhau
+    // lên trước Teacher Baseline hoặc bài nộp lại của chính sinh viên, tránh bị che khuất.
+    const isTeacherPeer = (pair: PairwisePlagiarismResult): boolean => {
+      const peerId = pair.submissionAId === params.submissionId ? pair.submissionBId : pair.submissionAId;
+      const peer = peers.find((p) => p.record.submissionId === peerId);
+      const name = (peer?.studentName || '').toLowerCase();
+      return name.includes('thầy') || name.includes('teacher') || name.includes('giảng viên');
+    };
+    const isSelfSameAssignment = (pair: PairwisePlagiarismResult): boolean => {
+      const peerId = pair.submissionAId === params.submissionId ? pair.submissionBId : pair.submissionAId;
+      const peer = peers.find((p) => p.record.submissionId === peerId);
+      return peer?.selfOverlap?.kind === 'SAME_ASSIGNMENT';
+    };
+
     const involved = comparison.pairs
       .filter((p) => p.submissionAId === params.submissionId || p.submissionBId === params.submissionId)
-      .sort((a, b) => b.similarityRate - a.similarityRate);
+      .sort((a, b) => {
+        const aSignificantStudent =
+          !isTeacherPeer(a) && !isSelfSameAssignment(a) && (a.isFlagged || a.similarityRate >= 50);
+        const bSignificantStudent =
+          !isTeacherPeer(b) && !isSelfSameAssignment(b) && (b.isFlagged || b.similarityRate >= 50);
+        if (aSignificantStudent !== bSignificantStudent) return aSignificantStudent ? -1 : 1;
+        return b.similarityRate - a.similarityRate;
+      });
 
     let topMatch: PlagiarismDetectionResult['topMatch'] = null;
     if (involved.length > 0) {
@@ -236,6 +261,11 @@ export class PlagiarismService {
         lineA: toTuple(aIsCurrent ? seg.lineRangeA : seg.lineRangeB) as [number, number],
         lineB: toTuple(aIsCurrent ? seg.lineRangeB : seg.lineRangeA) as [number, number],
       }));
+      const matchedQuirks = (best.matchedTokensJson.matchedQuirks || []).map((q) => ({
+        ...q,
+        lineA: aIsCurrent ? q.lineA : q.lineB,
+        lineB: aIsCurrent ? q.lineB : q.lineA,
+      }));
 
       topMatch = {
         matchedStudentName: peer ? peer.studentName : peerId,
@@ -249,6 +279,9 @@ export class PlagiarismService {
         jaccardSimilarity: best.matchedTokensJson.jaccardSimilarity,
         winnowingContainment: best.matchedTokensJson.maxContainment,
         astStructuralSimilarity: best.matchedTokensJson.containmentAinB,
+        matchedQuirks,
+        boilerplateFingerprintsFiltered: best.matchedTokensJson.boilerplateFingerprintsFiltered,
+        isShortSubmission: best.matchedTokensJson.isShortSubmission,
         // Only set when the match is the student's own work; lets every caller distinguish a
         // resubmission from collusion without re-deriving it.
         selfOverlap: peer?.selfOverlap,
@@ -332,6 +365,7 @@ export class PlagiarismService {
       submissionsList: matrix.submissionsList,
       flaggedReports: matrix.flaggedReports,
       clusters: matrix.clusters,
+      teacherBaselinePairs: matrix.teacherBaselinePairs || [],
       independentSubmissions: matrix.independentSubmissions,
       crossClusterIndependence: matrix.crossClusterIndependence,
       totalExecutionTimeMs: matrix.totalExecutionTimeMs || Date.now() - startTime,
@@ -529,21 +563,51 @@ export class PlagiarismService {
     submissions: CodeSubmission[],
     assignmentId: string,
   ): Promise<{ pairs: PairwisePlagiarismResult[]; engine: 'GENAI_HUB_HTTP' | 'LOCAL_AST_ENGINE'; flaggedOrAll: PairwisePlagiarismResult[] }> {
-    if (submissions.length >= 2) {
-      const hubReport = await this.requestHubMatrix(submissions, assignmentId);
-      if (hubReport) {
-        const pairs = this.rebuildPairsFromMatrix(submissions, hubReport);
-        return { pairs, engine: 'GENAI_HUB_HTTP', flaggedOrAll: pairs };
+    // Luôn ưu tiên LOCAL_AST_ENGINE (SSOT) để đồng bộ tuyệt đối 100% với getAssignmentMatrix và quy tắc bảo lưu điểm
+    const pairs: PairwisePlagiarismResult[] = [];
+    const N = submissions.length;
+
+    // Dynamic IDF: Tự động trích xuất các hash xuất hiện từ bài của Thầy hoặc ở >= 60% số bài nộp (khi N >= 6)
+    const commonTemplateHashes = new Set<string>();
+
+    for (const sub of submissions) {
+      const name = (sub.studentName || '').toLowerCase();
+      if (name.includes('thầy') || name.includes('teacher') || name.includes('giảng viên')) {
+        const norm = ASTNormalizer.normalize(sub.sourceCode, (sub.language || 'java').toLowerCase());
+        const fps = WinnowingEngine.computeFingerprints(norm.tokens);
+        for (const f of fps) {
+          commonTemplateHashes.add(f.hashValue);
+        }
       }
     }
 
-    const pairs: PairwisePlagiarismResult[] = [];
+    if (N >= 6) {
+      const hashDocFrequency = new Map<string, number>();
+      for (const sub of submissions) {
+        const norm = ASTNormalizer.normalize(sub.sourceCode, (sub.language || 'java').toLowerCase());
+        const fps = WinnowingEngine.computeFingerprints(norm.tokens);
+        const uniqueInDoc = new Set(fps.map((f) => f.hashValue));
+        for (const h of uniqueInDoc) {
+          hashDocFrequency.set(h, (hashDocFrequency.get(h) || 0) + 1);
+        }
+      }
+      // Đồng bộ tuyệt đối với ASTPlagiarismEngine.computeClassSimilarityMatrix: N >= 6 và >= 60% (tối thiểu 4 bài)
+      const frequencyThreshold = Math.max(4, Math.ceil(N * 0.6));
+      for (const [h, count] of hashDocFrequency.entries()) {
+        if (count >= frequencyThreshold) {
+          commonTemplateHashes.add(h);
+        }
+      }
+    }
+
+    const enhancedOptions = { commonTemplateHashes };
+
     for (let i = 0; i < submissions.length; i++) {
       for (let j = i + 1; j < submissions.length; j++) {
         // Self-pairs ARE compared here so the relationship can be classified and reported.
         // Whether the result counts as plagiarism is decided later, from `selfOverlap`:
         // a resubmission of the same task is never flagged, cross-course reuse is.
-        pairs.push(ASTPlagiarismEngine.compareSubmissions(submissions[i], submissions[j]));
+        pairs.push(ASTPlagiarismEngine.compareSubmissions(submissions[i], submissions[j], enhancedOptions));
       }
     }
     return { pairs, engine: 'LOCAL_AST_ENGINE', flaggedOrAll: pairs };
@@ -626,7 +690,10 @@ export class PlagiarismService {
   private async persistPairReport(pair: PairwisePlagiarismResult, assignmentId: string): Promise<boolean> {
     try {
       const status: PlagiarismReportStatus =
-        pair.status === 'CLEAN' || pair.status === 'SUSPECTED' || pair.status === 'FLAGGED_PLAGIARISM'
+        pair.status === 'CLEAN' ||
+        pair.status === 'SUSPECTED' ||
+        pair.status === 'FLAGGED_HIGH' ||
+        pair.status === 'FLAGGED_PLAGIARISM'
           ? pair.status
           : pair.isFlagged
             ? 'FLAGGED_PLAGIARISM'

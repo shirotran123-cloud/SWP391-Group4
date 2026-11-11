@@ -872,10 +872,17 @@ export function App() {
               setPlagiarismMatch(undefined);
             }
 
-            // BR-03: Đạo văn AST từ 80% trở lên (>= 80.0%) -> LẬP TỨC CHẤM 0 ĐIỂM HOÀN TOÀN
+            // BR-03: Đạo văn AST từ 80% trở lên (>= 80.0%)
+            // Nếu bài quá ngắn (<= 20 dòng, status === 'SUSPECTED'): tạm giữ điểm chờ Giảng viên kiểm tra trực tiếp.
             const sim = data.similarityRate ?? actualPlag?.similarityRate ?? 0;
-            const isSeverePlag = data.confirmedPlagiarism || sim >= 80.0;
-            const finalScore = isSeverePlag ? 0.0 : (data.score !== undefined ? data.score : 0.0);
+            const isPendingShortReview =
+              !data.confirmedPlagiarism &&
+              (actualPlag?.status === 'SUSPECTED' || (data.plagiarismStatus === 'NGHI VẤN' && sim >= 70.0));
+            const isSeverePlag =
+              data.confirmedPlagiarism === true ||
+              (!isPendingShortReview && actualPlag?.status === 'FLAGGED_PLAGIARISM') ||
+              (!isPendingShortReview && data.confirmedPlagiarism !== false && sim >= 80.0);
+            const finalScore = isSeverePlag ? 0.0 : (data.score ?? data.computedScoreBeforePenalty ?? 0);
             const finalBreakdown: ScoreBreakdown = isSeverePlag
               ? { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: 0 }
               : (data.scoreBreakdown || { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: finalScore });
@@ -897,8 +904,12 @@ export function App() {
             });
             setSteps((prev) =>
               syncTestcaseSteps(prev, data.testcaseResults).map((s) => {
-                if (isSeverePlag && s.id === '6') {
-                  return { ...s, status: 'failed', detail: `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.` };
+                if (s.id === '6') {
+                  if (isSeverePlag) {
+                    return { ...s, status: 'failed', detail: `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.` };
+                  } else if (isPendingShortReview && sim >= 50.0) {
+                    return { ...s, status: 'passed', detail: `Bài quá ngắn (≤ 20 dòng) — tương đồng ${sim.toFixed(1)}%, chưa đủ dữ liệu tự triển khai để kết tội tự động. Tạm giữ điểm ${finalScore}/10 chờ Giảng viên kiểm tra trực tiếp.` };
+                  }
                 }
                 return s.id.startsWith('tc-') ? s : { ...s, status: 'passed' };
               })
@@ -924,10 +935,16 @@ export function App() {
                 clearInterval(pollTimer);
                 if (sub.aiRating) setAiRating(sub.aiRating);
 
-                // BR-03: Đạo văn AST từ 80% trở lên (>= 80.0%) -> LẬP TỨC CHẤM 0 ĐIỂM
+                // BR-03: Đạo văn AST từ 80% trở lên (>= 80.0%)
                 const sim = sub.similarityRate ?? sub.result?.similarityRate ?? 0;
-                const isSeverePlag = sub.confirmedPlagiarism || sim >= 80.0;
-                const finalScore = isSeverePlag ? 0.0 : (sub.score !== undefined ? sub.score : 0.0);
+                const isPendingShortReview =
+                  !sub.confirmedPlagiarism &&
+                  (sub.plagiarismMatch?.status === 'SUSPECTED' || (sub.plagiarismStatus === 'NGHI VẤN' && sim >= 70.0));
+                const isSeverePlag =
+                  sub.confirmedPlagiarism === true ||
+                  (!isPendingShortReview && sub.plagiarismMatch?.status === 'FLAGGED_PLAGIARISM') ||
+                  (!isPendingShortReview && sub.confirmedPlagiarism !== false && sim >= 80.0);
+                const finalScore = isSeverePlag ? 0.0 : (sub.score ?? sub.computedScoreBeforePenalty ?? 0);
                 const finalBreakdown: ScoreBreakdown = isSeverePlag
                   ? { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: 0 }
                   : (sub.scoreBreakdown || { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: finalScore });
@@ -951,8 +968,12 @@ export function App() {
                   prev.map((s) => ({
                     ...s,
                     status: isSeverePlag && s.id === '6' ? 'failed' : (sub.status === 'GRADED' ? 'passed' : 'failed'),
-                    detail: isSeverePlag && s.id === '6'
-                      ? `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.`
+                    detail: s.id === '6'
+                      ? isSeverePlag
+                        ? `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.`
+                        : isPendingShortReview && sim >= 50.0
+                          ? `Bài quá ngắn (≤ 20 dòng) — tương đồng ${sim.toFixed(1)}%, chưa đủ dữ liệu tự triển khai để kết tội tự động. Tạm giữ điểm ${finalScore}/10 chờ Giảng viên kiểm tra trực tiếp.`
+                          : 'Hoàn thành phân tích AST & Winnowing'
                       : (sub.status === 'GRADED' ? 'Hoàn thành (Đạt)' : (sub.errorMessage || 'Thất bại')),
                   }))
                 );
@@ -1023,7 +1044,8 @@ export function App() {
   const simulateSocketGradingEvents = (realPlagiarism?: PlagiarismMatch) => {
     const delays = [600, 1400, 2400, 3400, 4600, 5800];
     const simRate = realPlagiarism?.similarityRate ?? 0;
-    const isSeverePlag = simRate >= 80.0;
+    const isShortSuspected = realPlagiarism?.status === 'SUSPECTED' && simRate >= 70.0;
+    const isSeverePlag = realPlagiarism?.status === 'FLAGGED_PLAGIARISM' || (!isShortSuspected && simRate >= 80.0);
     const effectiveBreakdown: ScoreBreakdown = isSeverePlag
       ? {
           testcase1: 0,

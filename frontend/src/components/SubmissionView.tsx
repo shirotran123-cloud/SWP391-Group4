@@ -10,7 +10,7 @@ import {
 import { CountdownTimer } from './CountdownTimer';
 import { AssignmentDescriptionView } from './AssignmentDescriptionView';
 import { parseAssignmentDescription } from '../utils/assignmentParser';
-import { verifyAssignmentTestCases } from '../services/assignment-testcases.service';
+import { verifyAssignmentTestCases, syncAssignmentTestCases } from '../services/assignment-testcases.service';
 import type { Task } from '../types';
 import { API_BASE_URL } from '../config/api';
 
@@ -906,26 +906,34 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     }
     const currentTask = selectedTask || task;
     if (selectedFile && currentTask) {
-      if (selectedTask?.configuredTestCases) {
+      if (selectedTask?.configuredTestCases && selectedTask.configuredTestCases.length > 0) {
+        const assignmentConfig = {
+          id: selectedTask.id,
+          courseId: selectedTask.courseId || '',
+          title: selectedTask.title,
+          description: selectedTask.description,
+          deadline: selectedTask.deadline,
+          timeLimitMs: selectedTask.timeLimitMs || 2000,
+          memoryLimitMb: selectedTask.memoryLimitMb || 512,
+          allowedLanguages: selectedTask.allowedLanguages || ['java', 'python', 'cpp'],
+          testCases: selectedTask.configuredTestCases,
+        };
+
         try {
-          await verifyAssignmentTestCases({
-            id: selectedTask.id,
-            courseId: selectedTask.courseId || '',
-            title: selectedTask.title,
-            description: selectedTask.description,
-            deadline: selectedTask.deadline,
-            timeLimitMs: selectedTask.timeLimitMs || 2000,
-            memoryLimitMb: selectedTask.memoryLimitMb || 512,
-            allowedLanguages: selectedTask.allowedLanguages || ['java', 'python', 'cpp'],
-            testCases: selectedTask.configuredTestCases,
-          });
-        } catch (error) {
-          setErrorMessage(
-            error instanceof Error
-              ? `Không thể đồng bộ đủ testcase lên máy chủ nên chưa gửi bài: ${error.message}`
-              : 'Không thể đồng bộ đủ testcase lên máy chủ nên chưa gửi bài.',
-          );
-          return;
+          await verifyAssignmentTestCases(assignmentConfig);
+        } catch (_verifyErr) {
+          try {
+            // Khi máy chủ chưa có hoặc thiếu bộ testcase, tự động đồng bộ lên máy chủ trước khi nộp
+            await syncAssignmentTestCases(assignmentConfig);
+            await verifyAssignmentTestCases(assignmentConfig);
+          } catch (syncError: any) {
+            setErrorMessage(
+              syncError instanceof Error
+                ? `Không thể đồng bộ đủ testcase lên máy chủ nên chưa gửi bài: ${syncError.message}`
+                : 'Không thể đồng bộ đủ testcase lên máy chủ nên chưa gửi bài.',
+            );
+            return;
+          }
         }
       }
 

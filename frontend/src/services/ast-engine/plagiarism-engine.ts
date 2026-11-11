@@ -1,4 +1,4 @@
-import { ASTNormalizer, type NormalizedToken } from "./ast-normalizer";
+import { ASTNormalizer, type CodeQuirk } from "./ast-normalizer";
 import { WinnowingEngine, type Fingerprint, type WinnowingOptions } from "./winnowing";
 
 export interface CodeSubmission {
@@ -19,17 +19,32 @@ export interface MatchedSegment {
   tokenCount: number;
 }
 
+export interface MatchedQuirk {
+  type: CodeQuirk['type'];
+  signature: string;
+  description: string;
+  lineA?: number;
+  lineB?: number;
+}
+
 export interface MatchedTokensJson {
   submissionAId: string;
   submissionBId: string;
   similarityRate: number;
   jaccardSimilarity: number;
-  winnowingContainment: number;
-  astStructuralSimilarity: number;
+  winnowingContainment?: number;
+  containmentBinA?: number;
+  containmentAinB?: number;
+  maxContainment?: number;
+  astStructuralSimilarity?: number;
   totalUniqueFingerprintsA: number;
   totalUniqueFingerprintsB: number;
   commonFingerprintsCount: number;
   matchedSegments: MatchedSegment[];
+  matchedQuirks?: MatchedQuirk[];
+  quirkCount?: number;
+  boilerplateFingerprintsFiltered?: number;
+  isShortSubmission?: boolean;
 }
 
 export interface PairwisePlagiarismResult {
@@ -47,6 +62,7 @@ export interface PairwisePlagiarismResult {
   isFlagged: boolean;
   status: "CLEAN" | "SUSPECTED" | "FLAGGED_HIGH" | "FLAGGED_PLAGIARISM";
   matchedTokensJson: MatchedTokensJson;
+  matchedQuirks?: MatchedQuirk[];
   executionTimeMs: number;
 }
 
@@ -85,6 +101,7 @@ export interface ClassPlagiarismMatrixReport {
   similarityMatrix: number[][];
   flaggedReports: PairwisePlagiarismResult[];
   clusters: PlagiarismCluster[];
+  teacherBaselinePairs?: PairwisePlagiarismResult[];
   independentSubmissions: { id: string; name?: string; studentId?: string }[];
   crossClusterIndependence: CrossClusterIndependence[];
   totalExecutionTimeMs: number;
@@ -98,30 +115,58 @@ export class ASTPlagiarismEngine {
   public static compareSubmissions(
     subA: CodeSubmission,
     subB: CodeSubmission,
-    options?: WinnowingOptions
+    options?: WinnowingOptions & { commonTemplateHashes?: Set<string> }
   ): PairwisePlagiarismResult {
     const startTime = Date.now();
 
-    const normA = ASTNormalizer.normalize(subA.sourceCode, subA.language || "python");
-    const normB = ASTNormalizer.normalize(subB.sourceCode, subB.language || "python");
+    const langA = (subA.language || 'java').toLowerCase();
+    const langB = (subB.language || 'java').toLowerCase();
+    const normA = ASTNormalizer.normalize(subA.sourceCode, langA);
+    const normB = ASTNormalizer.normalize(subB.sourceCode, langB);
 
-    const fingerprintsA = WinnowingEngine.computeFingerprints(normA.tokens, options);
-    const fingerprintsB = WinnowingEngine.computeFingerprints(normB.tokens, options);
+    const fpA = WinnowingEngine.computeFingerprints(normA.tokens, options);
+    const fpB = WinnowingEngine.computeFingerprints(normB.tokens, options);
 
-    const setAHashes = new Set(fingerprintsA.map((f) => f.hashValue));
-    const setBHashes = new Set(fingerprintsB.map((f) => f.hashValue));
+    // Lọc bỏ Boilerplate / Code mẫu của Thầy
+    const templateHashes = options?.commonTemplateHashes || new Set<string>();
+    let boilerplateFilteredCount = 0;
 
-    const mapB = new Map<string, Fingerprint[]>();
-    for (const f of fingerprintsB) {
-      if (!mapB.has(f.hashValue)) mapB.set(f.hashValue, []);
-      mapB.get(f.hashValue)!.push(f);
+    const rawSetA = new Set(fpA.map((f) => f.hashValue));
+    const rawSetB = new Set(fpB.map((f) => f.hashValue));
+
+    const setA = new Set<string>();
+    for (const h of rawSetA) {
+      if (templateHashes.has(h)) boilerplateFilteredCount++;
+      else setA.add(h);
+    }
+    const setB = new Set<string>();
+    for (const h of rawSetB) {
+      if (!templateHashes.has(h)) setB.add(h);
     }
 
-    const matchedSegments: MatchedSegment[] = [];
+    const rawMapB = new Map<string, Fingerprint[]>();
+    const mapB = new Map<string, Fingerprint[]>();
+    for (const f of fpB) {
+      if (!rawMapB.has(f.hashValue)) rawMapB.set(f.hashValue, []);
+      rawMapB.get(f.hashValue)!.push(f);
 
-    for (const fA of fingerprintsA) {
-      if (setBHashes.has(fA.hashValue)) {
-        const matchesInB = mapB.get(fA.hashValue) || [];
+      if (!templateHashes.has(f.hashValue)) {
+        if (!mapB.has(f.hashValue)) mapB.set(f.hashValue, []);
+        mapB.get(f.hashValue)!.push(f);
+      }
+    }
+
+    const effectiveSetA = setA.size > 0 ? setA : rawSetA;
+    const effectiveSetB = setB.size > 0 ? setB : rawSetB;
+    const effectiveMapB = setB.size > 0 ? mapB : rawMapB;
+
+    const matchedSegments: MatchedSegment[] = [];
+    const commonHashes = new Set<string>();
+
+    for (const fA of fpA) {
+      if (effectiveSetA.has(fA.hashValue) && effectiveSetB.has(fA.hashValue)) {
+        commonHashes.add(fA.hashValue);
+        const matchesInB = effectiveMapB.get(fA.hashValue) || [];
         for (const fB of matchesInB) {
           matchedSegments.push({
             hashValue: fA.hashValue,
@@ -135,52 +180,104 @@ export class ASTPlagiarismEngine {
       }
     }
 
-    const unionSet = new Set([...setAHashes, ...setBHashes]);
-    const unionSize = unionSet.size === 0 ? 1 : unionSet.size;
-
-    const commonHashesSet = new Set(
-      [...setAHashes].filter((h) => setBHashes.has(h))
-    );
-    const commonCount = commonHashesSet.size;
+    const commonCount = commonHashes.size;
+    const sizeA = effectiveSetA.size;
+    const sizeB = effectiveSetB.size;
+    const unionSize = new Set([...effectiveSetA, ...effectiveSetB]).size || 1;
 
     const jaccardSimilarity = Number(((commonCount / unionSize) * 100).toFixed(2));
-    const minSetSize = Math.min(setAHashes.size, setBHashes.size);
-    const winnowingContainment = minSetSize > 0 
-      ? Number(((commonCount / minSetSize) * 100).toFixed(2)) 
-      : 0.0;
+    const containmentBinA = sizeB > 0 ? Number(((commonCount / sizeB) * 100).toFixed(2)) : 0.0;
+    const containmentAinB = sizeA > 0 ? Number(((commonCount / sizeA) * 100).toFixed(2)) : 0.0;
 
-    const astStructuralSimilarity = this.computeASTTokenCosineSimilarity(normA.tokens, normB.tokens);
+    const nameA = (subA.studentName || '').toLowerCase();
+    const nameB = (subB.studentName || '').toLowerCase();
+    const isTeacherMatch =
+      nameA.includes('thầy') || nameA.includes('teacher') || nameA.includes('giảng viên') ||
+      nameB.includes('thầy') || nameB.includes('teacher') || nameB.includes('giảng viên');
 
-    let similarityRate = 0.0;
-    if (winnowingContainment >= 99.0) {
-      similarityRate = 100.0;
-    } else {
-      similarityRate = Number(
-        (0.65 * winnowingContainment + 0.35 * astStructuralSimilarity).toFixed(2)
-      );
+    let maxContainment = Math.max(containmentBinA, containmentAinB);
+    let similarityRate = Number(maxContainment.toFixed(2));
+
+    // So khớp Dấu vết trình bày bổ trợ (Presentation Quirks - khớp 1-1)
+    const quirksA = ASTNormalizer.extractQuirks(subA.sourceCode, langA);
+    const quirksB = ASTNormalizer.extractQuirks(subB.sourceCode, langB);
+
+    const matchedQuirks: MatchedQuirk[] = [];
+    const quirksPoolB = new Map<string, typeof quirksB>();
+    for (const q of quirksB) {
+      if (!quirksPoolB.has(q.signature)) quirksPoolB.set(q.signature, []);
+      quirksPoolB.get(q.signature)!.push(q);
     }
 
-    const isFlagged = similarityRate >= this.PLAGIARISM_THRESHOLD;
-    let status: PairwisePlagiarismResult['status'];
-    if (similarityRate >= this.CONFIRMED_ZERO_THRESHOLD) status = 'FLAGGED_PLAGIARISM';
-    else if (similarityRate >= this.PLAGIARISM_THRESHOLD) status = 'FLAGGED_HIGH';
-    else if (similarityRate >= this.SUSPECTED_WARNING_THRESHOLD) status = 'SUSPECTED';
-    else status = 'CLEAN';
+    for (const qA of quirksA) {
+      const bucketB = quirksPoolB.get(qA.signature);
+      if (bucketB && bucketB.length > 0) {
+        const qB = bucketB.shift()!;
+        matchedQuirks.push({
+          type: qA.type,
+          signature: qA.signature,
+          description: qA.description,
+          lineA: qA.line,
+          lineB: qB.line,
+        });
+      }
+    }
+
+    const quirkCount = matchedQuirks.length;
+
+    // So phần dư (Residual Matching) sau khi trừ code Thầy
+    const isResidualNegligible = !isTeacherMatch && setA.size <= 3 && setB.size <= 3 && templateHashes.size > 0;
+    if (isResidualNegligible && quirkCount === 0) {
+      similarityRate = 0.0;
+    }
+
+    // ── 5. Tiêu chuẩn xác định Đạo Văn (Chuẩn BR-03 + Bảo vệ bài quá ngắn <= 20 dòng) ──
+    const linesCountA = (subA.sourceCode || '').split('\n').filter((l) => l.trim().length > 0).length;
+    const linesCountB = (subB.sourceCode || '').split('\n').filter((l) => l.trim().length > 0).length;
+    const maxLines = Math.max(linesCountA, linesCountB);
+
+    const isShortSubmission = maxLines <= 20;
+    const hasStrongFormattingEvidence = similarityRate >= this.PLAGIARISM_THRESHOLD && quirkCount >= 2;
+
+    let isFlagged = false;
+    let status: PairwisePlagiarismResult['status'] = 'CLEAN';
+
+    if (isTeacherMatch) {
+      // Đối chiếu với bài mẫu Giảng viên -> Luôn sạch, tự động bảo lưu điểm
+      status = 'CLEAN';
+      isFlagged = false;
+    } else if (similarityRate >= this.PLAGIARISM_THRESHOLD) {
+      if (isShortSubmission && !hasStrongFormattingEvidence) {
+        status = 'SUSPECTED';
+      } else {
+        status = similarityRate >= this.CONFIRMED_ZERO_THRESHOLD ? 'FLAGGED_PLAGIARISM' : 'FLAGGED_HIGH';
+      }
+      isFlagged = true;
+    } else if (similarityRate >= this.SUSPECTED_WARNING_THRESHOLD) {
+      status = 'SUSPECTED';
+      isFlagged = true;
+    } else {
+      status = 'CLEAN';
+      isFlagged = false;
+    }
 
     const matchedTokensJson: MatchedTokensJson = {
       submissionAId: subA.submissionId,
       submissionBId: subB.submissionId,
       similarityRate,
       jaccardSimilarity,
-      winnowingContainment,
-      astStructuralSimilarity,
-      totalUniqueFingerprintsA: setAHashes.size,
-      totalUniqueFingerprintsB: setBHashes.size,
+      containmentBinA,
+      containmentAinB,
+      maxContainment,
+      totalUniqueFingerprintsA: sizeA,
+      totalUniqueFingerprintsB: sizeB,
       commonFingerprintsCount: commonCount,
       matchedSegments,
+      matchedQuirks,
+      quirkCount,
+      boilerplateFingerprintsFiltered: boilerplateFilteredCount,
+      isShortSubmission,
     };
-
-    const executionTimeMs = Date.now() - startTime;
 
     return {
       submissionAId: subA.submissionId,
@@ -191,36 +288,9 @@ export class ASTPlagiarismEngine {
       isFlagged,
       status,
       matchedTokensJson,
-      executionTimeMs,
+      matchedQuirks,
+      executionTimeMs: Date.now() - startTime,
     };
-  }
-
-  private static computeASTTokenCosineSimilarity(tokensA: NormalizedToken[], tokensB: NormalizedToken[]): number {
-    const freqA = new Map<string, number>();
-    const freqB = new Map<string, number>();
-
-    for (const t of tokensA) freqA.set(t.token, (freqA.get(t.token) || 0) + 1);
-    for (const t of tokensB) freqB.set(t.token, (freqB.get(t.token) || 0) + 1);
-
-    const allKeys = new Set([...freqA.keys(), ...freqB.keys()]);
-    if (allKeys.size === 0) return 100.0;
-
-    let dotProduct = 0;
-    let magA = 0;
-    let magB = 0;
-
-    for (const key of allKeys) {
-      const valA = freqA.get(key) || 0;
-      const valB = freqB.get(key) || 0;
-      dotProduct += valA * valB;
-      magA += valA * valA;
-      magB += valB * valB;
-    }
-
-    if (magA === 0 || magB === 0) return 0.0;
-
-    const cosine = dotProduct / (Math.sqrt(magA) * Math.sqrt(magB));
-    return Number((cosine * 100).toFixed(2));
   }
 
   public static computeClassSimilarityMatrix(
@@ -234,11 +304,61 @@ export class ASTPlagiarismEngine {
     const allPairs: PairwisePlagiarismResult[] = [];
     let pairsCount = 0;
 
+    // 1. Dynamic IDF: Phát hiện các fingerprint boilerplate phổ biến cả lớp
+    const hashDocFrequency = new Map<string, number>();
+    for (const sub of submissions) {
+      const norm = ASTNormalizer.normalize(sub.sourceCode, (sub.language || 'java').toLowerCase());
+      const fps = WinnowingEngine.computeFingerprints(norm.tokens, options);
+      const uniqueInDoc = new Set(fps.map((f) => f.hashValue));
+      for (const h of uniqueInDoc) {
+        hashDocFrequency.set(h, (hashDocFrequency.get(h) || 0) + 1);
+      }
+    }
+
+    const commonTemplateHashes = new Set<string>();
+
+    // Tự động nhận diện bài nộp của Thầy giáo / Giảng viên làm Template chuẩn
+    for (const sub of submissions) {
+      const name = (sub.studentName || '').toLowerCase();
+      if (name.includes('thầy') || name.includes('teacher') || name.includes('giảng viên')) {
+        const norm = ASTNormalizer.normalize(sub.sourceCode, (sub.language || 'java').toLowerCase());
+        const fps = WinnowingEngine.computeFingerprints(norm.tokens, options);
+        for (const f of fps) {
+          commonTemplateHashes.add(f.hashValue);
+        }
+      }
+    }
+
+    if (N >= 6) {
+      // Chỉ khi lớp có >= 6 bài nộp và fingerprint xuất hiện ở >= 60% số bài (ít nhất 4 bài)
+      // thì mới được coi là boilerplate khung bài của cả lớp
+      const frequencyThreshold = Math.max(4, Math.ceil(N * 0.6));
+      for (const [h, count] of hashDocFrequency.entries()) {
+        if (count >= frequencyThreshold) {
+          commonTemplateHashes.add(h);
+        }
+      }
+    }
+
+    const enhancedOptions = {
+      ...(options || {}),
+      commonTemplateHashes,
+    };
+
+    const teacherBaselinePairs: PairwisePlagiarismResult[] = [];
+
+    // 2. So sánh từng cặp (i, j) với bộ lọc boilerplate
     for (let i = 0; i < N; i++) {
       similarityMatrix[i][i] = 100.0;
+      const nameI = (submissions[i].studentName || '').toLowerCase();
+      const isTeacherI = nameI.includes('thầy') || nameI.includes('teacher') || nameI.includes('giảng viên');
+
       for (let j = i + 1; j < N; j++) {
         pairsCount++;
-        const result = this.compareSubmissions(submissions[i], submissions[j], options);
+        const nameJ = (submissions[j].studentName || '').toLowerCase();
+        const isTeacherJ = nameJ.includes('thầy') || nameJ.includes('teacher') || nameJ.includes('giảng viên');
+
+        const result = this.compareSubmissions(submissions[i], submissions[j], enhancedOptions);
         result.studentNameA = submissions[i].studentName || submissions[i].submissionId;
         result.studentNameB = submissions[j].studentName || submissions[j].submissionId;
         result.studentIdA = submissions[i].studentId || submissions[i].submissionId;
@@ -249,13 +369,27 @@ export class ASTPlagiarismEngine {
         similarityMatrix[i][j] = result.similarityRate;
         similarityMatrix[j][i] = result.similarityRate;
         allPairs.push(result);
+
+        if (isTeacherI || isTeacherJ) {
+          teacherBaselinePairs.push(result);
+        }
       }
     }
 
-    const significantPairs = allPairs.filter((p) => p.similarityRate >= this.SUSPECTED_WARNING_THRESHOLD);
+    // Các cặp có nguy cơ vi phạm (chỉ giữa các sinh viên với nhau)
+    const significantPairs = allPairs.filter((p) => {
+      const isTeach = (p.studentNameA || '').toLowerCase().includes('thầy') ||
+                      (p.studentNameA || '').toLowerCase().includes('giảng viên') ||
+                      (p.studentNameA || '').toLowerCase().includes('teacher') ||
+                      (p.studentNameB || '').toLowerCase().includes('thầy') ||
+                      (p.studentNameB || '').toLowerCase().includes('giảng viên') ||
+                      (p.studentNameB || '').toLowerCase().includes('teacher');
+      if (isTeach) return false;
+      return p.similarityRate >= this.SUSPECTED_WARNING_THRESHOLD || p.isFlagged;
+    });
     const flaggedReports = significantPairs.sort((a, b) => b.similarityRate - a.similarityRate);
 
-    // Connected components clustering
+    // 3. Phân cụm Union-Find (LOẠI BỎ HOÀN TOÀN THẦY GIÁO)
     const parent = new Map<number, number>();
     for (let i = 0; i < N; i++) parent.set(i, i);
 
@@ -278,8 +412,21 @@ export class ASTPlagiarismEngine {
     };
 
     for (let i = 0; i < N; i++) {
+      const nameI = (submissions[i].studentName || '').toLowerCase();
+      const isTeacherI = nameI.includes('thầy') || nameI.includes('teacher') || nameI.includes('giảng viên');
+      if (isTeacherI) continue;
+
       for (let j = i + 1; j < N; j++) {
-        if (similarityMatrix[i][j] >= this.SUSPECTED_WARNING_THRESHOLD) {
+        const nameJ = (submissions[j].studentName || '').toLowerCase();
+        const isTeacherJ = nameJ.includes('thầy') || nameJ.includes('teacher') || nameJ.includes('giảng viên');
+        if (isTeacherJ) continue;
+
+        const pair = allPairs.find(
+          (p) =>
+            (p.submissionAId === submissions[i].submissionId && p.submissionBId === submissions[j].submissionId) ||
+            (p.submissionAId === submissions[j].submissionId && p.submissionBId === submissions[i].submissionId),
+        );
+        if (pair?.isFlagged) {
           union(i, j);
         }
       }
@@ -287,6 +434,10 @@ export class ASTPlagiarismEngine {
 
     const componentMap = new Map<number, number[]>();
     for (let i = 0; i < N; i++) {
+      const nameI = (submissions[i].studentName || '').toLowerCase();
+      const isTeacherI = nameI.includes('thầy') || nameI.includes('teacher') || nameI.includes('giảng viên');
+      if (isTeacherI) continue; // Không đưa thầy vào component đạo văn
+
       const r = find(i);
       if (!componentMap.has(r)) componentMap.set(r, []);
       componentMap.get(r)!.push(i);
@@ -311,6 +462,12 @@ export class ASTPlagiarismEngine {
           for (let b = a + 1; b < memberIndices.length; b++) {
             const idxA = memberIndices[a];
             const idxB = memberIndices[b];
+            const nameA = (submissions[idxA].studentName || '').toLowerCase();
+            const nameB = (submissions[idxB].studentName || '').toLowerCase();
+            const isTeacher = nameA.includes('thầy') || nameA.includes('giảng viên') || nameA.includes('teacher') ||
+                              nameB.includes('thầy') || nameB.includes('giảng viên') || nameB.includes('teacher');
+            if (isTeacher) continue;
+
             const subAId = submissions[idxA].submissionId;
             const subBId = submissions[idxB].submissionId;
             const pairMatch = allPairs.find(
@@ -327,9 +484,11 @@ export class ASTPlagiarismEngine {
 
         clusterPairs.sort((a, b) => b.similarityRate - a.similarityRate);
 
+        const hasConfirmedZero = clusterPairs.some((p) => p.status === 'FLAGGED_PLAGIARISM');
+        const hasFlagged = clusterPairs.some((p) => p.status === 'FLAGGED_HIGH' || p.status === 'FLAGGED_PLAGIARISM');
         let riskLevel: PlagiarismCluster['riskLevel'] = 'WARNING';
-        if (maxSim >= this.CONFIRMED_ZERO_THRESHOLD) riskLevel = 'CONFIRMED_ZERO';
-        else if (maxSim >= this.PLAGIARISM_THRESHOLD) riskLevel = 'FLAGGED';
+        if (hasConfirmedZero) riskLevel = 'CONFIRMED_ZERO';
+        else if (hasFlagged) riskLevel = 'FLAGGED';
 
         clusters.push({
           clusterId: clusterIdx,
@@ -415,6 +574,7 @@ export class ASTPlagiarismEngine {
       similarityMatrix,
       flaggedReports,
       clusters,
+      teacherBaselinePairs,
       independentSubmissions,
       crossClusterIndependence,
       totalExecutionTimeMs: Date.now() - startTime,

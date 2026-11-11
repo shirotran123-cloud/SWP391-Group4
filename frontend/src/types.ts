@@ -62,6 +62,9 @@ export interface PlagiarismMatch {
   status?: string;
   studentAName?: string;
   studentAId?: string;
+  matchedQuirks?: Array<{ type: string; signature: string; description: string; lineA?: number; lineB?: number }>;
+  boilerplateFingerprintsFiltered?: number;
+  isShortSubmission?: boolean;
 }
 
 export interface PlagiarismPairItem {
@@ -81,6 +84,14 @@ export interface PlagiarismPairItem {
   jaccardSimilarity?: number;
   containment?: number;
   language?: string;
+  matchedQuirks?: Array<{ type: string; signature: string; description: string; lineA?: number; lineB?: number }>;
+  matchedTokensJson?: {
+    matchedSegments?: Array<{ lineRangeA: { start: number; end: number }; lineRangeB: { start: number; end: number } }>;
+    matchedQuirks?: Array<{ type: string; signature: string; description: string; lineA?: number; lineB?: number }>;
+    quirkCount?: number;
+    boilerplateFingerprintsFiltered?: number;
+    isShortSubmission?: boolean;
+  };
 }
 
 export interface PlagiarismCluster {
@@ -120,6 +131,7 @@ export interface PlagiarismScanResultData {
   similarityMatrix?: number[][];
   flaggedReports?: any[];
   clusters: PlagiarismCluster[];
+  teacherBaselinePairs?: PlagiarismPairItem[];
   independentSubmissions: Array<{ id: string; name?: string; studentId?: string }>;
   crossClusterIndependence: CrossClusterIndependence[];
   totalExecutionTimeMs?: number;

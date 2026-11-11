@@ -181,6 +181,12 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
           matchedTokens: match.matchedTokens || [],
           jaccardSimilarity: match.jaccardSimilarity,
           containment: match.winnowingContainment,
+          matchedQuirks: match.matchedQuirks,
+          matchedTokensJson: {
+            matchedQuirks: match.matchedQuirks,
+            boilerplateFingerprintsFiltered: match.boilerplateFingerprintsFiltered,
+            isShortSubmission: match.isShortSubmission,
+          },
         };
         pairsMap.set(pId, item);
       }
@@ -206,6 +212,12 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
               matchedTokens: m.matchedTokens || [],
               jaccardSimilarity: m.jaccardSimilarity,
               containment: m.winnowingContainment,
+              matchedQuirks: m.matchedQuirks,
+              matchedTokensJson: {
+                matchedQuirks: m.matchedQuirks,
+                boilerplateFingerprintsFiltered: m.boilerplateFingerprintsFiltered,
+                isShortSubmission: m.isShortSubmission,
+              },
             });
           }
         }
@@ -215,6 +227,28 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
     const list = Array.from(pairsMap.values()).sort((a, b) => b.similarityRate - a.similarityRate);
     return list;
   }, [clusters, initialPair, match, similarMatches, studentAName]);
+
+  // Phân loại các cặp so với Thầy giáo (Teacher Baseline) và các cặp giữa Sinh viên với nhau
+  const { teacherPairs, studentPairs } = useMemo(() => {
+    const tPairs: PlagiarismPairItem[] = [];
+    const sPairs: PlagiarismPairItem[] = [];
+
+    for (const p of allAvailablePairs) {
+      const nA = (p.studentNameA || '').toLowerCase();
+      const nB = (p.studentNameB || '').toLowerCase();
+      const isTeacher =
+        nA.includes('thầy') || nA.includes('teacher') || nA.includes('giảng viên') ||
+        nB.includes('thầy') || nB.includes('teacher') || nB.includes('giảng viên');
+
+      if (isTeacher) {
+        tPairs.push(p);
+      } else {
+        sPairs.push(p);
+      }
+    }
+
+    return { teacherPairs: tPairs, studentPairs: sPairs };
+  }, [allAvailablePairs]);
 
   // Khởi tạo cặp hiển thị ban đầu khi mở modal
   useEffect(() => {
@@ -231,6 +265,17 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
 
     if (initialPair) {
       setSelectedPair(initialPair);
+      const isInitTeacher =
+        (initialPair.studentNameA || '').toLowerCase().includes('thầy') ||
+        (initialPair.studentNameB || '').toLowerCase().includes('thầy') ||
+        (initialPair.studentNameA || '').toLowerCase().includes('giảng viên') ||
+        (initialPair.studentNameB || '').toLowerCase().includes('giảng viên');
+
+      if (isInitTeacher) {
+        setActiveTabMode('TEACHER_BASELINE');
+        return;
+      }
+
       // Tìm xem initialPair thuộc cluster nào để active tab tương ứng
       const foundCl = clusters.find((c) =>
         c.pairs.some((p) => p.pairId === initialPair.pairId ||
@@ -241,36 +286,47 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
       return;
     }
 
-    if (allAvailablePairs.length > 0) {
+    if (studentPairs.length > 0) {
+      setSelectedPair(studentPairs[0]);
+    } else if (allAvailablePairs.length > 0) {
       setSelectedPair(allAvailablePairs[0]);
+      if (teacherPairs.length > 0) setActiveTabMode('TEACHER_BASELINE');
     }
-  }, [isOpen, initialClusterId, initialPair, clusters, allAvailablePairs]);
+  }, [isOpen, initialClusterId, initialPair, clusters, allAvailablePairs, studentPairs, teacherPairs]);
 
   // Cặp đang được chọn đối chiếu
   const currentPair: PlagiarismPairItem | null = useMemo(() => {
     if (activeTabMode === 'CROSS_CHECK' && customStudentAId && customStudentBId) {
-      // Tìm submission A và submission B trong allSubmissions
       const subA = allSubmissions.find((s) => s.id === customStudentAId || s.studentId === customStudentAId);
       const subB = allSubmissions.find((s) => s.id === customStudentBId || s.studentId === customStudentBId);
 
       const codeA = subA?.sourceCode || '// Không có mã nguồn bài A';
       const codeB = subB?.sourceCode || '// Không có mã nguồn bài B';
 
-      // Tính nhanh kết quả đối soát bằng ASTPlagiarismEngine embedded
       let sim = 0;
+      let status: PlagiarismPairItem['status'] = 'CLEAN';
+      let isFlagged = false;
       let matchedTokens: Array<{ lineA: [number, number]; lineB: [number, number] }> = [];
+      let matchedQuirks: PlagiarismPairItem['matchedQuirks'];
+      let matchedTokensJson: PlagiarismPairItem['matchedTokensJson'];
       try {
         const res = ASTPlagiarismEngine.compareSubmissions(
-          { submissionId: subA?.id || 'A', sourceCode: codeA, language: subA?.language || 'python' },
-          { submissionId: subB?.id || 'B', sourceCode: codeB, language: subB?.language || 'python' }
+          { submissionId: subA?.id || 'A', sourceCode: codeA, language: subA?.language || 'python', studentName: subA?.name },
+          { submissionId: subB?.id || 'B', sourceCode: codeB, language: subB?.language || 'python', studentName: subB?.name }
         );
         sim = res.similarityRate;
+        status = res.status;
+        isFlagged = res.isFlagged;
         matchedTokens = res.matchedTokensJson?.matchedSegments?.map((s) => ({
           lineA: [s.lineRangeA.start, s.lineRangeA.end],
           lineB: [s.lineRangeB.start, s.lineRangeB.end],
         })) || [];
+        matchedQuirks = res.matchedQuirks || res.matchedTokensJson?.matchedQuirks;
+        matchedTokensJson = res.matchedTokensJson;
       } catch {
-        sim = 8.5;
+        sim = 0;
+        status = 'CLEAN';
+        isFlagged = false;
       }
 
       return {
@@ -282,38 +338,71 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
         studentIdA: subA?.studentId || customStudentAId,
         studentIdB: subB?.studentId || customStudentBId,
         similarityRate: sim,
-        status: sim >= 80 ? 'FLAGGED_PLAGIARISM' : sim >= 70 ? 'FLAGGED_HIGH' : sim >= 50 ? 'SUSPECTED' : 'CLEAN',
-        isFlagged: sim >= 70,
+        status,
+        isFlagged,
         sourceCodeA: codeA,
         sourceCodeB: codeB,
         matchedTokens,
+        matchedQuirks,
+        matchedTokensJson,
       };
     }
 
-    return selectedPair || allAvailablePairs[0] || null;
-  }, [activeTabMode, customStudentAId, customStudentBId, selectedPair, allAvailablePairs, allSubmissions]);
+    return selectedPair || (activeTabMode === 'TEACHER_BASELINE' ? teacherPairs[0] : studentPairs[0]) || allAvailablePairs[0] || null;
+  }, [activeTabMode, customStudentAId, customStudentBId, selectedPair, allAvailablePairs, studentPairs, teacherPairs, allSubmissions]);
+
+  // Lọc sạch tuyệt đối Thầy giáo ra khỏi các cụm nhóm đạo văn (chỉ giữ sinh viên vi phạm chép nhau)
+  const cleanedClusters = useMemo<PlagiarismCluster[]>(() => {
+    if (!clusters || clusters.length === 0) return [];
+    return clusters
+      .map((cl) => {
+        const cleanStudents = cl.students.filter((st) => {
+          const sName = (st.studentName || '').toLowerCase();
+          return !sName.includes('thầy') && !sName.includes('giảng viên') && !sName.includes('teacher');
+        });
+        const cleanPairs = cl.pairs.filter((p) => {
+          const nA = (p.studentNameA || '').toLowerCase();
+          const nB = (p.studentNameB || '').toLowerCase();
+          return (
+            !nA.includes('thầy') && !nA.includes('giảng viên') && !nA.includes('teacher') &&
+            !nB.includes('thầy') && !nB.includes('giảng viên') && !nB.includes('teacher')
+          );
+        });
+        return {
+          ...cl,
+          studentCount: cleanStudents.length,
+          students: cleanStudents,
+          pairs: cleanPairs,
+          maxSimilarity: cleanPairs.length > 0 ? Math.max(...cleanPairs.map((p) => p.similarityRate)) : 0,
+        };
+      })
+      .filter((cl) => cl.students.length >= 2 && cl.pairs.length >= 1);
+  }, [clusters]);
 
   // Lấy các cặp thuộc Tab hiện tại
   const pairsInActiveTab: PlagiarismPairItem[] = useMemo(() => {
+    if (activeTabMode === 'TEACHER_BASELINE') {
+      return teacherPairs;
+    }
     if (activeTabMode === 'ALL') {
-      return allAvailablePairs;
+      return studentPairs.length > 0 ? studentPairs : allAvailablePairs;
     }
     const clId = parseInt(activeTabMode, 10);
     if (!isNaN(clId)) {
-      const found = clusters.find((c) => c.clusterId === clId);
+      const found = cleanedClusters.find((c) => c.clusterId === clId);
       return found ? found.pairs : [];
     }
     return [];
-  }, [activeTabMode, allAvailablePairs, clusters]);
+  }, [activeTabMode, allAvailablePairs, studentPairs, teacherPairs, cleanedClusters]);
 
   // Cụm hiện tại nếu activeTabMode là một số
   const currentClusterObj = useMemo(() => {
     const clId = parseInt(activeTabMode, 10);
     if (!isNaN(clId)) {
-      return clusters.find((c) => c.clusterId === clId) || null;
+      return cleanedClusters.find((c) => c.clusterId === clId) || null;
     }
     return null;
-  }, [activeTabMode, clusters]);
+  }, [activeTabMode, cleanedClusters]);
 
   if (!mounted || !currentPair) return null;
 
@@ -327,14 +416,53 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
     : { name: currentPair.studentNameB, id: currentPair.studentIdB, subId: currentPair.submissionBId, code: currentPair.sourceCodeB };
 
   const similarity = currentPair.similarityRate || 0;
-  const isSevereZeroScore = similarity >= PLAGIARISM_THRESHOLDS.CONFIRMED_ZERO; // >= 80%
-  const isFlaggedPlagiarism = similarity >= PLAGIARISM_THRESHOLDS.FLAGGED_FRAUD; // >= 70%
-  const isWarningSuspected = similarity >= PLAGIARISM_THRESHOLDS.WARNING_SUSPECTED; // >= 50%
+  const nameA = (displayStudentA.name || '').toLowerCase();
+  const nameB = (displayStudentB.name || '').toLowerCase();
+  const isTeacherMatch =
+    nameA.includes('thầy') || nameA.includes('teacher') || nameA.includes('giảng viên') ||
+    nameB.includes('thầy') || nameB.includes('teacher') || nameB.includes('giảng viên');
+
+  // Đếm số dòng thực và lấy dấu vết trình bày bổ trợ từ AST Engine
+  const codeL = displayStudentA.code || '';
+  const codeR = displayStudentB.code || '';
+  const linesCountA = codeL.split('\n').filter((l) => l.trim().length > 0).length;
+  const linesCountB = codeR.split('\n').filter((l) => l.trim().length > 0).length;
+  const maxLines = Math.max(linesCountA, linesCountB);
+
+  const rawMatchedQuirks = (currentPair.matchedQuirks || currentPair.matchedTokensJson?.matchedQuirks || []) as Array<{
+    type: string;
+    signature: string;
+    description: string;
+    lineA?: number;
+    lineB?: number;
+  }>;
+  const quirkCount = rawMatchedQuirks.length;
+  const boilerplateFilteredCount = currentPair.matchedTokensJson?.boilerplateFingerprintsFiltered ?? 0;
+  const hasStrongFormattingEvidence = similarity >= PLAGIARISM_THRESHOLDS.FLAGGED_FRAUD && quirkCount >= 2;
+  const isShortSubmission =
+    currentPair.matchedTokensJson?.isShortSubmission ?? (maxLines > 0 && maxLines <= 20);
+
+  // Bài quá ngắn (<= 20 dòng thực, không đủ dấu vết trình bày trùng khớp):
+  // Đưa vào diện NGHI VẤN chờ Giảng viên kiểm tra trực tiếp, không auto-0đ.
+  const isShortPendingReview =
+    !isTeacherMatch &&
+    similarity >= PLAGIARISM_THRESHOLDS.FLAGGED_FRAUD &&
+    currentPair.status !== 'FLAGGED_PLAGIARISM' &&
+    currentPair.status !== 'FLAGGED_HIGH' &&
+    !hasStrongFormattingEvidence &&
+    (currentPair.status === 'SUSPECTED' || isShortSubmission);
+
   const matchedTokensCount =
     currentPair.matchedTokens?.length ||
     (currentPair as any).matchedTokensJson?.matchedSegments?.length ||
     (currentPair as any).commonFingerprintsCount ||
     (similarity > 0 ? Math.max(1, Math.round(similarity / 8)) : 0);
+
+  const isMicroMatch = matchedTokensCount <= 4 && !currentPair.isFlagged && !isTeacherMatch;
+
+  const isSevereZeroScore = !isTeacherMatch && !isMicroMatch && !isShortPendingReview && similarity >= PLAGIARISM_THRESHOLDS.CONFIRMED_ZERO; // >= 80%
+  const isFlaggedPlagiarism = !isTeacherMatch && !isMicroMatch && !isShortPendingReview && similarity >= PLAGIARISM_THRESHOLDS.FLAGGED_FRAUD; // >= 70%
+  const isWarningSuspected = !isTeacherMatch && !isMicroMatch && (isShortPendingReview || similarity >= PLAGIARISM_THRESHOLDS.WARNING_SUSPECTED); // >= 50%
 
   const diffLanguage = resolveLanguage(language, displayStudentA.code, displayStudentB.code);
 
@@ -344,7 +472,54 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
     setTimeout(() => setCopiedId(false), 2000);
   };
 
-  const getStatusBadge = (rate: number) => {
+  const getStatusBadge = (rate: number, pairOverride?: PlagiarismPairItem) => {
+    const pNameA = (pairOverride ? pairOverride.studentNameA : displayStudentA.name || '').toLowerCase();
+    const pNameB = (pairOverride ? pairOverride.studentNameB : displayStudentB.name || '').toLowerCase();
+    const pIsTeacher =
+      pNameA.includes('thầy') || pNameA.includes('teacher') || pNameA.includes('giảng viên') ||
+      pNameB.includes('thầy') || pNameB.includes('teacher') || pNameB.includes('giảng viên');
+
+    const pIsShortPending = pairOverride
+      ? !pIsTeacher && rate >= PLAGIARISM_THRESHOLDS.FLAGGED_FRAUD && pairOverride.status === 'SUSPECTED'
+      : isShortPendingReview;
+
+    const pIsMicro = pairOverride
+      ? (pairOverride.matchedTokens?.length || 0) <= 4 && !pairOverride.isFlagged && !pIsTeacher && rate < PLAGIARISM_THRESHOLDS.FLAGGED_FRAUD
+      : isMicroMatch;
+
+    if (pIsTeacher) {
+      return {
+        bg: '#ecfdf5',
+        border: '#10b981',
+        text: '#047857',
+        badgeClass: 'chip-good',
+        label: `MÃ NGUỒN MẪU GIẢNG VIÊN (KHÔNG PHẠT)`,
+        shortLabel: 'CODE MẪU THẦY',
+        icon: CheckCircle2,
+      };
+    }
+    if (pIsShortPending) {
+      return {
+        bg: '#fef3c7',
+        border: '#f59e0b',
+        text: '#b45309',
+        badgeClass: 'chip-warn',
+        label: `NGHI VẤN · BÀI QUÁ NGẮN ≤ 20 DÒNG (${rate.toFixed(1)}% - CHỜ DUYỆT)`,
+        shortLabel: 'CHỜ DUYỆT (≤20 DÒNG)',
+        icon: AlertTriangle,
+      };
+    }
+    if (pIsMicro) {
+      return {
+        bg: '#f0fdf4',
+        border: '#86efac',
+        text: '#15803d',
+        badgeClass: 'chip-good',
+        label: `TƯƠNG ĐỒNG THẤP (${rate.toFixed(1)}% - ĐỘC LẬP)`,
+        shortLabel: 'ĐỘC LẬP',
+        icon: CheckCircle2,
+      };
+    }
     if (rate >= PLAGIARISM_THRESHOLDS.CONFIRMED_ZERO) {
       return {
         bg: '#fee2e2',
@@ -428,34 +603,29 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <h2 style={{ fontSize: '17px', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
+                Đối Sánh Mã Nguồn: <span style={{ color: 'var(--blue-600)' }}>{displayStudentA.name}</span> ⇔ <span style={{ color: badge.text }}>{displayStudentB.name}</span>
+              </h2>
               <span
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
+                  gap: '5px',
+                  padding: '2px 8px',
+                  borderRadius: '5px',
+                  fontSize: '11.5px',
                   fontWeight: 800,
                   backgroundColor: badge.bg,
                   color: badge.text,
                   border: `1px solid ${badge.border}`,
-                  letterSpacing: '0.02em',
                 }}
               >
-                <BadgeIcon size={14} /> {badge.label}
-              </span>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Quy chế xử lý vi phạm: <strong>≥50%</strong> Cảnh báo · <strong>≥70%</strong> Gắn cờ · <strong>≥80%</strong> Hủy điểm (0.0đ)
+                <BadgeIcon size={13} /> {similarity.toFixed(1)}% · {badge.label}
               </span>
             </div>
-
-            <h2 style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)', margin: '2px 0' }}>
-              Chia 2 Màn Hình Đối Sánh Đạo Văn: {displayStudentA.name} ⇔ {displayStudentB.name}
-            </h2>
-            <p style={{ fontSize: '12px', color: 'var(--text-dim)', margin: 0 }}>
-              Bảo mật thông tin: Báo cáo chỉ dành cho Giảng viên / Ban chủ nhiệm bộ môn. Phân cụm kiểm định theo từng nhóm nhỏ độc lập.
+            <p style={{ fontSize: '11.5px', color: 'var(--text-dim)', margin: '2px 0 0 0' }}>
+              Bảo mật thông tin: Báo cáo chỉ dành cho Giảng viên / Ban chủ nhiệm bộ môn · Phân tích tương đồng cây cú pháp AST & kiểm định lỗi dị biệt
             </p>
           </div>
 
@@ -508,7 +678,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
             Phân Cụm Đạo Văn:
           </span>
 
-          {/* Tab 1: Tất Cả Cặp */}
+          {/* Tab 1: Tất Cả Cặp Vi Phạm (chỉ giữa sinh viên với nhau) */}
           <button
             type="button"
             onClick={() => setActiveTabMode('ALL')}
@@ -525,13 +695,48 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
               whiteSpace: 'nowrap',
             }}
           >
-            Tất Cả Cặp Vi Phạm ({allAvailablePairs.length})
+            Tất Cả Cặp Vi Phạm ({studentPairs.length})
           </button>
 
-          {/* Các Tab cho từng Nhóm Đạo Văn nhỏ (Clusters) */}
-          {clusters.map((cl) => {
+          {/* Tab Riêng Biệt: Đối Chiếu Code Mẫu Giảng Viên (Baseline) */}
+          {teacherPairs.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTabMode('TEACHER_BASELINE');
+                if (teacherPairs.length > 0) {
+                  setSelectedPair(teacherPairs[0]);
+                }
+              }}
+              style={{
+                padding: '5px 12px',
+                borderRadius: '6px',
+                border: '1px solid',
+                borderColor: activeTabMode === 'TEACHER_BASELINE' ? '#10b981' : '#a7f3d0',
+                backgroundColor: activeTabMode === 'TEACHER_BASELINE' ? '#ecfdf5' : '#ffffff',
+                color: '#047857',
+                fontSize: '12px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <CheckCircle2 size={13} color="#10b981" />
+              <span>Khớp Code Mẫu Giảng Viên ({teacherPairs.length})</span>
+            </button>
+          )}
+
+          {/* Các Tab cho từng Nhóm Đạo Văn nhỏ (Clusters) - LỌC SẠCH HOÀN TOÀN THẦY GIÁO */}
+          {cleanedClusters.map((cl) => {
             const isTabActive = activeTabMode === String(cl.clusterId);
-            const isSevere = cl.maxSimilarity >= 80;
+            const isSevere = cl.riskLevel
+              ? cl.riskLevel === 'CONFIRMED_ZERO'
+              : cl.pairs.some((p) => p.status === 'FLAGGED_PLAGIARISM' || (p.status !== 'SUSPECTED' && p.status !== 'FLAGGED_HIGH' && p.similarityRate >= 80));
+            const isFlaggedTab = !isSevere && cl.riskLevel === 'FLAGGED';
+            const tabAccent = isSevere ? '#dc2626' : isFlaggedTab ? '#ea580c' : '#d97706';
             return (
               <button
                 key={cl.clusterId}
@@ -547,12 +752,12 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
                   borderRadius: '6px',
                   border: '1px solid',
                   borderColor: isTabActive
-                    ? (isSevere ? '#ef4444' : '#ea580c')
-                    : (isSevere ? '#fecaca' : '#fed7aa'),
+                    ? tabAccent
+                    : (isSevere ? '#fecaca' : isFlaggedTab ? '#fed7aa' : '#fde68a'),
                   backgroundColor: isTabActive
-                    ? (isSevere ? '#fee2e2' : '#ffedd5')
+                    ? (isSevere ? '#fee2e2' : isFlaggedTab ? '#ffedd5' : '#fef3c7')
                     : '#ffffff',
-                  color: isSevere ? '#991b1b' : '#9a3412',
+                  color: isSevere ? '#991b1b' : isFlaggedTab ? '#9a3412' : '#92400e',
                   fontSize: '12px',
                   fontWeight: 700,
                   cursor: 'pointer',
@@ -568,7 +773,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
                     fontSize: '11px',
                     padding: '1px 5px',
                     borderRadius: '4px',
-                    backgroundColor: isSevere ? '#dc2626' : '#ea580c',
+                    backgroundColor: tabAccent,
                     color: '#ffffff',
                   }}
                 >
@@ -636,7 +841,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
               {pairsInActiveTab.map((p, idx) => {
                 const isSelected = selectedPair?.pairId === p.pairId ||
                   ([selectedPair?.submissionAId, selectedPair?.submissionBId].sort().join('_') === [p.submissionAId, p.submissionBId].sort().join('_'));
-                const pBadge = getStatusBadge(p.similarityRate);
+                const pBadge = getStatusBadge(p.similarityRate, p);
                 return (
                   <button
                     key={`${p.pairId}_${idx}`}
@@ -653,6 +858,9 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
                           matchedTokens: p.matchedTokens || [],
                           status: p.status,
                           isFlagged: p.isFlagged,
+                          matchedQuirks: p.matchedQuirks || p.matchedTokensJson?.matchedQuirks,
+                          boilerplateFingerprintsFiltered: p.matchedTokensJson?.boilerplateFingerprintsFiltered,
+                          isShortSubmission: p.matchedTokensJson?.isShortSubmission,
                         });
                       }
                     }}
@@ -692,9 +900,14 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
             </div>
 
             {/* Thông tin giải thích nhóm nhỏ */}
-            {currentClusterObj && (
+            {currentClusterObj && !isTeacherMatch && (
               <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontStyle: 'italic', marginLeft: 'auto', whiteSpace: 'nowrap' }}>
                 💡 {currentClusterObj.studentCount} sinh viên sao chép mã nguồn chéo trong nhóm
+              </span>
+            )}
+            {isTeacherMatch && (
+              <span style={{ fontSize: '11.5px', color: '#047857', fontWeight: 600, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                🌿 Đối chiếu chuẩn mực với Mã nguồn mẫu của Giảng viên (Baseline Reference)
               </span>
             )}
           </div>
@@ -790,159 +1003,196 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
           </div>
         )}
 
-        {/* METRICS STRIP: CẢNH BÁO TỔNG QUAN */}
+        {/* THANH TÓM TẮT TRỰC QUAN TINH GỌN (REFINED STATUS STRIP) */}
         <div
           style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '8px',
-            marginBottom: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            marginBottom: '8px',
+            padding: '8px 14px',
+            backgroundColor: badge.bg,
+            border: `1px solid ${badge.border}`,
+            borderRadius: '8px',
+            flexWrap: 'wrap',
           }}
         >
-          {/* Card 1: Similarity Rate */}
-          <div
-            style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              backgroundColor: badge.bg,
-              border: `1px solid ${badge.border}`,
-            }}
-          >
-            <span style={{ fontSize: '11px', color: badge.text, textTransform: 'uppercase', fontWeight: 700 }}>
-              Độ Tương Đồng Đang Đối Chiếu
-            </span>
-            <div style={{ fontSize: '20px', fontWeight: 800, color: badge.text, marginTop: '1px' }}>
-              {similarity.toFixed(1)}%
+          {/* Cụm thông số cốt lõi */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            {/* Tỷ lệ tương đồng */}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: badge.text, textTransform: 'uppercase' }}>
+                {isTeacherMatch ? 'Mức Khớp Code Mẫu:' : 'Độ Tương Đồng:'}
+              </span>
+              <span style={{ fontSize: '20px', fontWeight: 900, color: badge.text }}>
+                {similarity.toFixed(1)}%
+              </span>
+            </div>
+
+            <div style={{ width: '1px', height: '18px', backgroundColor: badge.border }} />
+
+            {/* Phán quyết liêm chính */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                Quy Chế Liêm Chính:
+              </span>
+              <span
+                style={{
+                  fontSize: '11.5px',
+                  fontWeight: 800,
+                  color: badge.text,
+                  padding: '2px 8px',
+                  borderRadius: '4px',
+                  backgroundColor: '#ffffff',
+                  border: `1px solid ${badge.border}`,
+                }}
+              >
+                {isTeacherMatch
+                  ? 'BẢO LƯU ĐIỂM (CODE THẦY)'
+                  : isShortPendingReview
+                  ? 'CHỜ GIẢNG VIÊN KIỂM TRA'
+                  : isMicroMatch
+                  ? 'AN TOÀN (TRÙNG THẤP)'
+                  : isSevereZeroScore
+                  ? 'HỦY ĐIỂM (0.0 / 10.0)'
+                  : isFlaggedPlagiarism
+                  ? 'GẮN CỜ GIAN LẬN'
+                  : isWarningSuspected
+                  ? 'CẢNH BÁO NGHI VẤN'
+                  : 'AN TOÀN (<50%)'}
+              </span>
+            </div>
+
+            <div style={{ width: '1px', height: '18px', backgroundColor: badge.border }} />
+
+            {/* Đoạn trùng khớp */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                Trùng Khớp:
+              </span>
+              <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-main)' }}>
+                {matchedTokensCount} đoạn AST
+              </span>
+            </div>
+
+            <div style={{ width: '1px', height: '18px', backgroundColor: badge.border }} />
+
+            {/* Cụm nhóm */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                Phân Nhóm:
+              </span>
+              <span style={{ fontSize: '12px', fontWeight: 800, color: isTeacherMatch ? '#047857' : 'var(--blue-600)' }}>
+                {isTeacherMatch ? 'Mã Nguồn Mẫu Thầy' : currentClusterObj ? currentClusterObj.clusterName : (similarity < 50 ? 'Độc lập' : 'Cụm toàn lớp')}
+              </span>
             </div>
           </div>
 
-          {/* Card 2: Quy tắc BR-03 */}
-          <div
-            style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(11, 18, 32, 0.03)',
-              border: '1px solid var(--border-soft)',
-            }}
-          >
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-              Xử Lý Vi Phạm Đạo Văn
-            </span>
-            <div style={{ fontSize: '13px', fontWeight: 800, color: badge.text, marginTop: '3px' }}>
-              {isSevereZeroScore
-                ? 'HỦY ĐIỂM: CHẤM 0.0 / 10.0'
-                : isFlaggedPlagiarism
-                ? 'GẮN CỜ ĐẠO VĂN (TRỪ ĐIỂM)'
-                : isWarningSuspected
-                ? 'ĐƯA VÀO DANH SÁCH CẢNH BÁO'
-                : 'MÃ NGUỒN AN TOÀN (<50%)'}
-            </div>
-          </div>
-
-          {/* Card 3: Matched Segments */}
-          <div
-            style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(11, 18, 32, 0.03)',
-              border: '1px solid var(--border-soft)',
-            }}
-          >
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700 }}>
-              Đoạn Mã AST Trùng Khớp
-            </span>
-            <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
-              {matchedTokensCount} đoạn trùng
-            </div>
-          </div>
-
-          {/* Card 4: Nhóm Đạo Văn */}
-          <div
-            style={{
-              padding: '8px 12px',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(59, 130, 246, 0.05)',
-              border: '1px solid rgba(59, 130, 246, 0.25)',
-            }}
-          >
-            <span style={{ fontSize: '11px', color: 'var(--blue-400)', textTransform: 'uppercase', fontWeight: 700 }}>
-              Phân Nhóm Liên Quan
-            </span>
-            <div style={{ fontSize: '13.5px', fontWeight: 800, color: 'var(--blue-500)', marginTop: '3px' }}>
-              {currentClusterObj
-                ? `${currentClusterObj.clusterName}`
-                : similarity < 50
-                ? 'ĐỐI SOÁT ĐỘC LẬP (KHÔNG ĐẠO VĂN)'
-                : 'CỤM ĐẠO VĂN TOÀN LỚP'}
-            </div>
-          </div>
+          {/* Nhãn trạng thái ngắn gọn */}
+          <span style={{ fontSize: '11.5px', color: badge.text, fontWeight: 600 }}>
+            {isTeacherMatch
+              ? '✓ Trùng khớp với bài nộp / code mẫu của Giảng viên. Tự động bảo lưu điểm.'
+              : isShortPendingReview
+              ? '⚡ Bài quá ngắn (≤ 20 dòng) — chưa đủ dữ liệu tự triển khai để kết tội tự động, Giảng viên kiểm tra trực tiếp.'
+              : isMicroMatch
+              ? '✓ Độ tương đồng đoạn nhỏ (≤ 4 đoạn AST). Chưa có dấu hiệu sao chép.'
+              : isSevereZeroScore
+              ? '⚠️ Tương đồng ≥ 80%: Vi phạm liêm chính học thuật nghiêm trọng'
+              : isFlaggedPlagiarism
+              ? '⚡ Tương đồng ≥ 70%: Nghi vấn sao chép cao, cần xem xét'
+              : isWarningSuspected
+              ? 'ℹ️ Tương đồng 50–70%: Cấu trúc logic có phần tương đồng (nên đối chiếu thêm)'
+              : '✓ Hai bài làm độc lập, không có dấu hiệu sao chép'}
+          </span>
         </div>
 
-        {/* THÔNG BÁO QUY CHẾ / XÁC THỰC ĐỘC LẬP CHÉO */}
-        {similarity < 50 ? (
-          <div
-            style={{
-              padding: '8px 14px',
-              borderRadius: '6px',
-              backgroundColor: '#ecfdf5',
-              border: '1px solid #10b981',
-              color: '#065f46',
-              fontSize: '12px',
-              fontWeight: 600,
-              marginBottom: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <CheckCircle2 size={16} color="#059669" style={{ flexShrink: 0 }} />
-            <span>
-              <strong>XÁC THỰC TÍNH ĐỘC LẬP:</strong> Độ tương đồng chỉ đạt <strong>{similarity.toFixed(1)}% (&lt; 50.0%)</strong>. Cấu trúc cây cú pháp AST và fingerprints của hai bài hoàn toàn khác nhau. Xác nhận <strong>KHÔNG CÓ ĐẠO VĂN</strong> giữa 2 sinh viên/nhóm này.
-            </span>
-          </div>
-        ) : isSevereZeroScore ? (
-          <div
-            style={{
-              padding: '8px 14px',
-              borderRadius: '6px',
-              backgroundColor: '#fee2e2',
-              border: '1px solid #ef4444',
-              color: '#991b1b',
-              fontSize: '12px',
-              fontWeight: 600,
-              marginBottom: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <AlertOctagon size={16} color="#b91c1c" style={{ flexShrink: 0 }} />
-            <span>
-              <strong>QUY CHẾ LIÊM CHÍNH (ZERO-TOLERANCE):</strong> Phát hiện đạo văn <strong>{similarity.toFixed(1)}% (≥ 80.0%)</strong> giữa <strong>{displayStudentA.name}</strong> và <strong>{displayStudentB.name}</strong>. Cả hai bài nộp bị <strong>HỦY TOÀN BỘ ĐIỂM SỐ VỀ 0.0 ĐIỂM</strong> ngay lập tức.
-            </span>
-          </div>
-        ) : isFlaggedPlagiarism ? (
-          <div
-            style={{
-              padding: '8px 14px',
-              borderRadius: '6px',
-              backgroundColor: '#ffedd5',
-              border: '1px solid #f97316',
-              color: '#9a3412',
-              fontSize: '12px',
-              fontWeight: 600,
-              marginBottom: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <ShieldAlert size={16} color="#c2410c" style={{ flexShrink: 0 }} />
-            <span>
-              <strong>CẢNH BÁO GẮN CỜ ĐẠO VĂN:</strong> Tỷ lệ tương đồng <strong>{similarity.toFixed(1)}% (≥ 70.0%)</strong> vượt ngưỡng quy định. Đã gắn cờ đạo văn. Giảng viên vui lòng kiểm tra phân đoạn bôi đỏ/xanh đối chiếu 2 bên.
-            </span>
-          </div>
-        ) : null}
+        {/* HỘP CHỈ BÁO DẤU VẾT TRÌNH BÀY & DYNAMIC IDF / TEACHER BASELINE */}
+        {(() => {
+          if (isShortPendingReview) {
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '8px',
+                  padding: '8px 14px',
+                  backgroundColor: '#fffbeb',
+                  border: '1px solid #f59e0b',
+                  borderRadius: '8px',
+                  fontSize: '12px',
+                  color: '#92400e',
+                }}
+              >
+                <AlertTriangle size={16} color="#d97706" style={{ flexShrink: 0 }} />
+                <div>
+                  <strong style={{ color: '#b45309' }}>Bài quá ngắn ({maxLines} dòng ≤ 20) — Chờ Giảng viên kiểm tra trực tiếp:</strong> Tổng dung lượng mã nguồn thực quá ngắn nên chưa đủ phần tự triển khai để áp phạt tự động 0 điểm (quy chế liêm chính học thuật). Độ tương đồng AST đạt {similarity.toFixed(1)}%{boilerplateFilteredCount > 0 ? ` (đã lọc ${boilerplateFilteredCount} dấu vân tay khung mẫu)` : ''}; giảng viên vui lòng đối chiếu trực tiếp hai bài nộp.
+                </div>
+              </div>
+            );
+          }
+
+          const nameL = displayStudentA.name || 'Bên Trái';
+          const nameR = displayStudentB.name || 'Bên Phải';
+          const traces: string[] = [];
+
+          if (isTeacherMatch) {
+            const studentName =
+              nameL.toLowerCase().includes('thầy') || nameL.toLowerCase().includes('giảng viên') || nameL.toLowerCase().includes('teacher')
+                ? nameR
+                : nameL;
+            traces.push(
+              `Đối chiếu với Mã nguồn mẫu của Giảng viên (Teacher Baseline): phần khung mẫu do Giảng viên cung cấp được loại trừ khỏi ma trận vi phạm của ${studentName}.`,
+            );
+          } else {
+            for (const q of rawMatchedQuirks) {
+              const lineL = isSwapped ? q.lineB : q.lineA;
+              const lineR = isSwapped ? q.lineA : q.lineB;
+              const posInfo = lineL && lineR ? ` (${nameL}: dòng ${lineL} ↔ ${nameR}: dòng ${lineR})` : '';
+              traces.push(`${q.description}${posInfo}`);
+            }
+
+            if (boilerplateFilteredCount > 0) {
+              traces.push(
+                `Dynamic IDF / Teacher Baseline đã lọc ${boilerplateFilteredCount} dấu vân tay khung bài chung cả lớp trước khi tính độ tương đồng.`,
+              );
+            }
+
+            if (rawMatchedQuirks.length === 0 && similarity >= 80) {
+              traces.push(
+                `Thuật toán và cấu trúc cây cú pháp AST trên ${maxLines} dòng code thực trùng lặp vượt ngưỡng quy chế liêm chính (${similarity.toFixed(1)}% ≥ 80%).`,
+              );
+            }
+          }
+
+          if (traces.length === 0) return null;
+
+          return (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                marginBottom: '8px',
+                padding: '6px 12px',
+                backgroundColor: isTeacherMatch ? '#f0fdf4' : '#fffbeb',
+                border: isTeacherMatch ? '1px solid #bbf7d0' : '1px solid #fde68a',
+                borderRadius: '6px',
+                fontSize: '11.5px',
+                color: isTeacherMatch ? '#166534' : '#92400e',
+              }}
+            >
+              <Sparkles size={14} color={isTeacherMatch ? '#16a34a' : '#d97706'} style={{ flexShrink: 0 }} />
+              <span style={{ fontWeight: 700, color: isTeacherMatch ? '#15803d' : '#b45309', whiteSpace: 'nowrap' }}>
+                Phân tích dấu vết:
+              </span>
+              <span style={{ flex: 1 }}>
+                {traces.join(' · ')}
+              </span>
+            </div>
+          );
+        })()}
 
         {/* THÂN CHÍNH: CHIA 2 MÀN HÌNH SO SÁNH 2 BÀI (MONACO DIFF VIEWER) */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>

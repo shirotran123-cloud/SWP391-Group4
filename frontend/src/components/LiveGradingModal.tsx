@@ -79,16 +79,27 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
   const progressPercent = Math.round((completedCount / steps.length) * 100);
   const hasFailedStep = steps.some((step) => {
     if (/^tc-\d+$/.test(step.id)) return false;
-    return step.status === 'failed';
+    return step.status === 'failed' || /chưa chạy được container|fallback phân tích tĩnh/i.test(step.detail || '');
   });
   const testcaseSteps = steps
     .filter((step) => /^tc-\d+$/.test(step.id))
     .sort((a, b) => Number(a.id.slice(3)) - Number(b.id.slice(3)));
   const passedTestcaseCount = testcaseSteps.filter((step) => step.status === 'passed').length;
   const simRate = plagiarismMatch?.similarityRate ?? 0;
-  const isSeverePlagiarism = simRate >= 80;
+  // Bài quá ngắn (<= 20 dòng, status === 'SUSPECTED'): giữ nguyên điểm chờ Giảng viên kiểm tra trực tiếp
+  const isPendingShortReview = plagiarismMatch?.status === 'SUSPECTED' && simRate >= 70;
+  const isSeverePlagiarism =
+    plagiarismMatch?.status === 'FLAGGED_PLAGIARISM' ||
+    (!isPendingShortReview &&
+      plagiarismMatch?.status !== 'CLEAN' &&
+      plagiarismMatch?.status !== 'SELF_RESUBMISSION' &&
+      plagiarismMatch?.status !== 'FLAGGED_HIGH' &&
+      simRate >= 80 &&
+      (score === undefined || score === 0));
   const effectiveScore = isSeverePlagiarism ? 0.0 : (score !== undefined ? score : undefined);
-  const effectiveTestcaseScore = isSeverePlagiarism ? 0.0 : (scoreBreakdown?.testcase1 ?? 0) + (scoreBreakdown?.testcase2 ?? 0);
+  const effectiveTestcaseScore = isSeverePlagiarism
+    ? 0.0
+    : ((scoreBreakdown?.testcase1 ?? 0) + (scoreBreakdown?.testcase2 ?? 0) || (score !== undefined ? Math.round(score * 0.7 * 10) / 10 : 0));
 
   return (
     <div className="modal-backdrop">
@@ -272,6 +283,10 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
               {isSeverePlagiarism ? (
                 <div style={{ fontSize: '11px', fontWeight: 800, color: '#dc2626', marginTop: '6px' }}>
                   ⚠️ ĐẠO VĂN {simRate.toFixed(1)}% (≥80%)
+                </div>
+              ) : isPendingShortReview && simRate >= 70 ? (
+                <div style={{ fontSize: '11px', fontWeight: 800, color: '#d97706', marginTop: '6px' }}>
+                  ⚡ NGHI VẤN · CHỜ DUYỆT (Trùng {simRate.toFixed(1)}%)
                 </div>
               ) : executionTimeMs !== undefined ? (
                 <p style={{ fontSize: '11.5px', color: 'var(--text-dim)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>

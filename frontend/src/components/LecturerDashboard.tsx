@@ -126,6 +126,9 @@ interface SubmissionRecord {
     matchedTokens?: Array<{ lineA: [number, number]; lineB: [number, number] }>;
     isFlagged?: boolean;
     status?: string;
+    matchedQuirks?: Array<{ type: string; signature: string; description: string; lineA?: number; lineB?: number }>;
+    boilerplateFingerprintsFiltered?: number;
+    isShortSubmission?: boolean;
   } | null;
   sourceCode?: string;
   /** How many times the student submitted this assignment; 1 means a single attempt. */
@@ -722,12 +725,46 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         const mapped: SubmissionRecord[] = rows.map((row: any) => {
           const detail = detailById.get(row.countedSubmissionId) || {};
           const sim = detail.similarityRate ?? detail.result?.similarityRate ?? 0;
-          const isPlagZero = sim >= 80.0;
-          const pStatus = sim >= 70.0 ? 'ĐẠO VĂN' : sim >= 50.0 ? 'NGHI VẤN' : 'AN TOÀN';
+          const matchObj = detail.plagiarismMatch || detail.result?.plagiarismMatch || null;
+          const status = detail.plagiarismStatus || detail.result?.plagiarismStatus || '';
+          const matchStatus = matchObj?.status || '';
+          const isExplicitConfirmed = detail.confirmedPlagiarism === true || detail.result?.confirmedPlagiarism === true;
+          const isExplicitUnconfirmed = detail.confirmedPlagiarism === false || detail.result?.confirmedPlagiarism === false;
+
+          // Bài quá ngắn (<= 20 dòng, status === 'SUSPECTED'): giữ điểm chờ Giảng viên kiểm tra trực tiếp
+          const isPendingShortReview =
+            !isExplicitConfirmed &&
+            (matchStatus === 'SUSPECTED' || (status === 'NGHI VẤN' && sim >= 70.0));
+
+          const isPlagZero =
+            isExplicitConfirmed ||
+            (!isPendingShortReview && matchStatus === 'FLAGGED_PLAGIARISM') ||
+            (!isPendingShortReview && !isExplicitUnconfirmed && sim >= 80.0);
+
+          const pStatus =
+            matchStatus === 'CLEAN' || matchStatus === 'SELF_RESUBMISSION' || status === 'AN TOÀN'
+              ? 'AN TOÀN'
+              : isPendingShortReview
+                ? 'NGHI VẤN'
+                : isPlagZero || matchStatus === 'FLAGGED_HIGH' || status === 'ĐẠO VĂN'
+                  ? 'ĐẠO VĂN'
+                  : sim >= 70.0
+                    ? 'ĐẠO VĂN'
+                    : sim >= 50.0
+                      ? 'NGHI VẤN'
+                      : 'AN TOÀN';
+
           const rawAssignId = row.assignmentId || row.assignmentTitle || '';
           const matchedAssign = publishedAssignments.find(
             (a) => a.id === rawAssignId || a.title === rawAssignId
           );
+
+          const finalScore = isPlagZero ? 0.0 : (row.score ?? undefined);
+          const tcScore = isPlagZero
+            ? 0.0
+            : (row.score !== null && row.score !== undefined ? Math.round(row.score * 0.7 * 10) / 10 : undefined);
+          const ccScore = isPlagZero ? 0.0 : (detail.result?.aiRating?.cleanCodeScore ?? row.cleanCodeScore);
+
           return {
             id: row.countedSubmissionId,
             studentId: row.studentId || 'SE-N/A',
@@ -737,15 +774,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             assignmentTitle: row.assignmentTitle || matchedAssign?.title || rawAssignId || 'Bài nộp',
             fileName: detail.fileName || `${row.countedSubmissionId}.zip`,
             submittedAt: row.submittedAt ? new Date(row.submittedAt).toLocaleString('vi-VN') : 'Vừa xong',
-            testcaseScore: isPlagZero ? 0.0 : (row.score !== null && row.score !== undefined
-              ? Math.round(row.score * 0.7 * 10) / 10
-              : undefined),
-            cleanCodeScore: isPlagZero ? 0.0 : (detail.result?.aiRating?.cleanCodeScore ?? row.cleanCodeScore),
+            testcaseScore: tcScore,
+            cleanCodeScore: ccScore,
             solidScore: isPlagZero ? 0.0 : row.solidScore,
-            finalScore: isPlagZero ? 0.0 : (row.score ?? undefined),
+            finalScore,
             plagiarismStatus: pStatus as any,
             similarityRate: sim,
-            plagiarismMatch: detail.plagiarismMatch || detail.result?.plagiarismMatch || null,
+            plagiarismMatch: matchObj,
             sourceCode: detail.sourceCode || detail.result?.sourceCode,
             passedTestcases: detail.passedTestcases ?? detail.result?.passedTestcases,
             totalTestcases: detail.totalTestcases ?? detail.result?.totalTestcases,
@@ -753,7 +788,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             scoreBreakdown: detail.scoreBreakdown ?? detail.result?.scoreBreakdown,
             executionTimeMs: detail.executionTimeMs ?? detail.result?.executionTimeMs,
             aiRating: detail.aiRating ?? detail.result?.aiRating,
-            // Extra fields the table uses to explain which attempt counts.
             attemptsCount: row.attemptsCount ?? 1,
             attemptNote: row.note as string | undefined,
           };
@@ -782,13 +816,46 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         if (Array.isArray(serverList) && serverList.length > 0) {
           const mapped: SubmissionRecord[] = serverList.map((s: any) => {
             const sim = s.similarityRate ?? s.result?.similarityRate ?? 0;
-            const isPlagZero = sim >= 80.0;
-            const pStatus = sim >= 70.0 ? 'ĐẠO VĂN' : sim >= 50.0 ? 'NGHI VẤN' : 'AN TOÀN';
+            const matchObj = s.plagiarismMatch || s.result?.plagiarismMatch || null;
+            const status = s.plagiarismStatus || s.result?.plagiarismStatus || '';
+            const matchStatus = matchObj?.status || '';
+            const isExplicitConfirmed = s.confirmedPlagiarism === true || s.result?.confirmedPlagiarism === true;
+            const isExplicitUnconfirmed = s.confirmedPlagiarism === false || s.result?.confirmedPlagiarism === false;
+
+            const isPendingShortReview =
+              !isExplicitConfirmed &&
+              (matchStatus === 'SUSPECTED' || (status === 'NGHI VẤN' && sim >= 70.0));
+
+            const isPlagZero =
+              isExplicitConfirmed ||
+              (!isPendingShortReview && matchStatus === 'FLAGGED_PLAGIARISM') ||
+              (!isPendingShortReview && !isExplicitUnconfirmed && sim >= 80.0);
+
+            const pStatus =
+              matchStatus === 'CLEAN' || matchStatus === 'SELF_RESUBMISSION' || status === 'AN TOÀN'
+                ? 'AN TOÀN'
+                : isPendingShortReview
+                  ? 'NGHI VẤN'
+                  : isPlagZero || matchStatus === 'FLAGGED_HIGH' || status === 'ĐẠO VĂN'
+                    ? 'ĐẠO VĂN'
+                    : sim >= 70.0
+                      ? 'ĐẠO VĂN'
+                      : sim >= 50.0
+                        ? 'NGHI VẤN'
+                        : 'AN TOÀN';
+
             const rawAssignId = s.assignmentId || s.assignmentTitle || '';
             const matchedAssign = publishedAssignments.find(
               (a) => a.id === rawAssignId || a.title === rawAssignId
             );
             const courseId = s.courseId || matchedAssign?.courseId || (rawAssignId.includes('PRN211') ? 'COURSE-PRN211' : rawAssignId.includes('CSD') ? 'COURSE-CSD201' : 'COURSE-SWP391');
+
+            const finalScore = isPlagZero ? 0.0 : (s.score ?? undefined);
+            const tcScore = isPlagZero
+              ? 0.0
+              : (s.score !== undefined && s.score !== null ? Math.round(s.score * 0.7 * 10) / 10 : undefined);
+            const ccScore = isPlagZero ? 0.0 : (s.result?.aiRating?.cleanCodeScore ?? s.cleanCodeScore);
+
             return {
               id: s.submissionId || s.id,
               studentId: s.studentId || 'SE-N/A',
@@ -798,13 +865,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               assignmentTitle: matchedAssign?.title || s.assignmentTitle || s.assignmentId || 'Bài nộp',
               fileName: s.fileName || `${s.submissionId || s.id}.zip`,
               submittedAt: s.createdAt ? new Date(s.createdAt).toLocaleString('vi-VN') : 'Vừa xong',
-              testcaseScore: isPlagZero ? 0.0 : (s.score !== undefined && s.score !== null ? Math.round(s.score * 0.7 * 10) / 10 : undefined),
-              cleanCodeScore: isPlagZero ? 0.0 : (s.result?.aiRating?.cleanCodeScore ?? s.cleanCodeScore),
+              testcaseScore: tcScore,
+              cleanCodeScore: ccScore,
               solidScore: isPlagZero ? 0.0 : s.solidScore,
-              finalScore: isPlagZero ? 0.0 : (s.score ?? undefined),
+              finalScore,
               plagiarismStatus: pStatus as any,
               similarityRate: sim,
-              plagiarismMatch: s.plagiarismMatch || s.result?.plagiarismMatch || null,
+              plagiarismMatch: matchObj,
               sourceCode: s.sourceCode || s.result?.sourceCode,
               passedTestcases: s.passedTestcases ?? s.result?.passedTestcases,
               totalTestcases: s.totalTestcases ?? s.result?.totalTestcases,
@@ -869,7 +936,25 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     // Chạy phân tích ma trận trực tiếp bằng ASTPlagiarismEngine từ mã nguồn THỰC TẾ của bài nộp
     const buildClientSideClusterMatrix = () => {
       const subsToCompare = assignmentSubmissions.map((s, idx) => {
-        let code = s.sourceCode || (s as any).plagiarismMatch?.sourceCodeA || (s as any).plagiarismMatch?.sourceCodeB || '';
+        let code = s.sourceCode ||
+                   (s as any).result?.sourceCode ||
+                   (s as any).plagiarismMatch?.sourceCodeA ||
+                   (s as any).plagiarismMatch?.sourceCodeB ||
+                   '';
+
+        if (!code) {
+          // Tìm trong bài nộp của các bạn khác xem có lưu mã nguồn đối chiếu của sinh viên này không
+          for (const other of assignmentSubmissions) {
+            const m = (other as any).plagiarismMatch;
+            if (m) {
+              if (m.matchedStudentId === s.studentId || m.matchedStudentName === s.studentName) {
+                code = m.sourceCodeB || m.sourceCodeA || '';
+                if (code) break;
+              }
+            }
+          }
+        }
+
         if (!code) {
           code = `// Mã nguồn bài nộp ${s.id} (${s.studentName || s.studentId})\n// Không tìm thấy nội dung mã nguồn\n`;
         }
@@ -885,27 +970,92 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       return ASTPlagiarismEngine.computeClassSimilarityMatrix(subsToCompare, assignIdToScan);
     };
 
+    const applyScanResultToSubmissions = (scanData: any) => {
+      if (!scanData) return;
+      const allPairs = [...(scanData.flaggedReports || []), ...(scanData.clusters?.flatMap((c: any) => c.pairs) || [])];
+      const maxSimBySubId = new Map<string, number>();
+      const pairMetaBySubId = new Map<string, any>();
+      for (const pair of allPairs) {
+        const nameA = (pair.studentNameA || '').toLowerCase();
+        const nameB = (pair.studentNameB || '').toLowerCase();
+        const isTeach =
+          nameA.includes('thầy') || nameA.includes('giảng viên') || nameA.includes('teacher') ||
+          nameB.includes('thầy') || nameB.includes('giảng viên') || nameB.includes('teacher');
+        if (isTeach) continue; // Không phạt theo code thầy
+
+        const sim = pair.similarityRate || 0;
+        if ((maxSimBySubId.get(pair.submissionAId) || 0) < sim) {
+          maxSimBySubId.set(pair.submissionAId, sim);
+          pairMetaBySubId.set(pair.submissionAId, pair);
+        }
+        if ((maxSimBySubId.get(pair.submissionBId) || 0) < sim) {
+          maxSimBySubId.set(pair.submissionBId, sim);
+          pairMetaBySubId.set(pair.submissionBId, pair);
+        }
+      }
+
+      setRealSubmissions((prev) =>
+        prev.map((sub) => {
+          const freshSim = maxSimBySubId.get(sub.id);
+          if (freshSim !== undefined) {
+            const pair = pairMetaBySubId.get(sub.id);
+            const pairStatus = pair?.status;
+            const isPendingShortReview = pairStatus === 'SUSPECTED' && freshSim >= 70.0;
+            const isPlagZero =
+              pairStatus === 'FLAGGED_PLAGIARISM' ||
+              (!isPendingShortReview && pairStatus !== 'FLAGGED_HIGH' && pairStatus !== 'CLEAN' && freshSim >= 80.0);
+
+            return {
+              ...sub,
+              similarityRate: freshSim,
+              plagiarismStatus:
+                pairStatus === 'FLAGGED_PLAGIARISM' || pairStatus === 'FLAGGED_HIGH'
+                  ? 'ĐẠO VĂN'
+                  : isPendingShortReview || freshSim >= 50.0
+                    ? 'NGHI VẤN'
+                    : 'AN TOÀN',
+              finalScore: isPlagZero ? 0.0 : sub.finalScore,
+              testcaseScore: isPlagZero ? 0.0 : sub.testcaseScore,
+              cleanCodeScore: isPlagZero ? 0.0 : sub.cleanCodeScore,
+              solidScore: isPlagZero ? 0.0 : sub.solidScore,
+            };
+          }
+          return sub;
+        })
+      );
+    };
+
     try {
       const res = await fetch(`${API_BASE_URL}/api/v1/plagiarism/matrix/${encodeURIComponent(assignIdToScan)}`);
+      const clientMatrix = buildClientSideClusterMatrix();
+
       if (res.ok) {
         const json = await res.json();
-        if (json.data && json.data.totalSubmissions >= 2) {
+        // Ưu tiên kết quả phân tích có cụm vi phạm thực tế (bảo vệ khi Backend chưa restart)
+        if (json.data && json.data.clusters && json.data.clusters.length > 0) {
           setPlagiarismScanResult(json.data);
           setShowPlagiarismMatrix(true);
-        } else {
-          const clientMatrix = buildClientSideClusterMatrix();
+          applyScanResultToSubmissions(json.data);
+        } else if (clientMatrix && clientMatrix.clusters && clientMatrix.clusters.length > 0) {
           setPlagiarismScanResult(clientMatrix);
           setShowPlagiarismMatrix(true);
+          applyScanResultToSubmissions(clientMatrix);
+        } else {
+          const fallback = json.data && json.data.totalSubmissions >= 2 ? json.data : clientMatrix;
+          setPlagiarismScanResult(fallback);
+          setShowPlagiarismMatrix(true);
+          applyScanResultToSubmissions(fallback);
         }
       } else {
-        const clientMatrix = buildClientSideClusterMatrix();
         setPlagiarismScanResult(clientMatrix);
         setShowPlagiarismMatrix(true);
+        applyScanResultToSubmissions(clientMatrix);
       }
     } catch {
       const clientMatrix = buildClientSideClusterMatrix();
       setPlagiarismScanResult(clientMatrix);
       setShowPlagiarismMatrix(true);
+      applyScanResultToSubmissions(clientMatrix);
     } finally {
       setScanningPlagiarism(false);
     }
@@ -915,7 +1065,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     void fetchRealSubmissions();
     const fetchBackendAssignments = async () => {
       try {
-        const res = await fetch('http://localhost:3000/api/v1/assignments');
+        const res = await fetch(`${API_BASE_URL}/api/v1/assignments`);
         if (res.ok) {
           const json = await res.json();
           const serverAsms = json.data || json || [];
@@ -3924,6 +4074,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 status: pair.status,
                 studentAName: pair.studentNameA,
                 studentAId: pair.studentIdA,
+                matchedQuirks: pair.matchedQuirks || (pair as any).matchedTokensJson?.matchedQuirks,
+                boilerplateFingerprintsFiltered: (pair as any).matchedTokensJson?.boilerplateFingerprintsFiltered,
+                isShortSubmission: (pair as any).matchedTokensJson?.isShortSubmission,
               };
 
               const candidates: PlagiarismMatch[] = (cluster ? cluster.pairs : (plagiarismScanResult.flaggedReports || [])).map((p: any) => ({
@@ -3937,6 +4090,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 status: p.status,
                 studentAName: p.studentNameA || p.submissionAId,
                 studentAId: p.studentIdA || p.submissionAId,
+                matchedQuirks: p.matchedQuirks || p.matchedTokensJson?.matchedQuirks,
+                boilerplateFingerprintsFiltered: p.matchedTokensJson?.boilerplateFingerprintsFiltered,
+                isShortSubmission: p.matchedTokensJson?.isShortSubmission,
               }));
 
               onOpenDiffViewer(currentMatch, candidates, {
@@ -4072,171 +4228,285 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 </div>
 
                 {/* DANH SÁCH TỪNG CỤM NHÓM ĐẠO VĂN (CLUSTERS DISPLAY) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '22px' }}>
-                  {clusters.map((cl, clIdx) => {
-                    const isSevere = cl.maxSimilarity >= 80;
-                    return (
-                      <div
-                        key={cl.clusterId}
-                        style={{
-                          backgroundColor: '#ffffff',
-                          borderRadius: '12px',
-                          border: `1.5px solid ${isSevere ? '#f87171' : '#fb923c'}`,
-                          padding: '16px 20px',
-                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                        }}
-                      >
-                        {/* HEADER NHÓM */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                            <span
-                              style={{
-                                fontSize: '13px',
-                                fontWeight: 800,
-                                padding: '4px 10px',
-                                borderRadius: '6px',
-                                backgroundColor: isSevere ? '#fee2e2' : '#ffedd5',
-                                color: isSevere ? '#991b1b' : '#9a3412',
-                                border: `1px solid ${isSevere ? '#ef4444' : '#f97316'}`,
-                              }}
-                            >
-                              NHÓM {cl.clusterId}: {cl.studentCount} SINH VIÊN
+                {clusters.length === 0 ? (
+                  <div style={{ padding: '20px', borderRadius: '12px', backgroundColor: '#f0fdf4', border: '1.5px solid #86efac', textAlign: 'center', marginBottom: '22px' }}>
+                    <CheckCircle2 size={32} color="#16a34a" style={{ margin: '0 auto 8px auto' }} />
+                    <h4 style={{ fontSize: '16px', fontWeight: 800, color: '#166534', margin: '0 0 6px 0' }}>
+                      Tất Cả Sinh Viên Đều Nộp Bài Độc Lập & An Toàn!
+                    </h4>
+                    <p style={{ fontSize: '13px', color: '#15803d', margin: 0 }}>
+                      Không phát hiện cụm sinh viên nào sao chép mã nguồn chéo trong lớp.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '22px' }}>
+                    {clusters.map((cl) => {
+                      const isSevere = cl.riskLevel
+                        ? cl.riskLevel === 'CONFIRMED_ZERO'
+                        : cl.pairs.some((p) => p.status === 'FLAGGED_PLAGIARISM' || (p.status !== 'SUSPECTED' && p.status !== 'FLAGGED_HIGH' && p.similarityRate >= 80));
+                      const isFlaggedCluster = !isSevere && (cl.riskLevel === 'FLAGGED' || cl.pairs.some((p) => p.status === 'FLAGGED_HIGH'));
+                      const isWarningCluster = !isSevere && !isFlaggedCluster;
+                      const accentColor = isSevere ? '#dc2626' : isFlaggedCluster ? '#ea580c' : '#d97706';
+                      const borderColor = isSevere ? '#f87171' : isFlaggedCluster ? '#fb923c' : '#fbbf24';
+                      return (
+                        <div
+                          key={cl.clusterId}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            borderRadius: '12px',
+                            border: `1.5px solid ${borderColor}`,
+                            padding: '16px 20px',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                          }}
+                        >
+                          {/* HEADER NHÓM */}
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                              <span
+                                style={{
+                                  fontSize: '13px',
+                                  fontWeight: 800,
+                                  padding: '4px 10px',
+                                  borderRadius: '6px',
+                                  backgroundColor: isSevere ? '#fee2e2' : isFlaggedCluster ? '#ffedd5' : '#fef3c7',
+                                  color: isSevere ? '#991b1b' : isFlaggedCluster ? '#9a3412' : '#92400e',
+                                  border: `1px solid ${isSevere ? '#ef4444' : isFlaggedCluster ? '#f97316' : '#f59e0b'}`,
+                                }}
+                              >
+                                NHÓM {cl.clusterId}: {cl.studentCount} SINH VIÊN
+                              </span>
+                              <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
+                                {cl.clusterName} &mdash; Mức tương đồng cao nhất: <strong style={{ color: accentColor }}>{cl.maxSimilarity.toFixed(1)}%</strong>
+                              </span>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  padding: '2px 7px',
+                                  borderRadius: '4px',
+                                  backgroundColor: accentColor,
+                                  color: '#ffffff',
+                                }}
+                              >
+                                {isSevere
+                                  ? 'VI PHẠM ĐẠO VĂN: 0.0 ĐIỂM'
+                                  : isFlaggedCluster
+                                    ? 'CẢNH BÁO GẮN CỜ (≥70%)'
+                                    : 'NGHI VẤN — CHỜ GIẢNG VIÊN KIỂM TRA'}
+                              </span>
+                            </div>
+
+                            {/* NÚT MỞ TOÀN BỘ NHÓM VÀO TRÌNH SO SÁNH 2 MÀN HÌNH */}
+                            {cl.pairs.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => openPairInDiffViewer(cl.pairs[0], cl)}
+                                style={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                  padding: '7px 14px',
+                                  borderRadius: '8px',
+                                  background: isSevere
+                                    ? 'linear-gradient(135deg, #dc2626, #b91c1c)'
+                                    : isWarningCluster
+                                      ? 'linear-gradient(135deg, #d97706, #b45309)'
+                                      : 'linear-gradient(135deg, #ea580c, #c2410c)',
+                                  border: 'none',
+                                  color: '#ffffff',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  cursor: 'pointer',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                                }}
+                              >
+                                <Layers size={14} /> Mở Trình So Sánh Đầy Đủ Nhóm {cl.clusterId} ({cl.pairs.length} cặp)
+                              </button>
+                            )}
+                          </div>
+
+                          {/* DANH SÁCH THÀNH VIÊN TRONG NHÓM */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
+                              Thành viên trong nhóm:
                             </span>
-                            <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-main)' }}>
-                              {cl.clusterName} &mdash; Mức tương đồng cao nhất: <strong style={{ color: isSevere ? '#dc2626' : '#ea580c' }}>{cl.maxSimilarity.toFixed(1)}%</strong>
-                            </span>
-                            <span
-                              style={{
-                                fontSize: '11px',
-                                fontWeight: 700,
-                                padding: '2px 7px',
-                                borderRadius: '4px',
-                                backgroundColor: isSevere ? '#dc2626' : '#ea580c',
-                                color: '#ffffff',
-                              }}
-                            >
-                              {isSevere ? 'VI PHẠM ĐẠO VĂN: 0.0 ĐIỂM' : 'CẢNH BÁO GẮN CỜ (≥70%)'}
+                            {cl.students.map((st, stIdx) => (
+                              <span
+                                key={st.submissionId || stIdx}
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                  padding: '3px 9px',
+                                  borderRadius: '6px',
+                                  backgroundColor: '#f1f5f9',
+                                  border: '1px solid var(--border-soft)',
+                                  fontSize: '12px',
+                                  fontWeight: 700,
+                                  color: 'var(--text-main)',
+                                }}
+                              >
+                                <span style={{ color: 'var(--blue-500)' }}>
+                                  {String.fromCharCode(65 + stIdx)}:
+                                </span>
+                                {st.studentName} ({st.studentId})
+                              </span>
+                            ))}
+                            <span style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontStyle: 'italic', marginLeft: '6px' }}>
+                              ({cl.studentCount} sinh viên {isWarningCluster ? 'có độ tương đồng cần kiểm tra' : 'sao chép chéo trong nhóm'})
                             </span>
                           </div>
 
-                          {/* NÚT MỞ TOÀN BỘ NHÓM VÀO TRÌNH SO SÁNH 2 MÀN HÌNH */}
-                          {cl.pairs.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => openPairInDiffViewer(cl.pairs[0], cl)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                padding: '7px 14px',
-                                borderRadius: '8px',
-                                background: isSevere ? 'linear-gradient(135deg, #dc2626, #b91c1c)' : 'linear-gradient(135deg, #ea580c, #c2410c)',
-                                border: 'none',
-                                color: '#ffffff',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                cursor: 'pointer',
-                                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
-                              }}
-                            >
-                              <Layers size={14} /> Mở Trình So Sánh Đầy Đủ Nhóm {cl.clusterId} ({cl.pairs.length} cặp)
-                            </button>
-                          )}
-                        </div>
-
-                        {/* DANH SÁCH THÀNH VIÊN TRONG NHÓM */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>
-                            Thành viên trong nhóm:
-                          </span>
-                          {cl.students.map((st, stIdx) => (
-                            <span
-                              key={st.submissionId || stIdx}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                                padding: '3px 9px',
-                                borderRadius: '6px',
-                                backgroundColor: '#f1f5f9',
-                                border: '1px solid var(--border-soft)',
-                                fontSize: '12px',
-                                fontWeight: 700,
-                                color: 'var(--text-main)',
-                              }}
-                            >
-                              <span style={{ color: 'var(--blue-500)' }}>
-                                {String.fromCharCode(65 + stIdx)}:
-                              </span>
-                              {st.studentName} ({st.studentId})
-                            </span>
-                          ))}
-                          <span style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontStyle: 'italic', marginLeft: '6px' }}>
-                            ({cl.studentCount} sinh viên sao chép chéo trong nhóm)
-                          </span>
-                        </div>
-
-                        {/* DANH SÁCH CÁC CẶP ĐỐI CHIẾU TRONG NHÓM */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '10px' }}>
-                          {cl.pairs.map((pair, pIdx) => {
-                            const pSevere = pair.similarityRate >= 80;
-                            return (
-                              <div
-                                key={pair.pairId || pIdx}
-                                style={{
-                                  display: 'flex',
-                                  justifyContent: 'space-between',
-                                  alignItems: 'center',
-                                  padding: '10px 14px',
-                                  borderRadius: '8px',
-                                  backgroundColor: pSevere ? '#fff5f5' : '#fffaf5',
-                                  border: `1px solid ${pSevere ? '#fecaca' : '#fed7aa'}`,
-                                }}
-                              >
-                                <div style={{ minWidth: 0 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
-                                    <span>{pair.studentNameA?.split(' ').slice(-1)[0] || pair.submissionAId}</span>
-                                    <span style={{ color: 'var(--text-muted)' }}>⇔</span>
-                                    <span>{pair.studentNameB?.split(' ').slice(-1)[0] || pair.submissionBId}</span>
+                          {/* DANH SÁCH CÁC CẶP ĐỐI CHIẾU TRONG NHÓM */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '10px' }}>
+                            {cl.pairs.map((pair, pIdx) => {
+                              const pSevere =
+                                pair.status === 'FLAGGED_PLAGIARISM' ||
+                                (pair.status !== 'SUSPECTED' && pair.status !== 'FLAGGED_HIGH' && pair.similarityRate >= 80);
+                              const pSuspectedShort = pair.status === 'SUSPECTED' && pair.similarityRate >= 70;
+                              return (
+                                <div
+                                  key={pair.pairId || pIdx}
+                                  style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    padding: '10px 14px',
+                                    borderRadius: '8px',
+                                    backgroundColor: pSevere ? '#fff5f5' : pSuspectedShort ? '#fffbeb' : '#fffaf5',
+                                    border: `1px solid ${pSevere ? '#fecaca' : pSuspectedShort ? '#fde68a' : '#fed7aa'}`,
+                                  }}
+                                >
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
+                                      <span>{pair.studentNameA?.split(' ').slice(-1)[0] || pair.submissionAId}</span>
+                                      <span style={{ color: 'var(--text-muted)' }}>⇔</span>
+                                      <span>{pair.studentNameB?.split(' ').slice(-1)[0] || pair.submissionBId}</span>
+                                    </div>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+                                      {pair.submissionAId} ⇔ {pair.submissionBId}
+                                      {pSuspectedShort && ' · Bài ≤20 dòng (Chờ GV duyệt)'}
+                                    </span>
                                   </div>
-                                  <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
-                                    {pair.submissionAId} ⇔ {pair.submissionBId}
-                                  </span>
-                                </div>
 
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                  <span style={{ fontSize: '16px', fontWeight: 800, color: pSevere ? '#dc2626' : '#ea580c', fontFamily: 'var(--font-mono)' }}>
-                                    {pair.similarityRate.toFixed(1)}%
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => openPairInDiffViewer(pair, cl)}
-                                    style={{
-                                      padding: '5px 10px',
-                                      borderRadius: '6px',
-                                      backgroundColor: 'var(--blue-600)',
-                                      color: '#ffffff',
-                                      border: 'none',
-                                      fontSize: '11.5px',
-                                      fontWeight: 700,
-                                      cursor: 'pointer',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '4px',
-                                      whiteSpace: 'nowrap',
-                                    }}
-                                  >
-                                    <Sparkles size={12} /> Chia 2 Màn Hình
-                                  </button>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ fontSize: '16px', fontWeight: 800, color: pSevere ? '#dc2626' : pSuspectedShort ? '#d97706' : '#ea580c', fontFamily: 'var(--font-mono)' }}>
+                                      {pair.similarityRate.toFixed(1)}%
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => openPairInDiffViewer(pair, cl)}
+                                      style={{
+                                        padding: '5px 10px',
+                                        borderRadius: '6px',
+                                        backgroundColor: 'var(--blue-600)',
+                                        color: '#ffffff',
+                                        border: 'none',
+                                        fontSize: '11.5px',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        whiteSpace: 'nowrap',
+                                      }}
+                                    >
+                                      <Sparkles size={12} /> Chia 2 Màn Hình
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
                         </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* KHỐI ĐỐI CHIẾU MÃ NGUỒN MẪU GIẢNG VIÊN (TEACHER BASELINE) */}
+                {plagiarismScanResult.teacherBaselinePairs && plagiarismScanResult.teacherBaselinePairs.length > 0 && (
+                  <div
+                    style={{
+                      backgroundColor: '#f8fafc',
+                      borderRadius: '12px',
+                      border: '1.5px solid #cbd5e1',
+                      padding: '16px 20px',
+                      marginBottom: '22px',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 800,
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            backgroundColor: '#ecfdf5',
+                            color: '#047857',
+                            border: '1px solid #a7f3d0',
+                          }}
+                        >
+                          🌿 BASELINE CODE MẪU GIẢNG VIÊN
+                        </span>
+                        <span style={{ fontSize: '14.5px', fontWeight: 700, color: 'var(--text-main)' }}>
+                          {plagiarismScanResult.teacherBaselinePairs.length} Bài Nộp Khớp Lời Giải Mẫu Của Thầy &mdash; <strong>Bảo Lưu Điểm (Không Phạt)</strong>
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '10px' }}>
+                      {plagiarismScanResult.teacherBaselinePairs.map((pair: any, pIdx: number) => (
+                        <div
+                          key={pair.pairId || pIdx}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '10px 14px',
+                            borderRadius: '8px',
+                            backgroundColor: '#ffffff',
+                            border: '1px solid #e2e8f0',
+                          }}
+                        >
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 700, color: 'var(--text-main)' }}>
+                              <span>{pair.studentNameA}</span>
+                              <span style={{ color: 'var(--text-muted)' }}>⇔</span>
+                              <span style={{ color: '#047857' }}>{pair.studentNameB} (Thầy)</span>
+                            </div>
+                            <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600 }}>
+                              ✓ Khớp code mẫu {pair.similarityRate.toFixed(1)}% &middot; Bảo lưu điểm
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => openPairInDiffViewer(pair)}
+                            style={{
+                              padding: '5px 10px',
+                              borderRadius: '6px',
+                              backgroundColor: '#059669',
+                              color: '#ffffff',
+                              border: 'none',
+                              fontSize: '11.5px',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            <Sparkles size={12} /> So Sánh Với Code Thầy
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* KHỐI KIỂM ĐỊNH ĐỘC LẬP CHÉO GIỮA CÁC NHÓM (CROSS-GROUP INDEPENDENCE CHECK) */}
                 {clusters.length >= 2 && (
@@ -4351,6 +4621,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           {(() => {
             const openSubPlagiarismDiff = (sub: typeof filteredSubmissions[0]) => {
               if (!sub.plagiarismMatch || !onOpenDiffViewer) return;
+              const fallbackStatus = sub.plagiarismStatus === 'NGHI VẤN'
+                ? 'SUSPECTED'
+                : sub.similarityRate >= 80
+                  ? 'FLAGGED_PLAGIARISM'
+                  : sub.similarityRate >= 70
+                    ? 'FLAGGED_HIGH'
+                    : 'SUSPECTED';
               const currentMatch: PlagiarismMatch = {
                 matchedStudentName: sub.plagiarismMatch.matchedStudentName || sub.plagiarismMatch.matchedStudentId,
                 matchedStudentId: sub.plagiarismMatch.matchedStudentId,
@@ -4358,12 +4635,22 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 sourceCodeA: sub.plagiarismMatch.sourceCodeA || sub.sourceCode || '',
                 sourceCodeB: sub.plagiarismMatch.sourceCodeB || '',
                 matchedTokens: sub.plagiarismMatch.matchedTokens || [],
-                isFlagged: sub.similarityRate >= 70,
-                status: sub.similarityRate >= 80 ? 'FLAGGED_PLAGIARISM' : sub.similarityRate >= 70 ? 'FLAGGED_HIGH' : 'SUSPECTED',
+                isFlagged: sub.plagiarismMatch.isFlagged ?? (sub.similarityRate >= 70),
+                status: sub.plagiarismMatch.status || fallbackStatus,
+                matchedQuirks: sub.plagiarismMatch.matchedQuirks,
+                boilerplateFingerprintsFiltered: sub.plagiarismMatch.boilerplateFingerprintsFiltered,
+                isShortSubmission: sub.plagiarismMatch.isShortSubmission,
               };
               const candidates: PlagiarismMatch[] = [currentMatch];
               realSubmissions.forEach((other) => {
                 if (other.id !== sub.id && (other.similarityRate || 0) >= 50 && other.plagiarismMatch) {
+                  const otherFallback = other.plagiarismStatus === 'NGHI VẤN'
+                    ? 'SUSPECTED'
+                    : other.similarityRate >= 80
+                      ? 'FLAGGED_PLAGIARISM'
+                      : other.similarityRate >= 70
+                        ? 'FLAGGED_HIGH'
+                        : 'SUSPECTED';
                   candidates.push({
                     matchedStudentName: other.studentName || other.studentId,
                     matchedStudentId: other.studentId,
@@ -4371,8 +4658,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                     sourceCodeA: sub.sourceCode || currentMatch.sourceCodeA,
                     sourceCodeB: other.sourceCode || other.plagiarismMatch.sourceCodeB || '',
                     matchedTokens: other.plagiarismMatch.matchedTokens || [],
-                    isFlagged: other.similarityRate >= 70,
-                    status: other.similarityRate >= 80 ? 'FLAGGED_PLAGIARISM' : other.similarityRate >= 70 ? 'FLAGGED_HIGH' : 'SUSPECTED',
+                    isFlagged: other.plagiarismMatch.isFlagged ?? (other.similarityRate >= 70),
+                    status: other.plagiarismMatch.status || otherFallback,
+                    matchedQuirks: other.plagiarismMatch.matchedQuirks,
+                    boilerplateFingerprintsFiltered: other.plagiarismMatch.boilerplateFingerprintsFiltered,
+                    isShortSubmission: other.plagiarismMatch.isShortSubmission,
                   });
                 }
               });
@@ -4501,6 +4791,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                     Trùng {sub.similarityRate}%
                                   </div>
                                 )}
+                                {sub.plagiarismStatus === 'NGHI VẤN' && sub.similarityRate >= 70 && (
+                                  <div style={{ fontSize: '10px', color: '#d97706', fontWeight: 700, marginTop: '1px' }}>
+                                    Tạm giữ {sub.finalScore}đ (Chờ duyệt · Trùng {sub.similarityRate}%)
+                                  </div>
+                                )}
                               </>
                             ) : (
                               <span style={{ fontSize: '10.5px', padding: '2px 7px', borderRadius: '4px', backgroundColor: 'var(--state-info-bg)', color: 'var(--state-info)', fontWeight: 700 }}>
@@ -4539,10 +4834,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                                 boxShadow: sub.plagiarismStatus === 'ĐẠO VĂN' ? '0 1px 4px rgba(239,68,68,0.35)' : 'none',
                               }}
                             >
-                              {sub.plagiarismStatus === 'ĐẠO VĂN' && '⚠️ '}
-                              {sub.plagiarismStatus === 'NGHI VẤN' && '⚡ '}
-                              {sub.plagiarismStatus === 'AN TOÀN' && '✓ '}
-                              {sub.plagiarismStatus}
+                              {sub.plagiarismStatus === 'ĐẠO VĂN' && '⚠️ ĐẠO VĂN'}
+                              {sub.plagiarismStatus === 'NGHI VẤN' && (sub.similarityRate >= 70 ? '⚡ NGHI VẤN (Chờ duyệt)' : '⚡ NGHI VẤN')}
+                              {sub.plagiarismStatus === 'AN TOÀN' && '✓ AN TOÀN'}
                               {sub.similarityRate > 0 && ` (${sub.similarityRate}%)`}
                             </span>
                           </td>

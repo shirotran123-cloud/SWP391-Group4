@@ -57,6 +57,8 @@ export interface SubmissionDetailData {
   testCaseResults?: TestCaseDetailItem[];
   plagiarismRate?: number;
   plagiarismStatus?: string;
+  plagiarismMatch?: any;
+  confirmedPlagiarism?: boolean;
 }
 
 interface SubmissionDetailModalProps {
@@ -118,10 +120,19 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
   if (!isOpen || !submission) return null;
 
   const currentSource = fetchedCode || submission.sourceCode || '// Không tìm thấy nội dung mã nguồn.';
-  const isSeverePlagiarism = (submission.plagiarismRate !== undefined && submission.plagiarismRate >= 80.0) ||
-    submission.status === 'FLAGGED_PLAGIARISM' ||
-    submission.plagiarismStatus === 'ĐẠO VĂN (≥80%)' ||
-    submission.plagiarismStatus === 'ĐẠO VĂN';
+  const simRate = submission.plagiarismRate ?? submission.plagiarismMatch?.similarityRate ?? 0;
+  const isPendingShortReview =
+    !submission.confirmedPlagiarism &&
+    (submission.plagiarismMatch?.status === 'SUSPECTED' ||
+      (submission.plagiarismStatus === 'NGHI VẤN' && simRate >= 70.0));
+
+  const isSeverePlagiarism =
+    submission.confirmedPlagiarism === true ||
+    (!isPendingShortReview && submission.plagiarismMatch?.status === 'FLAGGED_PLAGIARISM') ||
+    (!isPendingShortReview && submission.status === 'FLAGGED_PLAGIARISM') ||
+    (!isPendingShortReview &&
+      submission.confirmedPlagiarism !== false &&
+      (simRate >= 80.0 || submission.plagiarismStatus === 'ĐẠO VĂN (≥80%)'));
   const hasScore = submission.score !== undefined && submission.score !== null;
   const displayScore = isSeverePlagiarism ? 0.0 : (hasScore ? submission.score! : null);
   const isStatusFailed = isSeverePlagiarism || submission.status?.toUpperCase() === 'FAILED' || submission.status?.toUpperCase() === 'ERROR';
@@ -359,7 +370,34 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 Hủy Điểm Bài Nộp: 0.0 / 10.0 (Vi Phạm Liêm Chính Học Thuật)
               </div>
               <div style={{ color: '#4b5563', fontSize: '12px', marginTop: '2px' }}>
-                Hệ thống AST & Winnowing phát hiện bài nộp có mức độ tương đồng cao vượt ngưỡng xử phạt nghiêm ngặt (≥ 80.0%{submission.plagiarismRate ? ` - Thực tế: ${submission.plagiarismRate.toFixed(1)}%` : ''}). Toàn bộ điểm kiểm thử và điểm AI đã bị hủy theo quy định.
+                Hệ thống AST &amp; Winnowing phát hiện bài nộp có mức độ tương đồng cao vượt ngưỡng xử phạt nghiêm ngặt (≥ 80.0%{submission.plagiarismRate ? ` - Thực tế: ${submission.plagiarismRate.toFixed(1)}%` : ''}). Toàn bộ điểm kiểm thử và điểm AI đã bị hủy theo quy định.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SHORT SUBMISSION PENDING REVIEW BANNER */}
+        {!isSeverePlagiarism && isPendingShortReview && simRate >= 70 && (
+          <div
+            style={{
+              margin: '12px 24px 0 24px',
+              padding: '12px 16px',
+              backgroundColor: '#fffbeb',
+              border: '1px solid #f59e0b',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              color: '#92400e',
+            }}
+          >
+            <AlertTriangle size={24} color="#d97706" style={{ flexShrink: 0 }} />
+            <div style={{ fontSize: '13px', lineHeight: 1.4 }}>
+              <div style={{ fontWeight: 700, textTransform: 'uppercase', color: '#b45309' }}>
+                Nghi Vấn Đạo Văn Trên Bài Quá Ngắn (≤ 20 Dòng) — Tạm Giữ Điểm Chờ Duyệt
+              </div>
+              <div style={{ color: '#78350f', fontSize: '12px', marginTop: '2px' }}>
+                Độ tương đồng AST đạt {simRate.toFixed(1)}%, nhưng dung lượng mã nguồn quá ngắn (≤ 20 dòng không trống) nên chưa đủ dữ liệu tự triển khai để kết tội tự động 0 điểm. Giảng viên vui lòng đối chiếu trực tiếp hai bài nộp.
               </div>
             </div>
           </div>

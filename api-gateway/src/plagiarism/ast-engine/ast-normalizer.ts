@@ -13,10 +13,18 @@ export interface NormalizedToken {
   col: number;       // cột gốc
 }
 
+export interface CodeQuirk {
+  type: 'FORMATTING_ANOMALY' | 'MAGIC_NUMBER' | 'INVERTED_CONDITION' | 'REDUNDANT_EXPR' | 'IDIOSYNCRATIC_LOOP';
+  signature: string; // Chuỗi đại diện dấu vết trình bày dùng bổ trợ đối soát
+  description: string;
+  line: number;
+}
+
 export interface NormalizationResult {
   tokens: NormalizedToken[];
   tokenString: string;   // chuỗi token ghép bằng space để hash nhanh
   lineCount: number;
+  quirks?: CodeQuirk[];
 }
 
 export class ASTNormalizer {
@@ -249,5 +257,95 @@ export class ASTNormalizer {
       tokenString: tokens.map((t) => t.token).join(' '),
       lineCount: lines.length,
     };
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // PRESENTATION QUIRK DETECTOR (Dấu vết trình bày bổ trợ — Tách bạch khỏi Clean Code)
+  // ─────────────────────────────────────────────────────────
+  /**
+   * Trích xuất các dấu vết trình bày / lỗi gõ hình thức nhỏ vô hại (;;,  ;, ((...)), khoảng trắng kép quanh toán tử).
+   * KHÔNG chấm các tiêu chuẩn Clean Code / SOLID (biến thừa, hằng số, +0, ? true : false) vì đã do AI Review chấm.
+   * Chỉ dùng làm tín hiệu bổ trợ khi độ tương đồng AST >= 70% trên bài quá ngắn (<= 20 dòng).
+   */
+  public static extractQuirks(sourceCode: string, language = 'java'): CodeQuirk[] {
+    const quirks: CodeQuirk[] = [];
+    if (!sourceCode) return quirks;
+
+    const isPython = language.toLowerCase().includes('py');
+    // Xóa comment khối nhưng giữ nguyên số lượng dòng (\n) để khớp line number chính xác
+    const noBlockComments = sourceCode
+      .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '))
+      .replace(/("""[\s\S]*?"""|'''[\s\S]*?''')/g, (m) => m.replace(/[^\n]/g, ' '));
+
+    const lines = noBlockComments.split('\n');
+
+    for (let i = 0; i < lines.length; i++) {
+      let cleaned = lines[i]
+        .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+        .replace(/'(?:[^'\\]|\\.)*'/g, "''")
+        .replace(/\/\/[^\n]*/g, '');
+      if (isPython) {
+        cleaned = cleaned.replace(/#[^\n]*/g, '');
+      }
+      cleaned = cleaned.trimStart();
+
+      if (!cleaned) continue;
+      const lineNum = i + 1;
+
+      // 1. Dấu chấm phẩy kép thừa (;;) ngoài vòng lặp for (;;)
+      if (/;{2,}/.test(cleaned) && !/\bfor\s*\([^)]*;;/.test(cleaned)) {
+        quirks.push({
+          type: 'FORMATTING_ANOMALY',
+          signature: 'DOUBLE_SEMICOLON',
+          description: 'Dấu chấm phẩy kép thừa (;;) cuối lệnh',
+          line: lineNum,
+        });
+      }
+
+      // 2. Khoảng trắng thừa trước dấu chấm phẩy ( ;) ngoài vòng lặp for (; ...)
+      if (/[A-Za-z0-9_)\]]\s+;/.test(cleaned) && !/\bfor\s*\([^)]*;/.test(cleaned)) {
+        quirks.push({
+          type: 'FORMATTING_ANOMALY',
+          signature: 'SPACED_SEMICOLON',
+          description: 'Khoảng trắng bất thường trước dấu chấm phẩy ( ;)',
+          line: lineNum,
+        });
+      }
+
+      // 3. Đóng mở ngoặc kép dư thừa ((...))
+      if (/\(\(\s*[A-Za-z0-9_]+(\s*[%+\-*/]\s*[A-Za-z0-9_]+)?\s*(==|!=|>=|<=|>|<)\s*[A-Za-z0-9_]+\s*\)\)/.test(cleaned)) {
+        quirks.push({
+          type: 'FORMATTING_ANOMALY',
+          signature: 'EXCESSIVE_PARENS',
+          description: 'Cặp ngoặc đơn lồng dư thừa ((...))',
+          line: lineNum,
+        });
+      }
+
+      // 4. Khoảng trắng kép bất thường quanh toán tử bên trong câu lệnh
+      if (/[A-Za-z0-9_)\]]\s{2,}(=|==|!=|<=|>=|\+=|-=|\*=|\/=)\s|\s(=|==|!=|<=|>=|\+=|-=|\*=|\/=)\s{2,}[A-Za-z0-9_(\[]/.test(cleaned)) {
+        quirks.push({
+          type: 'FORMATTING_ANOMALY',
+          signature: 'MULTI_SPACE_STMT',
+          description: 'Khoảng trắng kép bất thường quanh toán tử',
+          line: lineNum,
+        });
+      }
+    }
+
+    return quirks;
+  }
+
+  /**
+   * Xóa sạch comment và string literal để gửi an toàn cho LLM (chống Prompt Injection)
+   */
+  public static sanitizeForAI(sourceCode: string): string {
+    if (!sourceCode) return '';
+    return sourceCode
+      .replace(/\/\*[\s\S]*?\*\//g, ' ')
+      .replace(/\/\/[^\n]*/g, ' ')
+      .replace(/#[^\n]*/g, ' ')
+      .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+      .replace(/'(?:[^'\\]|\\.)*'/g, "''");
   }
 }
