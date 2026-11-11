@@ -97,9 +97,18 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
       simRate >= 80 &&
       (score === undefined || score === 0));
   const effectiveScore = isSeverePlagiarism ? 0.0 : (score !== undefined ? score : undefined);
+  const hasExplicitTestcaseBreakdown =
+    scoreBreakdown !== undefined &&
+    (scoreBreakdown.testcase1 !== undefined || scoreBreakdown.testcase2 !== undefined);
   const effectiveTestcaseScore = isSeverePlagiarism
     ? 0.0
-    : ((scoreBreakdown?.testcase1 ?? 0) + (scoreBreakdown?.testcase2 ?? 0) || (score !== undefined ? Math.round(score * 0.7 * 10) / 10 : 0));
+    : hasExplicitTestcaseBreakdown
+      ? Math.round(((scoreBreakdown?.testcase1 ?? 0) + (scoreBreakdown?.testcase2 ?? 0)) * 10) / 10
+      : testcaseSteps.length > 0
+        ? Math.round((passedTestcaseCount / testcaseSteps.length) * 7 * 10) / 10
+        : score !== undefined
+          ? Math.round(score * 0.7 * 10) / 10
+          : 0;
 
   return (
     <div className="modal-backdrop">

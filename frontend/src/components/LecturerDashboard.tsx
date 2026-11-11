@@ -91,6 +91,7 @@ export interface PublishedAssignment {
   memoryLimitMb: number;
   allowedLanguages: string[];
   testCases: Array<{ input: string; output: string; weight: number; isHidden: boolean }>;
+  testcasesCount?: number;
   rubrics?: RubricCriterion[];
   starterCode?: string;
   referenceSolution?: string;
@@ -1063,36 +1064,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
   useEffect(() => {
     void fetchRealSubmissions();
-    const fetchBackendAssignments = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/assignments`);
-        if (res.ok) {
-          const json = await res.json();
-          const serverAsms = json.data || json || [];
-          if (Array.isArray(serverAsms) && serverAsms.length > 0) {
-            const mapped: PublishedAssignment[] = serverAsms.map((sa: any) => ({
-              id: sa.assignmentId,
-              courseId: sa.courseId,
-              title: sa.title,
-              description: sa.description || '',
-              deadline: typeof sa.deadline === 'string' ? sa.deadline.slice(0, 16) : '2026-11-20T23:59',
-              timeLimitMs: sa.timeLimitMs || 2000,
-              memoryLimitMb: sa.memoryLimitMb || 512,
-              allowedLanguages: sa.allowedLanguages || ['java', 'cpp', 'python'],
-              testCases: [],
-              rubrics: [],
-              createdAt: typeof sa.createdAt === 'string' ? new Date(sa.createdAt).toLocaleString('vi-VN') : new Date().toLocaleString('vi-VN'),
-              status: sa.isActive ? 'PUBLISHED' : 'CLOSED',
-              submissionCount: 0,
-            }));
-            setPublishedAssignments(mapped);
-          }
-        }
-      } catch (err) {
-        console.warn('[LecturerDashboard] Lỗi đọc bài tập từ PostgreSQL:', err);
-      }
-    };
-    void fetchBackendAssignments();
   }, []);
 
   const handleDownloadZip = async (subId: string, preferredFileName?: string) => {
@@ -1160,70 +1131,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     }
     return defaultPublishedAssignments;
   });
-
-  // Tự động đồng bộ các bài tập và testcases từ LocalStorage xuống Backend Database
-  const syncLocalAssignmentsToBackend = async (asms: PublishedAssignment[]) => {
-    if (!Array.isArray(asms) || asms.length === 0) return;
-    const token = localStorage.getItem('aita_token') || '';
-    const authHeaders: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    };
-
-    for (const asm of asms) {
-      if (!asm.id) continue;
-      try {
-        let validDeadlineIso = asm.deadline;
-        const parsed = new Date(asm.deadline);
-        if (isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
-          validDeadlineIso = new Date(Date.now() + 7 * 86400000).toISOString();
-        } else {
-          validDeadlineIso = parsed.toISOString();
-        }
-
-        // Tạo bài tập trên Backend (nếu chưa có)
-        await fetch(`${API_BASE_URL}/api/v1/assignments`, {
-          method: 'POST',
-          headers: authHeaders,
-          body: JSON.stringify({
-            assignmentId: asm.id,
-            courseId: asm.courseId || 'COURSE-SWP391',
-            title: asm.title || 'Bài tập AITA',
-            description: asm.description || '',
-            allowedLanguages: asm.allowedLanguages || ['java', 'python', 'cpp', 'dotnet'],
-            deadline: validDeadlineIso,
-            timeLimitMs: asm.timeLimitMs || 2000,
-            memoryLimitMb: asm.memoryLimitMb || 512,
-            testcasesCount: asm.testCases?.length || 2,
-          }),
-        });
-
-        // Tạo từng testcase (nếu chưa có)
-        if (Array.isArray(asm.testCases) && asm.testCases.length > 0) {
-          for (const tc of asm.testCases) {
-            await fetch(`${API_BASE_URL}/api/v1/test-cases`, {
-              method: 'POST',
-              headers: authHeaders,
-              body: JSON.stringify({
-                assignmentId: asm.id,
-                inputData: tc.input || ' ',
-                expectedOutput: tc.output || ' ',
-                isHidden: !!tc.isHidden,
-                weight: Number(tc.weight) || 1.0,
-                timeLimitMs: asm.timeLimitMs || 2000,
-              }),
-            });
-          }
-        }
-      } catch {
-        // Bỏ qua lỗi kết nối / trùng lặp (409)
-      }
-    }
-  };
-
-  useEffect(() => {
-    syncLocalAssignmentsToBackend(publishedAssignments);
-  }, []);
 
   const normalizeClassId = (id?: string) => {
     if (!id) return '';
@@ -1559,17 +1466,31 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       validDeadlineIso = parsedDate.toISOString();
     }
 
-    const generatedId = `ASM-${Date.now().toString().slice(-6)}`;
-
-    // Đảm bảo có ít nhất bộ test cases hợp lệ để không bị lỗi rỗng
-    let validTestCases = Array.isArray(testCases) && testCases.length > 0 ? [...testCases] : [];
-    if (validTestCases.length === 0 || validTestCases.every(tc => !tc.input.trim() && !tc.output.trim())) {
-      validTestCases = [
-        { input: '1', output: '1', weight: 3.5, isHidden: false },
-        { input: '5', output: '5', weight: 3.5, isHidden: true },
-      ];
-      setTestCases(validTestCases);
+    // Đảm bảo bộ test cases hợp lệ (Expected Output không rỗng, không trùng cặp Input/Output)
+    const validTestCases = Array.isArray(testCases) ? [...testCases] : [];
+    if (validTestCases.length === 0) {
+      setAiErrorMsg('Vui lòng thêm ít nhất 1 test case trước khi xuất bản bài tập.');
+      setIsPublishingAssignment(false);
+      return;
     }
+    const invalidIdx = validTestCases.findIndex((tc) => !String(tc.output ?? '').trim());
+    if (invalidIdx !== -1) {
+      setAiErrorMsg(`Test case #${invalidIdx + 1} chưa có Kết quả kỳ vọng (StdOut). Vui lòng nhập đầy đủ trước khi xuất bản.`);
+      setIsPublishingAssignment(false);
+      return;
+    }
+    const seenPairs = new Set<string>();
+    for (let i = 0; i < validTestCases.length; i++) {
+      const pairKey = `${String(validTestCases[i].input ?? '')}\u0000${String(validTestCases[i].output ?? '')}`;
+      if (seenPairs.has(pairKey)) {
+        setAiErrorMsg(`Test case #${i + 1} bị trùng lặp Input và Expected Output với test case khác. Vui lòng chỉnh sửa.`);
+        setIsPublishingAssignment(false);
+        return;
+      }
+      seenPairs.add(pairKey);
+    }
+
+    const generatedId = `ASM-${Date.now().toString().slice(-6)}`;
 
     const newAsm: PublishedAssignment = {
       id: generatedId,
@@ -1583,6 +1504,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       memoryLimitMb: memoryLimitMb || 512,
       allowedLanguages: allowedLanguages.length > 0 ? [...allowedLanguages] : ['java', 'python', 'cpp'],
       testCases: validTestCases,
+      testcasesCount: validTestCases.length,
       rubrics: generatedRubrics.length > 0 ? [...generatedRubrics] : [
         { criterion: 'Tính đúng đắn thuật toán & Vượt qua Testcases', maxScore: 5.0, description: 'Pass 100% testcases' },
         { criterion: 'Clean Code & Tối ưu O(N log N)', maxScore: 2.5, description: 'Mã nguồn rõ ràng, đặt tên chuẩn' },
@@ -1597,12 +1519,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
     };
 
     setAiErrorMsg(null);
-    let syncSuccess = false;
     try {
       await syncAssignmentTestCases(newAsm);
-      syncSuccess = true;
     } catch (error: any) {
-      console.warn('[handleSaveAssignment] Backend sync warning, continuing with local persistent storage:', error);
+      // Thu hồi bản ghi đề bài rỗng trên server nếu lưu testcases thất bại để không bao giờ kẹt đề thiếu testcases
+      await fetch(`${API_BASE_URL}/api/v1/assignments/${encodeURIComponent(generatedId)}`, {
+        method: 'DELETE',
+      }).catch(() => {});
+      setAiErrorMsg(
+        `Không thể lưu bài tập & bộ test case lên máy chủ: ${error?.message || 'Lỗi không xác định'}. Vui lòng kiểm tra lại và thử xuất bản lại.`,
+      );
+      setIsPublishingAssignment(false);
+      return;
     }
 
     const updatedAsms = [newAsm, ...publishedAssignments.filter(a => a.id !== newAsm.id)];
@@ -1618,9 +1546,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       )
     );
 
-    const toastMsg = syncSuccess
-      ? `Đã xuất bản thành công: Bài tập "${assignmentTitle}" (${validTestCases.length} testcases) đã lưu vào CSDL và giao cho lớp ${courseCode} (${courseName})!`
-      : `Đã xuất bản thành công: Bài tập "${assignmentTitle}" (${validTestCases.length} testcases) đã giao cho lớp ${courseCode}!`;
+    const toastMsg = `Đã xuất bản thành công: Bài tập "${assignmentTitle}" (${validTestCases.length} testcases) đã lưu vào CSDL và giao cho lớp ${courseCode} (${courseName})!`;
     setPublishSuccessToast(toastMsg);
     setCreateSuccessMsg(toastMsg);
     setIsPublishingAssignment(false);
@@ -1733,17 +1659,49 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         const json = await res.json();
         const serverAsms = json.data || json || [];
         if (Array.isArray(serverAsms) && serverAsms.length > 0) {
+          const testCaseMap = new Map<string, Array<{ input: string; output: string; weight: number; isHidden: boolean }>>();
+          await Promise.all(
+            serverAsms.map(async (s: any) => {
+              const id = s.assignmentId || s.id;
+              if (!id) return;
+              try {
+                const tcRes = await fetch(
+                  `${API_BASE_URL}/api/v1/test-cases/assignment/${encodeURIComponent(id)}?includeHidden=true`,
+                );
+                if (tcRes.ok) {
+                  const tcJson = await tcRes.json();
+                  const list = tcJson.data || tcJson || [];
+                  if (Array.isArray(list)) {
+                    testCaseMap.set(
+                      id,
+                      list.map((tc: any) => ({
+                        input: tc.inputData ?? '',
+                        output: tc.expectedOutput ?? '',
+                        weight: Number(tc.weight) || 1.0,
+                        isHidden: Boolean(tc.isHidden),
+                      })),
+                    );
+                  }
+                }
+              } catch {
+                // bỏ qua lỗi đọc từng bài tập đơn lẻ
+              }
+            }),
+          );
+
           setPublishedAssignments((prev) => {
             const map = new Map<string, PublishedAssignment>();
             // Nạp từ local trước
             for (const a of prev) {
               if (a.id) map.set(a.id, a);
             }
-            // Hợp nhất từ server (ghi đè nếu có cập nhật từ server)
+            // Hợp nhất từ server (ưu tiên dữ liệu từ CSDL nếu lấy được)
             for (const s of serverAsms) {
               const id = s.assignmentId || s.id;
               if (!id) continue;
               const existing = map.get(id);
+              const serverCases = testCaseMap.get(id);
+              const resolvedCases = serverCases !== undefined ? serverCases : (existing?.testCases || []);
               map.set(id, {
                 id,
                 courseId: s.courseId || s.classId || existing?.courseId || 'CRS-SWP391',
@@ -1755,7 +1713,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 timeLimitMs: s.timeLimitMs || existing?.timeLimitMs || 2000,
                 memoryLimitMb: s.memoryLimitMb || existing?.memoryLimitMb || 512,
                 allowedLanguages: s.allowedLanguages || existing?.allowedLanguages || ['java', 'python', 'cpp'],
-                testCases: existing?.testCases || [],
+                testCases: resolvedCases,
+                testcasesCount:
+                  serverCases !== undefined
+                    ? serverCases.length
+                    : (typeof s.testcasesCount === 'number' ? s.testcasesCount : (existing?.testcasesCount ?? resolvedCases.length)),
                 rubrics: existing?.rubrics || [],
                 createdAt: s.createdAt ? new Date(s.createdAt).toLocaleString('vi-VN') : (existing?.createdAt || 'Hôm nay'),
                 status: s.isActive === false ? 'CLOSED' : 'PUBLISHED',
@@ -1768,6 +1730,41 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             } catch {}
             return merged;
           });
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleOpenPreviewAssignment = async (asm: PublishedAssignment) => {
+    setPreviewAssignment(asm);
+    try {
+      const tcRes = await fetch(
+        `${API_BASE_URL}/api/v1/test-cases/assignment/${encodeURIComponent(asm.id)}?includeHidden=true`,
+      );
+      if (tcRes.ok) {
+        const tcJson = await tcRes.json();
+        const list = tcJson.data || tcJson || [];
+        if (Array.isArray(list)) {
+          const freshCases = list.map((tc: any) => ({
+            input: tc.inputData ?? '',
+            output: tc.expectedOutput ?? '',
+            weight: Number(tc.weight) || 1.0,
+            isHidden: Boolean(tc.isHidden),
+          }));
+          setPreviewAssignment((prev) =>
+            prev && prev.id === asm.id
+              ? { ...prev, testCases: freshCases, testcasesCount: freshCases.length }
+              : prev,
+          );
+          setPublishedAssignments((prev) =>
+            prev.map((item) =>
+              item.id === asm.id
+                ? { ...item, testCases: freshCases, testcasesCount: freshCases.length }
+                : item,
+            ),
+          );
         }
       }
     } catch {
@@ -2437,7 +2434,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                           {/* Chips Thông số kỹ thuật */}
                           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(59, 130, 246, 0.09)', color: '#1e40af' }}>
-                              {testCasesList.length} Test Cases ({totalWeight.toFixed(1)}đ)
+                              {testCasesList.length > 0 ? testCasesList.length : (asm.testcasesCount ?? 0)} Test Cases ({totalWeight.toFixed(1)}đ)
                             </span>
                             <span style={{ fontSize: '12px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-200)' }}>
                               Thời gian: {asm.timeLimitMs || 2000}ms
@@ -2458,7 +2455,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                             <div style={{ display: 'flex', gap: '8px' }}>
                               <button
                                 type="button"
-                                onClick={() => setPreviewAssignment(asm)}
+                                onClick={() => void handleOpenPreviewAssignment(asm)}
                                 style={{
                                   padding: '7px 12px',
                                   borderRadius: '8px',

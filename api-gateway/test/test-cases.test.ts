@@ -91,11 +91,41 @@ async function main(): Promise<boolean> {
     const miss = await req(`${base}/api/v1/test-cases/NOPE-${ts}`, 'GET');
     check(miss.statusCode === 404, 'get missing 404', `${miss.statusCode}`);
 
-    const bad = await req(`${base}/api/v1/test-cases`, 'POST', { assignmentId: asmId, inputData: '   ', expectedOutput: 'x' });
-    check(bad.statusCode === 400, 'create empty input 400', `${bad.statusCode}`);
+    const bad = await req(`${base}/api/v1/test-cases`, 'POST', { assignmentId: asmId, inputData: '1', expectedOutput: '   ' });
+    check(bad.statusCode === 400, 'create empty expectedOutput 400', `${bad.statusCode}`);
+
+    const emptyInput = await req(`${base}/api/v1/test-cases`, 'POST', { assignmentId: asmId, inputData: '', expectedOutput: 'hello' });
+    check(emptyInput.statusCode === 201, 'create empty inputData 201', `${emptyInput.statusCode}`);
 
     const dup = await req(`${base}/api/v1/test-cases`, 'POST', { assignmentId: asmId, inputData: 'input-1', expectedOutput: 'output-1' });
     check(dup.statusCode === 409, 'duplicate 409', `${dup.statusCode}`);
+
+    // Atomic batch replace + rollback check
+    const repBad = await req(`${base}/api/v1/test-cases/assignment/${asmId}`, 'PUT', {
+      testCases: [
+        { inputData: 'a', expectedOutput: 'A', isHidden: false, weight: 3.5 },
+        { inputData: 'a', expectedOutput: 'A', isHidden: true, weight: 3.5 },
+      ],
+    });
+    check(repBad.statusCode === 409, 'replace duplicate batch returns 409 and preserves existing', `${repBad.statusCode}`);
+
+    const afterBadList = await req(`${base}/api/v1/test-cases/assignment/${asmId}?includeHidden=true`, 'GET');
+    check(afterBadList.statusCode === 200 && afterBadList.data?.total === 2, 'rollback kept previous 2 testcases', `${afterBadList.data?.total}`);
+
+    const repOk = await req(`${base}/api/v1/test-cases/assignment/${asmId}`, 'PUT', {
+      testCases: [
+        { inputData: '1', expectedOutput: 'Odd', isHidden: false, weight: 3.5 },
+        { inputData: '2', expectedOutput: 'Even', isHidden: true, weight: 3.5 },
+        { inputData: '3', expectedOutput: 'Odd', isHidden: true, weight: 3.0 },
+      ],
+    });
+    check(repOk.statusCode === 200 && repOk.data?.total === 3, 'atomic replace returns 3 testcases', `${repOk.statusCode} total=${repOk.data?.total}`);
+
+    const asmAfter = await req(`${base}/api/v1/assignments/${asmId}`, 'GET');
+    check(asmAfter.statusCode === 200 && asmAfter.data?.data?.testcasesCount === 3, 'assignment testcasesCount synced to 3', `${asmAfter.data?.data?.testcasesCount}`);
+
+    // Clean up test fixture so repeated runs keep stores tidy
+    await req(`${base}/api/v1/assignments/${asmId}`, 'DELETE');
 
     console.log(`---\nTEST-CASES: ${passed} passed, ${failed} failed`);
     return failed === 0;

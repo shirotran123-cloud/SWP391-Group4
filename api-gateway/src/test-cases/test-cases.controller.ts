@@ -2,6 +2,7 @@ import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, 
 import { TestCasesService } from './test-cases.service';
 import { CreateTestCaseDto } from './dto/create-test-case.dto';
 import { UpdateTestCaseDto } from './dto/update-test-case.dto';
+import { ReplaceTestCasesDto } from './dto/replace-test-cases.dto';
 
 @Controller('api/v1/test-cases')
 export class TestCasesController {
@@ -18,6 +19,17 @@ export class TestCasesController {
   public async listByAssignment(@Param('assignmentId') assignmentId: string, @Query('includeHidden') includeHidden?: string) {
     const data = await this.testCasesService.listByAssignment(assignmentId, includeHidden === 'true');
     return { statusCode: HttpStatus.OK, total: data.length, data };
+  }
+
+  @Put('assignment/:assignmentId')
+  public async replaceForAssignment(@Param('assignmentId') assignmentId: string, @Body() dto: ReplaceTestCasesDto) {
+    const data = await this.testCasesService.replaceForAssignment(assignmentId, dto);
+    return {
+      statusCode: HttpStatus.OK,
+      message: 'Cập nhật đồng bộ danh sách test case thành công.',
+      total: data.length,
+      data,
+    };
   }
 
   @Get(':id')

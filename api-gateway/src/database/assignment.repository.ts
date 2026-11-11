@@ -10,6 +10,7 @@ export class AssignmentRepository implements OnModuleInit {
   private readonly records: Map<string, AssignmentRecord> = new Map();
   private readonly dataDir: string;
   private readonly dataFile: string;
+  private syncPromise: Promise<void> | null = null;
 
   constructor(private readonly postgres: PostgresService) {
     const candidateDirs = [
@@ -23,10 +24,8 @@ export class AssignmentRepository implements OnModuleInit {
   }
 
   public async onModuleInit(): Promise<void> {
+    await this.postgres.ensureInitialized?.();
     await this.syncWithPostgres();
-    setTimeout(async () => {
-      await this.syncWithPostgres();
-    }, 1500);
   }
 
   private initStore(): void {
@@ -56,18 +55,91 @@ export class AssignmentRepository implements OnModuleInit {
     }
   }
 
+  private normalizeClassId(courseId?: string): string {
+    const raw = (courseId || 'CRS-SWP391').trim();
+    const normalized = raw.startsWith('CRS-') ? raw : `CRS-${raw.replace(/^COURSE-/i, '')}`;
+    return normalized.slice(0, 64);
+  }
+
+  private async ensureParentClassInPostgres(classId: string): Promise<void> {
+    if (!this.postgres.isAvailable()) return;
+
+    const existingClass = await this.postgres.query(
+      `SELECT class_id FROM classes WHERE class_id = $1 LIMIT 1`,
+      [classId],
+    );
+    if (existingClass.rows.length > 0) return;
+
+    await this.postgres.query(
+      `INSERT INTO roles (role_id, role_name, description)
+       VALUES ('LECTURER', 'LECTURER', 'Giảng viên')
+       ON CONFLICT (role_id) DO NOTHING`,
+    );
+
+    const lecturerRes = await this.postgres.query(
+      `SELECT user_id FROM users
+       WHERE user_id = 'GV001' OR role_id IN ('LECTURER', 'ADMIN', 'HOD')
+       ORDER BY CASE WHEN user_id = 'GV001' THEN 0 ELSE 1 END
+       LIMIT 1`,
+    );
+    let lecturerId = lecturerRes.rows[0]?.user_id as string | undefined;
+    if (!lecturerId) {
+      await this.postgres.query(
+        `INSERT INTO users (user_id, student_code, full_name, email, role_id, role)
+         VALUES ('GV001', 'GV001', 'Giảng Viên Phụ Trách', 'gv001@fpt.edu.vn', 'LECTURER', 'INSTRUCTOR')
+         ON CONFLICT DO NOTHING`,
+      );
+      lecturerId = 'GV001';
+    }
+
+    const baseCode = classId.replace(/^CRS-/i, '').trim() || classId;
+    let classCode = baseCode.slice(0, 32);
+    const codeCheck = await this.postgres.query(
+      `SELECT class_id FROM classes WHERE class_code = $1 LIMIT 1`,
+      [classCode],
+    );
+    if (codeCheck.rows.length > 0 && codeCheck.rows[0].class_id !== classId) {
+      classCode = classId.slice(0, 32);
+      const altCheck = await this.postgres.query(
+        `SELECT class_id FROM classes WHERE class_code = $1 LIMIT 1`,
+        [classCode],
+      );
+      if (altCheck.rows.length > 0 && altCheck.rows[0].class_id !== classId) {
+        const suffix = `-${Date.now().toString(36).slice(-5)}`;
+        classCode = `${baseCode.slice(0, Math.max(1, 32 - suffix.length))}${suffix}`;
+      }
+    }
+
+    await this.postgres.query(
+      `INSERT INTO classes (class_id, lecturer_id, class_code, class_name, semester, description, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, true, NOW(), NOW())
+       ON CONFLICT (class_id) DO NOTHING`,
+      [
+        classId,
+        lecturerId,
+        classCode,
+        `Lớp ${baseCode}`,
+        'Fall 2026',
+        'Tự động đồng bộ từ bài tập',
+      ],
+    );
+  }
+
   private async syncWithPostgres(): Promise<void> {
     if (!this.postgres.isAvailable()) return;
-    try {
-      const rows = await this.postgres.safeQuery<any>(
-        `SELECT assignment_id, class_id, course_id, title, description, allowed_languages, 
-                max_score, deadline, due_date, time_limit_ms, memory_limit_mb, testcases_count, 
-                is_active, created_at, updated_at 
-         FROM assignments ORDER BY created_at DESC`,
-      );
+    if (this.syncPromise) return this.syncPromise;
 
-      const dbIds = new Set<string>();
-      if (rows && rows.length > 0) {
+    this.syncPromise = (async () => {
+      try {
+        const res = await this.postgres.query(
+          `SELECT assignment_id, class_id, course_id, title, description, allowed_languages,
+                  max_score, deadline, due_date, time_limit_ms, memory_limit_mb, testcases_count,
+                  is_active, created_at, updated_at
+           FROM assignments ORDER BY created_at DESC`,
+        );
+        const rows = res.rows || [];
+
+        const dbIds = new Set<string>();
         for (const r of rows) {
           dbIds.add(r.assignment_id);
           this.records.set(r.assignment_id, {
@@ -80,81 +152,112 @@ export class AssignmentRepository implements OnModuleInit {
             deadline: new Date(r.deadline || r.due_date),
             timeLimitMs: r.time_limit_ms || 2000,
             memoryLimitMb: r.memory_limit_mb || 512,
-            testcasesCount: r.testcases_count || 2,
+            testcasesCount: typeof r.testcases_count === 'number' ? r.testcases_count : 2,
             isActive: r.is_active,
             createdAt: new Date(r.created_at),
             updatedAt: new Date(r.updated_at),
           });
         }
-        this.logger.log(`✅ [AssignmentRepository] Đã nạp ${rows.length} bài tập từ PostgreSQL 15.`);
-      }
-
-      // Đồng bộ 2 chiều
-      let newlySynced = 0;
-      for (const a of this.records.values()) {
-        if (!dbIds.has(a.assignmentId)) {
-          await this.saveToPostgres(a);
-          dbIds.add(a.assignmentId);
-          newlySynced++;
+        if (rows.length > 0) {
+          this.logger.log(`✅ [AssignmentRepository] Đã nạp ${rows.length} bài tập từ PostgreSQL 15.`);
         }
-      }
-      if (newlySynced > 0) {
-        this.logger.log(`✅ [AssignmentRepository] Đã đồng bộ ngược ${newlySynced} bài tập vào PostgreSQL 15.`);
-      }
 
-      this.persist();
-    } catch (err: any) {
-      this.logger.warn(`[AssignmentRepository] Lỗi đồng bộ PostgreSQL: ${err.message}`);
+        // Đồng bộ 2 chiều: đẩy các bài tập JSON chưa có vào PostgreSQL
+        let newlySynced = 0;
+        for (const a of this.records.values()) {
+          if (!dbIds.has(a.assignmentId)) {
+            try {
+              await this.saveToPostgres(a);
+              dbIds.add(a.assignmentId);
+              newlySynced++;
+            } catch (syncItemErr: any) {
+              this.logger.warn(
+                `[AssignmentRepository] Không thể đồng bộ ngược ${a.assignmentId} sang PostgreSQL: ${syncItemErr.message}`,
+              );
+            }
+          }
+        }
+        if (newlySynced > 0) {
+          this.logger.log(`✅ [AssignmentRepository] Đã đồng bộ ngược ${newlySynced} bài tập vào PostgreSQL 15.`);
+        }
+
+        this.persist();
+      } catch (err: any) {
+        this.logger.warn(`[AssignmentRepository] Lỗi đồng bộ PostgreSQL: ${err.message}`);
+      } finally {
+        this.syncPromise = null;
+      }
+    })();
+
+    return this.syncPromise;
+  }
+
+  public async ensureInPostgres(assignmentId: string): Promise<void> {
+    if (!this.postgres.isAvailable()) return;
+    const existing = await this.postgres.query(
+      `SELECT assignment_id FROM assignments WHERE assignment_id = $1 LIMIT 1`,
+      [assignmentId],
+    );
+    if (existing.rows.length > 0) return;
+
+    const record = this.records.get(assignmentId);
+    if (!record) {
+      throw new Error(`Không tìm thấy bài tập ${assignmentId} để đồng bộ PostgreSQL.`);
     }
+    await this.saveToPostgres(record);
   }
 
   private async saveToPostgres(a: AssignmentRecord): Promise<void> {
     if (!this.postgres.isAvailable()) return;
-    try {
-      const classId = a.courseId.startsWith('CRS-') ? a.courseId : `CRS-${a.courseId.replace('COURSE-', '')}`;
+    const classId = this.normalizeClassId(a.courseId);
+    await this.ensureParentClassInPostgres(classId);
 
-      await this.postgres.safeQuery(
-        `INSERT INTO assignments (
-           assignment_id, class_id, course_id, title, description, allowed_languages, 
-           max_score, due_date, deadline, time_limit_ms, memory_limit_mb, testcases_count, 
-           is_active, created_at, updated_at
-         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-         ON CONFLICT (assignment_id) DO UPDATE SET
-           class_id = EXCLUDED.class_id,
-           course_id = EXCLUDED.course_id,
-           title = EXCLUDED.title,
-           description = EXCLUDED.description,
-           allowed_languages = EXCLUDED.allowed_languages,
-           max_score = EXCLUDED.max_score,
-           due_date = EXCLUDED.due_date,
-           deadline = EXCLUDED.deadline,
-           time_limit_ms = EXCLUDED.time_limit_ms,
-           memory_limit_mb = EXCLUDED.memory_limit_mb,
-           testcases_count = EXCLUDED.testcases_count,
-           is_active = EXCLUDED.is_active,
-           updated_at = NOW()`,
-        [
-          a.assignmentId,
-          classId,
-          a.courseId,
-          a.title,
-          a.description || '',
-          JSON.stringify(a.allowedLanguages || ['java']),
-          a.maxScore,
-          a.deadline,
-          a.deadline,
-          a.timeLimitMs,
-          a.memoryLimitMb,
-          a.testcasesCount,
-          a.isActive,
-          a.createdAt,
-          a.updatedAt,
-        ],
-      );
-    } catch (err: any) {
-      this.logger.warn(`[AssignmentRepository] Postgres save error for ${a.assignmentId}: ${err.message}`);
-    }
+    const parsedDeadline = new Date(a.deadline);
+    const validDeadline = isNaN(parsedDeadline.getTime()) ? new Date() : parsedDeadline;
+    const parsedCreatedAt = new Date(a.createdAt);
+    const validCreatedAt = isNaN(parsedCreatedAt.getTime()) ? new Date() : parsedCreatedAt;
+    const parsedUpdatedAt = new Date(a.updatedAt);
+    const validUpdatedAt = isNaN(parsedUpdatedAt.getTime()) ? new Date() : parsedUpdatedAt;
+
+    await this.postgres.query(
+      `INSERT INTO assignments (
+         assignment_id, class_id, course_id, title, description, allowed_languages,
+         max_score, due_date, deadline, time_limit_ms, memory_limit_mb, testcases_count,
+         is_active, created_at, updated_at
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+       ON CONFLICT (assignment_id) DO UPDATE SET
+         class_id = EXCLUDED.class_id,
+         course_id = EXCLUDED.course_id,
+         title = EXCLUDED.title,
+         description = EXCLUDED.description,
+         allowed_languages = EXCLUDED.allowed_languages,
+         max_score = EXCLUDED.max_score,
+         due_date = EXCLUDED.due_date,
+         deadline = EXCLUDED.deadline,
+         time_limit_ms = EXCLUDED.time_limit_ms,
+         memory_limit_mb = EXCLUDED.memory_limit_mb,
+         testcases_count = EXCLUDED.testcases_count,
+         is_active = EXCLUDED.is_active,
+         updated_at = NOW()`,
+      [
+        a.assignmentId,
+        classId,
+        a.courseId,
+        a.title,
+        a.description || '',
+        JSON.stringify(a.allowedLanguages || ['java']),
+        a.maxScore,
+        validDeadline,
+        validDeadline,
+        a.timeLimitMs,
+        a.memoryLimitMb,
+        a.testcasesCount,
+        a.isActive,
+        validCreatedAt,
+        validUpdatedAt,
+      ],
+    );
   }
 
   private seedInitialAssignments(): void {
@@ -244,15 +347,45 @@ export class AssignmentRepository implements OnModuleInit {
       createdAt: now,
       updatedAt: now,
     };
+    await this.saveToPostgres(newRecord);
     this.records.set(newRecord.assignmentId, newRecord);
     this.persist();
-
-    await this.saveToPostgres(newRecord);
     return newRecord;
   }
 
   public async findById(assignmentId: string): Promise<AssignmentRecord | null> {
-    return this.records.get(assignmentId) || null;
+    const inMemory = this.records.get(assignmentId);
+    if (inMemory) return inMemory;
+    if (this.postgres.isAvailable()) {
+      const res = await this.postgres.query(
+        `SELECT assignment_id, class_id, course_id, title, description, allowed_languages,
+                max_score, deadline, due_date, time_limit_ms, memory_limit_mb, testcases_count,
+                is_active, created_at, updated_at
+         FROM assignments WHERE assignment_id = $1 LIMIT 1`,
+        [assignmentId],
+      );
+      if (res.rows.length > 0) {
+        const r = res.rows[0];
+        const hydrated: AssignmentRecord = {
+          assignmentId: r.assignment_id,
+          courseId: r.course_id || r.class_id,
+          title: r.title,
+          description: r.description || '',
+          allowedLanguages: r.allowed_languages || ['java', 'python', 'cpp', 'dotnet'],
+          maxScore: parseFloat(r.max_score) || 10.0,
+          deadline: new Date(r.deadline || r.due_date),
+          timeLimitMs: r.time_limit_ms || 2000,
+          memoryLimitMb: r.memory_limit_mb || 512,
+          testcasesCount: typeof r.testcases_count === 'number' ? r.testcases_count : 2,
+          isActive: r.is_active,
+          createdAt: new Date(r.created_at),
+          updatedAt: new Date(r.updated_at),
+        };
+        this.records.set(hydrated.assignmentId, hydrated);
+        return hydrated;
+      }
+    }
+    return null;
   }
 
   public async findByCourseId(courseId: string): Promise<AssignmentRecord[]> {
@@ -266,7 +399,7 @@ export class AssignmentRepository implements OnModuleInit {
   }
 
   public async update(assignmentId: string, partial: Partial<Omit<AssignmentRecord, 'assignmentId' | 'createdAt'>>): Promise<AssignmentRecord | null> {
-    const existing = this.records.get(assignmentId);
+    const existing = await this.findById(assignmentId);
     if (!existing) return null;
 
     const updated: AssignmentRecord = {
@@ -274,20 +407,20 @@ export class AssignmentRepository implements OnModuleInit {
       ...partial,
       updatedAt: new Date(),
     };
+    await this.saveToPostgres(updated);
     this.records.set(assignmentId, updated);
     this.persist();
-
-    await this.saveToPostgres(updated);
     return updated;
   }
 
   public async delete(assignmentId: string): Promise<boolean> {
-    const existed = this.records.delete(assignmentId);
+    const existed = (await this.findById(assignmentId)) !== null;
     if (existed) {
-      this.persist();
       if (this.postgres.isAvailable()) {
-        await this.postgres.safeQuery(`DELETE FROM assignments WHERE assignment_id = $1`, [assignmentId]);
+        await this.postgres.query(`DELETE FROM assignments WHERE assignment_id = $1`, [assignmentId]);
       }
+      this.records.delete(assignmentId);
+      this.persist();
     }
     return existed;
   }

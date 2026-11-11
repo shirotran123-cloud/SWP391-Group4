@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { AssignmentRepository } from '../database/assignment.repository';
 import { CourseRepository } from '../database/course.repository';
+import { TestCaseRepository } from '../database/test-case.repository';
 import { CreateAssignmentDto } from './dto/create-assignment.dto';
 import { UpdateAssignmentDto } from './dto/update-assignment.dto';
 import { AssignmentRecord } from '../database/assignment.entity';
@@ -18,6 +19,7 @@ export class AssignmentsService {
   constructor(
     private readonly assignmentRepo: AssignmentRepository,
     private readonly courseRepo: CourseRepository,
+    private readonly testCaseRepo: TestCaseRepository,
   ) {}
 
   public async createAssignment(dto: CreateAssignmentDto): Promise<AssignmentRecord> {
@@ -89,6 +91,7 @@ export class AssignmentsService {
   public async deleteAssignment(assignmentId: string): Promise<{ success: boolean; message: string }> {
     await this.getAssignmentById(assignmentId);
     const success = await this.assignmentRepo.delete(assignmentId);
+    await this.testCaseRepo.deleteByAssignmentLocal(assignmentId);
     this.logger.log(`[AssignmentsService] Deleted assignment ${assignmentId}`);
     return { success, message: `Đã xóa bài tập ${assignmentId} thành công.` };
   }

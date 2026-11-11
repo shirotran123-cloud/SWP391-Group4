@@ -513,7 +513,8 @@ export function App() {
       setIsSocketConnected(false);
     });
 
-    socket.on('grading:progress', (data: { stepId: string; stepName: string; status: any; detail?: string }) => {
+    socket.on('grading:progress', (data: { submissionId?: string; stepId: string; stepName: string; status: any; detail?: string }) => {
+      if (data?.submissionId && submissionIdRef.current && data.submissionId !== submissionIdRef.current) return;
       setSteps((prev) =>
         upsertStep(
           prev,
@@ -524,7 +525,8 @@ export function App() {
       );
     });
 
-    socket.on('testcase:evaluated', (data: { testcaseIndex: number; totalTestcases: number; status: string; timeMs: number; memoryKb?: number }) => {
+    socket.on('testcase:evaluated', (data: { submissionId?: string; testcaseIndex: number; totalTestcases: number; status: string; timeMs: number; memoryKb?: number }) => {
+      if (data?.submissionId && submissionIdRef.current && data.submissionId !== submissionIdRef.current) return;
       const stepId = `tc-${data.testcaseIndex}`;
       const mem = data.memoryKb ? `, ${(data.memoryKb / 1024).toFixed(1)}MB` : '';
       setSteps((prev) =>
@@ -536,6 +538,7 @@ export function App() {
     });
 
     socket.on('ai:reviewed', (data: any) => {
+      if (data?.submissionId && submissionIdRef.current && data.submissionId !== submissionIdRef.current) return;
       if (data) {
         setAiRating({
           cleanCodeScore: data.cleanCodeScore,
@@ -547,6 +550,7 @@ export function App() {
     });
 
     socket.on('grading:completed', (data: any) => {
+      if (data?.submissionId && submissionIdRef.current && data.submissionId !== submissionIdRef.current) return;
       if (data.aiRating) setAiRating(data.aiRating);
       if (data.sourceCode) setCurrentSourceCode(data.sourceCode);
       if (data.plagiarismMatch) setPlagiarismMatch(data.plagiarismMatch);
@@ -564,19 +568,41 @@ export function App() {
         executionTimeMs: data.executionTimeMs,
       });
       setSteps((prev) =>
-        syncTestcaseSteps(prev, data.testcaseResults).map((s) =>
-          s.id.startsWith('tc-') || (s.status !== 'in_progress' && s.status !== 'pending')
-            ? s
-            : { ...s, status: 'passed' }
-        )
+        syncTestcaseSteps(prev, data.testcaseResults).map((s) => {
+          if (data.compileError && s.id === '2') {
+            return { ...s, status: 'failed', detail: s.detail || 'Biên dịch mã nguồn thất bại trong Sandbox.' };
+          }
+          if (s.id.startsWith('tc-') || s.status === 'failed') return s;
+          return s.status === 'in_progress' || s.status === 'pending' ? { ...s, status: 'passed' } : s;
+        })
       );
       setIsCompleted(true);
     });
 
     socket.on('grading:failed', (data: any) => {
-      setSteps((prev) =>
-        prev.map((s) => (s.status === 'in_progress' ? { ...s, status: 'failed', detail: data.error || 'Thất bại' } : s))
-      );
+      if (data?.submissionId && submissionIdRef.current && data.submissionId !== submissionIdRef.current) return;
+      setSteps((prev) => {
+        let marked = false;
+        const next = prev.map((s) => {
+          if (s.status === 'in_progress') {
+            marked = true;
+            return { ...s, status: 'failed' as const, detail: data?.error || s.detail || 'Thất bại' };
+          }
+          return s;
+        });
+        if (!marked) {
+          const fallbackIdx = next.findIndex((s) => s.status === 'pending' || s.id === '2');
+          if (fallbackIdx !== -1) {
+            next[fallbackIdx] = {
+              ...next[fallbackIdx],
+              status: 'failed',
+              detail: data?.error || next[fallbackIdx].detail || 'Chấm bài thất bại',
+            };
+          }
+        }
+        return next;
+      });
+      setIsCompleted(true);
     });
 
     socketRef.current = socket;
@@ -761,61 +787,6 @@ export function App() {
     }
 
     if (file) {
-      // ── Đảm bảo đề bài và testcases đã có trên Backend CSDL trước khi gửi bài ──
-      try {
-        const rawSaved = localStorage.getItem('aita_published_assignments');
-        if (rawSaved) {
-          const list: any[] = JSON.parse(rawSaved);
-          const found = list.find((a) => a.id === activeTask.id);
-          if (found) {
-            let validDeadline = found.deadline;
-            const parsed = new Date(found.deadline);
-            if (isNaN(parsed.getTime()) || parsed.getTime() <= Date.now()) {
-              validDeadline = new Date(Date.now() + 7 * 86400000).toISOString();
-            } else {
-              validDeadline = parsed.toISOString();
-            }
-
-            // Sync assignment
-            await fetch(`${API_BASE_URL}/api/v1/assignments`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json', ...headers },
-              body: JSON.stringify({
-                assignmentId: found.id,
-                courseId: found.courseId || 'COURSE-SWP391',
-                title: found.title || activeTask.title,
-                description: found.description || activeTask.description,
-                allowedLanguages: found.allowedLanguages || ['java', 'python', 'cpp', 'dotnet'],
-                deadline: validDeadline,
-                timeLimitMs: found.timeLimitMs || 2000,
-                memoryLimitMb: found.memoryLimitMb || 512,
-                testcasesCount: found.testCases?.length || 2,
-              }),
-            });
-
-            // Sync test cases
-            if (Array.isArray(found.testCases)) {
-              for (const tc of found.testCases) {
-                await fetch(`${API_BASE_URL}/api/v1/test-cases`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', ...headers },
-                  body: JSON.stringify({
-                    assignmentId: found.id,
-                    inputData: tc.input || ' ',
-                    expectedOutput: tc.output || ' ',
-                    isHidden: !!tc.isHidden,
-                    weight: Number(tc.weight) || 1.0,
-                    timeLimitMs: found.timeLimitMs || 2000,
-                  }),
-                });
-              }
-            }
-          }
-        }
-      } catch (syncErr) {
-        console.warn('[Submission] Không thể tự động đồng bộ đề bài sang backend:', syncErr);
-      }
-
       let response: Response | null = null;
       let networkErrorDetail = '';
 
@@ -851,7 +822,8 @@ export function App() {
           });
 
           socketRef.current.off('grading:progress');
-          socketRef.current.on('grading:progress', (data: { stepId: string; stepName: string; status: any; detail?: string }) => {
+          socketRef.current.on('grading:progress', (data: { submissionId?: string; stepId: string; stepName: string; status: any; detail?: string }) => {
+            if (data?.submissionId && data.submissionId !== subId) return;
             setSteps((prev) =>
                   upsertStep(
                     prev,
@@ -862,8 +834,36 @@ export function App() {
                 );
               });
 
+          socketRef.current.off('grading:failed');
+          socketRef.current.on('grading:failed', (data: { submissionId?: string; error?: string }) => {
+            if (data?.submissionId && data.submissionId !== subId) return;
+            setSteps((prev) => {
+              let marked = false;
+              const next = prev.map((s) => {
+                if (s.status === 'in_progress') {
+                  marked = true;
+                  return { ...s, status: 'failed' as const, detail: data?.error || s.detail || 'Chấm bài thất bại' };
+                }
+                return s;
+              });
+              if (!marked) {
+                const fallbackIdx = next.findIndex((s) => s.status === 'pending' || s.id === '2');
+                if (fallbackIdx !== -1) {
+                  next[fallbackIdx] = {
+                    ...next[fallbackIdx],
+                    status: 'failed',
+                    detail: data?.error || next[fallbackIdx].detail || 'Chấm bài thất bại',
+                  };
+                }
+              }
+              return next;
+            });
+            setIsCompleted(true);
+          });
+
           socketRef.current.off('grading:completed');
           socketRef.current.on('grading:completed', (data: any) => {
+            if (data?.submissionId && data.submissionId !== subId) return;
             if (data.aiRating) setAiRating(data.aiRating);
             const actualPlag = computedPlagiarism || data.plagiarismMatch;
             if (isLecturerRole(currentUser?.role)) {
@@ -904,6 +904,13 @@ export function App() {
             });
             setSteps((prev) =>
               syncTestcaseSteps(prev, data.testcaseResults).map((s) => {
+                if (data.compileError && s.id === '2') {
+                  return {
+                    ...s,
+                    status: 'failed',
+                    detail: s.detail || 'Biên dịch mã nguồn thất bại trong Docker Sandbox.',
+                  };
+                }
                 if (s.id === '6') {
                   if (isSeverePlag) {
                     return { ...s, status: 'failed', detail: `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.` };
@@ -911,7 +918,8 @@ export function App() {
                     return { ...s, status: 'passed', detail: `Bài quá ngắn (≤ 20 dòng) — tương đồng ${sim.toFixed(1)}%, chưa đủ dữ liệu tự triển khai để kết tội tự động. Tạm giữ điểm ${finalScore}/10 chờ Giảng viên kiểm tra trực tiếp.` };
                   }
                 }
-                return s.id.startsWith('tc-') ? s : { ...s, status: 'passed' };
+                if (s.id.startsWith('tc-') || s.status === 'failed') return s;
+                return { ...s, status: 'passed' };
               })
             );
             setIsCompleted(true);
@@ -931,51 +939,106 @@ export function App() {
             if (pollRes.ok) {
               const pollData = await pollRes.json();
               const sub = pollData.data || pollData;
-              if (sub.status === 'GRADED' || sub.status === 'FAILED') {
+              const resPayload = sub.result || sub.details || {};
+              const isDoneSuccess = sub.status === 'COMPLETED' || sub.status === 'GRADED';
+              const isDoneFailed = sub.status === 'FAILED';
+              if (isDoneFailed) {
                 clearInterval(pollTimer);
-                if (sub.aiRating) setAiRating(sub.aiRating);
+                const errDetail = sub.errorMessage || resPayload.error || 'Chấm bài thất bại';
+                setSteps((prev) => {
+                  let marked = false;
+                  const next = prev.map((s) => {
+                    if (s.status === 'in_progress') {
+                      marked = true;
+                      return { ...s, status: 'failed' as const, detail: errDetail };
+                    }
+                    return s;
+                  });
+                  if (!marked) {
+                    const fallbackIdx = next.findIndex((s) => s.status === 'pending' || s.id === '2');
+                    if (fallbackIdx !== -1) {
+                      next[fallbackIdx] = { ...next[fallbackIdx], status: 'failed', detail: errDetail };
+                    }
+                  }
+                  return next;
+                });
+                setIsCompleted(true);
+                return;
+              }
+              if (isDoneSuccess) {
+                clearInterval(pollTimer);
+                const resolvedAiRating = sub.aiRating || resPayload.aiRating;
+                if (resolvedAiRating) setAiRating(resolvedAiRating);
 
                 // BR-03: Đạo văn AST từ 80% trở lên (>= 80.0%)
-                const sim = sub.similarityRate ?? sub.result?.similarityRate ?? 0;
+                const resolvedPlag = sub.plagiarismMatch || resPayload.plagiarismMatch;
+                const resolvedPlagStatus = sub.plagiarismStatus || resPayload.plagiarismStatus;
+                const sim = sub.similarityRate ?? resPayload.similarityRate ?? resolvedPlag?.similarityRate ?? 0;
+                const confirmedFlag = sub.confirmedPlagiarism ?? resPayload.confirmedPlagiarism;
                 const isPendingShortReview =
-                  !sub.confirmedPlagiarism &&
-                  (sub.plagiarismMatch?.status === 'SUSPECTED' || (sub.plagiarismStatus === 'NGHI VẤN' && sim >= 70.0));
+                  !confirmedFlag &&
+                  (resolvedPlag?.status === 'SUSPECTED' || (resolvedPlagStatus === 'NGHI VẤN' && sim >= 70.0));
                 const isSeverePlag =
-                  sub.confirmedPlagiarism === true ||
-                  (!isPendingShortReview && sub.plagiarismMatch?.status === 'FLAGGED_PLAGIARISM') ||
-                  (!isPendingShortReview && sub.confirmedPlagiarism !== false && sim >= 80.0);
-                const finalScore = isSeverePlag ? 0.0 : (sub.score ?? sub.computedScoreBeforePenalty ?? 0);
+                  confirmedFlag === true ||
+                  (!isPendingShortReview && resolvedPlag?.status === 'FLAGGED_PLAGIARISM') ||
+                  (!isPendingShortReview && confirmedFlag !== false && sim >= 80.0);
+                const finalScore = isSeverePlag
+                  ? 0.0
+                  : (sub.score ?? resPayload.score ?? sub.computedScoreBeforePenalty ?? resPayload.computedScoreBeforePenalty ?? 0);
+                const rawBreakdown = sub.scoreBreakdown || resPayload.scoreBreakdown;
                 const finalBreakdown: ScoreBreakdown = isSeverePlag
                   ? { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: 0 }
-                  : (sub.scoreBreakdown || { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: finalScore });
+                  : (rawBreakdown || { testcase1: 0, testcase2: 0, cleanCode: 0, solid: 0, total: finalScore });
+
+                const resolvedExecMs = sub.executionTimeMs ?? resPayload.executionTimeMs;
+                const resolvedSource = sub.sourceCode || resPayload.sourceCode;
+                const resolvedPassed = isSeverePlag ? 0 : (sub.passedTestcases ?? resPayload.passedTestcases);
+                const resolvedTotal = sub.totalTestcases ?? resPayload.totalTestcases;
+                const resolvedTcResults = sub.testcaseResults || resPayload.testcaseResults;
+                const isCompileErr = Boolean(sub.compileError ?? resPayload.compileError);
 
                 setScore(finalScore);
                 setScoreBreakdown(finalBreakdown);
-                if (sub.executionTimeMs !== undefined) setExecutionTimeMs(sub.executionTimeMs);
-                if (sub.sourceCode) setCurrentSourceCode(sub.sourceCode);
+                if (resolvedExecMs !== undefined) setExecutionTimeMs(resolvedExecMs);
+                if (resolvedSource) setCurrentSourceCode(resolvedSource);
                 persistGradingResult({
                   score: finalScore,
                   scoreBreakdown: finalBreakdown,
                   submissionId: subId,
-                  sourceCode: sub.sourceCode || codeToGrade,
-                  aiRating: sub.aiRating,
-                  passedTestcases: isSeverePlag ? 0 : sub.passedTestcases,
-                  totalTestcases: sub.totalTestcases,
-                  executionTimeMs: sub.executionTimeMs,
+                  sourceCode: resolvedSource || codeToGrade,
+                  aiRating: resolvedAiRating,
+                  passedTestcases: resolvedPassed,
+                  totalTestcases: resolvedTotal,
+                  executionTimeMs: resolvedExecMs,
                   fileName: file.name,
                 });
                 setSteps((prev) =>
-                  prev.map((s) => ({
-                    ...s,
-                    status: isSeverePlag && s.id === '6' ? 'failed' : (sub.status === 'GRADED' ? 'passed' : 'failed'),
-                    detail: s.id === '6'
-                      ? isSeverePlag
-                        ? `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.`
-                        : isPendingShortReview && sim >= 50.0
-                          ? `Bài quá ngắn (≤ 20 dòng) — tương đồng ${sim.toFixed(1)}%, chưa đủ dữ liệu tự triển khai để kết tội tự động. Tạm giữ điểm ${finalScore}/10 chờ Giảng viên kiểm tra trực tiếp.`
-                          : 'Hoàn thành phân tích AST & Winnowing'
-                      : (sub.status === 'GRADED' ? 'Hoàn thành (Đạt)' : (sub.errorMessage || 'Thất bại')),
-                  }))
+                  syncTestcaseSteps(prev, resolvedTcResults).map((s) => {
+                    if (isCompileErr && s.id === '2') {
+                      return {
+                        ...s,
+                        status: 'failed',
+                        detail: 'Biên dịch mã nguồn thất bại trong Docker Sandbox.',
+                      };
+                    }
+                    if (s.id === '6') {
+                      return {
+                        ...s,
+                        status: isSeverePlag ? 'failed' : 'passed',
+                        detail: isSeverePlag
+                          ? `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.`
+                          : isPendingShortReview && sim >= 50.0
+                            ? `Bài quá ngắn (≤ 20 dòng) — tương đồng ${sim.toFixed(1)}%, chưa đủ dữ liệu tự triển khai để kết tội tự động. Tạm giữ điểm ${finalScore}/10 chờ Giảng viên kiểm tra trực tiếp.`
+                            : 'Hoàn thành phân tích AST & Winnowing',
+                      };
+                    }
+                    if (s.id.startsWith('tc-') || s.status === 'failed') return s;
+                    return {
+                      ...s,
+                      status: 'passed',
+                      detail: 'Hoàn thành (Đạt)',
+                    };
+                  }),
                 );
                 setIsCompleted(true);
                 return;

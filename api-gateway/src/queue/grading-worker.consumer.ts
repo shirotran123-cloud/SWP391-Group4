@@ -248,13 +248,14 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     // Nạp testcase TRƯỚC khi kiểm tra source để mọi nhánh (kể cả zip lỗi) đều báo đúng tổng N.
     const persistedCases = await this.loadAssignmentTestCases(assignmentId);
     const assignment = await this.assignmentRepo.findById(assignmentId);
-    if (
-      assignment &&
-      ((persistedCases.length > 0 && persistedCases.length !== assignment.testcasesCount) ||
-        (persistedCases.length === 0 && assignment.testcasesCount !== TESTCASES.length))
-    ) {
+    if (assignment && persistedCases.length === 0) {
       throw new Error(
-        `Assignment ${assignmentId} khai báo ${assignment.testcasesCount} testcase nhưng chỉ lưu được ${persistedCases.length}. Không thể chấm bằng bộ testcase mặc định.`,
+        `Assignment ${assignmentId} không có testcase nào trong CSDL (khai báo ${assignment.testcasesCount}). Không thể chấm bằng bộ testcase mặc định.`,
+      );
+    }
+    if (assignment && persistedCases.length > 0 && persistedCases.length !== assignment.testcasesCount) {
+      this.logger.warn(
+        `[Pipeline] Assignment ${assignmentId} khai báo ${assignment.testcasesCount} testcase nhưng CSDL có ${persistedCases.length} testcase; đang chạy toàn bộ ${persistedCases.length} testcase từ CSDL.`,
       );
     }
     const casesToRun =
@@ -415,6 +416,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const totalCasesCount = casesToRun.length;
     const testcaseExecutionDetails: Array<{
       id: string;
+      dbTestCaseId: string | null;
       status: 'PASSED' | 'FAILED';
       timeMs: number;
       memoryKb: number;
@@ -425,8 +427,10 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     for (let i = 0; i < totalCasesCount; i++) {
       const tc = casesToRun[i];
       const tcNumber = i + 1;
-      const tcId = (persistedCases[i]?.testCaseId) || (TESTCASES[i]?.id) || `TC-${String(tcNumber).padStart(2, '0')}`;
-      const tcDesc = (persistedCases[i]?.isHidden ? `Testcase ${tcNumber} (Ẩn)` : `Testcase ${tcNumber}`) || TESTCASES[i]?.description || `Testcase ${tcNumber}`;
+      const persistedTc = persistedCases[i];
+      const tcId = persistedTc?.testCaseId || TESTCASES[i]?.id || `TC-${String(tcNumber).padStart(2, '0')}`;
+      const dbTestCaseId = persistedTc?.testCaseId ?? null;
+      const tcDesc = (persistedTc?.isHidden ? `Testcase ${tcNumber} (Ẩn)` : `Testcase ${tcNumber}`) || TESTCASES[i]?.description || `Testcase ${tcNumber}`;
 
       const realResult = usedRealContainer && sandboxExec.testResults ? sandboxExec.testResults[i] : undefined;
 
@@ -464,6 +468,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
 
       testcaseExecutionDetails.push({
         id: tcId,
+        dbTestCaseId,
         status: tcStatus,
         timeMs: tcTimeMs,
         memoryKb: tcMemoryKb,
@@ -680,8 +685,18 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
     const scorePerCase = totalTestcases > 0 ? (SCORE_WEIGHTS.testcase1 + SCORE_WEIGHTS.testcase2) / totalTestcases : 0;
     const tc1Passed = testcaseExecutionDetails[0]?.status === 'PASSED';
     const tc2Passed = testcaseExecutionDetails[1]?.status === 'PASSED';
-    const tc1Score = tc1Passed ? Math.round(scorePerCase * 10) / 10 : 0;
-    const tc2Score = tc2Passed ? Math.round((testcaseTotalScore - (tc1Passed ? tc1Score : 0)) * 10) / 10 : 0;
+    const tc1Score =
+      totalTestcases === 2
+        ? tc1Passed
+          ? SCORE_WEIGHTS.testcase1
+          : 0
+        : Math.min(SCORE_WEIGHTS.testcase1, testcaseTotalScore);
+    const tc2Score =
+      totalTestcases === 2
+        ? tc2Passed
+          ? SCORE_WEIGHTS.testcase2
+          : 0
+        : Math.max(0, Math.round((testcaseTotalScore - tc1Score) * 10) / 10);
     const cleanCodePart = Math.round((liveAiRating.cleanCodeScore / 10) * SCORE_WEIGHTS.cleanCode * 10) / 10;
     const solidPart = Math.round((liveSolidAvg / 10) * SCORE_WEIGHTS.solid * 10) / 10;
     const computedScore = Math.min(SCORE_WEIGHTS.maxScore, Math.round((testcaseTotalScore + cleanCodePart + solidPart) * 10) / 10);
@@ -868,7 +883,7 @@ export class GradingWorkerConsumer implements OnModuleInit, OnModuleDestroy {
       const detailsBatch = testcaseExecutionDetails.map((t, idx) => ({
         detailId: `DTL-${submissionId}-TC${idx + 1}`,
         submissionId,
-        testCaseId: t.id,
+        testCaseId: t.dbTestCaseId,
         status: (t.status === 'PASSED' ? 'PASS' : 'FAIL') as 'PASS' | 'FAIL',
         actualOutput: t.actualOutput,
         timeMs: t.timeMs,

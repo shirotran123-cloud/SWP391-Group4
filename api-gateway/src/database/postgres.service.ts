@@ -8,9 +8,18 @@ export class PostgresService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PostgresService.name);
   private pool: Pool | null = null;
   private isConnected = false;
+  private initPromise: Promise<void> | null = null;
 
   async onModuleInit() {
-    await this.initPostgresConnection();
+    await this.ensureInitialized();
+  }
+
+  public async ensureInitialized(): Promise<boolean> {
+    if (!this.initPromise) {
+      this.initPromise = this.initPostgresConnection();
+    }
+    await this.initPromise;
+    return this.isAvailable();
   }
 
   async onModuleDestroy() {

@@ -10,7 +10,7 @@ import {
 import { CountdownTimer } from './CountdownTimer';
 import { AssignmentDescriptionView } from './AssignmentDescriptionView';
 import { parseAssignmentDescription } from '../utils/assignmentParser';
-import { verifyAssignmentTestCases, syncAssignmentTestCases } from '../services/assignment-testcases.service';
+import { verifyServerAssignmentReady } from '../services/assignment-testcases.service';
 import type { Task } from '../types';
 import { API_BASE_URL } from '../config/api';
 
@@ -482,33 +482,53 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     setDetailModalOpen(true);
   };
 
-  // Nạp testcase mẫu từ PostgreSQL cho bài tập nếu có
+  // Nạp bộ testcase thực tế từ PostgreSQL khi sinh viên chọn bài tập
   useEffect(() => {
-    if (!selectedTask || (selectedTask.sampleTestCases && selectedTask.sampleTestCases.length > 0)) return;
-    const fetchSampleCases = async () => {
+    const taskId = selectedTask?.id;
+    if (!taskId) return;
+    let cancelled = false;
+
+    const fetchLiveTestCasesForTask = async () => {
       try {
-        const res = await fetch(`${apiBaseUrl}/api/v1/test-cases/assignment/${encodeURIComponent(selectedTask.id)}`);
-        if (res.ok) {
-          const json = await res.json();
-          const list = json.data || json || [];
-          if (Array.isArray(list) && list.length > 0) {
-            const publicCases = list.filter((tc: any) => !tc.isHidden && tc.expectedOutput !== null);
-            if (publicCases.length > 0) {
-              const samples: SampleTestCase[] = publicCases.map((tc: any, idx: number) => ({
-                name: `Testcase Mẫu ${idx + 1} (Công Khai)`,
-                input: tc.inputData,
-                expectedOutput: tc.expectedOutput,
-                explanation: `Trọng số: ${tc.weight || 1.0}đ. Giới hạn thời gian: ${tc.timeLimitMs || 2000}ms.`,
-              }));
-              setSelectedTask((prev) => (prev && prev.id === selectedTask.id ? { ...prev, sampleTestCases: samples } : prev));
-            }
-          }
-        }
+        const res = await fetch(`${apiBaseUrl}/api/v1/test-cases/assignment/${encodeURIComponent(taskId)}`);
+        if (!res.ok || cancelled) return;
+        const json = await res.json();
+        const list = json.data || json || [];
+        if (!Array.isArray(list) || cancelled) return;
+
+        const mappedCases = list.map((tc: any) => ({
+          input: tc.inputData ?? '',
+          output: tc.expectedOutput ?? '',
+          weight: Number(tc.weight) || 1.0,
+          isHidden: Boolean(tc.isHidden),
+        }));
+        const publicCases = list.filter((tc: any) => !tc.isHidden && tc.expectedOutput !== null);
+        const samples: SampleTestCase[] = publicCases.map((tc: any, idx: number) => ({
+          name: `Testcase Công Khai ${idx + 1}`,
+          input: tc.inputData ?? '',
+          expectedOutput: tc.expectedOutput ?? '',
+          explanation: `Trọng số: ${tc.weight || 1.0}đ. Giới hạn thời gian: ${tc.timeLimitMs || 2000}ms.`,
+        }));
+
+        setSelectedTask((prev) =>
+          prev && prev.id === taskId
+            ? {
+                ...prev,
+                testCasesCount: list.length,
+                configuredTestCases: mappedCases,
+                sampleTestCases: samples,
+              }
+            : prev,
+        );
       } catch {
         // ignore
       }
     };
-    void fetchSampleCases();
+
+    void fetchLiveTestCasesForTask();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedTask?.id, apiBaseUrl]);
 
   useEffect(() => {
@@ -569,7 +589,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               allowedLanguages: sa.allowedLanguages || matchedTemplate?.allowedLanguages || ['java', 'python', 'cpp'],
               allowedExtensions: ['.zip'],
               maxSizeMb: 10,
-              testCasesCount: sa.testcasesCount || (matchedTemplate?.testCasesCount || 5),
+              testCasesCount: typeof sa.testcasesCount === 'number' ? sa.testcasesCount : (matchedTemplate?.testCasesCount ?? 0),
               rubrics: matchedTemplate?.rubrics,
               technicalRequirements: matchedTemplate?.technicalRequirements,
               sampleTestCases: matchedTemplate?.sampleTestCases,
@@ -906,35 +926,15 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     }
     const currentTask = selectedTask || task;
     if (selectedFile && currentTask) {
-      if (selectedTask?.configuredTestCases && selectedTask.configuredTestCases.length > 0) {
-        const assignmentConfig = {
-          id: selectedTask.id,
-          courseId: selectedTask.courseId || '',
-          title: selectedTask.title,
-          description: selectedTask.description,
-          deadline: selectedTask.deadline,
-          timeLimitMs: selectedTask.timeLimitMs || 2000,
-          memoryLimitMb: selectedTask.memoryLimitMb || 512,
-          allowedLanguages: selectedTask.allowedLanguages || ['java', 'python', 'cpp'],
-          testCases: selectedTask.configuredTestCases,
-        };
-
-        try {
-          await verifyAssignmentTestCases(assignmentConfig);
-        } catch (_verifyErr) {
-          try {
-            // Khi máy chủ chưa có hoặc thiếu bộ testcase, tự động đồng bộ lên máy chủ trước khi nộp
-            await syncAssignmentTestCases(assignmentConfig);
-            await verifyAssignmentTestCases(assignmentConfig);
-          } catch (syncError: any) {
-            setErrorMessage(
-              syncError instanceof Error
-                ? `Không thể đồng bộ đủ testcase lên máy chủ nên chưa gửi bài: ${syncError.message}`
-                : 'Không thể đồng bộ đủ testcase lên máy chủ nên chưa gửi bài.',
-            );
-            return;
-          }
-        }
+      try {
+        await verifyServerAssignmentReady(currentTask.id, apiBaseUrl);
+      } catch (verifyError: any) {
+        setErrorMessage(
+          verifyError instanceof Error
+            ? verifyError.message
+            : 'Bài tập chưa sẵn sàng bộ testcase trên máy chủ nên chưa thể nộp bài.',
+        );
+        return;
       }
 
       // Lưu lại thông tin nộp bài tạm thời
@@ -1123,7 +1123,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               { icon: Cpu, label: 'CPU time limit', value: `${selectedTask.timeLimitMs || 2000} ms` },
               { icon: HardDrive, label: 'RAM sandbox', value: `${selectedTask.memoryLimitMb || 512} MB` },
               { icon: Code, label: 'Ngôn ngữ', value: (selectedTask.allowedLanguages || ['java', 'python', 'cpp']).join(', ').toUpperCase() },
-              { icon: Layers, label: 'Bộ testcase', value: `${selectedTask.testCasesCount || 5} test` },
+              { icon: Layers, label: 'Bộ testcase', value: `${selectedTask.testCasesCount ?? 0} test` },
             ].map((metric, i) => {
               const Icon = metric.icon;
               return (
@@ -2529,7 +2529,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', color: 'var(--text-dim)', flexWrap: 'wrap' }}>
                     <span>{assignment.timeLimitMs || 2000}ms</span>
                     <span>{assignment.memoryLimitMb || 512}MB</span>
-                    <span>{assignment.testCasesCount || 5} testcases</span>
+                    <span>{assignment.testCasesCount ?? 0} testcases</span>
                     <span>{(assignment.allowedLanguages || ['java', 'python', 'cpp']).join(', ').toUpperCase()}</span>
                   </div>
                 </div>
