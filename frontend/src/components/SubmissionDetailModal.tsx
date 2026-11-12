@@ -349,7 +349,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
           </button>
         </div>
 
-        {/* SEVERE PLAGIARISM BANNER (BR-03 ZERO SCORE ENFORCEMENT) */}
+        {/* HIGH SUSPICION / CONFIRMED BANNER */}
         {isSeverePlagiarism && (
           <div
             style={{
@@ -367,37 +367,42 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             <AlertTriangle size={24} color="#dc2626" style={{ flexShrink: 0 }} />
             <div style={{ fontSize: '13px', lineHeight: 1.4 }}>
               <div style={{ fontWeight: 700, textTransform: 'uppercase', color: '#b91c1c' }}>
-                Hủy Điểm Bài Nộp: 0.0 / 10.0 (Vi Phạm Liêm Chính Học Thuật)
+                {submission.confirmedPlagiarism
+                  ? 'Đã Xác Nhận Đạo Văn — Áp Dụng Điểm 0 Theo Quy Chế'
+                  : 'Trùng Lặp ≥ 80% — Áp Dụng Điểm 0 Theo Quy Chế (Chờ Xác Nhận)'}
               </div>
               <div style={{ color: '#4b5563', fontSize: '12px', marginTop: '2px' }}>
-                Hệ thống AST &amp; Winnowing phát hiện bài nộp có mức độ tương đồng cao vượt ngưỡng xử phạt nghiêm ngặt (≥ 80.0%{submission.plagiarismRate ? ` - Thực tế: ${submission.plagiarismRate.toFixed(1)}%` : ''}). Toàn bộ điểm kiểm thử và điểm AI đã bị hủy theo quy định.
+                Độ tương đồng AST đo được: <strong>{(submission.plagiarismRate ?? simRate).toFixed(1)}%</strong> (chỉ là số đo).{' '}
+                {submission.confirmedPlagiarism
+                  ? 'Giảng viên đã thẩm định và xác nhận vi phạm theo quy chế.'
+                  : 'Hệ thống đang áp dụng điểm 0 theo quy chế BR-03, trạng thái: Chờ giảng viên xác nhận.'}
               </div>
             </div>
           </div>
         )}
 
-        {/* SHORT SUBMISSION PENDING REVIEW BANNER */}
+        {/* INSUFFICIENT BASIS BANNER (GRAY - TIER 3) */}
         {!isSeverePlagiarism && isPendingShortReview && simRate >= 70 && (
           <div
             style={{
               margin: '12px 24px 0 24px',
               padding: '12px 16px',
-              backgroundColor: '#fffbeb',
-              border: '1px solid #f59e0b',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #cbd5e1',
               borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
-              color: '#92400e',
+              color: '#334155',
             }}
           >
-            <AlertTriangle size={24} color="#d97706" style={{ flexShrink: 0 }} />
+            <AlertTriangle size={22} color="#64748b" style={{ flexShrink: 0 }} />
             <div style={{ fontSize: '13px', lineHeight: 1.4 }}>
-              <div style={{ fontWeight: 700, textTransform: 'uppercase', color: '#b45309' }}>
-                Nghi Vấn Đạo Văn Trên Bài Quá Ngắn (≤ 20 Dòng) — Tạm Giữ Điểm Chờ Duyệt
+              <div style={{ fontWeight: 700, textTransform: 'uppercase', color: '#334155' }}>
+                Không Đủ Cơ Sở Kết Luận (Bài Ngắn ≤ 20 Dòng) — Điểm: Giữ Nguyên
               </div>
-              <div style={{ color: '#78350f', fontSize: '12px', marginTop: '2px' }}>
-                Độ tương đồng AST đạt {simRate.toFixed(1)}%, nhưng dung lượng mã nguồn quá ngắn (≤ 20 dòng không trống) nên chưa đủ dữ liệu tự triển khai để kết tội tự động 0 điểm. Giảng viên vui lòng đối chiếu trực tiếp hai bài nộp.
+              <div style={{ color: '#475569', fontSize: '12px', marginTop: '2px' }}>
+                Độ tương đồng AST đo được là {simRate.toFixed(1)}%, nhưng dung lượng mã nguồn thực quá ngắn (≤ 20 dòng không trống) hoặc theo cấu trúc phổ thông nên chưa đủ cơ sở quy kết. Điểm bài làm được giữ nguyên.
               </div>
             </div>
           </div>

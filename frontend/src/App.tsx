@@ -134,7 +134,7 @@ const initialSteps: GradingStep[] = [
   { id: '2', label: 'Khởi tạo Docker Sandbox', status: 'pending', detail: 'Cấp phát 512MB RAM & cách ly seccomp.json' },
   // Các bước 'tc-1'..'tc-N' được chèn động theo số testcase thật của đề (xem upsertStep).
   { id: '5', label: 'Đánh giá Clean Code & SOLID (GenAI)', status: 'pending', detail: 'Phân tích thiết kế hướng đối tượng qua Gemini/GPT' },
-  { id: '6', label: 'Kiểm định Đạo văn AST Winnowing', status: 'pending', detail: 'So khớp vân tay mã nguồn trên cây cú pháp trừu tượng' },
+  { id: '6', label: 'Kiểm định AST Winnowing', status: 'pending', detail: 'So khớp vân tay mã nguồn trên cây cú pháp trừu tượng' },
 ];
 
 /**
@@ -912,10 +912,21 @@ export function App() {
                   };
                 }
                 if (s.id === '6') {
+                  const isLecturerViewer = isLecturerRole(currentUser?.role);
                   if (isSeverePlag) {
-                    return { ...s, status: 'failed', detail: `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.` };
+                    const msg = data.confirmedPlagiarism
+                      ? (isLecturerViewer
+                          ? `Đã xác nhận đạo văn (${sim.toFixed(1)}%) — Áp dụng điểm 0 theo quy chế.`
+                          : 'Bài nộp được áp dụng quy chế liêm chính học thuật.')
+                      : (isLecturerViewer
+                          ? `Nghi vấn sao chép cao (${sim.toFixed(1)}%) — Áp dụng điểm 0 theo quy chế, chờ giảng viên xác nhận.`
+                          : 'Bài nộp đang được chuyển giảng viên xem xét theo quy chế liêm chính học thuật.');
+                    return { ...s, status: 'failed', detail: msg };
                   } else if (isPendingShortReview && sim >= 50.0) {
-                    return { ...s, status: 'passed', detail: `Bài quá ngắn (≤ 20 dòng) — tương đồng ${sim.toFixed(1)}%, chưa đủ dữ liệu tự triển khai để kết tội tự động. Tạm giữ điểm ${finalScore}/10 chờ Giảng viên kiểm tra trực tiếp.` };
+                    const msg = isLecturerViewer
+                      ? `Không đủ cơ sở kết luận (bài ngắn ≤ 20 dòng, đo AST ${sim.toFixed(1)}%) — Điểm được giữ nguyên (${finalScore}/10).`
+                      : 'Hoàn thành kiểm định AST Winnowing.';
+                    return { ...s, status: 'passed', detail: msg };
                   }
                 }
                 if (s.id.startsWith('tc-') || s.status === 'failed') return s;
@@ -1022,14 +1033,24 @@ export function App() {
                       };
                     }
                     if (s.id === '6') {
+                      const isLecturerViewer = isLecturerRole(currentUser?.role);
+                      const detailMsg = isSeverePlag
+                        ? (confirmedFlag === true
+                            ? (isLecturerViewer
+                                ? `Đã xác nhận đạo văn (${sim.toFixed(1)}%) — Áp dụng điểm 0 theo quy chế.`
+                                : 'Bài nộp được áp dụng quy chế liêm chính học thuật.')
+                            : (isLecturerViewer
+                                ? `Nghi vấn sao chép cao (${sim.toFixed(1)}%) — Áp dụng điểm 0 theo quy chế, chờ giảng viên xác nhận.`
+                                : 'Bài nộp đang được chuyển giảng viên xem xét theo quy chế liêm chính học thuật.'))
+                        : isPendingShortReview && sim >= 50.0
+                          ? (isLecturerViewer
+                              ? `Không đủ cơ sở kết luận (bài ngắn ≤ 20 dòng, đo AST ${sim.toFixed(1)}%) — Điểm được giữ nguyên (${finalScore}/10).`
+                              : 'Hoàn thành kiểm định AST Winnowing.')
+                          : 'Hoàn thành phân tích AST & Winnowing';
                       return {
                         ...s,
                         status: isSeverePlag ? 'failed' : 'passed',
-                        detail: isSeverePlag
-                          ? `Vi phạm liêm chính: Đạo văn ${sim.toFixed(1)}% (≥ 80.0%). Bài làm bị 0.0 điểm do vi phạm quy chế liêm chính học thuật.`
-                          : isPendingShortReview && sim >= 50.0
-                            ? `Bài quá ngắn (≤ 20 dòng) — tương đồng ${sim.toFixed(1)}%, chưa đủ dữ liệu tự triển khai để kết tội tự động. Tạm giữ điểm ${finalScore}/10 chờ Giảng viên kiểm tra trực tiếp.`
-                            : 'Hoàn thành phân tích AST & Winnowing',
+                        detail: detailMsg,
                       };
                     }
                     if (s.id.startsWith('tc-') || s.status === 'failed') return s;
@@ -1089,7 +1110,7 @@ export function App() {
         },
         { id: '2', label: 'Khởi tạo Docker Sandbox', status: 'pending', detail: 'Chưa thể thực thi' },
         { id: '5', label: 'Đánh giá Clean Code & SOLID (GenAI)', status: 'pending', detail: 'Chưa thể thực thi' },
-        { id: '6', label: 'Kiểm định Đạo văn AST Winnowing', status: 'pending', detail: 'Chưa thể thực thi' },
+        { id: '6', label: 'Kiểm định AST Winnowing', status: 'pending', detail: 'Chưa thể thực thi' },
       ]);
       setIsCompleted(true);
       return;
@@ -1157,7 +1178,9 @@ export function App() {
                 detail:
                   s.id === '6'
                     ? isSeverePlag
-                      ? `Vi phạm liêm chính: Đạo văn AST ${simRate.toFixed(1)}% (≥ 80.0%). Bài làm bị hủy toàn bộ điểm số (0.0/10) do vi phạm quy chế liêm chính học thuật.`
+                      ? (isLecturerRole(currentUser?.role)
+                          ? `Nghi vấn sao chép cao (${simRate.toFixed(1)}%) — Áp dụng điểm 0 theo quy chế, chờ giảng viên xác nhận.`
+                          : 'Bài nộp đang được chuyển giảng viên xem xét theo quy chế liêm chính học thuật.')
                       : 'Hoàn tất phân tích cấu trúc cây cú pháp trừu tượng AST.'
                     : 'Hoàn thành (ĐẠT)',
               }))
@@ -1172,7 +1195,7 @@ export function App() {
                 { line: 15, rule: 'Single Responsibility Principle', description: 'Hàm `sortAndPrintAndSaveToDatabase` vi phạm nguyên lý SRP do ôm đồm nhiều nhiệm vụ độc lập.' },
               ],
               explanation: isSeverePlag
-                ? `Mã nguồn có độ tương đồng AST ${simRate.toFixed(1)}% vượt ngưỡng nghiêm trọng ≥ 80.0% theo quy chế liêm chính học thuật. Bài làm bị chấm 0.0 điểm.`
+                ? `Mã nguồn có độ tương đồng AST đo được ${simRate.toFixed(1)}% vượt ngưỡng quy chế liêm chính — đang áp dụng điểm 0 theo quy chế (chờ giảng viên xác nhận).`
                 : 'Mã nguồn có giải thuật rõ ràng, tối ưu thời gian chạy. Cần tách các phương thức in ấn và lưu trữ để tuân thủ nguyên lý Đơn trách nhiệm.',
             });
 

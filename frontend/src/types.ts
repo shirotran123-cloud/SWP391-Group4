@@ -65,6 +65,7 @@ export interface PlagiarismMatch {
   matchedQuirks?: Array<{ type: string; signature: string; description: string; lineA?: number; lineB?: number }>;
   boilerplateFingerprintsFiltered?: number;
   isShortSubmission?: boolean;
+  confirmedPlagiarism?: boolean;
 }
 
 export interface PlagiarismPairItem {
@@ -85,6 +86,7 @@ export interface PlagiarismPairItem {
   containment?: number;
   language?: string;
   matchedQuirks?: Array<{ type: string; signature: string; description: string; lineA?: number; lineB?: number }>;
+  confirmedPlagiarism?: boolean;
   matchedTokensJson?: {
     matchedSegments?: Array<{ lineRangeA: { start: number; end: number }; lineRangeB: { start: number; end: number } }>;
     matchedQuirks?: Array<{ type: string; signature: string; description: string; lineA?: number; lineB?: number }>;

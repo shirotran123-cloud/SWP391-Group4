@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CheckCircle2, Clock, Loader2, XCircle, Sparkles, Scale, Trophy, FlaskConical, CornerUpRight, AlertTriangle, RefreshCw, Terminal, ShieldAlert, AlertOctagon } from 'lucide-react';
+import { CheckCircle2, Clock, Loader2, XCircle, Sparkles, Scale, Trophy, FlaskConical, CornerUpRight, AlertTriangle, RefreshCw, Terminal, AlertOctagon } from 'lucide-react';
 import type { GradingStep, AIRating, PlagiarismMatch, ScoreBreakdown } from '../types';
 import { SolidRadarChart } from './SolidRadarChart';
 import { MonacoDiffViewer } from './MonacoDiffViewer';
@@ -231,14 +231,14 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
           </div>
         )}
 
-        {/* CẢNH BÁO HỦY ĐIỂM DO ĐẠO VĂN TRÊN 80% (BR-03) */}
+        {/* THÔNG BÁO ÁP DỤNG QUY CHẾ BR-03 (CHỈ HIỂN THỊ CHO GIẢNG VIÊN) */}
         {isCompleted && isSeverePlagiarism && (
           <div
             style={{
               padding: '14px 18px',
               borderRadius: '10px',
-              backgroundColor: '#fee2e2',
-              border: '1px solid #ef4444',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fca5a5',
               marginBottom: '20px',
               display: 'flex',
               alignItems: 'center',
@@ -248,10 +248,15 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
             <AlertOctagon size={24} color="#b91c1c" style={{ flexShrink: 0 }} />
             <div>
               <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#991b1b', margin: '0 0 3px 0' }}>
-                HỦY KẾT QUẢ BÀI NỘP: 0.0 / 10 ĐIỂM (VI PHẠM LIÊM CHÍNH HỌC THUẬT)
+                {plagiarismMatch?.confirmedPlagiarism
+                  ? 'ĐÃ XÁC NHẬN ĐẠO VĂN — ÁP DỤNG ĐIỂM 0 THEO QUY CHẾ'
+                  : 'TRÙNG LẶP ≥ 80% — ÁP DỤNG ĐIỂM 0 THEO QUY CHẾ (CHỜ XÁC NHẬN)'}
               </h4>
               <p style={{ fontSize: '12.5px', color: '#7f1d1d', margin: 0, lineHeight: 1.5 }}>
-                Thuật toán AST Winnowing phát hiện độ tương đồng <strong>{simRate.toFixed(1)}% (≥ 80.0%)</strong> so với kho mã nguồn (trùng khớp với bài của <strong>{plagiarismMatch?.matchedStudentName || plagiarismMatch?.matchedStudentId}</strong>). Bài làm tự động bị <strong>HỦY ĐIỂM VỀ 0.0 ĐIỂM</strong> không thể hoàn tác.
+                Số đo AST đạt <strong>{simRate.toFixed(1)}%</strong> so với bài đối chiếu (<strong>{plagiarismMatch?.matchedStudentName || plagiarismMatch?.matchedStudentId}</strong>).{' '}
+                {plagiarismMatch?.confirmedPlagiarism
+                  ? 'Giảng viên đã thẩm định và xác nhận áp dụng điểm 0 theo quy chế.'
+                  : 'Hệ thống đang áp dụng điểm 0 theo quy chế BR-03, trạng thái: Chờ giảng viên xác nhận.'}
               </p>
             </div>
           </div>
@@ -273,7 +278,9 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
           >
             <div style={{ borderRight: '1px solid var(--border-soft)', paddingRight: '18px' }}>
               <p className="eyebrow" style={{ color: isSeverePlagiarism ? '#b91c1c' : undefined }}>
-                {isSeverePlagiarism ? 'HỦY ĐIỂM (VI PHẠM)' : 'Điểm tổng'}
+                {isSeverePlagiarism
+                  ? (plagiarismMatch?.confirmedPlagiarism ? 'ĐÃ XÁC NHẬN (0Đ)' : 'ÁP DỤNG 0Đ (QUY CHẾ)')
+                  : 'Điểm tổng'}
               </p>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '5px', marginTop: '4px' }}>
                 <span
@@ -290,12 +297,14 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                 <span style={{ fontSize: '13px', color: 'var(--text-dim)' }}>/ {maxScore}</span>
               </div>
               {isSeverePlagiarism ? (
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#dc2626', marginTop: '6px' }}>
-                  ⚠️ ĐẠO VĂN {simRate.toFixed(1)}% (≥80%)
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#b91c1c', marginTop: '6px' }}>
+                  {plagiarismMatch?.confirmedPlagiarism
+                    ? `Đã xác nhận đạo văn · ${simRate.toFixed(1)}%`
+                    : `Trùng lặp ≥ 80% · Chờ xác nhận (${simRate.toFixed(1)}%)`}
                 </div>
               ) : isPendingShortReview && simRate >= 70 ? (
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#d97706', marginTop: '6px' }}>
-                  ⚡ NGHI VẤN · CHỜ DUYỆT (Trùng {simRate.toFixed(1)}%)
+                <div style={{ fontSize: '11px', fontWeight: 700, color: '#475569', marginTop: '6px' }}>
+                  Không đủ cơ sở · Điểm giữ nguyên ({simRate.toFixed(1)}%)
                 </div>
               ) : executionTimeMs !== undefined ? (
                 <p style={{ fontSize: '11.5px', color: 'var(--text-dim)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>

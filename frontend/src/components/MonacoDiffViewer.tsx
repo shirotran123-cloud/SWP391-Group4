@@ -130,7 +130,7 @@ export const MonacoDiffViewer: React.FC<MonacoDiffViewerProps> = ({
 
           {plagiarismMatch && (
             <button type="button" onClick={() => setActiveTab('diff')} style={tabStyle(activeTab === 'diff')}>
-              <GitCompare size={13} /> Đối sánh đạo văn ({similarity}%)
+              <GitCompare size={13} /> Đối chiếu mã nguồn ({similarity}%)
             </button>
           )}
         </div>

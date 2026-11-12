@@ -1441,7 +1441,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     <ShieldCheck size={24} color="#1d4ed8" />
                     <div style={{ fontSize: '12.5px', color: '#33415a', lineHeight: '1.5' }}>
                       <strong style={{ color: 'var(--text-main)' }}>Giám sát Liêm chính học thuật AST: </strong>
-                      Mọi bài nộp sẽ được tạo chữ ký k-gram thông qua giải thuật Winnowing AST. Nếu độ tương đồng từ 80% trở lên, bài nộp sẽ bị tự động đánh dấu vi phạm đạo văn (điểm 0) và chuyển tới hội đồng giảng viên xem xét.
+                      Mọi bài nộp sẽ được tạo chữ ký k-gram thông qua giải thuật Winnowing AST. Nếu độ tương đồng đạt từ 50% trở lên, hệ thống sẽ chuyển vào diện cần xem xét hoặc chờ giảng viên thẩm định trước khi kết luận chính thức.
                     </div>
                   </div>
                 </div>

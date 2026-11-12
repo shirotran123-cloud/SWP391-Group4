@@ -175,11 +175,14 @@ export const RblBenchmarkView: React.FC<RblBenchmarkViewProps> = ({ onOpenDiffVi
                 <div style={{ fontSize: '16px', fontWeight: 700, color: evaluationResult.isFlagged ? 'var(--accent-rose)' : 'var(--accent-emerald)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   {evaluationResult.isFlagged ? (
                     <>
-                      <ShieldAlert size={18} /> CẢNH BÁO ĐẠO VĂN
+                      <ShieldAlert size={18} />{' '}
+                      {evaluationResult.similarityRate >= 80
+                        ? 'TRÙNG LẶP ≥ 80% · CHỜ XÁC NHẬN'
+                        : 'GIỐNG NHAU, CẦN GIẢNG VIÊN XEM'}
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 size={18} /> MÃ NGUỒN ĐỘC LẬP (HỢP LỆ)
+                      <CheckCircle2 size={18} /> KHÔNG PHÁT HIỆN DẤU HIỆU SAO CHÉP
                     </>
                   )}
                 </div>

@@ -779,7 +779,7 @@ public class Solution {
                 }}
               >
                 <ShieldCheck size={16} color={activeModalTab === 'PLAGIARISM' ? '#2563eb' : '#4d5c76'} />
-                4. Kiểm Tra Đạo Văn (Moss/AST)
+                4. Đối Chiếu AST &amp; Độ Tương Đồng
               </button>
             </div>
 
@@ -1046,17 +1046,21 @@ public class Solution {
               </div>
             )}
 
-            {/* Nội dung TAB 4: KIỂM TRA ĐẠO VĂN (MOSS / AST) */}
+            {/* Nội dung TAB 4: ĐỐI CHIẾU AST & ĐỘ TƯƠNG ĐỒNG */}
             {activeModalTab === 'PLAGIARISM' && (
               <div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '18px' }}>
                   <div style={{ backgroundColor: '#f7f9fc', padding: '16px', borderRadius: '12px', border: '1px solid rgba(37, 99, 235, 0.14)' }}>
                     <span style={{ fontSize: '11px', color: '#4d5c76', fontWeight: 600 }}>TỈ LỆ TƯƠNG ĐỒNG AST TỔNG THỂ</span>
-                    <div style={{ fontSize: '32px', fontWeight: 900, color: auditData.plagiarism.similarityRate > 40 ? 'var(--state-bad)' : 'var(--state-ok)', margin: '4px 0' }}>
+                    <div style={{ fontSize: '32px', fontWeight: 900, color: auditData.plagiarism.similarityRate >= 80 ? 'var(--state-bad)' : auditData.plagiarism.similarityRate >= 50 ? '#d97706' : 'var(--state-ok)', margin: '4px 0' }}>
                       {auditData.plagiarism.similarityRate}%
                     </div>
                     <span style={{ fontSize: '11.5px', color: '#1e40af', fontWeight: 700 }}>
-                      {auditData.plagiarism.similarityRate > 40 ? 'Cảnh Báo Trùng Lặp Cao' : 'An Toàn - Không Vi Phạm'}
+                      {auditData.plagiarism.similarityRate >= 80
+                        ? 'Trùng Lặp ≥ 80% — Chờ Xác Nhận'
+                        : auditData.plagiarism.similarityRate >= 50
+                          ? 'Giống Nhau, Cần Giảng Viên Xem'
+                          : 'Không Phát Hiện Dấu Hiệu Sao Chép'}
                     </span>
                   </div>
 
@@ -1099,7 +1103,7 @@ public class Solution {
                   <ShieldCheck size={28} color="#1d4ed8" style={{ flexShrink: 0 }} />
                   <div>
                     <strong style={{ fontSize: '14px', color: 'var(--blue-200)', display: 'block', marginBottom: '2px' }}>
-                      KẾT LUẬN LIÊM CHÍNH HỌC THUẬT:
+                      ĐÁNH GIÁ ĐỐI CHIẾU AST:
                     </strong>
                     <div style={{ fontSize: '13px', color: '#0b1220', lineHeight: 1.5 }}>
                       {auditData.plagiarism.verdict} Đối tượng có điểm tương đồng gần nhất: <strong>{auditData.plagiarism.matchedStudentName} ({auditData.plagiarism.matchedStudentId})</strong> với tỉ lệ {auditData.plagiarism.similarityRate}% (dưới ngưỡng cảnh báo 40%).
