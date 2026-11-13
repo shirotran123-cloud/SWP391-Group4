@@ -6,6 +6,7 @@ import {
   CheckCircle, XCircle, Clock, Cpu, BarChart2, Settings, Sparkles
 } from 'lucide-react';
 import { API_BASE_URL as API } from '../config/api';
+import { getSubmissionStatusStyle } from '../utils/statusStyles';
 
 interface QueueStats {
   queueName: string;
@@ -57,15 +58,15 @@ const badge = (text: string, color: string) => (
   }}>{text}</span>
 );
 
-const statCard = (icon: React.ReactNode, label: string, value: string | number, sub?: string, color = 'var(--blue-400)') => (
-  <div className="glass-panel" style={{ padding: '16px 18px', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+const statCard = (icon: React.ReactNode, label: string, value: string | number, sub?: string, color = '#0E4274') => (
+  <div className="aita-card" style={{ padding: '18px 20px', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', gap: '14px' }}>
     <div
       style={{
-        width: '32px',
-        height: '32px',
-        borderRadius: '8px',
-        background: 'rgba(11, 18, 32, 0.035)',
-        border: '1px solid var(--border-color)',
+        width: '44px',
+        height: '44px',
+        borderRadius: '12px',
+        background: '#FAEBEF',
+        border: '1px solid rgba(14, 66, 116, 0.14)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -75,10 +76,10 @@ const statCard = (icon: React.ReactNode, label: string, value: string | number, 
     >
       {icon}
     </div>
-    <div style={{ minWidth: 0 }}>
-      <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', marginBottom: '3px' }}>{label}</div>
-      <div style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>{value}</div>
-      {sub && <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: '3px' }}>{sub}</div>}
+    <div style={{ minWidth: 0, flex: 1 }}>
+      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-dim)', marginBottom: '4px' }}>{label}</div>
+      <div style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.025em', lineHeight: 1.1 }}>{value}</div>
+      {sub && <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', marginTop: '4px' }}>{sub}</div>}
     </div>
   </div>
 );
@@ -184,15 +185,15 @@ export function AdminDashboard({ token }: { token: string }) {
   const roleColor: Record<string, string> = { ADMIN: '#1d4ed8', INSTRUCTOR: '#1d4ed8', HOD: '#1d4ed8', STUDENT: '#1d4ed8' };
 
   return (
-    <div style={{ padding: '0 0 48px 0' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 0 48px 0' }}>
       {/* Header */}
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
         <div>
-          <p className="eyebrow" style={{ marginBottom: 3 }}>Quản trị hệ thống</p>
-          <h1 style={{ fontSize: 22, fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <p className="eyebrow" style={{ marginBottom: 4 }}>Quản trị hệ thống</p>
+          <h1 className="aita-page-title">
             Bảng điều khiển Admin
           </h1>
-          <p style={{ fontSize: 12.5, color: 'var(--text-dim)', marginTop: 3 }}>
+          <p style={{ fontSize: 13.5, color: 'var(--text-muted)', marginTop: 6 }}>
             Giám sát hàng đợi chấm bài, người dùng và bài nộp toàn hệ thống.
           </p>
         </div>
@@ -220,28 +221,20 @@ export function AdminDashboard({ token }: { token: string }) {
       )}
 
       {/* Tab Navigation */}
-      <div style={{ display: 'flex', gap: 2, marginBottom: 22, borderBottom: '1px solid var(--border-color)', overflowX: 'auto' }}>
+      <div role="tablist" aria-label="Quản trị hệ thống" className="aita-tablist" style={{ marginBottom: 22 }}>
         {tabs.map(tab => {
           const active = activeTab === tab.key;
           return (
-            <button key={tab.key} onClick={() => setActiveTab(tab.key as any)}
-              style={{
-                padding: '9px 14px',
-                border: 'none',
-                borderBottom: `2px solid ${active ? 'var(--blue-500)' : 'transparent'}`,
-                marginBottom: '-1px',
-                background: 'transparent',
-                color: active ? 'var(--text-main)' : 'var(--text-muted)',
-                fontWeight: active ? 600 : 500,
-                fontSize: 12.5,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                whiteSpace: 'nowrap',
-                transition: 'color .15s ease, border-color .15s ease',
-              }}>
-              {tab.icon} {tab.label}
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveTab(tab.key as any)}
+              className={`aita-tab-btn ${active ? 'active' : ''}`}
+            >
+              <span className="tab-icon">{tab.icon}</span>
+              <span>{tab.label}</span>
             </button>
           );
         })}
@@ -250,33 +243,33 @@ export function AdminDashboard({ token }: { token: string }) {
       {/* OVERVIEW TAB */}
       {activeTab === 'overview' && (
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
-            {statCard(<Users size={20} />, 'Tổng người dùng', users.length, `${users.filter(u => u.role === 'STUDENT').length} sinh viên`, '#1d4ed8')}
-            {statCard(<Activity size={20} />, 'Tổng bài nộp', submissions.length, `${submissions.filter(s => s.status === 'COMPLETED').length} đã chấm xong`)}
-            {statCard(<Server size={20} />, 'Queue Mode', queueStats?.mode || '—', queueStats?.isRedisAvailable ? 'Redis Online' : 'In-Memory Fallback', queueStats?.isRedisAvailable ? '#1d4ed8' : '#1d4ed8')}
-            {statCard(<AlertTriangle size={20} />, 'Dead Letter Queue', queueStats?.dlqCount ?? dlqJobs.length, 'job thất bại', '#b42318')}
-            {statCard(<Cpu size={20} />, 'Active Jobs', queueStats?.activeCount ?? 0, `Đang chấm bài`, '#1d4ed8')}
-            {statCard(<Database size={20} />, 'Completed', queueStats?.completedCount ?? 0, 'bài đã chấm xong', '#1d4ed8')}
+          <div className="aita-grid-3" style={{ marginBottom: 24 }}>
+            {statCard(<Users size={20} />, 'Tổng người dùng', users.length, `${users.filter(u => u.role === 'STUDENT').length} sinh viên`, '#0E4274')}
+            {statCard(<Activity size={20} />, 'Tổng bài nộp', submissions.length, `${submissions.filter(s => s.status === 'COMPLETED').length} đã chấm xong`, '#0E4274')}
+            {statCard(<Server size={20} />, 'Queue Mode', queueStats?.mode || '—', queueStats?.isRedisAvailable ? 'Redis Online' : 'In-Memory Fallback', '#0E4274')}
+            {statCard(<AlertTriangle size={20} />, 'Dead Letter Queue', queueStats?.dlqCount ?? dlqJobs.length, 'job thất bại', '#b91c1c')}
+            {statCard(<Cpu size={20} />, 'Active Jobs', queueStats?.activeCount ?? 0, `Đang chấm bài`, '#175794')}
+            {statCard(<Database size={20} />, 'Completed', queueStats?.completedCount ?? 0, 'bài đã chấm xong', '#15803d')}
           </div>
 
           {/* Queue Status Card */}
           {queueStats && (
-            <div className="glass-panel" style={{ padding: 24, marginBottom: 16 }}>
+            <div className="glass-panel" style={{ padding: 24, marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700 }}>BullMQ Queue Status</h3>
-                {badge(queueStats.mode, queueStats.mode === 'REDIS' ? '#1d4ed8' : '#1d4ed8')}
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)' }}>BullMQ Queue Status</h3>
+                {badge(queueStats.mode, '#0E4274')}
               </div>
-              <div className="stat-grid-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
+              <div className="stat-grid-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 14 }}>
                 {[
-                  { label: 'Waiting', val: queueStats.waitingCount, color: 'var(--blue-200)' },
-                  { label: 'Active', val: queueStats.activeCount, color: 'var(--blue-300)' },
-                  { label: 'Completed', val: queueStats.completedCount, color: 'var(--blue-300)' },
-                  { label: 'Failed', val: queueStats.failedCount, color: 'var(--text-main)' },
-                  { label: 'DLQ', val: queueStats.dlqCount, color: 'var(--blue-300)' },
-                ].map(({ label, val, color }) => (
-                  <div key={label} style={{ textAlign: 'center', padding: '12px', background: `${color}11`, borderRadius: 10, border: `1px solid ${color}33` }}>
-                    <div style={{ fontSize: 22, fontWeight: 600, color }}>{val}</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>{label}</div>
+                  { label: 'Waiting', val: queueStats.waitingCount, color: '#0E4274', bg: 'rgba(14, 66, 116, 0.06)', border: 'rgba(14, 66, 116, 0.18)' },
+                  { label: 'Active', val: queueStats.activeCount, color: '#1d4ed8', bg: 'rgba(29, 78, 216, 0.07)', border: 'rgba(29, 78, 216, 0.22)' },
+                  { label: 'Completed', val: queueStats.completedCount, color: '#15803d', bg: '#dcfce7', border: '#86efac' },
+                  { label: 'Failed', val: queueStats.failedCount, color: '#b91c1c', bg: '#fee2e2', border: '#fca5a5' },
+                  { label: 'DLQ', val: queueStats.dlqCount, color: '#b45309', bg: '#fef3c7', border: '#fcd34d' },
+                ].map(({ label, val, color, bg, border }) => (
+                  <div key={label} style={{ textAlign: 'center', padding: '14px 12px', background: bg, borderRadius: 12, border: `1px solid ${border}` }}>
+                    <div style={{ fontSize: 24, fontWeight: 700, color, lineHeight: 1.1 }}>{val}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--text-muted)', marginTop: 6 }}>{label}</div>
                   </div>
                 ))}
               </div>
@@ -306,9 +299,17 @@ export function AdminDashboard({ token }: { token: string }) {
                     <td style={{ padding: '10px 12px', color: '#0b1220' }}>{s.studentId}</td>
                     <td style={{ padding: '10px 12px' }}>{badge(s.language?.toUpperCase() || 'N/A', '#1d4ed8')}</td>
                     <td style={{ padding: '10px 12px' }}>
-                      {badge(s.status, s.status === 'COMPLETED' ? '#166534' : s.status === 'FAILED' ? '#b42318' : '#1d4ed8')}
+                      {(() => {
+                        const st = getSubmissionStatusStyle(s.status, { score: s.score });
+                        return (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 9px', borderRadius: 9999, fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, border: `1px solid ${st.border}` }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.dot }} />
+                            {st.label}
+                          </span>
+                        );
+                      })()}
                     </td>
-                    <td style={{ padding: '10px 12px', fontWeight: 700, color: s.score !== undefined ? '#2563eb' : 'var(--text-dim)' }}>
+                    <td style={{ padding: '10px 12px', fontWeight: 700, color: s.score !== undefined ? '#0E4274' : 'var(--text-dim)' }}>
                       {s.score !== undefined ? `${s.score}/10` : '—'}
                     </td>
                     <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: 12 }}>
@@ -420,9 +421,17 @@ export function AdminDashboard({ token }: { token: string }) {
                   <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: 12 }}>{s.assignmentId}</td>
                   <td style={{ padding: '10px 12px' }}>{badge(s.language?.toUpperCase() || '—', '#1d4ed8')}</td>
                   <td style={{ padding: '10px 12px' }}>
-                    {badge(s.status, s.status === 'COMPLETED' ? '#166534' : s.status === 'FAILED' ? '#b42318' : '#1d4ed8')}
+                    {(() => {
+                      const st = getSubmissionStatusStyle(s.status, { score: s.score });
+                      return (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '3px 9px', borderRadius: 9999, fontSize: 11, fontWeight: 700, color: st.color, background: st.bg, border: `1px solid ${st.border}` }}>
+                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: st.dot }} />
+                          {st.label}
+                        </span>
+                      );
+                    })()}
                   </td>
-                  <td style={{ padding: '10px 12px', fontWeight: 700, color: s.score !== undefined ? '#2563eb' : 'var(--text-dim)' }}>
+                  <td style={{ padding: '10px 12px', fontWeight: 700, color: s.score !== undefined ? '#0E4274' : 'var(--text-dim)' }}>
                     {s.score !== undefined ? `${s.score}/10` : '—'}
                   </td>
                   <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: 12 }}>

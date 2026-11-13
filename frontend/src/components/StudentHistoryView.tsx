@@ -9,6 +9,7 @@ import { AppealModal } from './AppealModal';
 import { FileTypeIcon } from './FileTypeIcon';
 import type { Appeal } from '../types';
 import { API_BASE_URL } from '../config/api';
+import { getSubmissionStatusStyle } from '../utils/statusStyles';
 
 export interface SubmissionItem {
   submissionId: string;
@@ -247,7 +248,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-200)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
               USE CASE 04 &amp; 06 • SINH VIÊN
             </span>
-            <h1 style={{ fontSize: '26px', fontWeight: 600, marginTop: '4px', marginBottom: '8px', color: 'var(--text-main)' }}>
+            <h1 className="aita-page-title" style={{ marginTop: '6px', marginBottom: '8px' }}>
               Lịch Sử Bài Nộp &amp; Điểm Số
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
@@ -302,25 +303,25 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
         </div>
 
         {/* Thống kê nhanh */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginTop: '24px' }}>
-          <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>TỔNG BÀI ĐÃ NỘP</div>
-            <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--text-main)', marginTop: '4px' }}>
-              {totalSubmissions} <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-dim)' }}>bài</span>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '24px', alignItems: 'stretch' }}>
+          <div className="aita-card" style={{ padding: '18px 20px', background: '#FDF6F8', borderColor: 'rgba(14, 66, 116, 0.14)', justifyContent: 'center' }}>
+            <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.04em' }}>TỔNG BÀI ĐÃ NỘP</div>
+            <div style={{ fontSize: '26px', fontWeight: 700, color: '#0E4274', marginTop: '6px', lineHeight: 1.1 }}>
+              {totalSubmissions} <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)' }}>bài</span>
             </div>
           </div>
 
-          <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>BÀI ĐẠT YÊU CẦU</div>
-            <div style={{ fontSize: '24px', fontWeight: 600, color: 'var(--blue-200)', marginTop: '4px' }}>
-              {passedCount} <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-dim)' }}>/ {totalSubmissions} bài</span>
+          <div className="aita-card" style={{ padding: '18px 20px', background: '#FDF6F8', borderColor: 'rgba(14, 66, 116, 0.14)', justifyContent: 'center' }}>
+            <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.04em' }}>BÀI ĐẠT YÊU CẦU</div>
+            <div style={{ fontSize: '26px', fontWeight: 700, color: '#15803d', marginTop: '6px', lineHeight: 1.1 }}>
+              {passedCount} <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-muted)' }}>/ {totalSubmissions} bài</span>
             </div>
           </div>
 
-          <div style={{ padding: '16px 20px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 600 }}>QUY ĐỊNH PHÚC KHẢO ĐIỂM</div>
-            <div style={{ fontSize: '13px', fontWeight: 600, color: '#1e40af', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Scale size={16} /> 2 lượt độc lập / mỗi bài tập
+          <div className="aita-card" style={{ padding: '18px 20px', background: '#FDF6F8', borderColor: 'rgba(14, 66, 116, 0.14)', justifyContent: 'center' }}>
+            <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.04em' }}>QUY ĐỊNH PHÚC KHẢO ĐIỂM</div>
+            <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0E4274', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '7px' }}>
+              <Scale size={17} /> 2 lượt độc lập / mỗi bài tập
             </div>
           </div>
         </div>
@@ -349,7 +350,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div role="tablist" aria-label="Lọc trạng thái bài nộp" className="aita-tablist" style={{ marginBottom: 0 }}>
           {(['ALL', 'PASSED', 'FAILED', 'QUEUED'] as const).map((filter) => {
             const labelMap = {
               ALL: 'Tất cả',
@@ -361,21 +362,12 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
             return (
               <button
                 key={filter}
+                type="button"
+                role="tab"
+                aria-selected={active}
                 onClick={() => setStatusFilter(filter)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: active ? 'rgba(59, 130, 246, 0.16)' : 'rgba(11, 18, 32, 0.035)',
-                  borderWidth: '1px',
-                  borderStyle: 'solid',
-                  borderColor: active ? '#3b82f6' : 'transparent',
-                  color: active ? 'var(--text-main)' : 'var(--text-muted)',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
+                className={`aita-tab-btn ${active ? 'active' : ''}`}
+                style={{ padding: '7px 14px', fontSize: '12.5px' }}
               >
                 {labelMap[filter]}
               </button>
@@ -460,19 +452,51 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
                     {/* Badge trạng thái */}
-                    {sub.status === 'QUEUED' || sub.status === 'IN_PROGRESS' ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'var(--state-info-bg)', color: 'var(--state-info)', fontSize: '12px', fontWeight: 700 }}>
-                        <Clock size={14} /> ĐANG CHẤM
-                      </span>
-                    ) : isPassed ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'var(--state-ok-bg)', color: 'var(--state-ok)', fontSize: '12px', fontWeight: 700 }}>
-                        <CheckCircle size={14} /> ĐẠT ({displayScore !== undefined ? `${displayScore.toFixed(1)}/10` : 'PASS'})
-                      </span>
-                    ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '5px 12px', borderRadius: '12px', backgroundColor: 'var(--state-bad-bg)', color: 'var(--state-bad)', fontSize: '12px', fontWeight: 700 }}>
-                        <XCircle size={14} /> CHƯA ĐẠT ({displayScore !== undefined ? `${displayScore.toFixed(1)}/10` : 'FAIL'})
-                      </span>
-                    )}
+                    {(() => {
+                      const rawStatus =
+                        sub.status === 'COMPLETED'
+                          ? isPassed
+                            ? 'PASSED'
+                            : 'FAILED'
+                          : sub.status;
+                      const st = getSubmissionStatusStyle(rawStatus, {
+                        score: displayScore,
+                        passedTestcases: sub.details?.passedTestcases,
+                        totalTestcases: sub.details?.totalTestcases,
+                      });
+                      const StatusIcon =
+                        st.severity === 'info'
+                          ? Clock
+                          : st.severity === 'success'
+                            ? CheckCircle
+                            : st.severity === 'warning' || st.severity === 'critical'
+                              ? AlertCircle
+                              : XCircle;
+                      return (
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            padding: '5px 12px',
+                            borderRadius: '9999px',
+                            backgroundColor: st.bg,
+                            color: st.color,
+                            border: `1px solid ${st.border}`,
+                            fontSize: '12px',
+                            fontWeight: 700,
+                          }}
+                        >
+                          <StatusIcon size={14} />
+                          <span>
+                            {st.label}
+                            {st.severity !== 'info' && displayScore !== undefined
+                              ? ` (${displayScore.toFixed(1)}/10)`
+                              : ''}
+                          </span>
+                        </span>
+                      );
+                    })()}
 
                     {/* Mã bài nộp */}
                     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>

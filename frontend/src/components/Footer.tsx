@@ -317,9 +317,16 @@ export const Footer: React.FC = () => {
           {/* CỘT 1: THƯƠNG HIỆU & GIỚI THIỆU */}
           <div className="footer-brand">
             <div className="footer-logo-row">
-              <div className="footer-logo-icon">
-                <Terminal size={18} strokeWidth={2.4} />
-              </div>
+              <img
+                src="/aita-logo.png"
+                alt="AITA Logo"
+                style={{
+                  width: '34px',
+                  height: '34px',
+                  objectFit: 'contain',
+                  flexShrink: 0,
+                }}
+              />
               <span className="footer-brand-title">
                 AITA
               </span>
@@ -332,13 +339,13 @@ export const Footer: React.FC = () => {
 
             <div className="footer-badges">
               <span className="footer-badge" title="Môi trường chấm an toàn cách ly seccomp">
-                <ShieldCheck size={12} color="#2563eb" /> Docker Sandbox
+                <ShieldCheck size={12} color="#0E4274" /> Docker Sandbox
               </span>
               <span className="footer-badge" title="Thuật toán đối soát cây cú pháp trừu tượng">
-                <Cpu size={12} color="#2563eb" /> AST Winnowing
+                <Cpu size={12} color="#0E4274" /> AST Winnowing
               </span>
               <span className="footer-badge" title="Phân tích chất lượng mã nguồn & hướng đối tượng">
-                <Code2 size={12} color="#2563eb" /> SOLID &amp; Clean Code
+                <Code2 size={12} color="#0E4274" /> SOLID &amp; Clean Code
               </span>
             </div>
           </div>

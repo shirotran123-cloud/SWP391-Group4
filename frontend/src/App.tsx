@@ -17,6 +17,7 @@ import { PlagiarismService } from './services/plagiarism.service';
 import JSZip from 'jszip';
 import { API_BASE_URL } from './config/api';
 import Footer from './components/Footer';
+import { Click } from './components/effects/Click';
 
 function generateFallbackSubId(): string {
   return 'SUB-' + Date.now().toString(36).toUpperCase();
@@ -1262,7 +1263,11 @@ export function App() {
 
   // NẾU CHƯA ĐĂNG NHẬP: BẮT BUỘC HIỂN THỊ MÀN HÌNH ĐĂNG NHẬP ĐẦU TIÊN
   if (!currentUser) {
-    return <LoginView onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <Click variant="ring" color="#0E4274" size={100} duration={400}>
+        <LoginView onLoginSuccess={handleLoginSuccess} />
+      </Click>
+    );
   }
 
   const handleRetrySubmission = () => {
@@ -1289,16 +1294,17 @@ export function App() {
   };
 
   return (
+    <Click variant="ring" color="#0E4274" size={100} duration={400}>
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* THANH ĐIỀU HƯỚNG TRÊN CÙNG (NAVBAR) */}
       <nav
         style={{
           padding: '0 24px',
-          height: '60px',
-          backgroundColor: 'rgba(255, 255, 255, 0.94)',
+          height: '62px',
+          backgroundColor: 'rgba(255, 255, 255, 0.88)',
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
-          borderBottom: '1px solid var(--border-color)',
+          borderBottom: '1px solid rgba(14, 66, 116, 0.13)',
           position: 'sticky',
           top: 0,
           zIndex: 100,
@@ -1309,21 +1315,16 @@ export function App() {
         <div className="nav-inner" style={{ maxWidth: '1360px', width: '100%', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '14px' }}>
           {/* Logo & Tên hệ thống */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0, flexShrink: 0 }}>
-            <div
+            <img
+              src="/aita-logo.png"
+              alt="AITA Logo"
               style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '9px',
-                background: 'var(--blue-600)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--on-blue)',
+                width: '36px',
+                height: '36px',
+                objectFit: 'contain',
                 flexShrink: 0,
               }}
-            >
-              <Terminal size={17} strokeWidth={2.2} />
-            </div>
+            />
             <div style={{ minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span style={{ fontSize: '14.5px', fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--text-main)' }}>
@@ -1348,14 +1349,16 @@ export function App() {
 
           {/* Center nav tabs: THANH CHUYỂN ĐỔI 3 VAI TRÒ NHANH (UI BUG 5 RESOLVED) */}
           <div
+            role="tablist"
+            aria-label="Chuyển đổi vai trò"
             className="nav-role-switcher"
             style={{
               display: 'flex',
-              gap: 3,
-              background: 'rgba(11, 18, 32, 0.04)',
-              borderRadius: 10,
-              padding: 3,
-              border: '1px solid var(--border-color)',
+              gap: 4,
+              background: 'rgba(250, 235, 239, 0.85)',
+              borderRadius: 12,
+              padding: 4,
+              border: '1px solid rgba(14, 66, 116, 0.16)',
             }}
           >
             {DEMO_PERSONAS.map((p) => {
@@ -1365,22 +1368,24 @@ export function App() {
                 <button
                   key={p.key}
                   type="button"
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => handleSwitchPersona(p)}
                   title={`Chuyển sang ${p.label} (Phím tắt: ${p.hotkey})`}
                   style={{
                     padding: '6px 13px',
-                    borderRadius: 8,
+                    borderRadius: 9,
                     border: 'none',
                     cursor: 'pointer',
-                    background: isActive ? 'var(--blue-600)' : 'transparent',
+                    background: isActive ? 'linear-gradient(135deg, #0E4274 0%, #175794 100%)' : 'transparent',
                     color: isActive ? '#ffffff' : 'var(--text-muted)',
-                    fontWeight: isActive ? 600 : 500,
+                    fontWeight: isActive ? 700 : 500,
                     fontSize: 12.5,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
-                    transition: 'all .15s ease',
-                    boxShadow: isActive ? '0 1px 3px rgba(37, 99, 235, 0.35)' : 'none',
+                    transition: 'all .18s cubic-bezier(0.22, 1, 0.36, 1)',
+                    boxShadow: isActive ? '0 4px 12px -3px rgba(14, 66, 116, 0.42)' : 'none',
                   }}
                 >
                   <IconComp size={14} />
@@ -1676,10 +1681,10 @@ export function App() {
           <div style={{ maxWidth: '1160px', margin: '0 auto' }}>
             {/* KHỐI HIỂN THỊ CÁC MÔN HỌC ĐANG THEO HỌC (ENROLLED COURSES) */}
             <section style={{ marginBottom: '22px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <p className="eyebrow" style={{ marginBottom: '2px' }}>Học phần của tôi</p>
-                  <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-main)' }}>
+                  <p className="eyebrow" style={{ marginBottom: '4px' }}>Học phần của tôi</p>
+                  <h2 className="aita-page-title">
                     {enrolledCourses.length} lớp học phần đang ghi danh
                   </h2>
                 </div>
@@ -1689,7 +1694,7 @@ export function App() {
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '10px' }}>
+              <div className="aita-grid-3">
                 {enrolledCourses.map((c) => {
                   const isSelected = selectedStudentCourseId === c.courseId || selectedStudentCourseId === c.courseCode;
                   return (
@@ -1705,50 +1710,42 @@ export function App() {
                           setSelectedStudentCourseId(targetId);
                         }
                       }}
+                      className={`aita-card aita-card-interactive ${isSelected ? 'selected' : ''}`}
                       style={{
                         textAlign: 'left',
-                        padding: '13px 15px',
-                        borderRadius: '10px',
+                        padding: '16px 18px',
                         cursor: 'pointer',
-                        transition: 'background-color .15s ease, border-color .15s ease',
-                        backgroundColor: isSelected ? 'rgba(37, 99, 235, 0.09)' : '#ffffff',
-                        border: `1px solid ${isSelected ? 'var(--border-highlight)' : 'var(--border-color)'}`,
-                        boxShadow: isSelected ? '0 6px 18px -10px rgba(37, 99, 235, 0.45)' : 'var(--shadow-sm)',
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!isSelected) e.currentTarget.style.borderColor = 'var(--border-strong)';
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!isSelected) e.currentTarget.style.borderColor = 'var(--border-color)';
+                        gap: '10px',
                       }}
                     >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '7px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
                         <span
                           style={{
-                            fontSize: '10.5px',
+                            fontSize: '11px',
                             fontWeight: 700,
                             letterSpacing: '0.05em',
                             fontFamily: 'var(--font-mono)',
-                            padding: '2px 6px',
-                            borderRadius: '4px',
-                            backgroundColor: isSelected ? 'var(--blue-600)' : 'rgba(11, 18, 32, 0.05)',
-                            color: isSelected ? 'var(--on-blue)' : 'var(--text-soft)',
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            backgroundColor: isSelected ? '#0E4274' : '#FAEBEF',
+                            color: isSelected ? '#ffffff' : '#0E4274',
+                            border: `1px solid ${isSelected ? '#0E4274' : 'rgba(14, 66, 116, 0.16)'}`,
                           }}
                         >
                           {c.courseCode}
                         </span>
                         {isSelected ? (
-                          <span style={{ fontSize: '10.5px', color: 'var(--blue-300)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Check size={11} strokeWidth={3} /> Đang chọn
+                          <span style={{ fontSize: '11px', fontWeight: 700, color: '#0E4274', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Check size={12} strokeWidth={3} /> Đang chọn
                           </span>
                         ) : (
-                          <span style={{ fontSize: '10.5px', color: 'var(--text-dim)' }}>Đang học</span>
+                          <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-dim)' }}>Đang học</span>
                         )}
                       </div>
-                      <h4 style={{ fontSize: '13px', fontWeight: 600, color: isSelected ? 'var(--text-main)' : 'var(--text-soft)', marginBottom: '3px', lineHeight: 1.4 }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)', lineHeight: 1.4, margin: 0 }}>
                         {c.courseName}
                       </h4>
-                      <p style={{ fontSize: '11.5px', color: 'var(--text-dim)' }}>{c.semester}</p>
+                      <p style={{ fontSize: '12px', color: 'var(--text-dim)', margin: 0, paddingTop: '4px', borderTop: '1px solid rgba(14, 66, 116, 0.08)' }}>{c.semester}</p>
                     </button>
                   );
                 })}
@@ -1758,18 +1755,13 @@ export function App() {
             {/* Thanh Tab chuyển đổi giữa các khu vực chức năng */}
             <div
               role="tablist"
-              style={{
-                display: 'flex',
-                gap: '2px',
-                marginBottom: '20px',
-                borderBottom: '1px solid var(--border-color)',
-                overflowX: 'auto',
-              }}
+              aria-label="Khu vực sinh viên"
+              className="aita-tablist"
             >
               {([
-                { key: 'submission', label: 'Nộp bài', icon: <FileCode size={14} /> },
-                { key: 'history', label: 'Lịch sử & điểm', icon: <Clock size={14} /> },
-                { key: 'appeals', label: 'Phúc khảo', icon: <Scale size={14} /> },
+                { key: 'submission', label: 'Nộp bài', icon: <FileCode size={15} /> },
+                { key: 'history', label: 'Lịch sử & điểm', icon: <Clock size={15} /> },
+                { key: 'appeals', label: 'Phúc khảo', icon: <Scale size={15} /> },
               ] as const).map((tab) => {
                 const active = studentActiveTab === tab.key;
                 return (
@@ -1779,25 +1771,10 @@ export function App() {
                     role="tab"
                     aria-selected={active}
                     onClick={() => setStudentActiveTab(tab.key)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '7px',
-                      padding: '9px 14px',
-                      border: 'none',
-                      borderBottom: `2px solid ${active ? 'var(--blue-500)' : 'transparent'}`,
-                      marginBottom: '-1px',
-                      background: 'transparent',
-                      color: active ? 'var(--blue-300)' : 'var(--text-muted)',
-                      fontSize: '13px',
-                      fontWeight: active ? 600 : 500,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                      transition: 'color .15s ease, border-color .15s ease',
-                    }}
+                    className={`aita-tab-btn ${active ? 'active' : ''}`}
                   >
-                    {tab.icon}
-                    {tab.label}
+                    <span className="tab-icon">{tab.icon}</span>
+                    <span>{tab.label}</span>
                   </button>
                 );
               })}
@@ -1882,6 +1859,7 @@ export function App() {
       <Footer />
 
     </div>
+    </Click>
   );
 }
 

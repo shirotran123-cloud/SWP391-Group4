@@ -410,75 +410,45 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
 
         {/* TABS NAVIGATION */}
         <div
+          role="tablist"
+          aria-label="Chi tiết bài nộp"
           style={{
             display: 'flex',
+            flexWrap: 'wrap',
             gap: '8px',
             padding: '12px 24px',
-            borderBottom: '1px solid rgba(11, 18, 32, 0.05)',
-            backgroundColor: 'rgba(11, 18, 32, 0.03)',
+            borderBottom: '1px solid rgba(14, 66, 116, 0.12)',
+            backgroundColor: '#FAEBEF',
           }}
         >
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'overview'}
             onClick={() => setActiveTab('overview')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: activeTab === 'overview' ? 'var(--blue-600)' : 'transparent',
-              color: activeTab === 'overview' ? 'var(--on-blue)' : 'var(--text-muted)',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease',
-            }}
+            className={`aita-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
           >
-            <ListChecks size={15} /> 1. Tổng Quan & Testcases {passedTC !== undefined && totalTC !== undefined ? `(${passedTC}/${totalTC})` : ''}
+            <ListChecks size={15} className="tab-icon" /> 1. Tổng Quan & Testcases {passedTC !== undefined && totalTC !== undefined ? `(${passedTC}/${totalTC})` : ''}
           </button>
 
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'ai'}
             onClick={() => setActiveTab('ai')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: activeTab === 'ai' ? 'var(--blue-600)' : 'transparent',
-              color: activeTab === 'ai' ? 'var(--on-blue)' : 'var(--text-muted)',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease',
-            }}
+            className={`aita-tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
           >
-            <Sparkles size={15} /> 2. Đánh Giá SOLID & Clean Code {aiRating ? `(${aiRating.cleanCodeScore}/10)` : '(Chưa có)'}
+            <Sparkles size={15} className="tab-icon" /> 2. Đánh Giá SOLID & Clean Code {aiRating ? `(${aiRating.cleanCodeScore}/10)` : '(Chưa có)'}
           </button>
 
           <button
             type="button"
+            role="tab"
+            aria-selected={activeTab === 'code'}
             onClick={() => setActiveTab('code')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: activeTab === 'code' ? 'var(--blue-600)' : 'transparent',
-              color: activeTab === 'code' ? 'var(--on-blue)' : 'var(--text-muted)',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              transition: 'all 0.15s ease',
-            }}
+            className={`aita-tab-btn ${activeTab === 'code' ? 'active' : ''}`}
           >
-            <Code size={15} /> 3. Mã Nguồn Đã Nộp
+            <Code size={15} className="tab-icon" /> 3. Mã Nguồn Đã Nộp
           </button>
         </div>
 

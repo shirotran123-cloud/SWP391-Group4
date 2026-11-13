@@ -2134,11 +2134,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       {/* Tiêu đề Dashboard Giảng Viên */}
       <div style={{ marginBottom: '22px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '14px' }}>
         <div>
-          <p className="eyebrow" style={{ marginBottom: '3px' }}>Cổng giảng viên</p>
-          <h1 style={{ fontSize: '22px', fontWeight: 600, color: 'var(--text-main)', letterSpacing: '-0.02em' }}>
+          <p className="eyebrow" style={{ marginBottom: '4px' }}>Cổng giảng viên</p>
+          <h1 className="aita-page-title">
             Học phần &amp; khảo thí lập trình
           </h1>
-          <p style={{ color: 'var(--text-dim)', fontSize: '12.5px', marginTop: '3px' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '13.5px', marginTop: '6px' }}>
             Quản lý đề bài, lớp học, soạn barem bằng AI và kiểm định đạo văn AST.
           </p>
         </div>
@@ -2556,10 +2556,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-main)' }}>
+                  <h3 className="aita-section-title">
                     Các Lớp Học Phần Đang Giảng Dạy ({courses.length} Môn)
                   </h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '13px' }}>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginTop: '4px' }}>
                     Chọn bất kỳ môn học nào để xem danh sách các bài tập đã giao hoặc giao bài tập mới
                   </p>
                 </div>
@@ -2583,7 +2583,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 </button>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '16px' }}>
+              <div className="aita-grid-3">
                 {courses.map((course) => {
                   const assignedCount = publishedAssignments.filter(
                     (a) =>

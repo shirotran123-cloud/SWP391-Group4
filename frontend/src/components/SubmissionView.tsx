@@ -1110,13 +1110,8 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-              gap: '0',
-              padding: '0',
-              borderRadius: '10px',
-              backgroundColor: 'rgba(11, 18, 32, 0.02)',
-              border: '1px solid var(--border-color)',
+              gap: '10px',
               marginBottom: '18px',
-              overflow: 'hidden',
             }}
           >
             {[
@@ -1124,7 +1119,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
               { icon: HardDrive, label: 'RAM sandbox', value: `${selectedTask.memoryLimitMb || 512} MB` },
               { icon: Code, label: 'Ngôn ngữ', value: (selectedTask.allowedLanguages || ['java', 'python', 'cpp']).join(', ').toUpperCase() },
               { icon: Layers, label: 'Bộ testcase', value: `${selectedTask.testCasesCount ?? 0} test` },
-            ].map((metric, i) => {
+            ].map((metric) => {
               const Icon = metric.icon;
               return (
                 <div
@@ -1132,15 +1127,32 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '10px',
+                    gap: '11px',
                     padding: '12px 15px',
-                    borderLeft: i === 0 ? 'none' : '1px solid var(--border-soft)',
+                    borderRadius: '11px',
+                    backgroundColor: '#FDF6F8',
+                    border: '1px solid rgba(14, 66, 116, 0.13)',
                   }}
                 >
-                  <Icon size={15} color="var(--text-dim)" strokeWidth={2} />
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '8px',
+                      backgroundColor: '#FAEBEF',
+                      border: '1px solid rgba(14, 66, 116, 0.14)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#0E4274',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Icon size={15} strokeWidth={2.2} />
+                  </div>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-dim)', letterSpacing: '0.03em' }}>{metric.label}</div>
-                    <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-soft)', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-dim)', fontWeight: 600, letterSpacing: '0.03em' }}>{metric.label}</div>
+                    <div style={{ fontSize: '13px', fontWeight: 700, color: '#0E4274', fontFamily: 'var(--font-mono)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {metric.value}
                     </div>
                   </div>
