@@ -62,7 +62,7 @@ export class AppealsService {
     });
 
     this.logger.log(
-      `[Appeals] Sinh viên ${dto.studentId} đã gửi đơn phúc khảo ${appealId} cho bài nộp ${dto.submissionId} (Lần ${existingCount + 1}/2).`,
+      `[Appeals] Sinh viên ${dto.studentId} đã gửi đơn phúc khảo ${appealId} cho bài nộp ${dto.submissionId} (Lần ${existingCount + 1}/1).`,
     );
 
     return newAppeal;
@@ -111,8 +111,12 @@ export class AppealsService {
     if (dto.status === 'ACCEPTED' && dto.adjustedScore !== undefined) {
       const sub = await this.submissionRepo.findById(appeal.submissionId);
       if (sub) {
-        sub.score = dto.adjustedScore;
-        sub.updatedAt = new Date();
+        await this.submissionRepo.updateStatus(
+          appeal.submissionId,
+          sub.status,
+          undefined,
+          dto.adjustedScore,
+        );
         this.logger.log(
           `[Appeals] Đã cập nhật điểm bài nộp ${sub.submissionId} thành ${dto.adjustedScore} theo đơn phúc khảo ${appealId}.`,
         );
