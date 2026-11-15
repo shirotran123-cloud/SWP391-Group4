@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import {
   AlertCircle,
   CheckCircle,
-  Settings,
   User,
   Lock,
   Mail,
@@ -29,17 +28,16 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [blockedEmail, setBlockedEmail] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const [clientId, setClientId] = useState<string>(() => {
+  const [clientId] = useState<string>(() => {
     const saved = localStorage.getItem('aita_google_client_id');
     if (!saved || saved.startsWith('652923540545')) {
       return DEFAULT_CLIENT_ID;
     }
     return saved;
   });
-  const [redirectUriConfig, setRedirectUriConfig] = useState<string>(() => {
+  const [redirectUriConfig] = useState<string>(() => {
     return localStorage.getItem('aita_google_redirect_uri') || window.location.origin;
   });
-  const [showConfig, setShowConfig] = useState(false);
 
   // Xử lý xác thực khi Google chuyển hướng về (OAuth 2.0 Redirect Callback)
   useEffect(() => {
@@ -215,16 +213,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     window.location.href = googleOAuthUrl;
   };
 
-  const handleSaveConfig = (cId: string, rUri: string) => {
-    const cleanClientId = cId.trim() || DEFAULT_CLIENT_ID;
-    const cleanRedirectUri = rUri.trim() || window.location.origin;
-    setClientId(cleanClientId);
-    setRedirectUriConfig(cleanRedirectUri);
-    localStorage.setItem('aita_google_client_id', cleanClientId);
-    localStorage.setItem('aita_google_redirect_uri', cleanRedirectUri);
-    setShowConfig(false);
-  };
-
   return (
     <div
       style={{
@@ -338,30 +326,10 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           <div className="aita-form-corner-sphere" aria-hidden="true" />
 
           <div style={{ position: 'relative', zIndex: 2 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+            <div style={{ marginBottom: '6px' }}>
               <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#0A1E36', letterSpacing: '-0.03em', margin: 0 }}>
                 {authMode === 'login' ? 'Đăng nhập' : 'Đăng ký'}
               </h2>
-              <button
-                type="button"
-                onClick={() => setShowConfig(!showConfig)}
-                title="Cấu hình Google OAuth"
-                style={{
-                  background: '#f8fafc',
-                  border: '1px solid rgba(14, 66, 116, 0.24)',
-                  borderRadius: '8px',
-                  padding: '6px 9px',
-                  color: '#0E4274',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <Settings size={13} /> SSO
-              </button>
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '22px', lineHeight: 1.5 }}>
               {authMode === 'login'
@@ -576,58 +544,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 </>
               )}
             </div>
-
-            {/* Khung cấu hình Client ID & Redirect URI */}
-            {showConfig && (
-              <div
-                style={{
-                  marginTop: '16px',
-                  padding: '14px',
-                  borderRadius: '12px',
-                  background: '#ffffff',
-                  border: '1.5px solid rgba(14, 66, 116, 0.26)',
-                }}
-              >
-                <div style={{ marginBottom: '8px' }}>
-                  <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
-                    Google OAuth 2.0 Client ID:
-                  </label>
-                  <input
-                    type="text"
-                    defaultValue={clientId}
-                    id="config-client-id"
-                    className="login-input"
-                  />
-                </div>
-
-                <div style={{ marginBottom: '10px' }}>
-                  <label style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px', fontWeight: 600 }}>
-                    OAuth Redirect URI:
-                  </label>
-                  <input
-                    type="text"
-                    defaultValue={redirectUriConfig}
-                    id="config-redirect-uri"
-                    className="login-input"
-                  />
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const cIdInput = document.getElementById('config-client-id') as HTMLInputElement;
-                    const rUriInput = document.getElementById('config-redirect-uri') as HTMLInputElement;
-                    if (cIdInput && rUriInput) {
-                      handleSaveConfig(cIdInput.value, rUriInput.value);
-                    }
-                  }}
-                  className="login-btn-primary"
-                  style={{ width: '100%' }}
-                >
-                  Lưu Cấu Hình
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
