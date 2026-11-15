@@ -80,6 +80,19 @@ export class AppealsService {
     return appeal;
   }
 
+  public async assignReviewer(appealId: string, reviewerId: string): Promise<AppealRecord> {
+    const appeal = await this.appealRepo.findById(appealId);
+    if (!appeal) {
+      throw new NotFoundException(`Không tìm thấy đơn phúc khảo: ${appealId}`);
+    }
+
+    const updated = await this.appealRepo.updateAssignment(appealId, reviewerId);
+    this.logger.log(
+      `[Appeals] Admin đã phân công đơn phúc khảo ${appealId} cho Giảng viên độc lập: ${reviewerId}.`,
+    );
+    return updated!;
+  }
+
   public async resolveAppeal(appealId: string, dto: ResolveAppealDto): Promise<AppealRecord> {
     const appeal = await this.appealRepo.findById(appealId);
     if (!appeal) {

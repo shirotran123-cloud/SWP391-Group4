@@ -192,6 +192,27 @@ export class AppealRepository implements OnModuleInit {
     return result;
   }
 
+  public async updateAssignment(
+    appealId: string,
+    reviewerId: string,
+  ): Promise<AppealRecord | null> {
+    const existing = this.records.get(appealId);
+    if (!existing) return null;
+
+    const updated: AppealRecord = {
+      ...existing,
+      status: 'IN_REVIEW',
+      reviewerId,
+      updatedAt: new Date(),
+    };
+
+    this.records.set(appealId, updated);
+    this.flushToDisk();
+
+    await this.saveToPostgres(updated);
+    return updated;
+  }
+
   public async updateResolution(
     appealId: string,
     status: AppealStatus,

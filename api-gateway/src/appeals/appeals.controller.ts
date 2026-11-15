@@ -59,6 +59,19 @@ export class AppealsController {
     };
   }
 
+  @Put(':id/assign')
+  public async assignReviewer(
+    @Param('id') id: string,
+    @Body('reviewerId') reviewerId: string,
+  ) {
+    const assigned = await this.appealsService.assignReviewer(id, reviewerId);
+    return {
+      statusCode: HttpStatus.OK,
+      message: `Đã phân công Giảng viên ${reviewerId} chấm phúc khảo đơn ${id}.`,
+      data: assigned,
+    };
+  }
+
   @Put(':id/resolve')
   public async resolveAppeal(
     @Param('id') id: string,

@@ -5,7 +5,7 @@ import {
   Users, Activity, Server, Database, Shield, RefreshCw,
   Trash2, RotateCcw, ChevronDown, ChevronUp, AlertTriangle,
   CheckCircle, XCircle, Clock, Cpu, BarChart2, Settings, Sparkles,
-  GitCommit
+  GitCommit, Scale
 } from 'lucide-react';
 import { API_BASE_URL as API } from '../config/api';
 import { getSubmissionStatusStyle } from '../utils/statusStyles';
@@ -114,20 +114,23 @@ export function AdminDashboard({ token }: { token: string }) {
     setDetailModalOpen(true);
   };
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'submissions' | 'dlq' | 'settings' | 'teamwork'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'submissions' | 'dlq' | 'settings' | 'teamwork' | 'appeals'>('overview');
   const [expandedDLQ, setExpandedDLQ] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState('');
+  const [appeals, setAppeals] = useState<any[]>([]);
+  const [assignMap, setAssignMap] = useState<Record<string, string>>({});
 
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [qRes, dlqRes, usersRes, subRes] = await Promise.allSettled([
+      const [qRes, dlqRes, usersRes, subRes, appRes] = await Promise.allSettled([
         fetch(`${API}/api/v1/queue/stats`, { headers }),
         fetch(`${API}/api/v1/queue/dlq`, { headers }),
         fetch(`${API}/api/v1/users`, { headers }),
         fetch(`${API}/api/v1/submissions`, { headers }),
+        fetch(`${API}/api/v1/appeals`, { headers }),
       ]);
 
       if (qRes.status === 'fulfilled' && qRes.value.ok) setQueueStats(await qRes.value.json());
@@ -140,6 +143,9 @@ export function AdminDashboard({ token }: { token: string }) {
       if (subRes.status === 'fulfilled' && subRes.value.ok) {
         const s = await subRes.value.json(); setSubmissions(s.data || s || []);
       }
+      if (appRes.status === 'fulfilled' && appRes.value.ok) {
+        const a = await appRes.value.json(); setAppeals(a.data || a || []);
+      }
     } catch (e) {
       console.error('Failed to fetch admin data:', e);
     } finally {
@@ -148,6 +154,30 @@ export function AdminDashboard({ token }: { token: string }) {
   }, [token]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const handleAssignReviewer = async (appealId: string, reviewerId: string) => {
+    if (!reviewerId) {
+      alert('Vui lòng chọn Giảng viên cần phân công!');
+      return;
+    }
+    try {
+      const res = await fetch(`${API}/api/v1/appeals/${appealId}/assign`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ reviewerId }),
+      });
+      if (res.ok) {
+        setActionMsg(`Đã phân công Giảng viên ${reviewerId} chấm phúc khảo đơn #${appealId}!`);
+        fetchAll();
+      } else {
+        const err = await res.json();
+        setActionMsg(err.message || 'Lỗi khi phân công giảng viên');
+      }
+    } catch (e: any) {
+      setActionMsg('Lỗi kết nối: ' + e.message);
+    }
+    setTimeout(() => setActionMsg(''), 4000);
+  };
 
   const retryDLQ = async (dlqId: string) => {
     const res = await fetch(`${API}/api/v1/queue/dlq/retry/${dlqId}`, { method: 'POST', headers });
@@ -180,6 +210,7 @@ export function AdminDashboard({ token }: { token: string }) {
     { key: 'overview', label: 'Tổng quan', icon: <BarChart2 size={14} /> },
     { key: 'users', label: `Người dùng (${users.length})`, icon: <Users size={14} /> },
     { key: 'submissions', label: `Bài nộp (${submissions.length})`, icon: <Activity size={14} /> },
+    { key: 'appeals', label: `Phúc khảo (${appeals.length})`, icon: <Scale size={14} /> },
     { key: 'teamwork', label: 'Git Teamwork', icon: <GitCommit size={14} /> },
     { key: 'dlq', label: `DLQ ${dlqJobs.length > 0 ? `(${dlqJobs.length})` : ''}`, icon: <AlertTriangle size={14} /> },
     { key: 'settings', label: 'Cài đặt', icon: <Settings size={14} /> },
@@ -508,6 +539,156 @@ export function AdminDashboard({ token }: { token: string }) {
                   )}
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* APPEALS MANAGEMENT TAB (PHAN HE 1 & 3: KHOA/BOMON PHAN CONG GIANG VIEN DOC LAP) */}
+      {activeTab === 'appeals' && (
+        <div className="glass-panel" style={{ padding: 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <h3 style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-main)', margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Scale size={18} color="var(--blue-300)" />
+                Quản lý Đơn Phúc Khảo &amp; Phân Công Giảng Viên Chấm Độc Lập
+              </h3>
+              <p style={{ fontSize: 12.5, color: 'var(--text-muted)', marginTop: 4 }}>
+                Admin / Trưởng bộ môn tiếp nhận đơn từ sinh viên và phân công cho Giảng viên độc lập chấm phúc tra (tránh thiên vị, bảo đảm khách quan).
+              </p>
+            </div>
+            <span style={{ fontSize: 12, padding: '4px 10px', borderRadius: 6, background: '#f1f5f9', color: '#475569', fontWeight: 600 }}>
+              Tổng: {appeals.length} đơn ({appeals.filter(a => a.status === 'PENDING').length} chờ phân công)
+            </span>
+          </div>
+
+          {appeals.length === 0 ? (
+            <div style={{ padding: '36px 16px', textAlign: 'center', color: 'var(--text-dim)' }}>
+              <Scale size={28} style={{ margin: '0 auto 8px', opacity: 0.4 }} />
+              <p>Hiện chưa có đơn phúc khảo nào trong hệ thống.</p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'rgba(14, 66, 116, 0.04)', borderBottom: '1px solid var(--border-color)' }}>
+                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>Mã đơn</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>Sinh viên &amp; Bài nộp</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)', maxWidth: '280px' }}>Lý do khiếu nại</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)', textAlign: 'center' }}>Trạng thái</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>Giảng viên phân công</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)', textAlign: 'right' }}>Thao tác phân công</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {appeals.map((item) => {
+                    const statusColor =
+                      item.status === 'ACCEPTED' ? '#15803d' :
+                      item.status === 'REJECTED' ? '#b91c1c' :
+                      item.status === 'IN_REVIEW' ? '#2563eb' : '#d97706';
+                    const statusBg =
+                      item.status === 'ACCEPTED' ? '#dcfce7' :
+                      item.status === 'REJECTED' ? '#fee2e2' :
+                      item.status === 'IN_REVIEW' ? '#eff6ff' : '#fef3c7';
+
+                    const currentSelectedGv = assignMap[item.appealId] || item.reviewerId || '';
+                    const availableLecturers = users.filter(u => u.role === 'INSTRUCTOR' || u.role === 'HOD');
+
+                    return (
+                      <tr key={item.appealId} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#0E4274' }}>{item.appealId}</span>
+                          <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: 2 }}>
+                            {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN') : '—'}
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                          <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{item.studentId}</div>
+                          <span style={{ fontFamily: 'monospace', fontSize: '11.5px', color: 'var(--text-muted)' }}>
+                            {item.submissionId}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '12px 14px', verticalAlign: 'top', maxWidth: '280px' }}>
+                          <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                            {item.reason}
+                          </p>
+                          {item.resolutionNote && (
+                            <div style={{ marginTop: 6, padding: '4px 8px', background: '#f8fafc', borderRadius: 4, fontSize: '11.5px', borderLeft: '3px solid #2563eb' }}>
+                              <strong>Kết quả:</strong> {item.resolutionNote} {item.adjustedScore !== undefined ? `(Điểm mới: ${item.adjustedScore})` : ''}
+                            </div>
+                          )}
+                        </td>
+
+                        <td style={{ padding: '12px 14px', verticalAlign: 'top', textAlign: 'center' }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '3px 8px',
+                              borderRadius: 6,
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              backgroundColor: statusBg,
+                              color: statusColor,
+                              border: `1px solid ${statusColor}33`,
+                            }}
+                          >
+                            {item.status}
+                          </span>
+                        </td>
+
+                        <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                          {item.reviewerId ? (
+                            <div>
+                              <span style={{ fontWeight: 600, color: '#1d4ed8', fontSize: '12.5px' }}>
+                                {item.reviewerId}
+                              </span>
+                              <div style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
+                                {item.resolvedAt ? `Đã xử lý lúc ${new Date(item.resolvedAt).toLocaleTimeString('vi-VN')}` : 'Đang thụ lý'}
+                              </div>
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: '12px', color: '#d97706', fontStyle: 'italic' }}>
+                              Chưa phân công
+                            </span>
+                          )}
+                        </td>
+
+                        <td style={{ padding: '12px 14px', verticalAlign: 'top', textAlign: 'right' }}>
+                          {item.status === 'ACCEPTED' || item.status === 'REJECTED' ? (
+                            <span style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontStyle: 'italic' }}>Đã hoàn tất</span>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                              <select
+                                value={currentSelectedGv}
+                                onChange={(e) => setAssignMap(prev => ({ ...prev, [item.appealId]: e.target.value }))}
+                                className="input-field"
+                                style={{ fontSize: '12px', height: '30px', padding: '0 6px', maxWidth: '170px' }}
+                              >
+                                <option value="">-- Chọn Giảng viên --</option>
+                                {availableLecturers.map((gv) => (
+                                  <option key={gv.userId} value={gv.userId}>
+                                    {gv.fullName} ({gv.userId})
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                type="button"
+                                onClick={() => handleAssignReviewer(item.appealId, currentSelectedGv)}
+                                className="btn btn-primary btn-sm"
+                                style={{ padding: '4px 9px', fontSize: '11.5px' }}
+                              >
+                                Phân công
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
