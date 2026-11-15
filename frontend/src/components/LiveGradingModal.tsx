@@ -24,8 +24,8 @@ interface LiveGradingModalProps {
 }
 
 const breakdownItems = [
-  { key: 'cleanCode' as const, label: 'Clean code', max: 2.0, icon: Sparkles },
-  { key: 'solid' as const, label: 'SOLID', max: 1.0, icon: CornerUpRight },
+  { key: 'cleanCode' as const, label: 'Clean code', max: 1.5, icon: Sparkles },
+  { key: 'solid' as const, label: 'SOLID', max: 1.5, icon: CornerUpRight },
 ];
 
 function getCompilerBadgeLabel(lang?: string): string {

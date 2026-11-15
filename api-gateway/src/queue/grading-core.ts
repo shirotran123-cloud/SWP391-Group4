@@ -13,8 +13,8 @@ export const MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 export const SCORE_WEIGHTS = {
   testcase1: 3.5,
   testcase2: 3.5,
-  cleanCode: 2.0,
-  solid: 1.0,
+  cleanCode: 1.5,
+  solid: 1.5,
   maxScore: 10.0,
 } as const;
 

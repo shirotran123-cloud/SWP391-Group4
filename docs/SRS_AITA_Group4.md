@@ -46,7 +46,7 @@
 
 - `RBL_Syllabus_AITA_10Weeks.md` (5 subsystems, CLO1–CLO6, gates).
 - `database/init_all_13_tables.sql` (13 tables 3NF + 2 infra).
-- `api-gateway/src/queue/grading-worker.consumer.ts` (weights 3.5/3.5/2.0/1.0, equal testcase weights).
+- `api-gateway/src/queue/grading-worker.consumer.ts` (weights 3.5/3.5/1.5/1.5, equal testcase weights).
 - `api-gateway/src/sandbox/sandbox.service.ts` (DOCKER_SECCOMP / RESILIENT_CIRCUIT_BREAKER).
 - `sandbox/worker/index.ts` (512MB, 2.0s, none, 64).
 - `genai-hub/src/ast-engine/plagiarism-engine.ts` (threshold 70.0, 0.65/0.35).
