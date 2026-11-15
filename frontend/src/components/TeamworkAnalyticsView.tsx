@@ -176,25 +176,6 @@ export const TeamworkAnalyticsView: React.FC<TeamworkAnalyticsViewProps> = ({
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '3px 9px',
-                borderRadius: '6px',
-                backgroundColor: 'rgba(14, 66, 116, 0.08)',
-                color: '#0E4274',
-                fontSize: '11.5px',
-                fontWeight: 600,
-              }}
-            >
-              <GitCommit size={13} /> Phân hệ 5: Git Teamwork Analytics
-            </span>
-            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>•</span>
-            <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>Quy chuẩn chống Free-Rider (BR-12)</span>
-          </div>
           <h1 className="aita-page-title" style={{ fontSize: '22px', fontWeight: 700, color: 'var(--text-main)' }}>
             Theo dõi Đóng góp Nhóm &amp; Chống Free-Riding
           </h1>
@@ -557,7 +538,7 @@ export const TeamworkAnalyticsView: React.FC<TeamworkAnalyticsViewProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
           <Info size={16} style={{ color: '#0E4274' }} />
           <h4 style={{ fontSize: '13.5px', fontWeight: 700, color: '#0E4274' }}>
-            Quy định đánh giá đóng góp cá nhân (Trích Đề cương học phần SWP391)
+            Quy định đánh giá đóng góp cá nhân
           </h4>
         </div>
         <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.6 }}>

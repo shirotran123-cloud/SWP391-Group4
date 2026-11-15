@@ -1,0 +1,11 @@
+{
+  "files.associations": {
+    "Dockerfile.*": "dockerfile"
+  },
+  "java.project.exclusionFilters": [
+    "**/demo/**",
+    "**/sandbox/**",
+    "**/samples/**",
+    "**/node_modules/**"
+  ]
+}
