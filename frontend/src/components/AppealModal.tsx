@@ -65,7 +65,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
   if (!isOpen) return null;
 
   const appealsCount = appeals.length;
-  const maxAppeals = 2; // Quy định: Tối đa 2 lần cho MỖI bài nộp độc lập
+  const maxAppeals = 1; // Quy định chuẩn đại học: 1 lần phúc khảo duy nhất cho MỖI bài nộp độc lập (Final Verdict)
   const canSubmit = appealsCount < maxAppeals;
 
   const handleSubmitAppeal = async (e: React.FormEvent) => {
@@ -183,7 +183,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
                 Đơn Khiếu Nại &amp; Phúc Khảo Điểm
               </h2>
               <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                Quy định phúc khảo điểm (Tối đa 2 lần khiếu nại / mỗi bài nộp)
+                Quy chế khảo thí đại học: Mỗi bài nộp được phúc khảo 1 lần duy nhất (Kết quả cuối cùng)
               </p>
             </div>
           </div>
@@ -257,10 +257,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
             <div>
-              • <strong>Hạn mức quy định:</strong> Tối đa <strong>2 lần khiếu nại cho RIÊNG bài nộp này</strong>.
-              <span style={{ color: 'var(--blue-200)', fontStyle: 'italic', marginLeft: '4px' }}>
-                (Mỗi bài tập / bài nộp đều có 2 lượt độc lập, KHÔNG giới hạn tổng toàn bộ khóa học).
-              </span>
+              • <strong>Hạn mức quy định:</strong> <strong>1 lần phúc khảo duy nhất cho bài nộp này</strong>. Kết luận phúc khảo là quyết định cuối cùng.
             </div>
             <div>
               • <strong>Thời hạn khiếu nại:</strong> Trong vòng <strong>48 giờ</strong> kể từ thời điểm công bố kết quả chấm.
@@ -433,12 +430,9 @@ export const AppealModal: React.FC<AppealModalProps> = ({
         ) : (
           <div style={{ padding: '18px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.06)', border: '1px solid rgba(11, 18, 32, 0.1)', color: 'var(--text-main)', textAlign: 'center', fontSize: '14px' }}>
             <AlertCircle size={28} style={{ margin: '0 auto 8px' }} />
-            <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>Đã đạt giới hạn phúc khảo của bài nộp này (2/2 lần)</div>
+            <div style={{ fontWeight: 600, fontSize: '15px', marginBottom: '6px' }}>Đã hoàn tất phúc khảo cho bài nộp này (1/1 lần)</div>
             <p style={{ fontSize: '13px', margin: '0 0 6px 0', color: 'var(--text-main)', lineHeight: 1.5 }}>
-              Bài nộp này đã sử dụng đủ 2 lần phúc khảo theo quy định. Quyết định của Giảng viên là quyết định cuối cùng.
-            </p>
-            <p style={{ fontSize: '12px', margin: 0, color: '#33415a' }}>
-              Lưu ý: Hạn mức này chỉ áp dụng riêng cho mã bài nộp này. Các bài tập khác của bạn vẫn có 2 lượt phúc khảo độc lập bình thường.
+              Bài nộp này đã được thẩm định phúc khảo. Theo quy chế khảo thí, quyết định của Giảng viên là quyết định cuối cùng.
             </p>
           </div>
         )}

@@ -13,7 +13,7 @@ import { ResolveAppealDto } from './dto/resolve-appeal.dto';
 @Injectable()
 export class AppealsService {
   private readonly logger = new Logger(AppealsService.name);
-  private static readonly MAX_APPEALS_PER_SUBMISSION = 2; // BR-05
+  private static readonly MAX_APPEALS_PER_SUBMISSION = 1; // Quy chế khảo thí: Mỗi bài nộp chỉ phúc khảo 1 lần duy nhất (Final Verdict)
   private static readonly DISPUTE_WINDOW_MS = 48 * 60 * 60 * 1000; // 48 giờ
 
   constructor(
@@ -24,7 +24,7 @@ export class AppealsService {
   /**
    * Tạo đơn khiếu nại / phúc khảo (UC-06 & BR-05):
    * - Kiểm tra bài nộp tồn tại
-   * - Kiểm tra số lần phúc khảo <= 2 lần
+   * - Kiểm tra số lần phúc khảo: 1 lần duy nhất
    * - Kiểm tra thời hạn khiếu nại <= 48 giờ
    */
   public async createAppeal(dto: CreateAppealDto): Promise<AppealRecord> {
@@ -33,11 +33,11 @@ export class AppealsService {
       throw new NotFoundException(`Không tìm thấy bài nộp với mã: ${dto.submissionId}`);
     }
 
-    // 1. Kiểm tra số lần khiếu nại (BR-05: <= 2 lần)
+    // 1. Kiểm tra số lần khiếu nại (1 lần duy nhất theo thông lệ đại học)
     const existingCount = await this.appealRepo.countBySubmissionId(dto.submissionId);
     if (existingCount >= AppealsService.MAX_APPEALS_PER_SUBMISSION) {
       throw new BadRequestException(
-        `Vượt quá số lần phúc khảo cho phép! (Bài nộp này đã có ${existingCount}/2 lần khiếu nại theo quy tắc BR-05).`,
+        `Vượt quá số lần phúc khảo cho phép! (Bài nộp này đã có ${existingCount}/1 lần khiếu nại. Theo quy chế, mỗi bài chỉ được phúc khảo 1 lần duy nhất).`,
       );
     }
 

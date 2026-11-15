@@ -89,7 +89,7 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
               Theo Dõi Khiếu Nại &amp; Phúc Khảo Điểm (Appeals)
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
-              Sinh viên có quyền gửi tối đa <strong>2 đơn phúc khảo cho MỖI bài nộp độc lập</strong> trong vòng <strong>48 giờ</strong> sau khi công bố kết quả (Quy chế phúc khảo). Mỗi bài tập đều có hạn mức 2 lượt riêng biệt, không tính gộp toàn khóa học.
+              Sinh viên có quyền gửi <strong>1 đơn phúc khảo duy nhất cho mỗi bài nộp</strong> trong vòng <strong>48 giờ</strong> sau khi công bố kết quả. Kết luận của Giảng viên thẩm định là quyết định cuối cùng.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>

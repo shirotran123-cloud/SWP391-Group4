@@ -634,6 +634,18 @@ const mockSubmissionsList: SubmissionRecord[] = [
 export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiffViewer }) => {
   const [activeTab, setActiveTab] = useState<'COURSES' | 'CREATE_ASSIGNMENT' | 'EXCEL_IMPORT' | 'SUBMISSIONS' | 'RBL_LAB' | 'APPEALS' | 'TEAMWORK'>('COURSES');
 
+  // Lấy thông tin Giảng viên đang đăng nhập thực tế để ghi nhận vào biên bản phúc khảo (Blind / Independent Reviewer)
+  const currentLecturerId = useMemo(() => {
+    try {
+      const stored = localStorage.getItem('aita_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        return u.userId || u.email || 'GV001';
+      }
+    } catch {}
+    return 'GV001';
+  }, []);
+
   // Danh sách bài nộp thực tế từ server & trạng thái tải file zip
   const [realSubmissions, setRealSubmissions] = useState<SubmissionRecord[]>([]);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -5336,7 +5348,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
       {/* TAB 6: PHÚC KHẢO & KHIẾU NẠI ĐIỂM  */}
       {activeTab === 'APPEALS' && (
-        <LecturerAppealsManager apiBaseUrl={API_BASE_URL} lecturerId="GV001" />
+        <LecturerAppealsManager apiBaseUrl={API_BASE_URL} lecturerId={currentLecturerId} />
       )}
 
 
