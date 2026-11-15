@@ -2799,7 +2799,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
               >
                 {isAiGenerating ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
                 {isAiGenerating
-                  ? `Đang tạo đề... (${aiTimerSeconds}s / tối đa 10s)`
+                  ? `Đang tạo đề bằng AI... (${aiTimerSeconds}s)`
                   : 'Dùng AI sinh đề & barem'}
               </button>
             </div>
@@ -2891,7 +2891,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                 </h3>
               </div>
               <span style={{ fontSize: '11px', padding: '3px 8px', borderRadius: '6px', backgroundColor: 'rgba(37, 99, 235, 0.1)', color: 'var(--blue-200)', fontWeight: 700 }}>
-                Tốc độ cao (Bảo vệ thời gian thực tối đa 10s)
+                Tốc độ cao (Google Gemini Flash Engine)
               </span>
             </div>
 
