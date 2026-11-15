@@ -324,33 +324,25 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
       ? `YÊU CẦU & MÔ TẢ CỤ THỂ TỪ GIẢNG VIÊN: "${options.lecturerDescription}"\nChủ đề: ${options.topicPrompt}`
       : `Chủ đề: ${options.topicPrompt}`;
 
-    const userPrompt = `Hãy sáng tạo một đề thi lập trình HOÀN TOÀN MỚI LẠ VÀ ĐỘC ĐÁO:
+    const userPrompt = `Hãy soạn thảo một đề thi lập trình BÁM SÁT 100% YÊU CẦU CỦA GIẢNG VIÊN:
 - Mã thế hệ đề thi: #${randomSeed}
 - Môn học: ${options.courseCode} (${options.courseName})
 - ${promptDetails}
 - Ngôn ngữ cho phép: ${(options.allowedLanguages || ['java', 'python', 'cpp']).join(', ')}
-- MA TRẬN TESTCASES BẮT BUỘC (BAO QUÁT 100% CÁC RANH GIỚI BIÊN CỦA CODE):
-  Sinh ĐÚNG CHÍNH XÁC ${targetTestCount} bộ testcases, phân bổ bắt buộc bao quát đầy đủ 5 tầng ranh giới sau:
-  1. Testcases Cơ bản / Thông thường (Happy Path) [khoảng 40%]: Luồng hoạt động chuẩn, dữ liệu mẫu kích thước vừa (N từ 3 đến 8) để sinh viên debug và kiểm tra logic cơ bản.
-  2. Testcases Ranh giới Cực tiểu (Corner / Minimal Boundary) [khoảng 20%]:
-     - Kích thước tiệm cận biên dưới: N = 1 (chỉ duy nhất 1 phần tử), N = 0 (tập dữ liệu rỗng), chuỗi rỗng.
-     - Giá trị số 0, số âm, hoặc giá trị nhỏ nhất của kiểu dữ liệu.
-  3. Testcases Ranh giới Suy biến & Bẫy thuật toán (Degenerate / Adversarial Cases) [khoảng 20%]:
-     - Toàn bộ các phần tử đầu vào trùng khớp nhau hoàn toàn (All identical values).
-     - Dữ liệu đã sắp xếp sẵn theo thứ tự tăng dần hoặc giảm dần (Sorted / Reversed input) nhằm bẫy thuật toán O(N^2) (ví dụ QuickSort suy biến nếu không chọn pivot tốt).
-     - Với Cấu trúc Cây (Tree): Dữ liệu làm cây bị lệch 1 nhánh thành danh sách liên kết (Skewed Tree) nhằm kiểm tra đệ quy tràn Call Stack.
-     - Với Đồ thị (Graph): Đồ thị không liên thông, đỉnh cô lập hoặc có chu trình.
-  4. Testcases Ranh giới Cực đại & Chống tràn số (Stress Scale & Overflow) [khoảng 20%]:
-     - Kích thước chạm ngưỡng giới hạn trên của bài toán (N lớn) nhằm kiểm tra thời gian thực thi (chống TLE - Time Limit Exceeded) và bộ nhớ (chống MLE).
-     - Giá trị số lớn vượt quá 2^31 - 1 để kiểm tra việc sử dụng biến 64-bit (long / BigInt) tránh tràn số nguyên.
-  5. Testcases Thao tác Không tồn tại / Xử lý ngoại lệ:
-     - Yêu cầu tìm kiếm hoặc xóa một phần tử KHÔNG tồn tại trong cấu trúc dữ liệu.
-- MỤC GIẢI THÍCH (explanation): Trong mỗi testcase, trường "explanation" BẮT BUỘC ghi rõ mục đích kiểm tra biên (Ví dụ: "Biên cực tiểu N=1", "Biên bẫy suy biến dữ liệu trùng lặp", "Biên cực đại chống TLE", "Thao tác phần tử không tồn tại").
-- TRỌNG SỐ ĐIỂM: Tổng trọng số điểm của tất cả testcase BẮT BUỘC luôn luôn bằng đúng 7.0đ (theo Barem chuẩn AITA: 7.0đ Testcases + 3.0đ Clean Code & SOLID = 10.0đ). Phân bổ trọng số từng testcase theo độ khó (ví dụ test cơ bản từ 0.5đ - 1.0đ, test biên nâng cao 1.5đ - 2.0đ, đảm bảo tổng toàn bộ testcases = 7.0đ).
-- BỐI CẢNH THỰC TẾ BẮT BUỘC (ĐA DẠNG HÓA):
-  + Lĩnh vực bài toán cho đề thi này: "${chosenDomain}".
-  + ĐẶC BIỆT CẤM: TUYỆT ĐỐI KHÔNG lặp lại các mô-típ Drone y tế, máy bay cứu hộ khẩn cấp hay giao thuốc cấp cứu (trừ phi giảng viên yêu cầu đích danh từ khóa này).
-  + Hãy lồng ghép nghiệp vụ thực tế của lĩnh vực "${chosenDomain}" vào cốt truyện đề bài, sử dụng thuật ngữ nghiệp vụ chân thực để bài toán lập trình sống động và hấp dẫn.`;
+- NGUYÊN TẮC CỐT LÕI VỀ TESTCASES (BẮT BUỘC):
+  + Sinh ĐÚNG CHÍNH XÁC ${targetTestCount} phần tử trong mảng "testCases" (không được thiếu, không được thừa, không được để mảng rỗng).
+  + Mọi testcase PHẢI bám sát đúng yêu cầu bài toán của giảng viên và tuân thủ TUYỆT ĐỐI "Định dạng Đầu vào (StdIn)" và "Định dạng Đầu ra (StdOut)" đã mô tả trong "description".
+  + Tự kiểm tra bằng cách chạy nhẩm "referenceSolution" trên từng "input" để đảm bảo "output" chính xác 100%, không sai lệch.
+  + Nếu StdIn hoặc StdOut có nhiều dòng, dùng ký tự xuống dòng "\\n" chuẩn JSON (ví dụ: "4\\n1 2 3 4"). Tuyệt đối không gộp nhiều dòng thành một dòng dính liền.
+- PHÂN BỔ ĐỘ PHỦ ${targetTestCount} TESTCASES THEO ĐẶC THÙ BÀI TOÁN:
+  1. Testcases Cơ bản (Happy Path) [khoảng 40%]: Dữ liệu mẫu chuẩn, dễ kiểm tra logic cơ bản (isHidden: false).
+  2. Testcases Biên cực tiểu (Minimal Boundary) [khoảng 20%]: Biên nhỏ nhất hợp lệ theo ràng buộc đề bài (ví dụ N=0, N=1, số 0, số âm nếu đề cho phép) (isHidden: true).
+  3. Testcases Biên đặc biệt / Bẫy thuật toán [khoảng 20%]: Dữ liệu trùng lặp, đã sắp xếp / đảo ngược, hoặc trường hợp rẽ nhánh đặc biệt (isHidden: true).
+  4. Testcases Biên cực đại & Chống tràn số (Stress / Overflow) [khoảng 20%]: Giá trị lớn sát giới hạn trên của đề bài để kiểm tra hiệu năng và kiểu dữ liệu lớn (isHidden: true).
+- MỤC GIẢI THÍCH (explanation): Ghi rõ mục đích kiểm tra của từng testcase.
+- BỐI CẢNH THỰC TẾ:
+  + Nếu giảng viên đã nêu rõ bài toán cụ thể (ví dụ: tính chẵn lẻ, sắp xếp, cây AVL...), hãy giữ nguyên bản chất thuật toán và định dạng I/O đúng như giảng viên yêu cầu; chỉ dùng lĩnh vực "${chosenDomain}" để làm ví dụ minh họa nhẹ nhàng nếu phù hợp.
+  + ĐẶC BIỆT CẤM: TUYỆT ĐỐI KHÔNG tự ý bịa sang mô-típ Drone y tế hay cứu hộ khẩn cấp (trừ phi giảng viên yêu cầu đích danh).`;
 
     let lastError: Error | null = null;
     let successfulModel = '';
@@ -376,8 +368,8 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
             ],
             generationConfig: {
               responseMimeType: 'application/json',
-              temperature: 0.88, // Tăng độ đa dạng sáng tạo cho AI
-              maxOutputTokens: 4096,
+              temperature: 0.7,
+              maxOutputTokens: 8192,
             },
           }),
         });
@@ -413,7 +405,11 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
           cleaned = jsonMatch[0];
         }
 
-        parsedData = JSON.parse(cleaned);
+        const candidateParsed = JSON.parse(cleaned);
+        if (!Array.isArray(candidateParsed.testCases) || candidateParsed.testCases.length === 0) {
+          throw new Error(`Model ${modelToTry} không sinh được testCases hợp lệ.`);
+        }
+        parsedData = candidateParsed;
         successfulModel = modelToTry.replace('models/', '');
         break; // Gọi AI thành công 100%!
       } catch (err: any) {
@@ -444,15 +440,23 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
       );
     }
 
+    const normalizeNewlines = (val: unknown): string => {
+      const str = String(val ?? '');
+      return !str.includes('\n') && str.includes('\\n') ? str.replace(/\\n/g, '\n') : str;
+    };
+
     const latencyMs = Date.now() - startTime;
     let testCasesList: GeneratedTestCase[] = Array.isArray(parsedData.testCases)
-      ? parsedData.testCases.map((tc: any, idx: number) => ({
-          input: String(tc.input ?? ''),
-          output: String(tc.output ?? ''),
-          weight: 1,
-          isHidden: Boolean(tc.isHidden),
-          explanation: tc.explanation ? String(tc.explanation) : undefined,
-        }))
+      ? parsedData.testCases
+          .map((tc: any) => ({
+            input: normalizeNewlines(tc.input),
+            output: normalizeNewlines(tc.output),
+            weight: 1,
+            isHidden: Boolean(tc.isHidden),
+            explanation: tc.explanation ? String(tc.explanation) : undefined,
+          }))
+          .filter((tc: GeneratedTestCase) => tc.output.trim().length > 0)
+          .slice(0, targetTestCount)
       : [];
 
     // Giữ nguyên trọng số gốc do AI hoặc giảng viên thiết lập (hệ thống sẽ tự động quy đổi sang hệ 7.0đ khi chấm bài)

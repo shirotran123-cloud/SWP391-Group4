@@ -1407,7 +1407,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
       const courseCode = courseObj ? courseObj.courseCode : normalizeClassId(selectedCourse) || 'SWP391';
 
       const detectedCount = GeminiAIService.extractRequestedCount(lecturerPrompt);
-      const testCountToUse = detectedCount || desiredTestCount || 5;
+      const testCountToUse = desiredTestCount || detectedCount || 5;
 
       // Ưu tiên yêu cầu cụ thể của giảng viên; tránh truyền lại tiêu đề cũ nếu đã bị gán từ lần sinh trước
       let topicToUse = lecturerPrompt?.trim() || '';
@@ -3288,34 +3288,34 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {testCases.map((tc, idx) => (
-                  <div key={idx} className="testcase-row" style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#eef2f8', border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 115px 105px auto', gap: '12px', alignItems: 'center' }}>
+                  <div key={idx} className="testcase-row" style={{ padding: '14px', borderRadius: '10px', backgroundColor: '#eef2f8', border: '1px solid var(--border-color)', display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 115px 105px auto', gap: '12px', alignItems: 'flex-start' }}>
                     <div>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Input (StdIn #{idx + 1}):</span>
-                      <input
-                        type="text"
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Input (StdIn #{idx + 1}):</span>
+                      <textarea
+                        rows={2}
                         value={tc.input}
                         onChange={(e) => {
                           const updated = [...testCases];
                           updated[idx].input = e.target.value;
                           setTestCases(updated);
                         }}
-                        placeholder="Dữ liệu đầu vào..."
-                        style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#ffffff', border: '1px solid rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
+                        placeholder="Dữ liệu đầu vào (hỗ trợ nhiều dòng)..."
+                        style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#ffffff', border: '1px solid rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontSize: '12px', fontFamily: 'var(--font-mono)', lineHeight: '1.45', resize: 'vertical', whiteSpace: 'pre' }}
                       />
                     </div>
 
                     <div>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Kỳ Vọng (StdOut #{idx + 1}):</span>
-                      <input
-                        type="text"
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>Kỳ Vọng (StdOut #{idx + 1}):</span>
+                      <textarea
+                        rows={2}
                         value={tc.output}
                         onChange={(e) => {
                           const updated = [...testCases];
                           updated[idx].output = e.target.value;
                           setTestCases(updated);
                         }}
-                        placeholder="Kết quả chuẩn..."
-                        style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#ffffff', border: '1px solid rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontSize: '12px', fontFamily: 'var(--font-mono)' }}
+                        placeholder="Kết quả chuẩn (hỗ trợ nhiều dòng)..."
+                        style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', backgroundColor: '#ffffff', border: '1px solid rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontSize: '12px', fontFamily: 'var(--font-mono)', lineHeight: '1.45', resize: 'vertical', whiteSpace: 'pre' }}
                       />
                     </div>
 
