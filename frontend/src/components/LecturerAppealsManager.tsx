@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import type { Appeal } from '../types';
 import { API_BASE_URL } from '../config/api';
+import { translateAiExplanation, translateCodeSmell } from '../utils/aiTranslation';
 
 interface LecturerAppealsManagerProps {
   apiBaseUrl?: string;
@@ -1059,7 +1060,7 @@ public class Solution {
                         Nhận xét sư phạm từ Trí tuệ nhân tạo (GenAI Hub):
                       </div>
                       <p style={{ fontSize: '13px', color: '#0b1220', lineHeight: 1.6, margin: 0 }}>
-                        {auditData.aiRating.explanation}
+                        {translateAiExplanation(auditData.aiRating.explanation)}
                       </p>
                     </div>
 
@@ -1069,14 +1070,17 @@ public class Solution {
                         Các điểm cần cải tiến (Code Smells phát hiện qua AST):
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {auditData.aiRating.codeSmells.map((smell: any, i: number) => (
-                          <div key={i} style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(11, 18, 32, 0.05)', border: '1px solid rgba(11, 18, 32, 0.09)', fontSize: '12px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-main)', fontWeight: 700, marginBottom: '2px' }}>
-                              <span>Dòng {smell.line}: {smell.rule}</span>
+                        {auditData.aiRating.codeSmells.map((smell: any, i: number) => {
+                          const translated = translateCodeSmell(smell);
+                          return (
+                            <div key={i} style={{ padding: '8px 12px', borderRadius: '8px', backgroundColor: 'rgba(11, 18, 32, 0.05)', border: '1px solid rgba(11, 18, 32, 0.09)', fontSize: '12px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-main)', fontWeight: 700, marginBottom: '2px' }}>
+                                <span>Dòng {smell.line}: {translated.rule}</span>
+                              </div>
+                              <div style={{ color: '#0b1220' }}>{translated.description}</div>
                             </div>
-                            <div style={{ color: '#0b1220' }}>{smell.description}</div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   </div>

@@ -4,6 +4,7 @@ import type { GradingStep, AIRating, PlagiarismMatch, ScoreBreakdown } from '../
 import { SolidRadarChart } from './SolidRadarChart';
 import { MonacoDiffViewer } from './MonacoDiffViewer';
 import { AppealModal } from './AppealModal';
+import { translateAiExplanation, translateCodeSmell } from '../utils/aiTranslation';
 
 interface LiveGradingModalProps {
   isOpen: boolean;
@@ -458,7 +459,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                 Nhận xét của trợ lý
               </div>
               <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: '14px', flexGrow: 1 }}>
-                {aiRating.explanation}
+                {translateAiExplanation(aiRating.explanation)}
               </p>
 
               <h4 style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-soft)', marginBottom: '7px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -466,24 +467,30 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                 <span className="chip chip-neutral chip-mono">{aiRating.codeSmells.length}</span>
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxHeight: '128px', overflowY: 'auto' }}>
-                {aiRating.codeSmells.map((smell, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      padding: '7px 9px',
-                      borderRadius: '6px',
-                      backgroundColor: 'rgba(11, 18, 32, 0.025)',
-                      borderLeft: '2px solid var(--blue-500)',
-                      fontSize: '11.5px',
-                      display: 'flex',
-                      gap: '7px',
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--blue-300)', flexShrink: 0 }}>L{smell.line || 15}</span>
-                    <span style={{ color: 'var(--text-muted)' }}>{smell.description}</span>
-                  </div>
-                ))}
+                {aiRating.codeSmells.map((smell, index) => {
+                  const translated = translateCodeSmell(smell);
+                  return (
+                    <div
+                      key={index}
+                      style={{
+                        padding: '7px 9px',
+                        borderRadius: '6px',
+                        backgroundColor: 'rgba(11, 18, 32, 0.025)',
+                        borderLeft: '2px solid var(--blue-500)',
+                        fontSize: '11.5px',
+                        display: 'flex',
+                        gap: '7px',
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--blue-300)', flexShrink: 0 }}>L{smell.line || 15}</span>
+                      <span style={{ color: 'var(--text-muted)' }}>
+                        <strong style={{ color: 'var(--text-soft)', marginRight: 4 }}>{translated.rule}:</strong>
+                        {translated.description}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -509,7 +516,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
               <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.6, margin: 0 }}>
                 {aiRating.codeSmells && aiRating.codeSmells.length > 0 ? (
                   <span>
-                    Dòng {aiRating.codeSmells[0].line}: {aiRating.codeSmells[0].description} Nên tách nhỏ phương thức để tuân thủ{' '}
+                    Dòng {aiRating.codeSmells[0].line}: {translateCodeSmell(aiRating.codeSmells[0]).description} Nên tách nhỏ phương thức để tuân thủ{' '}
                     <strong style={{ color: 'var(--text-soft)' }}>Single Responsibility Principle</strong>.
                   </span>
                 ) : (

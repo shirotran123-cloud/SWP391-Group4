@@ -20,6 +20,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { SolidRadarChart } from './SolidRadarChart';
+import { translateAiExplanation, translateCodeSmell } from '../utils/aiTranslation';
 import type { AIRating, ScoreBreakdown } from '../types';
 import { API_BASE_URL } from '../config/api';
 
@@ -670,7 +671,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                     </div>
 
                     <p style={{ fontSize: '13px', color: '#33415a', lineHeight: '1.6', marginBottom: '16px', fontStyle: 'italic', backgroundColor: 'rgba(11, 18, 32, 0.04)', padding: '12px 14px', borderRadius: '8px', borderLeft: '3px solid #3b82f6' }}>
-                      &ldquo;{aiRating.explanation}&rdquo;
+                      &ldquo;{translateAiExplanation(aiRating.explanation)}&rdquo;
                     </p>
 
                     <h4 style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>
@@ -683,25 +684,31 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '140px', overflowY: 'auto' }}>
-                        {aiRating.codeSmells.map((smell, index) => (
-                          <div
-                            key={index}
-                            style={{
-                              padding: '8px 10px',
-                              borderRadius: '6px',
-                              backgroundColor: 'rgba(37, 99, 235, 0.07)',
-                              border: '1px solid rgba(37, 99, 235, 0.1)',
-                              fontSize: '12px',
-                              display: 'flex',
-                              gap: '8px',
-                            }}
-                          >
-                            <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-amber)', fontWeight: 600 }}>
-                              L{smell.line || 15}:
-                            </span>
-                            <span style={{ color: '#33415a' }}>{smell.description}</span>
-                          </div>
-                        ))}
+                        {aiRating.codeSmells.map((smell, index) => {
+                          const translated = translateCodeSmell(smell);
+                          return (
+                            <div
+                              key={index}
+                              style={{
+                                padding: '8px 10px',
+                                borderRadius: '6px',
+                                backgroundColor: 'rgba(37, 99, 235, 0.07)',
+                                border: '1px solid rgba(37, 99, 235, 0.1)',
+                                fontSize: '12px',
+                                display: 'flex',
+                                gap: '8px',
+                              }}
+                            >
+                              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent-amber)', fontWeight: 600 }}>
+                                L{smell.line || 15}:
+                              </span>
+                              <span style={{ color: '#33415a' }}>
+                                <strong style={{ color: 'var(--text-main)', marginRight: 4 }}>{translated.rule}:</strong>
+                                {translated.description}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -728,7 +735,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       {aiRating.codeSmells && aiRating.codeSmells.length > 0 ? (
                         <span>
                           <strong>Phát hiện vi phạm: </strong>
-                          {aiRating.codeSmells[0].description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử refactor lại các phương thức để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.
+                          {translateCodeSmell(aiRating.codeSmells[0]).description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử tái cấu trúc (refactor) lại các phương thức để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.
                         </span>
                       ) : (
                         <span>

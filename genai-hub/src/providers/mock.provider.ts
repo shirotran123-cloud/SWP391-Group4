@@ -78,10 +78,10 @@ export class MockProvider implements ILLMProvider {
         line_start: 10,
         line_end: 22,
         severity: "WARNING",
-        rule: "Open/Closed Principle (OCP)",
-        smell_type: "Type-Switch / Long if-else Chain",
+        rule: "Nguyên lý Đóng/Mở (OCP)",
+        smell_type: "Type-Switch / Chuỗi if-else dài",
         suggestion:
-          "Replace the if/else-if chain with polymorphism (Strategy pattern) so new operations can be added without modifying existing code.",
+          "Nên thay thế chuỗi if/else-if bằng tính đa hình (mẫu thiết kế Strategy Pattern) để có thể mở rộng nghiệp vụ mới mà không cần chỉnh sửa mã nguồn hiện tại.",
       });
     }
 
@@ -92,10 +92,10 @@ export class MockProvider implements ILLMProvider {
         line_start: 27,
         line_end: 31,
         severity: "WARNING",
-        rule: "Dependency Inversion Principle (DIP)",
-        smell_type: "Tight Coupling to Concrete Implementation",
+        rule: "Nguyên lý Đảo ngược Phụ thuộc (DIP)",
+        smell_type: "Phụ thuộc trực tiếp vào cài đặt cụ thể",
         suggestion:
-          "Depend on an abstraction (e.g. an ILogger / IRepository interface) injected through the constructor instead of instantiating concrete classes inline.",
+          "Nên phụ thuộc vào trừu tượng (Interface IService / IRepository) được truyền qua Constructor (Dependency Injection) thay vì khởi tạo lớp cụ thể trực tiếp.",
       });
     }
 
@@ -106,10 +106,10 @@ export class MockProvider implements ILLMProvider {
         line_start: 24,
         line_end: 28,
         severity: "WARNING",
-        rule: "Meaningful Names & Magic Literals",
-        smell_type: "Magic Numbers / Unclear Identifiers",
+        rule: "Quy chuẩn đặt tên & Hằng số (Clean Code)",
+        smell_type: "Số ma thuật / Đặt tên biến khó hiểu",
         suggestion:
-          "Replace cryptic single-letter variables and raw numbers with self-explanatory named constants (e.g. const int MAX_BUFFER_SIZE = 1024;).",
+          "Hãy thay thế các biến ký tự đơn và số thô bằng các hằng số có tên tự giải thích (ví dụ: final int MAX_BUFFER_SIZE = 1024;).",
       });
     }
 
@@ -120,9 +120,9 @@ export class MockProvider implements ILLMProvider {
         line_start: 35,
         line_end: 80,
         severity: "WARNING",
-        rule: "Small Functions & High Cohesion",
-        smell_type: "Long Method",
-        suggestion: "Extract subroutines from the large method into smaller helper functions with a single responsibility.",
+        rule: "Tính đơn trách nhiệm (Single Responsibility)",
+        smell_type: "Phương thức quá dài (Long Method)",
+        suggestion: "Hãy trích xuất các hàm con nhỏ hơn để đảm bảo mỗi hàm chỉ thực hiện một nhiệm vụ duy nhất (Single Responsibility).",
       });
     }
 
@@ -142,11 +142,11 @@ export class MockProvider implements ILLMProvider {
       solid_breakdown,
       overall_summary:
         smells.length === 0
-          ? "The submission follows clean coding practices with modular functions, clear naming conventions, and adherence to SOLID design principles."
-          : `The submission exhibits ${smells.length} architectural smell(s). Addressing them will significantly improve maintainability.`,
+          ? "Mã nguồn tuân thủ xuất sắc các tiêu chuẩn Clean Code với cấu trúc hàm rõ ràng, quy tắc đặt tên tường minh và áp dụng chuẩn xác 5 nguyên lý thiết kế SOLID."
+          : `Mã nguồn còn tồn tại ${smells.length} điểm kiến trúc cần cải thiện (Code Smell). Khắc phục các điểm này sẽ giúp mã nguồn dễ bảo trì, rõ ràng và mở rộng tốt hơn.`,
       code_smells: smells,
       compiler_explanation: hasCompilerError
-        ? "The build or execution failed. Check the line reported by the compiler, verify header inclusions, and make sure every pointer is initialized before use."
+        ? "Quá trình biên dịch hoặc thực thi phát sinh lỗi. Hãy kiểm tra các thông báo lỗi và dòng mã nguồn tương ứng."
         : "",
     };
   }
