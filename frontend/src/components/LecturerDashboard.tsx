@@ -38,7 +38,6 @@ import {
 } from 'lucide-react';
 import { RblBenchmarkView } from './RblBenchmarkView';
 import { LecturerAppealsManager } from './LecturerAppealsManager';
-import { TeamworkAnalyticsView } from './TeamworkAnalyticsView';
 import { FileTypeIcon } from './FileTypeIcon';
 import type {
   PlagiarismMatch,
@@ -632,7 +631,7 @@ const mockSubmissionsList: SubmissionRecord[] = [
 ];
 
 export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiffViewer }) => {
-  const [activeTab, setActiveTab] = useState<'COURSES' | 'CREATE_ASSIGNMENT' | 'EXCEL_IMPORT' | 'SUBMISSIONS' | 'RBL_LAB' | 'APPEALS' | 'TEAMWORK'>('COURSES');
+  const [activeTab, setActiveTab] = useState<'COURSES' | 'CREATE_ASSIGNMENT' | 'EXCEL_IMPORT' | 'SUBMISSIONS' | 'RBL_LAB' | 'APPEALS'>('COURSES');
 
   // Lấy thông tin Giảng viên đang đăng nhập thực tế để ghi nhận vào biên bản phúc khảo (Blind / Independent Reviewer)
   const currentLecturerId = useMemo(() => {
@@ -2231,7 +2230,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           { key: 'CREATE_ASSIGNMENT', label: 'Soạn đề & barem', icon: <Sparkles size={15} /> },
           { key: 'EXCEL_IMPORT', label: 'Nhập roster', icon: <FileSpreadsheet size={15} /> },
           { key: 'SUBMISSIONS', label: 'Sổ điểm', icon: <Award size={15} /> },
-          { key: 'TEAMWORK', label: 'Git Teamwork', icon: <Users size={15} /> },
           { key: 'RBL_LAB', label: 'RBL Lab', icon: <Activity size={15} /> },
           { key: 'APPEALS', label: 'Phúc khảo', icon: <Scale size={15} /> },
         ] as const).map((tab) => {
@@ -5336,10 +5334,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         </div>
       )}
 
-      {/* TAB: THEO DÕI ĐÓNG GÓP NHÓM & GIT ANALYTICS (PHÂN HỆ 5) */}
-      {activeTab === 'TEAMWORK' && (
-        <TeamworkAnalyticsView apiBaseUrl={API_BASE_URL} classId={selectedCourseDetailId || undefined} />
-      )}
 
       {/* TAB 5: PHÒNG THÍ NGHIỆM AST LAB & BENCHMARK DATASET */}
       {activeTab === 'RBL_LAB' && (
