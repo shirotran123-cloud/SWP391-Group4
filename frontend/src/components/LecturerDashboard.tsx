@@ -1211,7 +1211,32 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   }, [targetScanAssignId, allSubmissionsList]);
 
   // Môn học đang xem chi tiết (nếu null thì hiện danh sách tất cả môn học)
-  const [selectedCourseDetailId, setSelectedCourseDetailId] = useState<string | null>(null);
+  const [selectedCourseDetailId, setSelectedCourseDetailId] = useState<string | null>(() => {
+    try {
+      const match = window.location.pathname.match(/\/lecturer\/course\/([^/]+)/);
+      return match ? decodeURIComponent(match[1]) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleSelectCourseDetail = (courseId: string) => {
+    setSelectedCourseDetailId(courseId);
+    window.history.pushState(
+      { view: 'lecturer', courseId },
+      '',
+      `/lecturer/course/${encodeURIComponent(courseId)}`
+    );
+  };
+
+  const handleBackToCourseList = () => {
+    setSelectedCourseDetailId(null);
+    if (window.history.state?.courseId) {
+      window.history.back();
+    } else {
+      window.history.pushState({ view: 'lecturer' }, '', '/lecturer');
+    }
+  };
   const [isPublishingAssignment, setIsPublishingAssignment] = useState<boolean>(false);
 
   // Modal xem chi tiết đề bài đã giao
@@ -1632,6 +1657,29 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
   const [courseStudents, setCourseStudents] = useState<Array<{ userId: string; studentCode: string; fullName: string; email: string }>>([]);
   const [showCourseStudents, setShowCourseStudents] = useState<boolean>(false);
   const [loadingCourseStudents, setLoadingCourseStudents] = useState<boolean>(false);
+
+  // Đảm bảo nút Back trình duyệt không làm thoát trang khi đang mở chi tiết môn học hoặc modal
+  useEffect(() => {
+    const handleLecturerPopState = () => {
+      if (detailModalOpen) {
+        setDetailModalOpen(false);
+        return;
+      }
+      if (isCreateCourseModalOpen) {
+        setIsCreateCourseModalOpen(false);
+        return;
+      }
+      if (showSolutionModal) {
+        setShowSolutionModal(false);
+        return;
+      }
+      if (selectedCourseDetailId) {
+        setSelectedCourseDetailId(null);
+      }
+    };
+    window.addEventListener('popstate', handleLecturerPopState);
+    return () => window.removeEventListener('popstate', handleLecturerPopState);
+  }, [detailModalOpen, isCreateCourseModalOpen, showSolutionModal, selectedCourseDetailId]);
 
 
   // Tải danh sách khóa học thực tế từ API Gateway (PostgreSQL 15)
@@ -2255,7 +2303,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                     <button
                       type="button"
-                      onClick={() => setSelectedCourseDetailId(null)}
+                      onClick={handleBackToCourseList}
                       style={{
                         padding: '8px 14px',
                         borderRadius: '8px',
@@ -2617,7 +2665,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
                       <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <button
                           type="button"
-                          onClick={() => setSelectedCourseDetailId(course.courseId)}
+                          onClick={() => handleSelectCourseDetail(course.courseId)}
                           style={{
                             width: '100%',
                             padding: '9px 12px',

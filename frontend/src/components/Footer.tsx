@@ -412,7 +412,7 @@ export const Footer: React.FC = () => {
               </li>
               <li>
                 <span className="footer-nav-link" style={{ cursor: 'default' }}>
-                  <CheckCircle2 size={13} color="#16a34a" /> Hỗ trợ Java, C++, Python, .NET
+                  <CheckCircle2 size={13} color="#16a34a" /> Hỗ trợ Java, C++, Python
                 </span>
               </li>
               <li>

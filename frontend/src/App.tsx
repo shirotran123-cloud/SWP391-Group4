@@ -24,7 +24,7 @@ function generateFallbackSubId(): string {
 }
 
 /**
- * Tự động nhận diện ngôn ngữ lập trình của bài nộp (Java, Python, C++, C# / .NET, C).
+ * Tự động nhận diện ngôn ngữ lập trình của bài nộp (Java, Python, C++).
  * Ưu tiên: phần mở rộng file trong zip -> signature mã nguồn -> danh sách allowedLanguages.
  */
 function detectSubmissionLanguage(
@@ -36,9 +36,7 @@ function detectSubmissionLanguage(
 ): string {
   // 1. Ưu tiên cao nhất: Lựa chọn ngôn ngữ rõ ràng của sinh viên từ dropdown
   if (explicitLanguage && explicitLanguage !== 'auto') {
-    const norm = explicitLanguage.toLowerCase().trim();
-    if (norm === 'csharp' || norm === 'cs') return 'dotnet';
-    return norm;
+    return explicitLanguage.toLowerCase().trim();
   }
 
   const candidateName = (extractedFilename || file?.name || '').toLowerCase();
@@ -50,10 +48,6 @@ function detectSubmissionLanguage(
     detected = 'java';
   } else if (/\.(cpp|cc|cxx|hpp|h)$/i.test(candidateName)) {
     detected = 'cpp';
-  } else if (/\.(cs)$/i.test(candidateName)) {
-    detected = 'dotnet'; // Backend docker-runner dùng 'dotnet' cho mã nguồn C#
-  } else if (/\.(c)$/i.test(candidateName)) {
-    detected = 'c';
   }
 
   // 2. Phân tích signature nội dung mã nguồn nếu tên file chưa rõ ràng
@@ -63,12 +57,8 @@ function detectSubmissionLanguage(
       detected = 'python';
     } else if (/#include\s*<iostream>|std::cout|std::cin|cout\s*<<|cin\s*>>|using\s+namespace\s+std|#include\s*<vector>|#include\s*<algorithm>/.test(code)) {
       detected = 'cpp';
-    } else if (/using\s+System|namespace\s+\w+|Console\.Write|public\s+class\s+Program/.test(code)) {
-      detected = 'dotnet';
     } else if (/public\s+class|System\.out\.print|import\s+java\./.test(code)) {
       detected = 'java';
-    } else if (/#include\s*<stdio\.h>|printf\s*\(|scanf\s*\(/.test(code)) {
-      detected = 'c';
     }
   }
 
@@ -78,17 +68,8 @@ function detectSubmissionLanguage(
     if (detected && normalizedAllowed.includes(detected)) {
       return detected;
     }
-    if (detected === 'dotnet' && (normalizedAllowed.includes('csharp') || normalizedAllowed.includes('cs'))) {
-      return 'dotnet';
-    }
-    if (detected === 'c' && normalizedAllowed.includes('cpp')) {
-      return 'cpp';
-    }
-    if (detected === 'cpp' && normalizedAllowed.includes('c')) {
-      return 'c';
-    }
     if (!detected && normalizedAllowed.length === 1) {
-      return normalizedAllowed[0] === 'csharp' ? 'dotnet' : normalizedAllowed[0];
+      return normalizedAllowed[0];
     }
   }
 
@@ -183,6 +164,115 @@ function syncTestcaseSteps(
   }, steps);
 }
 
+export interface AppRouteState {
+  view: 'student' | 'admin' | 'lecturer';
+  studentTab?: 'submission' | 'history' | 'appeals';
+  taskId?: string | null;
+  lecturerTab?: string | null;
+  courseId?: string | null;
+  adminTab?: string | null;
+  modal?: string | null;
+}
+
+export function parseUrlToRoute(pathname: string, hash: string): AppRouteState {
+  let cleanPath = pathname || '/';
+  if (hash && hash.startsWith('#')) {
+    const hashWithoutHash = hash.slice(1).replace(/^\/+/, '');
+    if (hashWithoutHash && !hashWithoutHash.startsWith('modal-')) {
+      cleanPath = '/' + hashWithoutHash;
+    }
+  }
+
+  if (cleanPath.length > 1 && cleanPath.endsWith('/')) {
+    cleanPath = cleanPath.slice(0, -1);
+  }
+
+  const parts = cleanPath.split('/').filter(Boolean);
+  if (parts.length === 0) {
+    return { view: 'student', studentTab: 'submission', taskId: null };
+  }
+
+  const first = parts[0].toLowerCase();
+
+  // Admin routes: /admin, /admin/:tab
+  if (first === 'admin') {
+    return {
+      view: 'admin',
+      adminTab: parts[1] || 'overview',
+    };
+  }
+
+  // Lecturer routes: /lecturer, /lecturer/:tab, /lecturer/course/:courseId
+  if (first === 'lecturer' || first === 'instructor') {
+    if (parts[1]?.toLowerCase() === 'course' && parts[2]) {
+      return {
+        view: 'lecturer',
+        lecturerTab: 'COURSES',
+        courseId: decodeURIComponent(parts[2]),
+      };
+    }
+    return {
+      view: 'lecturer',
+      lecturerTab: parts[1]?.toUpperCase() || 'COURSES',
+    };
+  }
+
+  // Direct submission link aliases: /submit/:taskId, /task/:taskId, /assignment/:taskId, /submission/:taskId
+  if (first === 'submit' || first === 'task' || first === 'assignment' || first === 'submission') {
+    return {
+      view: 'student',
+      studentTab: 'submission',
+      taskId: parts[1] ? decodeURIComponent(parts[1]) : null,
+    };
+  }
+
+  // Student routes: /student, /student/submit, /student/submit/:taskId, /student/history, /student/appeals
+  if (first === 'student') {
+    const second = parts[1]?.toLowerCase();
+    if (second === 'history') {
+      return { view: 'student', studentTab: 'history', taskId: null };
+    }
+    if (second === 'appeals' || second === 'appeal') {
+      return { view: 'student', studentTab: 'appeals', taskId: null };
+    }
+    if (second === 'submit' || second === 'task' || second === 'assignment' || second === 'submission') {
+      return {
+        view: 'student',
+        studentTab: 'submission',
+        taskId: parts[2] ? decodeURIComponent(parts[2]) : null,
+      };
+    }
+    return { view: 'student', studentTab: 'submission', taskId: null };
+  }
+
+  return { view: 'student', studentTab: 'submission', taskId: null };
+}
+
+export function buildRoutePath(route: AppRouteState): string {
+  if (route.view === 'admin') {
+    return route.adminTab && route.adminTab !== 'overview' ? `/admin/${route.adminTab}` : '/admin';
+  }
+  if (route.view === 'lecturer') {
+    if (route.courseId) {
+      return `/lecturer/course/${encodeURIComponent(route.courseId)}`;
+    }
+    if (route.lecturerTab && route.lecturerTab !== 'COURSES') {
+      return `/lecturer/${route.lecturerTab.toLowerCase()}`;
+    }
+    return '/lecturer';
+  }
+  if (route.studentTab === 'history') {
+    return '/student/history';
+  }
+  if (route.studentTab === 'appeals') {
+    return '/student/appeals';
+  }
+  if (route.taskId) {
+    return `/student/submit/${encodeURIComponent(route.taskId)}`;
+  }
+  return '/student';
+}
+
 export function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
@@ -193,9 +283,21 @@ export function App() {
     }
   });
 
-  // Active view: 'student' | 'admin' | 'lecturer' (tự động phân định theo vai trò)
+  // Khởi tạo trạng thái điều hướng URL (Single-Page App URL Router)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(() => {
+    try {
+      const parsed = parseUrlToRoute(window.location.pathname, window.location.hash);
+      return parsed.taskId || null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Active view: 'student' | 'admin' | 'lecturer' (tự động phân định theo URL hoặc vai trò)
   const [activeView, setActiveView] = useState<'student' | 'admin' | 'lecturer'>(() => {
     try {
+      const parsed = parseUrlToRoute(window.location.pathname, window.location.hash);
+      if (parsed.view) return parsed.view;
       const stored = localStorage.getItem('aita_user');
       if (stored) {
         const u = JSON.parse(stored);
@@ -210,7 +312,15 @@ export function App() {
 
   // Tab cho Sinh viên: 'submission' (Khu vực nộp bài) | 'history' (Lịch sử nộp & điểm số) | 'appeals' (Khiếu nại điểm)
   // Quy chế BR-04: Đạo văn không được công khai cho sinh viên, chỉ dành cho Giảng viên/HOD
-  const [studentActiveTab, setStudentActiveTab] = useState<'submission' | 'history' | 'appeals'>('submission');
+  const [studentActiveTab, setStudentActiveTab] = useState<'submission' | 'history' | 'appeals'>(() => {
+    try {
+      const parsed = parseUrlToRoute(window.location.pathname, window.location.hash);
+      if (parsed.studentTab) return parsed.studentTab;
+    } catch {
+      // ignore
+    }
+    return 'submission';
+  });
 
   // Danh sách môn học sinh viên đang tham gia (nạp từ PostgreSQL qua API)
   const [enrolledCourses, setEnrolledCourses] = useState<Array<{ courseId: string; courseCode: string; courseName: string; semester: string; description?: string }>>([
@@ -366,7 +476,78 @@ export function App() {
   const currentUserRef = useRef<User | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const lastSubmissionRef = useRef<{ file?: File; task?: Task; lang?: string } | null>(null);
-  currentUserRef.current = currentUser;
+  const isModalOpenRef = useRef(isModalOpen);
+  isModalOpenRef.current = isModalOpen;
+  const plagiarismDiffMatchRef = useRef(plagiarismDiffMatch);
+  plagiarismDiffMatchRef.current = plagiarismDiffMatch;
+
+  const navigate = (newRoute: AppRouteState, replace = false) => {
+    const newPath = buildRoutePath(newRoute);
+    if (replace) {
+      window.history.replaceState(newRoute, '', newPath);
+    } else {
+      if (window.location.pathname !== newPath) {
+        window.history.pushState(newRoute, '', newPath);
+      }
+    }
+    setActiveView(newRoute.view);
+    if (newRoute.studentTab) setStudentActiveTab(newRoute.studentTab);
+    if (newRoute.taskId !== undefined) setSelectedTaskId(newRoute.taskId);
+  };
+
+  // Đồng bộ lịch sử trình duyệt (Browser History & Popstate Navigation)
+  useEffect(() => {
+    const currentParsed = parseUrlToRoute(window.location.pathname, window.location.hash);
+
+    if (window.location.pathname === '/' || window.location.pathname === '') {
+      const targetView = currentUser
+        ? isLecturerRole(currentUser.role)
+          ? 'lecturer'
+          : currentUser.role === 'ADMIN'
+          ? 'admin'
+          : 'student'
+        : 'student';
+      const homeRoute: AppRouteState = { view: targetView, studentTab: 'submission', taskId: null };
+      navigate(homeRoute, true);
+    } else if (currentParsed.taskId) {
+      // Khi truy cập trực tiếp bài nộp: tạo điểm neo Home trước trong browser history
+      // để khi nhấn nút Back trình duyệt sẽ quay về Home / danh sách deadline thay vì thoát trang!
+      const parentRoute: AppRouteState = { view: 'student', studentTab: 'submission', taskId: null };
+      window.history.replaceState(parentRoute, '', '/student');
+      window.history.pushState(currentParsed, '', buildRoutePath(currentParsed));
+      setActiveView('student');
+      setStudentActiveTab('submission');
+      setSelectedTaskId(currentParsed.taskId);
+    } else {
+      window.history.replaceState(currentParsed, '', buildRoutePath(currentParsed));
+      setActiveView(currentParsed.view);
+      if (currentParsed.studentTab) setStudentActiveTab(currentParsed.studentTab);
+      if (currentParsed.taskId !== undefined) setSelectedTaskId(currentParsed.taskId);
+    }
+
+    const handlePopState = (e: PopStateEvent) => {
+      // 1. Đóng modal trực tuyến chấm điểm nếu đang mở
+      if (isModalOpenRef.current) {
+        setIsModalOpen(false);
+        return;
+      }
+      // 2. Đóng modal đối sánh đạo văn nếu đang mở
+      if (plagiarismDiffMatchRef.current) {
+        setPlagiarismDiffMatch(null);
+        return;
+      }
+
+      // 3. Khôi phục trạng thái giao diện theo URL
+      const stateRoute: AppRouteState =
+        e.state || parseUrlToRoute(window.location.pathname, window.location.hash);
+      setActiveView(stateRoute.view || 'student');
+      if (stateRoute.studentTab) setStudentActiveTab(stateRoute.studentTab);
+      setSelectedTaskId(stateRoute.taskId || null);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Role Switcher demo state & handler (UI Bug 5)
   interface DemoPersona {
@@ -439,7 +620,7 @@ export function App() {
         localStorage.setItem('aita_token', json.data.token);
         localStorage.setItem('aita_user', JSON.stringify(json.data.user));
         setCurrentUser(json.data.user);
-        setActiveView(persona.key);
+        navigate({ view: persona.key, studentTab: 'submission', taskId: null });
         showRoleToast(`Đã chuyển sang vai trò: ${persona.shortLabel} (${persona.fullName})`);
         return;
       }
@@ -455,7 +636,7 @@ export function App() {
     };
     localStorage.setItem('aita_user', JSON.stringify(fallbackUser));
     setCurrentUser(fallbackUser);
-    setActiveView(persona.key);
+    navigate({ view: persona.key, studentTab: 'submission', taskId: null });
     showRoleToast(`Đã chuyển sang vai trò: ${persona.shortLabel} (${persona.fullName})`);
   };
 
@@ -617,13 +798,12 @@ export function App() {
     localStorage.setItem('aita_user', JSON.stringify(user));
     setCurrentUser(user);
     if (isLecturerRole(user.role)) {
-      setActiveView('lecturer');
+      navigate({ view: 'lecturer', studentTab: 'submission', taskId: null }, true);
     } else if (user.role === 'ADMIN') {
-      setActiveView('admin');
+      navigate({ view: 'admin', studentTab: 'submission', taskId: null }, true);
     } else {
-      setActiveView('student');
-      setStudentActiveTab('submission');
       setSelectedStudentCourseId('ALL');
+      navigate({ view: 'student', studentTab: 'submission', taskId: null }, true);
     }
   };
 
@@ -631,7 +811,7 @@ export function App() {
     localStorage.removeItem('aita_token');
     localStorage.removeItem('aita_user');
     setCurrentUser(null);
-    setActiveView('student');
+    navigate({ view: 'student', studentTab: 'submission', taskId: null }, true);
   };
 
   const persistGradingResult = (data: {
@@ -703,6 +883,11 @@ export function App() {
     setCurrentAssignmentId(activeTask.id);
     currentAssignmentIdRef.current = activeTask.id;
     setIsModalOpen(true);
+    window.history.pushState(
+      { view: 'student', studentTab: 'submission', taskId: activeTask.id, modal: 'grading' },
+      '',
+      window.location.pathname + '#modal-grading'
+    );
 
     let codeToGrade = mockSourceCodeStudent;
     let computedPlagiarism: PlagiarismMatch | undefined = undefined;
@@ -729,21 +914,17 @@ export function App() {
             const lang = explicitLanguage.toLowerCase().trim();
             if (lang === 'cpp') {
               bestKey = candidateKeys.find((k) => /\.(cpp|cc|cxx)$/i.test(k));
-            } else if (lang === 'dotnet' || lang === 'cs' || lang === 'csharp') {
-              bestKey = candidateKeys.find((k) => /\.(cs)$/i.test(k));
             } else if (lang === 'python') {
               bestKey = candidateKeys.find((k) => /\.(py)$/i.test(k));
             } else if (lang === 'java') {
               bestKey = candidateKeys.find((k) => /\.(java)$/i.test(k));
-            } else if (lang === 'c') {
-              bestKey = candidateKeys.find((k) => /\.(c)$/i.test(k));
             }
           }
 
           if (!bestKey) {
             bestKey =
               candidateKeys.find((k) => k.toLowerCase().includes('solution.')) ||
-              candidateKeys.find((k) => /\.(java|cpp|cc|cxx|c|py|cs|js|ts)$/i.test(k)) ||
+              candidateKeys.find((k) => /\.(java|cpp|cc|cxx|py|js|ts)$/i.test(k)) ||
               candidateKeys[0];
           }
 
@@ -1233,6 +1414,7 @@ export function App() {
         token: 'dev_mock_jwt_GV001',
       };
       setActiveView('lecturer');
+      navigate({ view: 'lecturer', studentTab: 'submission', taskId: null });
     } else if (role === 'ADMIN') {
       targetUser = {
         userId: 'ADMIN002',
@@ -1242,6 +1424,7 @@ export function App() {
         token: 'dev_mock_jwt_ADMIN002',
       };
       setActiveView('admin');
+      navigate({ view: 'admin', studentTab: 'submission', taskId: null });
     } else {
       targetUser = {
         userId: 'SE170002',
@@ -1251,6 +1434,7 @@ export function App() {
         token: 'dev_mock_jwt_SE170002',
       };
       setActiveView('student');
+      navigate({ view: 'student', studentTab: 'submission', taskId: null });
     }
     setCurrentUser(targetUser);
     try {
@@ -1313,8 +1497,12 @@ export function App() {
         }}
       >
         <div className="nav-inner" style={{ maxWidth: '1360px', width: '100%', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '14px' }}>
-          {/* Logo & Tên hệ thống */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0, flexShrink: 0 }}>
+          {/* Logo & Tên hệ thống (Click về Home) */}
+          <div
+            onClick={() => navigate({ view: activeView, studentTab: 'submission', taskId: null })}
+            style={{ display: 'flex', alignItems: 'center', gap: '11px', minWidth: 0, flexShrink: 0, cursor: 'pointer' }}
+            title="Về Trang Chủ (Home)"
+          >
             <img
               src="/aita-logo.png"
               alt="AITA Logo"
@@ -1770,7 +1958,11 @@ export function App() {
                     type="button"
                     role="tab"
                     aria-selected={active}
-                    onClick={() => setStudentActiveTab(tab.key)}
+                    onClick={() => {
+                      setStudentActiveTab(tab.key);
+                      setSelectedTaskId(null);
+                      navigate({ view: 'student', studentTab: tab.key, taskId: null });
+                    }}
                     className={`aita-tab-btn ${active ? 'active' : ''}`}
                   >
                     <span className="tab-icon">{tab.icon}</span>
@@ -1786,6 +1978,18 @@ export function App() {
                 studentName={currentUser.fullName}
                 enrolledCourses={enrolledCourses}
                 selectedCourseId={selectedStudentCourseId}
+                selectedTaskId={selectedTaskId}
+                onSelectTask={(taskItem) => {
+                  if (taskItem) {
+                    navigate({ view: 'student', studentTab: 'submission', taskId: taskItem.id });
+                  } else {
+                    if (window.history.state?.taskId) {
+                      window.history.back();
+                    } else {
+                      navigate({ view: 'student', studentTab: 'submission', taskId: null });
+                    }
+                  }
+                }}
                 apiBaseUrl={API_BASE_URL}
                 onSelectCourse={(courseId) => setSelectedStudentCourseId(courseId)}
                 onSubmit={(file, taskItem, lang) => handleSubmission(file, undefined, taskItem, lang)}
@@ -1795,7 +1999,11 @@ export function App() {
                 studentId={currentUser?.userId || 'SE170000'}
                 studentName={currentUser?.fullName || 'Sinh viên'}
                 apiBaseUrl={API_BASE_URL}
-                onNavigateToSubmit={() => setStudentActiveTab('submission')}
+                onNavigateToSubmit={() => {
+                  setStudentActiveTab('submission');
+                  setSelectedTaskId(null);
+                  navigate({ view: 'student', studentTab: 'submission', taskId: null });
+                }}
               />
             ) : (
               <StudentAppealsView
@@ -1812,7 +2020,12 @@ export function App() {
       {/* MODAL TRỰC TUYẾN CHẤM BÀI & BÁO CÁO KẾT QUẢ */}
       <LiveGradingModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          if (window.location.hash.includes('modal-grading')) {
+            window.history.back();
+          }
+        }}
         onRetry={handleRetrySubmission}
         submissionId={submissionId}
         studentName={currentUser.fullName}

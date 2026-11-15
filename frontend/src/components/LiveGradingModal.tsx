@@ -32,10 +32,8 @@ function getCompilerBadgeLabel(lang?: string): string {
   if (!lang) return 'Java 17 (OpenJDK)';
   const l = lang.toLowerCase().trim();
   if (l === 'java') return 'Java 17 (OpenJDK)';
-  if (l === 'cpp') return 'C++17 (GCC 13)';
+  if (l === 'cpp' || l === 'c++') return 'C++17 (GCC 13)';
   if (l === 'python' || l === 'py') return 'Python 3.11';
-  if (l === 'dotnet' || l === 'cs' || l === 'csharp') return 'C# .NET 8.0';
-  if (l === 'c') return 'C11 (GCC 13)';
   return lang.toUpperCase();
 }
 

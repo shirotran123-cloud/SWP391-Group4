@@ -85,6 +85,8 @@ export interface EnrolledCourseItem {
 
 interface SubmissionViewProps {
   task?: Task;
+  selectedTaskId?: string | null;
+  onSelectTask?: (task: StudentTaskItem | null) => void;
   studentId?: string;
   studentName?: string;
   enrolledCourses?: EnrolledCourseItem[];
@@ -193,7 +195,7 @@ const defaultAssignmentPool: StudentTaskItem[] = [
     deadline: '2026-11-20T23:59:59.000Z',
     timeLimitMs: 2000,
     memoryLimitMb: 512,
-    allowedLanguages: ['cpp', 'c', 'java'],
+    allowedLanguages: ['cpp', 'java'],
     allowedExtensions: ['.zip'],
     maxSizeMb: 10,
     testCasesCount: 3,
@@ -385,28 +387,12 @@ export const COMPILER_OPTIONS: CompilerOption[] = [
     icon: '🐍',
     cmd: 'python3 -u solution.py',
   },
-  {
-    id: 'dotnet',
-    name: 'C# / .NET (.NET 8.0 SDK)',
-    compiler: 'Microsoft .NET 8.0 SDK',
-    badge: 'dotnet 8',
-    ext: '.cs',
-    icon: '🔷',
-    cmd: 'dotnet build / run (C# 12)',
-  },
-  {
-    id: 'c',
-    name: 'C11 (GCC 13)',
-    compiler: 'GNU C Compiler (gcc)',
-    badge: 'gcc 13',
-    ext: '.c',
-    icon: '🔧',
-    cmd: 'gcc -O2 -std=c11 -Wall',
-  },
 ];
 
 export const SubmissionView: React.FC<SubmissionViewProps> = ({
   task,
+  selectedTaskId,
+  onSelectTask,
   studentId = 'SE170000',
   studentName = 'Sinh Viên',
   enrolledCourses = [],
@@ -419,7 +405,47 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   // Danh sách các bài tập đang mở
   const [assignmentList, setAssignmentList] = useState<StudentTaskItem[]>([]);
   // Bài tập đang được chọn để nộp (null = xem danh sách deadline)
-  const [selectedTask, setSelectedTask] = useState<StudentTaskItem | null>(task ? { ...task } : null);
+  const [selectedTask, setSelectedTask] = useState<StudentTaskItem | null>(() => {
+    if (task) return { ...task };
+    if (selectedTaskId) {
+      return defaultAssignmentPool.find((a) => a.id === selectedTaskId) || null;
+    }
+    return null;
+  });
+
+  const handleChooseTask = (assignment: StudentTaskItem) => {
+    setSelectedTask(assignment);
+    setSelectedFile(null);
+    setSha256Checksum(null);
+    setErrorMessage(null);
+    onSelectTask?.(assignment);
+  };
+
+  const handleBackToList = () => {
+    setSelectedTask(null);
+    setSelectedFile(null);
+    setSha256Checksum(null);
+    setErrorMessage(null);
+    onSelectTask?.(null);
+  };
+
+  // Đồng bộ selectedTaskId từ props (URL Router / popstate điều hướng trình duyệt)
+  useEffect(() => {
+    if (selectedTaskId === undefined) return;
+    if (!selectedTaskId) {
+      setSelectedTask(null);
+      setSelectedFile(null);
+      setSha256Checksum(null);
+      setErrorMessage(null);
+      return;
+    }
+    const found =
+      assignmentList.find((a) => a.id === selectedTaskId) ||
+      defaultAssignmentPool.find((a) => a.id === selectedTaskId);
+    if (found) {
+      setSelectedTask(found);
+    }
+  }, [selectedTaskId, assignmentList]);
 
   // Bộ lọc
   const [searchQuery, setSearchQuery] = useState('');
@@ -599,7 +625,11 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
           setAssignmentList(mapped);
 
-          if (task) {
+          if (selectedTaskId) {
+            const matched = mapped.find((t: StudentTaskItem) => t.id === selectedTaskId) ||
+              defaultAssignmentPool.find((t: StudentTaskItem) => t.id === selectedTaskId);
+            if (matched) setSelectedTask(matched);
+          } else if (task) {
             const matched = mapped.find((t: StudentTaskItem) => t.id === task.id);
             setSelectedTask(matched || { ...task, allowedExtensions: ['.zip'], maxSizeMb: 10 });
           }
@@ -611,7 +641,10 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     }
 
     setAssignmentList([...defaultAssignmentPool]);
-    if (task) {
+    if (selectedTaskId) {
+      const matched = defaultAssignmentPool.find((t: StudentTaskItem) => t.id === selectedTaskId);
+      if (matched) setSelectedTask(matched);
+    } else if (task) {
       const matched = defaultAssignmentPool.find((t: StudentTaskItem) => t.id === task.id);
       setSelectedTask(matched || { ...task, allowedExtensions: ['.zip'], maxSizeMb: 10 });
     }
@@ -973,12 +1006,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
         <div style={{ marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
           <button
             type="button"
-            onClick={() => {
-              setSelectedTask(null);
-              setSelectedFile(null);
-              setSha256Checksum(null);
-              setErrorMessage(null);
-            }}
+            onClick={handleBackToList}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -1791,7 +1819,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                 <span>Đề bài cho phép:</span>
                 {(selectedTask.allowedLanguages && selectedTask.allowedLanguages.length > 0
                   ? selectedTask.allowedLanguages
-                  : ['java', 'python', 'cpp', 'dotnet']
+                  : ['java', 'python', 'cpp']
                 ).map((l) => (
                   <span
                     key={l}
@@ -1819,12 +1847,11 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             >
               {COMPILER_OPTIONS.map((opt) => {
                 const isSelected = selectedLanguage === opt.id;
-                const allowedList = (selectedTask.allowedLanguages || ['java', 'python', 'cpp', 'dotnet']).map((l) => l.toLowerCase());
+                const allowedList = (selectedTask.allowedLanguages || ['java', 'python', 'cpp']).map((l) => l.toLowerCase());
                 const isPermitted =
                   opt.id === 'auto' ||
                   allowedList.includes(opt.id) ||
-                  (opt.id === 'cpp' && (allowedList.includes('cpp') || allowedList.includes('c++'))) ||
-                  (opt.id === 'dotnet' && (allowedList.includes('dotnet') || allowedList.includes('csharp') || allowedList.includes('cs')));
+                  (opt.id === 'cpp' && (allowedList.includes('cpp') || allowedList.includes('c++')));
 
                 return (
                   <button
@@ -1896,12 +1923,11 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
             {/* Cảnh báo nếu chọn ngôn ngữ không thuộc allowedLanguages */}
             {(() => {
-              const allowedList = (selectedTask.allowedLanguages || ['java', 'python', 'cpp', 'dotnet']).map((l) => l.toLowerCase());
+              const allowedList = (selectedTask.allowedLanguages || ['java', 'python', 'cpp']).map((l) => l.toLowerCase());
               const isPermitted =
                 selectedLanguage === 'auto' ||
                 allowedList.includes(selectedLanguage) ||
-                (selectedLanguage === 'cpp' && (allowedList.includes('cpp') || allowedList.includes('c++'))) ||
-                (selectedLanguage === 'dotnet' && (allowedList.includes('dotnet') || allowedList.includes('csharp') || allowedList.includes('cs')));
+                (selectedLanguage === 'cpp' && (allowedList.includes('cpp') || allowedList.includes('c++')));
               if (!isPermitted) {
                 return (
                   <div
@@ -2139,7 +2165,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           <div style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
             <button
               type="button"
-              onClick={() => setSelectedTask(null)}
+              onClick={handleBackToList}
               style={{
                 padding: '12px 20px',
                 borderRadius: '10px',
@@ -2438,7 +2464,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             return (
               <div
                 key={assignment.id}
-                onClick={() => setSelectedTask(assignment)}
+                onClick={() => handleChooseTask(assignment)}
                 className="glass-panel"
                 style={{
                   padding: '20px 24px',
@@ -2576,7 +2602,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedTask(assignment);
+                      handleChooseTask(assignment);
                     }}
                     style={{
                       padding: '8px 16px',
