@@ -5,10 +5,10 @@
    Nền Pantone 9061 U dịu nhẹ, thẻ trắng nổi bật, Medici Blue làm màu nhấn chủ đạo.
    ============================================================ */
 :root {
-  /* PANTONE 9061 U & BỀ MẶT SÁNG */
-  --pantone-9061: #FAEBEF;
-  --pantone-9061-soft: #FDF6F8;
-  --pantone-9061-deep: #F3DCE3;
+  /* BỀ MẶT TRẮNG SÁCH & MEDICI BLUE */
+  --pantone-9061: #ffffff;
+  --pantone-9061-soft: #fcfcfd;
+  --pantone-9061-deep: #f1f5f9;
   --medici-blue: #0E4274;
   --medici-blue-dark: #092F54;
   --medici-blue-mid: #175794;
@@ -33,8 +33,8 @@
   --white: #0A1E36;
 
   /* Ánh xạ ngữ nghĩa */
-  --bg-primary: var(--pantone-9061);
-  --bg-secondary: var(--pantone-9061-soft);
+  --bg-primary: #ffffff;
+  --bg-secondary: #fcfcfd;
   --bg-card: #ffffff;
   --bg-glass: #ffffff;
   --bg-elevated: #ffffff;

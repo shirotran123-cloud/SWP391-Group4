@@ -1357,7 +1357,7 @@ export function App() {
 
   return (
     <Click variant="ring" color="#0E4274" size={100} duration={400}>
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', backgroundColor: '#ffffff' }}>
       {/* THANH ĐIỀU HƯỚNG TRÊN CÙNG (NAVBAR) */}
       <nav
         style={{
@@ -1573,7 +1573,7 @@ export function App() {
                             fontFamily: 'var(--font-mono)',
                             padding: '3px 8px',
                             borderRadius: '6px',
-                            backgroundColor: isSelected ? '#0E4274' : '#FAEBEF',
+                            backgroundColor: isSelected ? '#0E4274' : '#ffffff',
                             color: isSelected ? '#ffffff' : '#0E4274',
                             border: `1px solid ${isSelected ? '#0E4274' : 'rgba(14, 66, 116, 0.16)'}`,
                           }}

@@ -418,7 +418,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
             gap: '8px',
             padding: '12px 24px',
             borderBottom: '1px solid rgba(14, 66, 116, 0.12)',
-            backgroundColor: '#FAEBEF',
+            backgroundColor: '#ffffff',
           }}
         >
           <button

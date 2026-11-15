@@ -1,12 +1,8 @@
 import React from 'react';
 import {
-  Terminal,
-  BookOpen,
-  Mail,
   ShieldCheck,
   Cpu,
   GraduationCap,
-  ExternalLink,
   Code2,
   CheckCircle2,
   FileCheck2
@@ -35,22 +31,12 @@ export const Footer: React.FC = () => {
       <style>{`
         .aita-pro-footer {
           background: #ffffff;
-          border-top: 1px solid var(--border-color, rgba(11, 18, 32, 0.1));
+          border-top: 1px solid rgba(14, 66, 116, 0.12);
           color: var(--text-soft, #33415a);
           font-family: var(--font-sans, inherit);
           position: relative;
           overflow: hidden;
           margin-top: auto;
-        }
-
-        .aita-pro-footer::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.45), transparent);
         }
 
         .footer-wrapper {
@@ -61,10 +47,10 @@ export const Footer: React.FC = () => {
 
         .footer-top-grid {
           display: grid;
-          grid-template-columns: 2fr 1.2fr 1.2fr 1.4fr;
+          grid-template-columns: 2.2fr 1.4fr 1.4fr;
           gap: 36px;
           padding-bottom: 36px;
-          border-bottom: 1px solid var(--border-soft, rgba(11, 18, 32, 0.06));
+          border-bottom: 1px solid rgba(14, 66, 116, 0.08);
         }
 
         @media (max-width: 1024px) {
@@ -151,16 +137,16 @@ export const Footer: React.FC = () => {
           border-radius: 6px;
           font-size: 11px;
           font-weight: 500;
-          background: rgba(11, 18, 32, 0.03);
-          border: 1px solid var(--border-soft, rgba(11, 18, 32, 0.06));
+          background: #ffffff;
+          border: 1px solid rgba(14, 66, 116, 0.14);
           color: var(--text-muted, #4d5c76);
           transition: border-color .15s ease, background .15s ease;
         }
 
         .footer-badge:hover {
-          background: rgba(37, 99, 235, 0.05);
-          border-color: rgba(37, 99, 235, 0.25);
-          color: var(--blue-600, #2563eb);
+          background: rgba(14, 66, 116, 0.04);
+          border-color: rgba(14, 66, 116, 0.3);
+          color: var(--medici-blue, #0E4274);
         }
 
         .footer-col-title {
@@ -209,13 +195,14 @@ export const Footer: React.FC = () => {
         }
 
         .footer-info-card {
-          background: #f8fafc;
-          border: 1px solid var(--border-soft, rgba(11, 18, 32, 0.06));
+          background: #ffffff;
+          border: 1px solid rgba(14, 66, 116, 0.12);
           border-radius: 10px;
-          padding: 14px;
+          padding: 16px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
+          box-shadow: 0 1px 4px rgba(14, 66, 116, 0.04);
         }
 
         .footer-info-item {
@@ -350,29 +337,7 @@ export const Footer: React.FC = () => {
             </div>
           </div>
 
-          {/* CỘT 2: TÀI NGUYÊN & LIÊN KẾT HỆ THỐNG */}
-          <div>
-            <h4 className="footer-col-title">
-              <BookOpen size={14} color="#0E4274" />
-              Tài nguyên
-            </h4>
-            <ul className="footer-nav-list">
-              <li>
-                <a
-                  href="/docs"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="footer-nav-link"
-                >
-                  <BookOpen size={14} />
-                  Tài liệu Hướng dẫn (Docs)
-                  <ExternalLink size={11} style={{ opacity: 0.5 }} />
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          {/* CỘT 3: TÍNH NĂNG CHÍNH */}
+          {/* CỘT 2: TÍNH NĂNG CHÍNH */}
           <div>
             <h4 className="footer-col-title">
               <FileCheck2 size={14} color="#0E4274" />
@@ -402,7 +367,7 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* CỘT 4: ĐƠN VỊ PHÁT TRIỂN & TRẠNG THÁI */}
+          {/* CỘT 3: ĐƠN VỊ PHÁT TRIỂN & TRẠNG THÁI */}
           <div>
             <h4 className="footer-col-title">
               <GraduationCap size={15} color="#0E4274" />
@@ -431,18 +396,6 @@ export const Footer: React.FC = () => {
         <div className="footer-bottom-bar">
           <div className="footer-bottom-left">
             <span>AITA – Intelligent Automated Grading Platform © 2026</span>
-          </div>
-
-          <div className="footer-bottom-links">
-            <a
-              href="/docs"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="footer-bottom-link"
-            >
-              <BookOpen size={13} />
-              Docs
-            </a>
           </div>
         </div>
       </div>
