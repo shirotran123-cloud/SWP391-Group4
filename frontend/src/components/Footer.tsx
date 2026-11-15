@@ -353,22 +353,10 @@ export const Footer: React.FC = () => {
           {/* CỘT 2: TÀI NGUYÊN & LIÊN KẾT HỆ THỐNG */}
           <div>
             <h4 className="footer-col-title">
-              <BookOpen size={14} color="#2563eb" />
+              <BookOpen size={14} color="#0E4274" />
               Tài nguyên
             </h4>
             <ul className="footer-nav-list">
-              <li>
-                <a
-                  href="https://github.com/FPT-Software/AITA"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="footer-nav-link"
-                >
-                  <GithubIcon size={14} />
-                  GitHub Repository
-                  <ExternalLink size={11} style={{ opacity: 0.5 }} />
-                </a>
-              </li>
               <li>
                 <a
                   href="/docs"
@@ -381,22 +369,13 @@ export const Footer: React.FC = () => {
                   <ExternalLink size={11} style={{ opacity: 0.5 }} />
                 </a>
               </li>
-              <li>
-                <a
-                  href="mailto:contact@aita.edu.vn"
-                  className="footer-nav-link"
-                >
-                  <Mail size={14} />
-                  Hỗ trợ kỹ thuật (Contact)
-                </a>
-              </li>
             </ul>
           </div>
 
           {/* CỘT 3: TÍNH NĂNG CHÍNH */}
           <div>
             <h4 className="footer-col-title">
-              <FileCheck2 size={14} color="#2563eb" />
+              <FileCheck2 size={14} color="#0E4274" />
               Tính năng
             </h4>
             <ul className="footer-nav-list">
@@ -426,7 +405,7 @@ export const Footer: React.FC = () => {
           {/* CỘT 4: ĐƠN VỊ PHÁT TRIỂN & TRẠNG THÁI */}
           <div>
             <h4 className="footer-col-title">
-              <GraduationCap size={15} color="#2563eb" />
+              <GraduationCap size={15} color="#0E4274" />
               Đơn vị phát triển
             </h4>
             <div className="footer-info-card">
@@ -438,16 +417,6 @@ export const Footer: React.FC = () => {
                     Bộ môn Kỹ thuật Phần mềm (SWP391)
                   </div>
                 </div>
-              </div>
-
-              <div className="footer-info-item">
-                <Mail size={14} />
-                <a
-                  href="mailto:contact@aita.edu.vn"
-                  style={{ color: 'var(--blue-600, #2563eb)', textDecoration: 'none', fontWeight: 500 }}
-                >
-                  contact@aita.edu.vn
-                </a>
               </div>
 
               <div className="footer-status-pill">
@@ -466,16 +435,6 @@ export const Footer: React.FC = () => {
 
           <div className="footer-bottom-links">
             <a
-              href="https://github.com/FPT-Software/AITA"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="footer-bottom-link"
-            >
-              <GithubIcon size={13} />
-              GitHub
-            </a>
-            <span style={{ opacity: 0.3 }}>•</span>
-            <a
               href="/docs"
               target="_blank"
               rel="noopener noreferrer"
@@ -483,14 +442,6 @@ export const Footer: React.FC = () => {
             >
               <BookOpen size={13} />
               Docs
-            </a>
-            <span style={{ opacity: 0.3 }}>•</span>
-            <a
-              href="mailto:contact@aita.edu.vn"
-              className="footer-bottom-link"
-            >
-              <Mail size={13} />
-              Contact
             </a>
           </div>
         </div>

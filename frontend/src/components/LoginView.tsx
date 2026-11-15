@@ -3,15 +3,9 @@ import {
   AlertCircle,
   CheckCircle,
   Settings,
-  Sparkles,
-  UserX,
-  UserCheck,
   User,
   Lock,
   Mail,
-  GraduationCap,
-  BookOpen,
-  Shield,
 } from 'lucide-react';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import type { UserProfile } from '../types';
@@ -21,73 +15,6 @@ import { GOOGLE_CLIENT_ID as DEFAULT_CLIENT_ID } from '../config';
 interface LoginViewProps {
   onLoginSuccess: (user: UserProfile) => void;
 }
-
-const DEMO_ACCOUNTS = [
-  {
-    email: 'giangvien.edu@gmail.com',
-    name: 'ThS. Giảng Viên AITA',
-    shortLabel: 'Giảng viên',
-    role: 'INSTRUCTOR',
-    note: 'Đã cấu hình đề bài & rubric',
-    strong: true,
-  },
-  {
-    email: 'phaithayj@gmail.com',
-    name: 'Nguyễn Hoàng Vinh',
-    shortLabel: 'Sinh viên 1',
-    role: 'STUDENT',
-    note: 'Bài nộp sạch (Pass 100% testcase)',
-    strong: true,
-  },
-  {
-    email: 'linhcampochia@gmail.com',
-    name: 'Linh Campochia',
-    shortLabel: 'Sinh viên 2',
-    role: 'STUDENT',
-    note: 'Tài khoản thực nghiệm SE170002',
-    strong: true,
-  },
-  {
-    email: 'admin.aita@gmail.com',
-    name: 'Quản Trị Viên AITA',
-    shortLabel: 'Admin',
-    role: 'ADMIN',
-    note: 'Toàn quyền cấu hình & giám sát',
-    strong: true,
-  },
-  {
-    email: 'trungdt@fe.edu.vn',
-    name: 'ThS. Đinh Thành Trung',
-    shortLabel: 'GV Đinh Trung',
-    role: 'INSTRUCTOR',
-    note: 'Giảng Viên Bộ môn SE',
-    strong: false,
-  },
-  {
-    email: 'namlh@fe.edu.vn',
-    name: 'TS. Lê Hoàng Nam',
-    shortLabel: 'GV Hoàng Nam',
-    role: 'INSTRUCTOR',
-    note: 'Giảng Viên PRJ301 & PRF192',
-    strong: false,
-  },
-  {
-    email: 'mochibunnyyy123@gmail.com',
-    name: 'Viktor Wilson',
-    shortLabel: 'SV Viktor',
-    role: 'STUDENT',
-    note: 'Sinh Viên SE170003',
-    strong: false,
-  },
-  {
-    email: 'admin@aita.fpt.edu.vn',
-    name: 'Quản Trị Viên AITA',
-    shortLabel: 'Admin 001',
-    role: 'ADMIN',
-    note: 'Admin Quản Trị (ADMIN001)',
-    strong: false,
-  },
-];
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
@@ -113,7 +40,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     return localStorage.getItem('aita_google_redirect_uri') || window.location.origin;
   });
   const [showConfig, setShowConfig] = useState(false);
-  const [showMoreDemo, setShowMoreDemo] = useState(false);
 
   // Xử lý xác thực khi Google chuyển hướng về (OAuth 2.0 Redirect Callback)
   useEffect(() => {
@@ -230,38 +156,41 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
       setBlockedEmail(cleanEmail);
       setSuccessMsg(null);
       setErrorMsg(
-        'Hệ thống AITA sử dụng danh sách tài khoản do nhà trường cấp quyền (whitelist). Vui lòng dùng Google SSO hoặc chọn tài khoản Demo bên dưới.'
+        'Hệ thống AITA sử dụng danh sách tài khoản do nhà trường cấp quyền (whitelist). Vui lòng đăng nhập bằng Google SSO hoặc liên hệ giảng viên/quản trị viên.'
       );
       return;
     }
 
-    if (passwordInput.trim()) {
-      setLoading(true);
-      setErrorMsg(null);
-      setBlockedEmail(null);
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: cleanEmail, password: passwordInput }),
-        });
-        const json = await res.json();
-        if (res.ok && json.data?.token && json.data?.user) {
-          localStorage.setItem('aita_token', json.data.token);
-          localStorage.setItem('aita_user', JSON.stringify(json.data.user));
-          setSuccessMsg(`Đăng nhập thành công! Xin chào ${json.data.user.fullName}.`);
-          setTimeout(() => onLoginSuccess(json.data.user), 350);
-          return;
-        }
-        await verifyEmailWithBackend(cleanEmail, cleanEmail.split('@')[0]);
-      } catch (err: any) {
-        setErrorMsg('Không thể kết nối đến máy chủ AITA API Gateway: ' + err.message);
-        setLoading(false);
-      }
+    if (!passwordInput.trim()) {
+      setErrorMsg('Vui lòng nhập mật khẩu hoặc sử dụng nút Đăng nhập với Google SSO.');
       return;
     }
 
-    await verifyEmailWithBackend(cleanEmail, cleanEmail.split('@')[0]);
+    setLoading(true);
+    setErrorMsg(null);
+    setBlockedEmail(null);
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password: passwordInput }),
+      });
+      const json = await res.json();
+      if (res.ok && json.data?.token && json.data?.user) {
+        localStorage.setItem('aita_token', json.data.token);
+        localStorage.setItem('aita_user', JSON.stringify(json.data.user));
+        setSuccessMsg(`Đăng nhập thành công! Xin chào ${json.data.user.fullName}.`);
+        setTimeout(() => onLoginSuccess(json.data.user), 350);
+        return;
+      }
+      setBlockedEmail(cleanEmail);
+      setErrorMsg(json.message || 'Email hoặc mật khẩu không chính xác.');
+      setLoading(false);
+    } catch (err: any) {
+      setErrorMsg('Không thể kết nối đến máy chủ AITA API Gateway: ' + err.message);
+      setLoading(false);
+    }
   };
 
   // Điều hướng thẳng sang trang đăng nhập thật của Google (Google OAuth 2.0 Endpoint)
@@ -296,9 +225,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
     setShowConfig(false);
   };
 
-  const primaryDemos = DEMO_ACCOUNTS.slice(0, 4);
-  const extraDemos = DEMO_ACCOUNTS.slice(4);
-
   return (
     <div
       style={{
@@ -308,8 +234,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background:
-          'radial-gradient(960px 520px at 10% 0%, rgba(14, 66, 116, 0.10), transparent 62%), linear-gradient(135deg, #FAEBEF 0%, #FDF6F8 55%, #FAEBEF 100%)',
+        background: '#ffffff',
       }}
     >
       {/* KHUNG SPLIT-SCREEN ĐĂNG NHẬP / ĐĂNG KÝ */}
@@ -408,7 +333,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
 
-        {/* CỘT PHẢI: FORM ĐĂNG NHẬP / ĐĂNG KÝ + DEMO NHANH */}
+        {/* CỘT PHẢI: FORM ĐĂNG NHẬP / ĐĂNG KÝ */}
         <div className="aita-auth-form">
           <div className="aita-form-corner-sphere" aria-hidden="true" />
 
@@ -422,7 +347,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 onClick={() => setShowConfig(!showConfig)}
                 title="Cấu hình Google OAuth"
                 style={{
-                  background: '#FAEBEF',
+                  background: '#f8fafc',
                   border: '1px solid rgba(14, 66, 116, 0.24)',
                   borderRadius: '8px',
                   padding: '6px 9px',
@@ -440,7 +365,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '13px', marginBottom: '22px', lineHeight: 1.5 }}>
               {authMode === 'login'
-                ? 'Đăng nhập bằng email FPT / Google hoặc chọn nhanh tài khoản Demo.'
+                ? 'Đăng nhập bằng tài khoản FPT / Google SSO của bạn.'
                 : 'Tạo yêu cầu tài khoản mới thuộc whitelist của trường.'}
             </p>
 
@@ -518,7 +443,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   type="text"
                   value={emailInput}
                   onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="Email hoặc tên đăng nhập (vd: giangvien.edu@gmail.com)"
+                  placeholder="Email hoặc tên đăng nhập"
                   className="aita-pill-input"
                 />
               </div>
@@ -529,7 +454,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                   type={showPassword ? 'text' : 'password'}
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
-                  placeholder="Mật khẩu (để trống nếu dùng demo email)"
+                  placeholder="Mật khẩu"
                   className="aita-pill-input"
                   style={{ paddingRight: '58px' }}
                 />
@@ -567,7 +492,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
                 <button
                   type="button"
                   onClick={() =>
-                    setErrorMsg('Vui lòng liên hệ quản trị viên FPT / dùng nút Google SSO hoặc tài khoản Demo bên dưới.')
+                    setErrorMsg('Vui lòng liên hệ quản trị viên FPT hoặc sử dụng nút Đăng nhập với Google SSO.')
                   }
                   style={{
                     background: 'none',
@@ -605,7 +530,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             </form>
 
             {/* Divider "Hoặc" */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '16px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '18px 0' }}>
               <div style={{ flex: 1, height: '1px', background: 'rgba(14, 66, 116, 0.16)' }} />
               <span style={{ fontSize: '11.5px', fontWeight: 600, color: 'var(--text-dim)' }}>Hoặc</span>
               <div style={{ flex: 1, height: '1px', background: 'rgba(14, 66, 116, 0.16)' }} />
@@ -620,7 +545,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
             />
 
             {/* Chuyển đổi Đăng nhập / Đăng ký */}
-            <div style={{ textAlign: 'center', marginTop: '14px', fontSize: '12.5px', color: 'var(--text-muted)' }}>
+            <div style={{ textAlign: 'center', marginTop: '16px', fontSize: '12.5px', color: 'var(--text-muted)' }}>
               {authMode === 'login' ? (
                 <>
                   Chưa có tài khoản?{' '}
@@ -652,150 +577,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLoginSuccess }) => {
               )}
             </div>
 
-            {/* KHU VỰC TÀI KHOẢN DEMO NHANH (LUÔN HIỂN THỊ) */}
-            <div
-              style={{
-                marginTop: '18px',
-                padding: '14px',
-                borderRadius: '14px',
-                backgroundColor: '#FDF6F8',
-                border: '1.5px solid rgba(14, 66, 116, 0.24)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-                <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#0E4274', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                  <Sparkles size={13} /> Tài khoản Demo nhanh
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowMoreDemo(!showMoreDemo)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    color: '#0E4274',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {showMoreDemo ? 'Thu gọn' : 'Xem tất cả'}
-                </button>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '8px' }}>
-                {primaryDemos.map((a) => {
-                  const IconComp = a.role === 'INSTRUCTOR' ? BookOpen : a.role === 'ADMIN' ? Shield : GraduationCap;
-                  return (
-                    <button
-                      key={a.email}
-                      type="button"
-                      onClick={() => {
-                        setEmailInput(a.email);
-                        void verifyEmailWithBackend(a.email, a.name);
-                      }}
-                      title={`${a.email} — ${a.note}`}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '8px 10px',
-                        borderRadius: '10px',
-                        background: '#ffffff',
-                        border: '1.5px solid rgba(14, 66, 116, 0.22)',
-                        color: '#0A1E36',
-                        cursor: 'pointer',
-                        textAlign: 'left',
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: '26px',
-                          height: '26px',
-                          borderRadius: '7px',
-                          background: '#FAEBEF',
-                          color: '#0E4274',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                        }}
-                      >
-                        <IconComp size={13} />
-                      </span>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#0E4274', lineHeight: 1.2 }}>
-                          {a.shortLabel}
-                        </div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {a.email}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {showMoreDemo && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(14, 66, 116, 0.14)' }}>
-                  {extraDemos.map((a) => (
-                    <button
-                      key={a.email}
-                      type="button"
-                      onClick={() => {
-                        setEmailInput(a.email);
-                        void verifyEmailWithBackend(a.email, a.name);
-                      }}
-                      className="login-demo-btn"
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '7px 10px',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(14, 66, 116, 0.2)',
-                        background: '#ffffff',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 600, color: '#0A1E36' }}>
-                        <UserCheck size={13} color="#0E4274" /> {a.email}
-                      </span>
-                      <span style={{ fontSize: '10.5px', color: 'var(--text-dim)' }}>{a.note}</span>
-                    </button>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEmailInput('chua_dang_ky@gmail.com');
-                      void verifyEmailWithBackend('chua_dang_ky@gmail.com', 'Người Lạ');
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '7px 10px',
-                      borderRadius: '8px',
-                      border: '1px solid #fca5a5',
-                      background: '#fef2f2',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: 600, color: '#991b1b' }}>
-                      <UserX size={13} color="#dc2626" /> chua_dang_ky@gmail.com
-                    </span>
-                    <span style={{ fontSize: '10.5px', color: '#dc2626', fontWeight: 700 }}>Test chặn 401/403</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
             {/* Khung cấu hình Client ID & Redirect URI */}
             {showConfig && (
               <div
                 style={{
-                  marginTop: '14px',
+                  marginTop: '16px',
                   padding: '14px',
                   borderRadius: '12px',
                   background: '#ffffff',

@@ -549,128 +549,6 @@ export function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Role Switcher demo state & handler (UI Bug 5)
-  interface DemoPersona {
-    role: 'ADMIN' | 'INSTRUCTOR' | 'STUDENT';
-    key: 'admin' | 'lecturer' | 'student';
-    label: string;
-    shortLabel: string;
-    email: string;
-    fullName: string;
-    userId: string;
-    hotkey: string;
-  }
-
-  const DEMO_PERSONAS: DemoPersona[] = [
-    {
-      role: 'ADMIN',
-      key: 'admin',
-      label: 'Hệ Thống Quản Trị (Admin)',
-      shortLabel: 'Quản trị viên',
-      email: 'admin@aita.fpt.edu.vn',
-      fullName: 'Quản Trị Viên AITA',
-      userId: 'ADMIN001',
-      hotkey: 'Alt + 1',
-    },
-    {
-      role: 'INSTRUCTOR',
-      key: 'lecturer',
-      label: 'Cổng Giảng Viên (GV001)',
-      shortLabel: 'Giảng viên',
-      email: 'trungdt@fe.edu.vn',
-      fullName: 'ThS. Đinh Thành Trung',
-      userId: 'GV001',
-      hotkey: 'Alt + 2',
-    },
-    {
-      role: 'STUDENT',
-      key: 'student',
-      label: 'Cổng Sinh Viên (SE170000)',
-      shortLabel: 'Sinh viên',
-      email: 'linhcampochia@gmail.com',
-      fullName: 'Nguyễn Văn An (Sinh viên)',
-      userId: 'SE170000',
-      hotkey: 'Alt + 3',
-    },
-  ];
-
-  const [isRoleDropdownOpen, setIsRoleDropdownOpen] = useState(false);
-  const [roleToast, setRoleToast] = useState<string | null>(null);
-  const roleDropdownRef = useRef<HTMLDivElement>(null);
-  const toastTimeoutRef = useRef<any>(null);
-
-  const showRoleToast = (msg: string) => {
-    setRoleToast(msg);
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    toastTimeoutRef.current = setTimeout(() => {
-      setRoleToast(null);
-    }, 2800);
-  };
-
-  const handleSwitchPersona = async (persona: DemoPersona) => {
-    setIsRoleDropdownOpen(false);
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/v1/auth/google`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: persona.email, fullName: persona.fullName }),
-      });
-      const json = await res.json();
-      if (res.ok && json.data?.user && json.data?.token) {
-        localStorage.setItem('aita_token', json.data.token);
-        localStorage.setItem('aita_user', JSON.stringify(json.data.user));
-        setCurrentUser(json.data.user);
-        navigate({ view: persona.key, studentTab: 'submission', taskId: null });
-        showRoleToast(`Đã chuyển sang vai trò: ${persona.shortLabel} (${persona.fullName})`);
-        return;
-      }
-    } catch (e) {
-      console.warn('[Role Switcher] Fallback local switch:', e);
-    }
-
-    const fallbackUser: User = {
-      userId: persona.userId,
-      email: persona.email,
-      fullName: persona.fullName,
-      role: persona.role,
-    };
-    localStorage.setItem('aita_user', JSON.stringify(fallbackUser));
-    setCurrentUser(fallbackUser);
-    navigate({ view: persona.key, studentTab: 'submission', taskId: null });
-    showRoleToast(`Đã chuyển sang vai trò: ${persona.shortLabel} (${persona.fullName})`);
-  };
-
-  // Lắng nghe phím tắt toàn cục Alt+1 (Admin), Alt+2 (Giảng viên), Alt+3 (Sinh viên)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey && !e.ctrlKey && !e.shiftKey) {
-        if (e.key === '1') {
-          e.preventDefault();
-          void handleSwitchPersona(DEMO_PERSONAS[0]);
-        } else if (e.key === '2') {
-          e.preventDefault();
-          void handleSwitchPersona(DEMO_PERSONAS[1]);
-        } else if (e.key === '3') {
-          e.preventDefault();
-          void handleSwitchPersona(DEMO_PERSONAS[2]);
-        }
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Đóng dropdown khi bấm ra ngoài
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (roleDropdownRef.current && !roleDropdownRef.current.contains(e.target as Node)) {
-        setIsRoleDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   // Khởi tạo kết nối Socket.IO
   useEffect(() => {
     const socket = io(API_BASE_URL, {
@@ -1535,66 +1413,6 @@ export function App() {
             </div>
           </div>
 
-          {/* Center nav tabs: THANH CHUYỂN ĐỔI 3 VAI TRÒ NHANH (UI BUG 5 RESOLVED) */}
-          <div
-            role="tablist"
-            aria-label="Chuyển đổi vai trò"
-            className="nav-role-switcher"
-            style={{
-              display: 'flex',
-              gap: 4,
-              background: 'rgba(250, 235, 239, 0.85)',
-              borderRadius: 12,
-              padding: 4,
-              border: '1px solid rgba(14, 66, 116, 0.16)',
-            }}
-          >
-            {DEMO_PERSONAS.map((p) => {
-              const isActive = activeView === p.key;
-              const IconComp = p.key === 'admin' ? LayoutDashboard : p.key === 'lecturer' ? BookOpen : GraduationCap;
-              return (
-                <button
-                  key={p.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  onClick={() => handleSwitchPersona(p)}
-                  title={`Chuyển sang ${p.label} (Phím tắt: ${p.hotkey})`}
-                  style={{
-                    padding: '6px 13px',
-                    borderRadius: 9,
-                    border: 'none',
-                    cursor: 'pointer',
-                    background: isActive ? 'linear-gradient(135deg, #0E4274 0%, #175794 100%)' : 'transparent',
-                    color: isActive ? '#ffffff' : 'var(--text-muted)',
-                    fontWeight: isActive ? 700 : 500,
-                    fontSize: 12.5,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all .18s cubic-bezier(0.22, 1, 0.36, 1)',
-                    boxShadow: isActive ? '0 4px 12px -3px rgba(14, 66, 116, 0.42)' : 'none',
-                  }}
-                >
-                  <IconComp size={14} />
-                  <span>{p.shortLabel}</span>
-                  <span
-                    style={{
-                      fontSize: '10px',
-                      opacity: isActive ? 0.9 : 0.5,
-                      padding: '1px 4px',
-                      borderRadius: '4px',
-                      backgroundColor: isActive ? 'rgba(255, 255, 255, 0.22)' : 'rgba(0, 0, 0, 0.05)',
-                      fontFamily: 'monospace',
-                    }}
-                  >
-                    {p.hotkey.replace(' ', '')}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
           {/* Vùng Thông tin Người dùng, Phân quyền & Hành động */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* Trạng thái WebSocket */}
@@ -1616,157 +1434,25 @@ export function App() {
 
             <span className="nav-divider" style={{ width: 1, height: 22, background: 'var(--border-color)', flexShrink: 0 }} />
 
-            {/* DROPDOWN CHUYỂN VAI TRÒ NHANH KÈM PHÍM TẮT (DEMO SWITCHER) */}
-            <div ref={roleDropdownRef} style={{ position: 'relative' }}>
-              <button
-                type="button"
-                onClick={() => setIsRoleDropdownOpen(!isRoleDropdownOpen)}
-                title="Chuyển đổi vai trò trình diễn (Alt + 1 / 2 / 3)"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '5px 11px',
-                  borderRadius: '8px',
-                  border: `1px solid ${isRoleDropdownOpen ? 'var(--blue-500)' : 'rgba(37, 99, 235, 0.25)'}`,
-                  backgroundColor: isRoleDropdownOpen ? 'rgba(37, 99, 235, 0.12)' : 'rgba(37, 99, 235, 0.06)',
-                  color: 'var(--blue-600)',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  flexShrink: 0,
-                }}
-              >
-                <Users size={13} />
-                <span>
-                  Vai trò: <strong style={{ color: 'var(--text-main)' }}>{roleBadge.text}</strong>
-                </span>
-                <ChevronDown
-                  size={12}
-                  style={{
-                    transform: isRoleDropdownOpen ? 'rotate(180deg)' : 'none',
-                    transition: 'transform 0.2s ease',
-                  }}
-                />
-              </button>
-
-              {/* MENU DROPDOWN */}
-              {isRoleDropdownOpen && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: 'calc(100% + 8px)',
-                    right: 0,
-                    width: '300px',
-                    backgroundColor: '#ffffff',
-                    borderRadius: '12px',
-                    border: '1px solid var(--border-color)',
-                    boxShadow: '0 12px 30px -4px rgba(0, 0, 0, 0.15), 0 4px 10px rgba(0, 0, 0, 0.05)',
-                    padding: '8px',
-                    zIndex: 1000,
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: '6px 10px 8px',
-                      borderBottom: '1px solid var(--border-soft)',
-                      marginBottom: '6px',
-                    }}
-                  >
-                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--blue-600)', letterSpacing: '0.04em' }}>
-                      CHUYỂN VAI TRÒ TRÌNH DIỄN
-                    </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: '2px' }}>
-                      Chuyển đổi trực tiếp không cần đăng xuất
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    {DEMO_PERSONAS.map((p) => {
-                      const isCurrent = activeView === p.key;
-                      const IconComp = p.key === 'admin' ? LayoutDashboard : p.key === 'lecturer' ? BookOpen : GraduationCap;
-                      return (
-                        <button
-                          key={p.key}
-                          type="button"
-                          onClick={() => handleSwitchPersona(p)}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '9px 10px',
-                            borderRadius: '8px',
-                            border: isCurrent ? '1px solid rgba(37, 99, 235, 0.3)' : '1px solid transparent',
-                            backgroundColor: isCurrent ? 'rgba(37, 99, 235, 0.08)' : 'transparent',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            transition: 'all 0.12s ease',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
-                            <div
-                              style={{
-                                width: '28px',
-                                height: '28px',
-                                borderRadius: '7px',
-                                backgroundColor: isCurrent ? 'var(--blue-600)' : 'rgba(11, 18, 32, 0.05)',
-                                color: isCurrent ? '#ffffff' : 'var(--text-soft)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0,
-                              }}
-                            >
-                              <IconComp size={14} />
-                            </div>
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontSize: '12.5px', fontWeight: 600, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                {p.shortLabel}
-                                {isCurrent && <Check size={13} style={{ color: 'var(--blue-600)' }} />}
-                              </div>
-                              <div style={{ fontSize: '11px', color: 'var(--text-dim)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {p.fullName}
-                              </div>
-                            </div>
-                          </div>
-
-                          <span
-                            style={{
-                              fontSize: '10.5px',
-                              fontFamily: 'monospace',
-                              padding: '2px 6px',
-                              borderRadius: '4px',
-                              border: '1px solid var(--border-soft)',
-                              color: 'var(--text-muted)',
-                              backgroundColor: 'rgba(0, 0, 0, 0.02)',
-                              flexShrink: 0,
-                              marginLeft: '8px',
-                            }}
-                          >
-                            {p.hotkey}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: '8px',
-                      padding: '7px 9px',
-                      borderRadius: '6px',
-                      backgroundColor: 'rgba(11, 18, 32, 0.03)',
-                      fontSize: '11px',
-                      color: 'var(--text-dim)',
-                      lineHeight: 1.45,
-                    }}
-                  >
-                    💡 <strong>Phím tắt:</strong> Bấm <kbd style={{ padding: '1px 4px', background: '#fff', border: '1px solid var(--border-strong)', borderRadius: '3px' }}>Alt+1</kbd>, <kbd style={{ padding: '1px 4px', background: '#fff', border: '1px solid var(--border-strong)', borderRadius: '3px' }}>Alt+2</kbd>, <kbd style={{ padding: '1px 4px', background: '#fff', border: '1px solid var(--border-strong)', borderRadius: '3px' }}>Alt+3</kbd> để chuyển đổi tức thì.
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Huy hiệu vai trò */}
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '5px 11px',
+                borderRadius: '8px',
+                border: '1px solid rgba(14, 66, 116, 0.22)',
+                backgroundColor: 'rgba(14, 66, 116, 0.06)',
+                color: '#0E4274',
+                fontSize: '12px',
+                fontWeight: 600,
+                flexShrink: 0,
+              }}
+            >
+              {roleBadge.icon}
+              <span>{roleBadge.text}</span>
+            </span>
 
             {/* Huy hiệu vai trò + thông tin người dùng */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '9px', minWidth: 0 }}>
@@ -1811,34 +1497,6 @@ export function App() {
           </div>
         </div>
       </nav>
-
-      {/* TOAST THÔNG BÁO CHUYỂN VAI TRÒ THÀNH CÔNG */}
-      {roleToast && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '70px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 9999,
-            backgroundColor: 'rgba(15, 23, 42, 0.94)',
-            color: '#ffffff',
-            padding: '9px 20px',
-            borderRadius: '24px',
-            boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '12.5px',
-            fontWeight: 600,
-            pointerEvents: 'none',
-          }}
-        >
-          <Sparkles size={14} style={{ color: '#60a5fa' }} />
-          <span>{roleToast}</span>
-        </div>
-      )}
 
       {/* NỘI DUNG CHÍNH (THEO PHÂN QUYỀN & ACTIVE VIEW) */}
       <main style={{ flexGrow: 1, padding: '24px 20px' }}>

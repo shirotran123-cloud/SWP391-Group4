@@ -14,12 +14,12 @@
   --medici-blue-mid: #175794;
   --medici-blue-light: #2368A8;
 
-  --ink-900: #FAEBEF; /* nền chính Pantone 9061 U */
-  --ink-850: #FDF6F8;
-  --ink-800: #F8E5EA; /* bề mặt thẻ phụ */
-  --ink-700: #F3DCE3; /* bề mặt lõm */
-  --ink-600: #EBD0D9;
-  --ink-500: #DFBFC9;
+  --ink-900: #ffffff; /* nền chính trắng sạch */
+  --ink-850: #fcfcfd;
+  --ink-800: #f8fafc; /* bề mặt thẻ phụ */
+  --ink-700: #f1f5f9; /* bề mặt lõm */
+  --ink-600: #e2e8f0;
+  --ink-500: #cbd5e1;
 
   /* MEDICI BLUE — màu nhấn chủ đạo */
   --blue-700: #092F54;
@@ -105,12 +105,9 @@ html {
 }
 
 body {
-  /* Nền ứng dụng: Pantone 9061 U (#FAEBEF) dịu mắt, giúp thẻ trắng và Medici Blue nổi bật */
-  background:
-    radial-gradient(1200px 420px at 12% -6%, rgba(14, 66, 116, 0.07), transparent 65%),
-    linear-gradient(180deg, #FAEBEF 0%, #FDF6F8 420px, #FAEBEF 100%) no-repeat,
-    var(--bg-primary);
-  background-color: var(--bg-primary);
+  /* Nền ứng dụng trắng sạch, thẻ trắng viền Medici Blue nổi bật */
+  background: #ffffff;
+  background-color: #ffffff;
   color: var(--text-main);
   font-family: var(--font-sans);
   font-size: 14px;
