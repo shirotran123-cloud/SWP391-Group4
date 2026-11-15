@@ -57,7 +57,10 @@ export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
       const res = await fetch(`${apiBaseUrl}/api/v1/appeals`);
       if (res.ok) {
         const json = await res.json();
-        setAppeals(json.data || []);
+        const list = json.data || [];
+        setAppeals(list);
+        setToastMessage(`Đã đồng bộ mới nhất: ${list.length} đơn phúc khảo.`);
+        setTimeout(() => setToastMessage(null), 3000);
       } else {
         throw new Error('API offline');
       }
@@ -218,6 +221,7 @@ export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
 
   const filteredAppeals = appeals.filter((a) => {
     if (statusFilter === 'ALL') return true;
+    if (statusFilter === 'PENDING') return a.status === 'PENDING' || a.status === 'IN_REVIEW';
     return a.status === statusFilter;
   });
 
@@ -435,7 +439,9 @@ public class Solution {
 
         <div style={{ display: 'flex', gap: '10px' }}>
           <button
-            onClick={fetchAppeals}
+            type="button"
+            onClick={() => void fetchAppeals()}
+            disabled={loading}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -447,10 +453,11 @@ public class Solution {
               color: 'var(--text-main)',
               fontSize: '13px',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.7 : 1,
             }}
           >
-            <RefreshCw size={14} /> Làm mới
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {loading ? 'Đang đồng bộ...' : 'Làm mới'}
           </button>
         </div>
       </div>
@@ -479,7 +486,7 @@ public class Solution {
             }}
           >
             {tab === 'ALL' && `Tất Cả (${appeals.length})`}
-            {tab === 'PENDING' && `Chờ Duyệt (${appeals.filter((a) => a.status === 'PENDING').length})`}
+            {tab === 'PENDING' && `Chờ Duyệt (${appeals.filter((a) => a.status === 'PENDING' || a.status === 'IN_REVIEW').length})`}
             {tab === 'ACCEPTED' && `Đã Chấp Thuận (${appeals.filter((a) => a.status === 'ACCEPTED').length})`}
             {tab === 'REJECTED' && `Đã Từ Chối (${appeals.filter((a) => a.status === 'REJECTED').length})`}
           </button>

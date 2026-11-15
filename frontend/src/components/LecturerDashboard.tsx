@@ -823,6 +823,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
           `${book.totalRows ?? mapped.length} dòng điểm · ${book.totalSubmissionsConsidered ?? 0} lượt nộp · ` +
             `${book.supersededCount ?? 0} lượt bị thay thế`,
         );
+        setLoadingSubmissions(false);
         return;
       }
     } catch {

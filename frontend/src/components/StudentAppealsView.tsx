@@ -94,7 +94,9 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button
-              onClick={fetchStudentAppeals}
+              type="button"
+              onClick={() => void fetchStudentAppeals()}
+              disabled={loading}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -106,10 +108,11 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
                 color: 'var(--text-main)',
                 fontSize: '13px',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.7 : 1,
               }}
             >
-              <RefreshCw size={14} /> Làm mới
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> {loading ? 'Đang tải...' : 'Làm mới'}
             </button>
             <button
               onClick={() => setIsModalOpen(true)}
