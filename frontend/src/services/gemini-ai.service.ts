@@ -92,6 +92,10 @@ export function isPureTextModel(modelItem: any): boolean {
   return name.includes('gemini');
 }
 
+// Bộ nhớ đệm danh mục model khả dụng từ Google để tối ưu tốc độ gọi
+let cachedAvailableModels: string[] = [];
+let cachedModelsKey = '';
+
 /**
  * Lựa chọn model văn bản tối ưu nhất theo thứ tự ưu tiên tốc độ và độ ổn định
  */
@@ -101,12 +105,14 @@ export function pickBestTextModel(availableModels: string[]): string {
     .filter(m => isPureTextModel(m));
 
   if (cleanList.length === 0) {
-    return 'gemini-flash-lite-latest';
+    return 'gemini-2.0-flash';
   }
 
   const priorityOrder = [
-    'gemini-flash-lite-latest',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
     'gemini-flash-latest',
+    'gemini-flash-lite-latest',
     'gemini-2.5-flash',
     'gemini-2.5-flash-lite',
     'gemini-3.5-flash',
@@ -193,6 +199,10 @@ export class GeminiAIService {
         };
       }
 
+      // Cập nhật bộ nhớ đệm model khả dụng
+      cachedAvailableModels = validModels;
+      cachedModelsKey = cleanKey;
+
       const preferred = (model || '').replace('models/', '');
       const chosenModel = (preferred && validModels.includes(preferred) && isPureTextModel(preferred))
         ? preferred
@@ -248,49 +258,40 @@ export class GeminiAIService {
     // CHỌN NGẪU NHIÊN 1 BỐI CẢNH ĐỜI THỰC ĐỘC ĐÁO CHO LẦN GỌI NÀY ĐỂ ĐA DẠNG HÓA
     const chosenDomain = DIVERSE_REAL_WORLD_DOMAINS[Math.floor(Math.random() * DIVERSE_REAL_WORLD_DOMAINS.length)];
 
-    // 1. Chọn các mô hình văn bản siêu tốc hiện hành từ Google Gemini API
+    // 1. Tối ưu danh mục mô hình: Ưu tiên trực tiếp các model siêu tốc (gemini-2.0-flash, 1.5-flash)
+    // Loại bỏ hoàn toàn round-trip HTTP 1.5s - 2.5s lấy danh sách models trước mỗi lần sinh đề.
     let modelsToTry: string[] = [];
-    try {
-      const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${cleanKey}`);
-      if (listRes.ok) {
-        const listData = await listRes.json();
-        // LỌC TRIỆT ĐỂ: Chỉ giữ lại các mô hình thuần văn bản (isPureTextModel)
-        const availableFromGoogle: string[] = (listData.models || [])
-          .filter((m: any) => isPureTextModel(m))
-          .map((m: any) => m.name as string);
 
-        if (availableFromGoogle.length > 0) {
-          const rawRequested = options.model || '';
-          const cleanedRequested = rawRequested.replace('models/', '');
-
-          let primaryChoice = '';
-          if (cleanedRequested && isPureTextModel(cleanedRequested)) {
-            const exactMatch = availableFromGoogle.find(m => m === `models/${cleanedRequested}` || m === cleanedRequested);
-            if (exactMatch) primaryChoice = exactMatch;
-          }
-
-          if (!primaryChoice) {
-            const bestName = pickBestTextModel(availableFromGoogle);
-            primaryChoice = availableFromGoogle.find(m => m.replace('models/', '') === bestName) || availableFromGoogle[0];
-          }
-
-          modelsToTry = [
-            primaryChoice,
-            ...availableFromGoogle.filter(m => m !== primaryChoice)
-          ];
-        }
-      }
-    } catch (listErr) {
-      console.warn('Không thể tự động liệt kê models từ Google, sử dụng danh sách phổ biến:', listErr);
+    const rawRequested = options.model || '';
+    const cleanedRequested = rawRequested.replace('models/', '').trim();
+    if (cleanedRequested && isPureTextModel(cleanedRequested)) {
+      modelsToTry.push(`models/${cleanedRequested}`);
     }
-    const candidateModels = [
-      'models/gemini-flash-lite-latest',
+
+    const FAST_CANDIDATE_MODELS = [
+      'models/gemini-2.0-flash',
+      'models/gemini-1.5-flash',
       'models/gemini-flash-latest',
+      'models/gemini-flash-lite-latest',
       'models/gemini-2.5-flash',
       'models/gemini-2.5-flash-lite',
-      'models/gemini-3.5-flash',
     ];
-    for (const c of candidateModels) {
+
+    if (cachedAvailableModels.length > 0 && cachedModelsKey === cleanKey) {
+      const bestName = pickBestTextModel(cachedAvailableModels);
+      const chosen = cachedAvailableModels.find(m => m.replace('models/', '') === bestName);
+      if (chosen && !modelsToTry.includes(chosen)) {
+        modelsToTry.push(chosen.startsWith('models/') ? chosen : `models/${chosen}`);
+      }
+      for (const m of cachedAvailableModels) {
+        const fullM = m.startsWith('models/') ? m : `models/${m}`;
+        if (!modelsToTry.includes(fullM)) {
+          modelsToTry.push(fullM);
+        }
+      }
+    }
+
+    for (const c of FAST_CANDIDATE_MODELS) {
       if (!modelsToTry.includes(c)) modelsToTry.push(c);
     }
 
@@ -355,10 +356,26 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
       const endpoint = modelToTry.startsWith('models/') ? modelToTry : `models/${modelToTry}`;
       const url = `https://generativelanguage.googleapis.com/v1beta/${endpoint}:generateContent?key=${cleanKey}`;
 
+      const genConfig: any = {
+        responseMimeType: 'application/json',
+        temperature: 0.7,
+        maxOutputTokens: 4096,
+      };
+
+      // Tắt thinking budget trên Gemini 2.5 để không tốn 4-8s suy luận ngầm
+      if (endpoint.includes('2.5') || endpoint.includes('thinking')) {
+        genConfig.thinkingConfig = { thinkingBudget: 0 };
+      }
+
+      // Giới hạn timeout 9.5 giây cho mỗi lần gọi để failover siêu tốc nếu 1 model của Google bị chậm
+      const controller = new AbortController();
+      const timeoutTimer = setTimeout(() => controller.abort(), 9500);
+
       try {
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
           body: JSON.stringify({
             contents: [
               {
@@ -366,13 +383,10 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
                 parts: [{ text: systemPrompt + '\n\n' + userPrompt }],
               },
             ],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.7,
-              maxOutputTokens: 8192,
-            },
+            generationConfig: genConfig,
           }),
         });
+        clearTimeout(timeoutTimer);
 
         if (!response.ok) {
           const errText = await response.text();
@@ -413,6 +427,7 @@ BẮT BUỘC: Bạn PHẢI trả về duy nhất một chuỗi JSON hợp lệ (
         successfulModel = modelToTry.replace('models/', '');
         break; // Gọi AI thành công 100%!
       } catch (err: any) {
+        clearTimeout(timeoutTimer);
         lastError = err;
         console.warn(`Lỗi khi gọi model ${modelToTry}:`, err.message);
 
