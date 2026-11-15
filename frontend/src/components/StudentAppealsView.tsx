@@ -191,9 +191,17 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
                   </div>
                 )}
 
-                <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', gap: '16px' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-dim)', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <span>Ngày gửi: {new Date(app.createdAt).toLocaleString('vi-VN')}</span>
                   {app.resolvedAt && <span>Ngày giải quyết: {new Date(app.resolvedAt).toLocaleString('vi-VN')}</span>}
+                  {app.submissionSha256 && (
+                    <span style={{ fontFamily: 'monospace', color: '#2563eb', background: '#eff6ff', padding: '2px 6px', borderRadius: 4 }} title={app.submissionSha256}>
+                      SHA-256: {app.submissionSha256.slice(0, 10)}... (Đã băm an toàn)
+                    </span>
+                  )}
+                  {app.originalScore !== undefined && (
+                    <span>Điểm gốc: <strong>{app.originalScore}</strong></span>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { AppealRecord, AppealStatus } from './appeal.entity';
+import { AppealRecord, AppealStatus, AppealEventRecord } from './appeal.entity';
 import { PostgresService } from './postgres.service';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -47,7 +47,12 @@ export class AppealRepository implements OnModuleInit {
             ...record,
             createdAt: new Date(record.createdAt),
             updatedAt: new Date(record.updatedAt),
+            assignedAt: record.assignedAt ? new Date(record.assignedAt) : undefined,
             resolvedAt: record.resolvedAt ? new Date(record.resolvedAt) : undefined,
+            events: (record.events || []).map((e: any) => ({
+              ...e,
+              createdAt: new Date(e.createdAt),
+            })),
           });
         }
         this.logger.log(`[AppealRepository] Loaded ${this.records.size} appeals from store.`);
@@ -144,8 +149,20 @@ export class AppealRepository implements OnModuleInit {
   }
 
   public async create(record: Omit<AppealRecord, 'createdAt' | 'updatedAt'>): Promise<AppealRecord> {
+    const createdEvent: AppealEventRecord = {
+      id: `EVT-${Date.now()}-CRT`,
+      action: 'CREATED',
+      actorId: record.studentId,
+      meta: {
+        originalScore: record.originalScore,
+        submissionSha256: record.submissionSha256,
+      },
+      createdAt: new Date(),
+    };
+
     const fullRecord: AppealRecord = {
       ...record,
+      events: record.events && record.events.length > 0 ? record.events : [createdEvent],
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -192,17 +209,39 @@ export class AppealRepository implements OnModuleInit {
     return result;
   }
 
+  public async getWorkloadByReviewer(): Promise<Record<string, number>> {
+    const counts: Record<string, number> = {};
+    for (const r of this.records.values()) {
+      if (r.reviewerId && r.status === 'IN_REVIEW') {
+        counts[r.reviewerId] = (counts[r.reviewerId] || 0) + 1;
+      }
+    }
+    return counts;
+  }
+
   public async updateAssignment(
     appealId: string,
     reviewerId: string,
+    assignedById: string = 'admin',
   ): Promise<AppealRecord | null> {
     const existing = this.records.get(appealId);
     if (!existing) return null;
+
+    const assignEvent: AppealEventRecord = {
+      id: `EVT-${Date.now()}-ASG`,
+      action: 'ASSIGNED',
+      actorId: assignedById,
+      meta: { reviewerId, previousReviewerId: existing.reviewerId },
+      createdAt: new Date(),
+    };
 
     const updated: AppealRecord = {
       ...existing,
       status: 'IN_REVIEW',
       reviewerId,
+      assignedById,
+      assignedAt: new Date(),
+      events: [...(existing.events || []), assignEvent],
       updatedAt: new Date(),
     };
 
@@ -223,6 +262,19 @@ export class AppealRepository implements OnModuleInit {
     const existing = this.records.get(appealId);
     if (!existing) return null;
 
+    const resolveEvent: AppealEventRecord = {
+      id: `EVT-${Date.now()}-RES`,
+      action: 'RESOLVED',
+      actorId: reviewerId,
+      meta: {
+        status,
+        oldScore: existing.originalScore,
+        adjustedScore,
+        resolutionNote,
+      },
+      createdAt: new Date(),
+    };
+
     const updated: AppealRecord = {
       ...existing,
       status,
@@ -230,6 +282,7 @@ export class AppealRepository implements OnModuleInit {
       resolutionNote,
       adjustedScore: adjustedScore !== undefined ? adjustedScore : existing.adjustedScore,
       resolvedAt: new Date(),
+      events: [...(existing.events || []), resolveEvent],
       updatedAt: new Date(),
     };
 

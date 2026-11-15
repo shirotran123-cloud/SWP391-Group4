@@ -159,12 +159,25 @@ export const isLecturerRole = (role?: string): boolean => {
 export type UserProfile = User;
 
 
+export interface AppealEventItem {
+  id: string;
+  action: 'CREATED' | 'ASSIGNED' | 'RESOLVED';
+  actorId: string;
+  meta?: Record<string, any>;
+  createdAt: string;
+}
+
 export interface Appeal {
   appealId: string;
   submissionId: string;
   studentId: string;
   reason: string;
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'IN_REVIEW';
+  submissionSha256?: string;
+  originalScore?: number;
+  assignedById?: string;
+  assignedAt?: string;
+  events?: AppealEventItem[];
   reviewerId?: string;
   resolutionNote?: string;
   adjustedScore?: number;

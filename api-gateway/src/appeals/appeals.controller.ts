@@ -59,12 +59,22 @@ export class AppealsController {
     };
   }
 
+  @Get(':id/eligible-reviewers')
+  public async getEligibleReviewers(@Param('id') id: string) {
+    const reviewers = await this.appealsService.getEligibleReviewers(id);
+    return {
+      statusCode: HttpStatus.OK,
+      data: reviewers,
+    };
+  }
+
   @Put(':id/assign')
   public async assignReviewer(
     @Param('id') id: string,
     @Body('reviewerId') reviewerId: string,
+    @Body('assignedById') assignedById?: string,
   ) {
-    const assigned = await this.appealsService.assignReviewer(id, reviewerId);
+    const assigned = await this.appealsService.assignReviewer(id, reviewerId, assignedById);
     return {
       statusCode: HttpStatus.OK,
       message: `Đã phân công Giảng viên ${reviewerId} chấm phúc khảo đơn ${id}.`,

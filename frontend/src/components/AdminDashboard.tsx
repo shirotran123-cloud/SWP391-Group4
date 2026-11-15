@@ -5,7 +5,7 @@ import {
   Users, Activity, Server, Database, Shield, RefreshCw,
   Trash2, RotateCcw, ChevronDown, ChevronUp, AlertTriangle,
   CheckCircle, XCircle, Clock, Cpu, BarChart2, Settings, Sparkles,
-  GitCommit, Scale
+  GitCommit, Scale, FileText, ShieldCheck, X
 } from 'lucide-react';
 import { API_BASE_URL as API } from '../config/api';
 import { getSubmissionStatusStyle } from '../utils/statusStyles';
@@ -119,8 +119,22 @@ export function AdminDashboard({ token }: { token: string }) {
   const [actionMsg, setActionMsg] = useState('');
   const [appeals, setAppeals] = useState<any[]>([]);
   const [assignMap, setAssignMap] = useState<Record<string, string>>({});
+  const [auditAppeal, setAuditAppeal] = useState<any | null>(null);
+  const [eligibleReviewersMap, setEligibleReviewersMap] = useState<Record<string, any[]>>({});
 
   const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+
+  const fetchEligibleReviewers = useCallback(async (appealId: string) => {
+    try {
+      const res = await fetch(`${API}/api/v1/appeals/${appealId}/eligible-reviewers`, { headers });
+      if (res.ok) {
+        const json = await res.json();
+        setEligibleReviewersMap((prev) => ({ ...prev, [appealId]: json.data || [] }));
+      }
+    } catch {
+      // ignore
+    }
+  }, [token]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -144,14 +158,19 @@ export function AdminDashboard({ token }: { token: string }) {
         const s = await subRes.value.json(); setSubmissions(s.data || s || []);
       }
       if (appRes.status === 'fulfilled' && appRes.value.ok) {
-        const a = await appRes.value.json(); setAppeals(a.data || a || []);
+        const a = await appRes.value.json();
+        const appealList = a.data || a || [];
+        setAppeals(appealList);
+        for (const it of appealList) {
+          void fetchEligibleReviewers(it.appealId);
+        }
       }
     } catch (e) {
       console.error('Failed to fetch admin data:', e);
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [token, fetchEligibleReviewers]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -572,12 +591,13 @@ export function AdminDashboard({ token }: { token: string }) {
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ backgroundColor: 'rgba(14, 66, 116, 0.04)', borderBottom: '1px solid var(--border-color)' }}>
-                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>Mã đơn</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>Mã đơn &amp; Thời gian</th>
                     <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>Sinh viên &amp; Bài nộp</th>
-                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)', maxWidth: '280px' }}>Lý do khiếu nại</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>Mã băm SHA-256 (Toàn vẹn)</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)', maxWidth: '240px' }}>Lý do khiếu nại</th>
                     <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)', textAlign: 'center' }}>Trạng thái</th>
                     <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)' }}>Giảng viên phân công</th>
-                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)', textAlign: 'right' }}>Thao tác phân công</th>
+                    <th style={{ padding: '12px 14px', fontWeight: 600, color: 'var(--text-main)', textAlign: 'right' }}>Thao tác &amp; Audit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -593,6 +613,12 @@ export function AdminDashboard({ token }: { token: string }) {
 
                     const currentSelectedGv = assignMap[item.appealId] || item.reviewerId || '';
                     const availableLecturers = users.filter(u => u.role === 'INSTRUCTOR' || u.role === 'HOD');
+                    const reviewersForThis = eligibleReviewersMap[item.appealId] || availableLecturers.map((gv: any) => ({
+                      userId: gv.userId,
+                      fullName: gv.fullName,
+                      openAppeals: appeals.filter(a => a.status === 'IN_REVIEW' && a.reviewerId === gv.userId).length,
+                      hasConflict: false,
+                    }));
 
                     return (
                       <tr key={item.appealId} style={{ borderBottom: '1px solid var(--border-color)' }}>
@@ -610,7 +636,29 @@ export function AdminDashboard({ token }: { token: string }) {
                           </span>
                         </td>
 
-                        <td style={{ padding: '12px 14px', verticalAlign: 'top', maxWidth: '280px' }}>
+                        <td style={{ padding: '12px 14px', verticalAlign: 'top' }}>
+                          <div
+                            style={{
+                              fontFamily: 'monospace',
+                              fontSize: '11px',
+                              color: '#1e40af',
+                              background: '#eff6ff',
+                              padding: '2px 6px',
+                              borderRadius: 4,
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 4,
+                            }}
+                            title={item.submissionSha256 || 'Chưa có mã băm'}
+                          >
+                            <ShieldCheck size={11} /> {item.submissionSha256 ? item.submissionSha256.slice(0, 10) + '...' : 'Chưa băm'}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-dim)', marginTop: 3 }}>
+                            Điểm gốc: <strong>{item.originalScore !== undefined ? item.originalScore : '—'}</strong>
+                          </div>
+                        </td>
+
+                        <td style={{ padding: '12px 14px', verticalAlign: 'top', maxWidth: '240px' }}>
                           <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-muted)', lineHeight: 1.4 }}>
                             {item.reason}
                           </p>
@@ -656,33 +704,48 @@ export function AdminDashboard({ token }: { token: string }) {
                         </td>
 
                         <td style={{ padding: '12px 14px', verticalAlign: 'top', textAlign: 'right' }}>
-                          {item.status === 'ACCEPTED' || item.status === 'REJECTED' ? (
-                            <span style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontStyle: 'italic' }}>Đã hoàn tất</span>
-                          ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                              <select
-                                value={currentSelectedGv}
-                                onChange={(e) => setAssignMap(prev => ({ ...prev, [item.appealId]: e.target.value }))}
-                                className="input-field"
-                                style={{ fontSize: '12px', height: '30px', padding: '0 6px', maxWidth: '170px' }}
-                              >
-                                <option value="">-- Chọn Giảng viên --</option>
-                                {availableLecturers.map((gv) => (
-                                  <option key={gv.userId} value={gv.userId}>
-                                    {gv.fullName} ({gv.userId})
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                onClick={() => handleAssignReviewer(item.appealId, currentSelectedGv)}
-                                className="btn btn-primary btn-sm"
-                                style={{ padding: '4px 9px', fontSize: '11.5px' }}
-                              >
-                                Phân công
-                              </button>
-                            </div>
-                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => setAuditAppeal(item)}
+                              className="btn btn-secondary btn-sm"
+                              style={{ padding: '3px 7px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: 3 }}
+                              title="Xem toàn bộ lịch sử kiểm toán của đơn này"
+                            >
+                              <FileText size={11} /> Nhật ký
+                            </button>
+
+                            {item.status !== 'ACCEPTED' && item.status !== 'REJECTED' && (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                <select
+                                  value={currentSelectedGv}
+                                  onChange={(e) => setAssignMap(prev => ({ ...prev, [item.appealId]: e.target.value }))}
+                                  className="input-field"
+                                  style={{ fontSize: '11.5px', height: '28px', padding: '0 4px', maxWidth: '175px' }}
+                                >
+                                  <option value="">-- Chọn Giảng viên --</option>
+                                  {reviewersForThis.map((gv: any) => (
+                                    <option
+                                      key={gv.userId}
+                                      value={gv.userId}
+                                      disabled={gv.hasConflict}
+                                      style={{ color: gv.hasConflict ? '#94a3b8' : 'inherit' }}
+                                    >
+                                      {gv.fullName} ({gv.userId}) {gv.hasConflict ? '⚠️ [Xung đột GV môn]' : `[Tải: ${gv.openAppeals ?? 0}]`}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAssignReviewer(item.appealId, currentSelectedGv)}
+                                  className="btn btn-primary btn-sm"
+                                  style={{ padding: '3px 8px', fontSize: '11px' }}
+                                >
+                                  Phân công
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -725,6 +788,83 @@ export function AdminDashboard({ token }: { token: string }) {
       )}
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+
+      {/* Modal Nhat Ky Kiem Toan (Audit Trail) */}
+      {auditAppeal && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div className="glass-panel" style={{ width: '100%', maxWidth: 580, maxHeight: '90vh', overflowY: 'auto', padding: 24, background: '#fff', borderRadius: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid var(--border-color)', paddingBottom: 12 }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-main)' }}>
+                <FileText size={18} color="var(--blue-300)" />
+                Nhật Ký Kiểm Toán (Audit Trail) #{auditAppeal.appealId}
+              </h3>
+              <button type="button" onClick={() => setAuditAppeal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, background: '#f8fafc', padding: 12, borderRadius: 8, fontSize: 12, marginBottom: 16 }}>
+              <div><strong>Sinh viên:</strong> {auditAppeal.studentId}</div>
+              <div><strong>Bài nộp:</strong> <span style={{ fontFamily: 'monospace' }}>{auditAppeal.submissionId}</span></div>
+              <div><strong>Điểm ban đầu:</strong> {auditAppeal.originalScore !== undefined ? auditAppeal.originalScore : '—'}</div>
+              <div><strong>Điểm sau phúc khảo:</strong> {auditAppeal.adjustedScore !== undefined ? auditAppeal.adjustedScore : 'Chưa đổi'}</div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <strong>Mã băm SHA-256 (Bất biến tại lúc gửi đơn):</strong>
+                <div style={{ fontFamily: 'monospace', fontSize: 11, wordBreak: 'break-all', color: '#1e40af', marginTop: 2 }}>
+                  {auditAppeal.submissionSha256 || 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'}
+                </div>
+              </div>
+            </div>
+
+            <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text-main)' }}>Dòng thời gian sự kiện (Timeline)</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {(auditAppeal.events && auditAppeal.events.length > 0 ? auditAppeal.events : [
+                { action: 'CREATED', actorId: auditAppeal.studentId, createdAt: auditAppeal.createdAt, meta: { originalScore: auditAppeal.originalScore } },
+                ...(auditAppeal.reviewerId ? [{ action: 'ASSIGNED', actorId: auditAppeal.assignedById || 'admin', createdAt: auditAppeal.assignedAt || auditAppeal.updatedAt, meta: { reviewerId: auditAppeal.reviewerId } }] : []),
+                ...(auditAppeal.status === 'ACCEPTED' || auditAppeal.status === 'REJECTED' ? [{ action: 'RESOLVED', actorId: auditAppeal.reviewerId, createdAt: auditAppeal.resolvedAt || auditAppeal.updatedAt, meta: { status: auditAppeal.status, adjustedScore: auditAppeal.adjustedScore, note: auditAppeal.resolutionNote } }] : []),
+              ]).map((evt: any, idx: number) => {
+                const isCreated = evt.action === 'CREATED';
+                const isAssigned = evt.action === 'ASSIGNED';
+                const isResolved = evt.action === 'RESOLVED';
+                const color = isCreated ? '#2563eb' : isAssigned ? '#d97706' : '#16a34a';
+
+                return (
+                  <div key={idx} style={{ display: 'flex', gap: 12, paddingLeft: 4, position: 'relative' }}>
+                    <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: color, marginTop: 4, flexShrink: 0 }} />
+                    <div style={{ flex: 1, fontSize: 12.5 }}>
+                      <div style={{ fontWeight: 600, color: 'var(--text-main)', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>
+                          {isCreated && 'Sinh viên gửi đơn khiếu nại'}
+                          {isAssigned && `Admin phân công cho Giảng viên ${evt.meta?.reviewerId || ''}`}
+                          {isResolved && `Giảng viên kết luận phúc khảo (${evt.meta?.status || auditAppeal.status})`}
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>
+                          {evt.createdAt ? new Date(evt.createdAt).toLocaleString('vi-VN') : ''}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 2 }}>
+                        Thực hiện bởi: <strong>{evt.actorId || 'Hệ thống'}</strong>
+                      </div>
+                      {evt.meta?.resolutionNote && (
+                        <div style={{ marginTop: 4, padding: '4px 8px', background: '#f0fdf4', borderRadius: 4, borderLeft: '3px solid #16a34a', fontSize: 11.5 }}>
+                          {evt.meta.resolutionNote}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ marginTop: 20, textAlign: 'right' }}>
+              <button type="button" onClick={() => setAuditAppeal(null)} className="btn btn-secondary btn-sm">
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal Xem Chi Tiet Bai Nop Cho Admin */}
       <SubmissionDetailModal
         isOpen={detailModalOpen}
