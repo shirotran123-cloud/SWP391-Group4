@@ -483,27 +483,28 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   const [taskSubmissions, setTaskSubmissions] = useState<any[]>([]);
 
   const handleOpenDetailModal = (record: StudentSubmissionRecord | any) => {
+    const rec = record || {};
     setSelectedDetailSubmission({
-      submissionId: record.submissionId || 'SUB-LATEST',
-      studentId: record.studentId || studentId,
+      submissionId: rec.submissionId || rec.id || 'SUB-LATEST',
+      studentId: rec.studentId || studentId,
       studentName: studentName,
       assignmentId: selectedTask?.id,
       assignmentTitle: selectedTask?.title,
-      fileName: record.fileName || 'Solution.zip',
-      language: record.language || 'java',
-      submittedAt: record.submittedAt || record.createdAt || new Date().toISOString(),
-      score: record.score ?? record.details?.score,
-      scoreBreakdown: record.scoreBreakdown || record.details?.scoreBreakdown,
-      passedTestcases: record.passedTestcases ?? record.details?.passedTestcases ?? 0,
+      fileName: rec.fileName || 'Solution.zip',
+      language: rec.language || 'java',
+      submittedAt: rec.submittedAt || rec.createdAt || new Date().toISOString(),
+      score: rec.score ?? rec.details?.score,
+      scoreBreakdown: rec.scoreBreakdown || rec.details?.scoreBreakdown,
+      passedTestcases: rec.passedTestcases ?? rec.details?.passedTestcases ?? 0,
       totalTestcases: Math.max(
-        record.totalTestcases ?? record.details?.totalTestcases ?? 0,
+        rec.totalTestcases ?? rec.details?.totalTestcases ?? 0,
         selectedTask?.testCasesCount ?? 0,
       ),
-      testCaseResults: record.testcaseResults ?? record.details?.testcaseResults,
-      executionTimeMs: record.executionTimeMs ?? record.details?.executionTimeMs ?? 185,
-      sha256: record.sha256 || record.sha256Hash,
-      sourceCode: record.sourceCode || record.details?.sourceCode,
-      aiRating: record.aiRating || record.details?.aiRating,
+      testCaseResults: rec.testcaseResults ?? rec.details?.testcaseResults,
+      executionTimeMs: rec.executionTimeMs ?? rec.details?.executionTimeMs ?? 185,
+      sha256: rec.sha256 || rec.sha256Hash,
+      sourceCode: rec.sourceCode || rec.details?.sourceCode,
+      aiRating: rec.aiRating || rec.details?.aiRating,
     });
     setDetailModalOpen(true);
   };
@@ -2217,6 +2218,15 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Modal Xem Chi Tiet Bai Nop Day Du (Code, Testcases & AI) */}
+        <SubmissionDetailModal
+          isOpen={detailModalOpen}
+          onClose={() => setDetailModalOpen(false)}
+          submission={selectedDetailSubmission}
+          apiBaseUrl={apiBaseUrl}
+          onOpenAppeal={onOpenAppeal}
+        />
       </div>
     );
   }
