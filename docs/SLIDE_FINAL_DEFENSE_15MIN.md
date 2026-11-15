@@ -86,10 +86,10 @@
   3. **Tạo k-gram & Băm Winnowing:** Sử dụng cửa sổ trượt $w=10, k=15$ lấy các giá trị băm cực tiểu làm chữ ký số fingerprint.
   4. **Chỉ số tương đồng Ensemble:**
      $$S_{\text{comb}} = 0.65 \times \text{Containment} + 0.35 \times \text{Cosine(AST Histogram)}$$
-* **3 Dải phân loại học thuật (Rule BR-03):**
-  - **$S < 40\%$ (CLEAN):** Mã nguồn độc lập, tự động thông qua.
-  - **$40\% \le S < 70\%$ (SUSPECTED):** Nghi vấn; chuyển giảng viên thẩm định trực quan.
-  - **$S \ge 70\%$ (FLAGGED):** Gắn cờ gian lận, chuyển Hội đồng xử lý.
+* **3 Dải phân loại học thuật chuẩn hóa trên Web (Rule BR-03):**
+  - **$S < 50\%$ (CLEAN / AN TOÀN):** Mã nguồn độc lập, tự động thông qua.
+  - **$50\% \le S < 80\%$ (SUSPECTED / NGHI VẤN):** Cần xem xét; đưa vào danh sách để Giảng viên thẩm định trực quan trên Monaco Diff.
+  - **$S \ge 80\%$ (FLAGGED / ĐẠO VĂN NGHIÊM TRỌNG):** Xác nhận đạo văn theo Rule BR-03, tự động áp dụng **0.0 điểm** toàn bài!
 
 ---
 
