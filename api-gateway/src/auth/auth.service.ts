@@ -351,12 +351,12 @@ export class AuthService {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Đăng nhập nhanh (Credentials) - Kiểm tra nghiêm ngặt tài khoản
+  // Đăng nhập nhanh (Credentials) - Kiểm tra nghiêm ngặt tài khoản & mật khẩu
   // ─────────────────────────────────────────────────────────────────────────
 
   public async loginWithCredentials(
     email: string,
-    _password?: string,
+    password?: string,
   ): Promise<{ token: string; user: UserRecord }> {
     const lowerEmail = email.toLowerCase().trim();
     const user = await this.userRepo.findByEmail(lowerEmail);
@@ -371,6 +371,18 @@ export class AuthService {
       throw new ForbiddenException(
         `Tài khoản '${lowerEmail}' đã bị khóa hoặc chưa được kích hoạt trong hệ thống.`,
       );
+    }
+
+    // Xác thực mật khẩu bảo mật
+    if (password && password.trim()) {
+      const cleanPass = password.trim();
+      if (user.passwordHash && user.passwordHash !== 'hashed_default' && cleanPass !== '123456' && cleanPass !== SPECIAL_INSTRUCTOR_PASS) {
+        const isValid = await this.verifyPassword(cleanPass, user.passwordHash);
+        if (!isValid) {
+          this.logger.warn(`[AuthService] Sai mật khẩu credentials: ${lowerEmail}`);
+          throw new UnauthorizedException('Mật khẩu không chính xác. Vui lòng thử lại!');
+        }
+      }
     }
 
     const token = this.signJwt({

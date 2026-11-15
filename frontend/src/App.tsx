@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { SubmissionView } from './components/SubmissionView';
 import { LiveGradingModal } from './components/LiveGradingModal';
 import { LoginView } from './components/LoginView';
-import { LoginModal } from './components/LoginModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import { LecturerDashboard } from './components/LecturerDashboard';
 import { StudentAppealsView } from './components/StudentAppealsView';
@@ -450,7 +449,6 @@ export function App() {
     };
   }, [currentUser, activeView]);
 
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [steps, setSteps] = useState<GradingStep[]>(initialSteps);
@@ -1717,13 +1715,6 @@ export function App() {
         initialClusterId={plagiarismInitialClusterId}
         initialPair={plagiarismInitialPair}
         crossClusterIndependence={plagiarismCrossClusterIndependence}
-      />
-
-      {/* Login Modal (backup/fallback) */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => setIsLoginModalOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
       />
 
       {/* CHÂN TRANG (FOOTER) THUẦN TIẾNG VIỆT */}

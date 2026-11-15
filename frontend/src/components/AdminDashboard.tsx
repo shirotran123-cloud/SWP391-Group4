@@ -1,9 +1,11 @@
 import { SubmissionDetailModal, type SubmissionDetailData } from './SubmissionDetailModal';
+import { TeamworkAnalyticsView } from './TeamworkAnalyticsView';
 import { useState, useEffect, useCallback } from 'react';
 import {
   Users, Activity, Server, Database, Shield, RefreshCw,
   Trash2, RotateCcw, ChevronDown, ChevronUp, AlertTriangle,
-  CheckCircle, XCircle, Clock, Cpu, BarChart2, Settings, Sparkles
+  CheckCircle, XCircle, Clock, Cpu, BarChart2, Settings, Sparkles,
+  GitCommit
 } from 'lucide-react';
 import { API_BASE_URL as API } from '../config/api';
 import { getSubmissionStatusStyle } from '../utils/statusStyles';
@@ -112,7 +114,7 @@ export function AdminDashboard({ token }: { token: string }) {
     setDetailModalOpen(true);
   };
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'submissions' | 'dlq' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'submissions' | 'dlq' | 'settings' | 'teamwork'>('overview');
   const [expandedDLQ, setExpandedDLQ] = useState<string | null>(null);
   const [actionMsg, setActionMsg] = useState('');
 
@@ -178,6 +180,7 @@ export function AdminDashboard({ token }: { token: string }) {
     { key: 'overview', label: 'Tổng quan', icon: <BarChart2 size={14} /> },
     { key: 'users', label: `Người dùng (${users.length})`, icon: <Users size={14} /> },
     { key: 'submissions', label: `Bài nộp (${submissions.length})`, icon: <Activity size={14} /> },
+    { key: 'teamwork', label: 'Git Teamwork', icon: <GitCommit size={14} /> },
     { key: 'dlq', label: `DLQ ${dlqJobs.length > 0 ? `(${dlqJobs.length})` : ''}`, icon: <AlertTriangle size={14} /> },
     { key: 'settings', label: 'Cài đặt', icon: <Settings size={14} /> },
   ];
@@ -508,6 +511,11 @@ export function AdminDashboard({ token }: { token: string }) {
             </div>
           )}
         </div>
+      )}
+
+      {/* GIT TEAMWORK TAB (PHAN HE 5) */}
+      {activeTab === 'teamwork' && (
+        <TeamworkAnalyticsView token={token} />
       )}
 
       {/* SETTINGS TAB */}
