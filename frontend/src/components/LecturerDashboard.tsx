@@ -159,7 +159,7 @@ const initialCourses: CourseItem[] = [
     courseCode: 'TEST123456',
     courseName: 'Test123456',
     semester: 'Học kỳ Thu 2026',
-    instructorName: 'ThS. Giảng Viên AITA (Demo Gmail)',
+    instructorName: 'ThS. Giảng Viên AITA',
     studentCount: 3,
     assignmentCount: 5,
   },
@@ -1111,7 +1111,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ onOpenDiff
         URL.revokeObjectURL(url);
       } else {
         // Fallback cho bài mẫu demo
-        const sampleCode = `// AITA Code Submission Archive: ${subId}\n// Sinh vien: ${preferredFileName || 'solution.zip'}\n\npublic class Solution {\n    public static void main(String[] args) {\n        System.out.println("AITA Grading Demo - Source Code Extracted");\n    }\n}`;
+        const sampleCode = `// AITA Code Submission Archive: ${subId}\n// Sinh vien: ${preferredFileName || 'solution.zip'}\n\npublic class Solution {\n    public static void main(String[] args) {\n        System.out.println("AITA Automated Grading System - Source Code");\n    }\n}`;
         const blob = new Blob([sampleCode], { type: 'application/zip' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');

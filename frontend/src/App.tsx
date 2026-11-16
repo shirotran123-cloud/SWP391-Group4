@@ -1279,48 +1279,6 @@ export function App() {
     });
   };
 
-  const switchDemoRole = (role: 'STUDENT' | 'INSTRUCTOR' | 'ADMIN') => {
-    let targetUser: User;
-    if (role === 'INSTRUCTOR') {
-      targetUser = {
-        userId: 'GV001',
-        email: 'giangvien.edu@gmail.com',
-        fullName: 'ThS. Giảng Viên AITA',
-        role: 'INSTRUCTOR',
-        token: 'dev_mock_jwt_GV001',
-      };
-      setActiveView('lecturer');
-      navigate({ view: 'lecturer', studentTab: 'submission', taskId: null });
-    } else if (role === 'ADMIN') {
-      targetUser = {
-        userId: 'ADMIN002',
-        email: 'admin.aita@gmail.com',
-        fullName: 'Quản Trị Viên AITA',
-        role: 'ADMIN',
-        token: 'dev_mock_jwt_ADMIN002',
-      };
-      setActiveView('admin');
-      navigate({ view: 'admin', studentTab: 'submission', taskId: null });
-    } else {
-      targetUser = {
-        userId: 'SE170002',
-        email: 'linhcampochia@gmail.com',
-        fullName: 'Linh Campochia',
-        role: 'STUDENT',
-        token: 'dev_mock_jwt_SE170002',
-      };
-      setActiveView('student');
-      navigate({ view: 'student', studentTab: 'submission', taskId: null });
-    }
-    setCurrentUser(targetUser);
-    try {
-      localStorage.setItem('aita_user', JSON.stringify(targetUser));
-      localStorage.setItem('aita_token', targetUser.token || '');
-    } catch (e) {
-      console.warn('Cannot store switched user:', e);
-    }
-  };
-
   // NẾU CHƯA ĐĂNG NHẬP: BẮT BUỘC HIỂN THỊ MÀN HÌNH ĐĂNG NHẬP ĐẦU TIÊN
   if (!currentUser) {
     return (

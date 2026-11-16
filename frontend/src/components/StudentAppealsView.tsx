@@ -32,8 +32,8 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
       // Sample fallback
       setAppeals([
         {
-          appealId: 'APL-001-DEMO',
-          submissionId: 'SUB-SWP391-DEMO',
+          appealId: 'APL-001',
+          submissionId: 'SUB-SWP391-01',
           studentId: studentId || 'SE170000',
           reason: 'Kính gửi Giảng viên, bài của em đã tối ưu O(N log N) bằng QuickSort, mong Thầy xem xét lại điểm Testcase 2.',
           status: 'ACCEPTED',

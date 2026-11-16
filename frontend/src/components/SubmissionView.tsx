@@ -582,7 +582,6 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   const [sha256Checksum, setSha256Checksum] = useState<string | null>(null);
   const [isHashing, setIsHashing] = useState(false);
   const [exceptionType, setExceptionType] = useState<"OVERSIZE" | "EXPIRED" | null>(null);
-  const [isDeadlineSimulatedExpired, setIsDeadlineSimulatedExpired] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('auto');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -863,8 +862,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
   };
 
   const activeDeadline = selectedTask?.deadline || task?.deadline;
-  const isActuallyExpired = activeDeadline ? new Date() > new Date(activeDeadline) : false;
-  const isExpired = isActuallyExpired || isDeadlineSimulatedExpired;
+  const isExpired = activeDeadline ? new Date() > new Date(activeDeadline) : false;
 
   const processFile = async (file: File) => {
     setErrorMessage(null);
@@ -924,32 +922,6 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
       void processFile(e.target.files[0]);
-    }
-  };
-
-  const triggerDemoOversize = () => {
-    setSelectedFile(null);
-    setSha256Checksum(null);
-    const currentTask = selectedTask || task;
-    setErrorMessage(
-      `[413 Payload Too Large - Ngoại Lệ 1] Dung lượng file (12.45 MB) vượt quá giới hạn tối đa ${currentTask?.maxSizeMb || 10} MB! Đã đánh chặn ngay tại Client-side trước khi truyền tải qua mạng.`,
-    );
-    setExceptionType('OVERSIZE');
-  };
-
-  const toggleDemoExpired = () => {
-    const nextState = !isDeadlineSimulatedExpired;
-    setIsDeadlineSimulatedExpired(nextState);
-    setSelectedFile(null);
-    setSha256Checksum(null);
-    if (nextState) {
-      setErrorMessage(
-        'Cổng nộp bài đã đóng do quá hạn chót Deadline. Không cho phép nộp bổ sung nhằm bảo toàn tính toàn vẹn học thuật.',
-      );
-      setExceptionType('EXPIRED');
-    } else {
-      setErrorMessage(null);
-      setExceptionType(null);
     }
   };
 
@@ -1027,68 +999,6 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
           </button>
         </div>
 
-        {/* Thanh Demo Ngoại Lệ cho Hội đồng đánh giá */}
-        <div
-          style={{
-            padding: '12px 18px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(37, 99, 235, 0.07)',
-            border: '1px solid rgba(37, 99, 235, 0.14)',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '10px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e40af', fontSize: '13px', fontWeight: 700 }}>
-            <Bug size={16} />
-            <span>Kịch bản Demo Đường Ngoại Lệ (Milestone 2 Defense):</span>
-          </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button
-              type="button"
-              onClick={triggerDemoOversize}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                backgroundColor: exceptionType === 'OVERSIZE' ? 'rgba(11, 18, 32, 0.1)' : 'rgba(11, 18, 32, 0.05)',
-                border: '1px solid rgba(11, 18, 32, 0.13)',
-                color: 'var(--text-main)',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              Demo File &gt; 10MB
-            </button>
-            <button
-              type="button"
-              onClick={toggleDemoExpired}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '8px',
-                backgroundColor: isDeadlineSimulatedExpired ? 'rgba(11, 18, 32, 0.1)' : 'rgba(11, 18, 32, 0.05)',
-                border: '1px solid rgba(11, 18, 32, 0.13)',
-                color: 'var(--text-main)',
-                fontSize: '12px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
-            >
-              {isDeadlineSimulatedExpired ? <RefreshCw size={12} /> : <Lock size={12} />}
-              {isDeadlineSimulatedExpired ? 'Khôi phục Deadline' : 'Demo Quá Deadline'}
-            </button>
-          </div>
-        </div>
-
         {/* Khung Thông Tin Bài Tập & Đếm Ngược Deadline */}
         <div className="glass-panel" style={{ padding: '24px', marginBottom: '20px' }}>
           {/* Hàng 1: Tiêu Đề, Mã Môn & Đồng Hồ Đếm Ngược */}
@@ -1126,7 +1036,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
 
             {/* Đồng hồ đếm ngược thời gian thực */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px', minWidth: '220px' }}>
-              <CountdownTimer deadline={isDeadlineSimulatedExpired ? new Date(Date.now() - 3600000).toISOString() : selectedTask.deadline} />
+              <CountdownTimer deadline={selectedTask.deadline} />
               <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                 <Clock size={12} color="var(--blue-400)" />
                 <span>Hạn nộp: <strong style={{ color: 'var(--text-muted)', fontWeight: 500 }}>{new Date(selectedTask.deadline).toLocaleString('vi-VN')}</strong></span>

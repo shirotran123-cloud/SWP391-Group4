@@ -79,7 +79,7 @@ export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
           updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
         },
         {
-          appealId: 'APL-101-DEMO',
+          appealId: 'APL-101',
           submissionId: 'SUB-SE170000-01',
           studentId: 'SE170000',
           reason: 'Kính gửi Thầy, bài của em đã tối ưu O(N log N) bằng thuật toán MergeSort nhưng AI chấm điểm SOLID bị trừ 1.5đ ở hàm hiển thị, mong Thầy chấm lại.',
@@ -88,7 +88,7 @@ export const LecturerAppealsManager: React.FC<LecturerAppealsManagerProps> = ({
           updatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
         },
         {
-          appealId: 'APL-102-DEMO',
+          appealId: 'APL-102',
           submissionId: 'SUB-SE170456-02',
           studentId: 'SE170456',
           reason: 'Em xin phúc khảo Testcase 2, em chạy trên Ubuntu local thì PASS nhưng server báo timeout 2.0s.',
