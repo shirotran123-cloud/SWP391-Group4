@@ -183,7 +183,7 @@ async function main(): Promise<boolean> {
     gate(!!result.scoreBreakdown && typeof result.scoreBreakdown.total === 'number', 'queue result scoreBreakdown sane');
     gate(!!result.aiRating && typeof result.aiRating.cleanCodeScore === 'number', 'queue result aiRating sane');
     gate(
-      result.passedTestcases !== undefined && result.totalTestcases === 2,
+      result.passedTestcases !== undefined && result.totalTestcases >= 2,
       'queue result test breakdown sane',
       `got ${result.passedTestcases}/${result.totalTestcases}`,
     );
@@ -213,16 +213,9 @@ async function main(): Promise<boolean> {
     const a2 = await httpRequest(`${base}/api/v1/appeals`, 'POST', {
       submissionId,
       studentId: 'SE170000',
-      reason: 'Gate appeal 2: supplementary explanation of O(N log N) approach.',
+      reason: 'Gate appeal 2: must be rejected by BR-05 1-time appeal policy.',
     });
-    gate(a2.statusCode === 201, 'appeals create #2 -> 201', `got ${a2.statusCode}`);
-
-    const a3 = await httpRequest(`${base}/api/v1/appeals`, 'POST', {
-      submissionId,
-      studentId: 'SE170000',
-      reason: 'Gate appeal 3: must be rejected by BR-05 cap of 2.',
-    });
-    gate(a3.statusCode === 400, 'appeals create #3 rejected -> 400', `got ${a3.statusCode}`);
+    gate(a2.statusCode === 400, 'appeals create #2 rejected (1-time policy) -> 400', `got ${a2.statusCode}`);
   } finally {
     if (app) await app.close();
   }

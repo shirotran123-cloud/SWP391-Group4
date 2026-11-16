@@ -89,7 +89,29 @@ int calculate(int x) {
   const subA: CodeSubmission = {
     submissionId: "SUB_A_01",
     studentName: "Student A",
-    sourceCode: pythonCode,
+    sourceCode: `
+def add_numbers(a, b):
+    # This is a comment
+    result = a + b
+    if result > 100:
+        result = result - 10
+    elif result > 50:
+        result = result - 5
+    else:
+        result = result + 1
+    for i in range(10):
+        result += i
+        if result % 2 == 0:
+            result = result // 2
+        else:
+            result = result * 3 + 1
+    while result > 1000:
+        result -= 100
+    step_a = result + 10
+    step_b = step_a * 3
+    final_val = step_b * 2
+    return final_val
+`,
     language: "python",
   };
 
@@ -100,7 +122,24 @@ int calculate(int x) {
 def sum_vals(x, y):
     // Renamed variables and function name
     total = x + y
-    return total
+    if total > 100:
+        total = total - 10
+    elif total > 50:
+        total = total - 5
+    else:
+        total = total + 1
+    for idx in range(10):
+        total += idx
+        if total % 2 == 0:
+            total = total // 2
+        else:
+            total = total * 3 + 1
+    while total > 1000:
+        total -= 100
+    part_1 = total + 10
+    part_2 = part_1 * 3
+    out_val = part_2 * 2
+    return out_val
 `,
     language: "python",
   };

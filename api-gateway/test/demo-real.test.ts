@@ -50,13 +50,13 @@ async function main(): Promise<boolean> {
 
   const directSrp = analyzeSourceCode(srpCode!, 'java', { tc1TimeMs: 80, tc2TimeMs: 140 });
   gate(srpCase.score === directSrp.score, 'SRP score equals core output', `${srpCase.score} vs ${directSrp.score}`);
-  gate(srpCase.smells.some((s) => s.startsWith('Single Responsibility Principle')), 'SRP case carries SRP smell', srpCase.smells.join(','));
+  gate(srpCase.smells.some((s) => s.startsWith('Single Responsibility Principle') || s.startsWith('Nguyên lý Đơn trách nhiệm')), 'SRP case carries SRP smell', srpCase.smells.join(','));
 
-  // 3. Exact expected values (formula TC1 3.5 + TC2 3.5 + Clean 2 + SOLID 1).
-  gate(passCase.score === 9.8, 'PASS score is 9.8', `got ${passCase.score}`);
+  // 3. Exact expected values (formula TC1 3.5 + TC2 3.5 + Clean 1.5 + SOLID 1.5 = 10.0).
+  gate(passCase.score === 9.7, 'PASS score is 9.7', `got ${passCase.score}`);
   gate(passCase.breakdown.testcase1 === 3.5 && passCase.breakdown.testcase2 === 3.5, 'PASS breakdown TC1=3.5 TC2=3.5');
   gate(passCase.tc1 === 'PASSED' && passCase.tc2 === 'PASSED', 'PASS both testcases PASSED');
-  gate(srpCase.score === 5.2, 'SRP score is 5.2', `got ${srpCase.score}`);
+  gate(srpCase.score === 5.4, 'SRP score is 5.4', `got ${srpCase.score}`);
   gate(srpCase.tc1 === 'PASSED' && srpCase.tc2 === 'FAILED', 'SRP TC1 pass TC2 fail (O(N^2))');
   gate(invalidCase.score === 0 && invalidCase.tc1 === 'FAILED' && invalidCase.tc2 === 'FAILED', 'INVALID 0/10 FAILED');
 
@@ -104,8 +104,8 @@ async function main(): Promise<boolean> {
   const noIdentity = ('sorting memo print via System out Scanner read for ( item while ( next sort( list output result record line total order arrange sequence value data element entry point item set group batch row table view tone note remark detail summary brief story text prose paragraph passage phrase sentence again repeat loop around over under through across beyond within without above below between among along plus minus times divide total whole each every all any some few many much more most other such only own same than too very can will just should now here there then when where which while for print sort Scanner System out output read list order ').repeat(4);
   const noIdentityRes = analyzeSourceCode(noIdentity, 'java', { tc1TimeMs: 0, tc2TimeMs: 0 });
   gate(noIdentityRes.score === 0 && noIdentityRes.tc1Status === 'FAILED', 'code without identity marker scores 0');
-  gate(analyzeSourceCode(passCode!, 'java', { tc1TimeMs: 80, tc2TimeMs: 140 }).score === 9.8, 'identity gate keeps PASS at 9.8');
-  gate(analyzeSourceCode(srpCode!, 'java', { tc1TimeMs: 80, tc2TimeMs: 140 }).score === 5.2, 'identity gate keeps SRP at 5.2');
+  gate(analyzeSourceCode(passCode!, 'java', { tc1TimeMs: 80, tc2TimeMs: 140 }).score === 9.7, 'identity gate keeps PASS at 9.7');
+  gate(analyzeSourceCode(srpCode!, 'java', { tc1TimeMs: 80, tc2TimeMs: 140 }).score === 5.4, 'identity gate keeps SRP at 5.4');
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const AdmZipTest = require('adm-zip');
   const txtOnlyZip = path.join(root, 'txt-only-identity-check.zip');

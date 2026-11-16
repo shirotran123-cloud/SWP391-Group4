@@ -1,4 +1,4 @@
-﻿# A Comparative Study of AST-Based Winnowing and Tree Edit Distance in Detecting GenAI-Obfuscated Source Code
+# A Comparative Study of AST-Based Winnowing and Tree Edit Distance in Detecting GenAI-Obfuscated Source Code
 
 **Group 4 — Software Engineering Department, FPT University Quy Nhon Campus**  
 *Course: SWP391 - Software Development Project (Research-Based Learning Track, 10 Weeks)*  
@@ -132,23 +132,23 @@ Each $k$-gram is hashed using a 64-bit non-cryptographic Murmur3/FNV-1a hash to 
 A sliding window of width $w$ selects the minimum hash value. The resulting set of unique fingerprint hashes forms the document signature:
 $$\mathcal{F}(D) = \{ (h, \text{span}) \mid h \text{ is selected by Winnowing over } D \}$$
 
-#### Stage 4: Ensemble Similarity Metric
-To mitigate false positives arising from identical length disparities, AITA computes an ensemble score combining **Containment** and **AST Token Histogram Cosine Similarity**:
+#### Stage 4: Asymmetric Containment & Template Filtering Metric
+To mitigate false positives arising from instructor starter code and dead-code padding disparities, AITA filters out baseline template hashes $\mathcal{F}(T)$ and computes **Maximum Asymmetric Containment ($S_{\max}$)** combined with presentation quirk analysis:
 
-1. **Jaccard Containment:**
-   $$C(A, B) = \frac{|\mathcal{F}(A) \cap \mathcal{F}(B)|}{\min(|\mathcal{F}(A)|, |\mathcal{F}(B)|)} \times 100\%$$
-2. **AST Token Vector Cosine Similarity:**
-   $$\cos(\mathbf{v}_A, \mathbf{v}_B) = \frac{\mathbf{v}_A \cdot \mathbf{v}_B}{\|\mathbf{v}_A\| \|\mathbf{v}_B\|} \times 100\%$$
-3. **Composite Similarity Rate ($S_{\text{comb}}$):**
-   $$S_{\text{comb}} = 0.65 \cdot C(A, B) + 0.35 \cdot \cos(\mathbf{v}_A, \mathbf{v}_B)$$
+1. **Template-Filtered Fingerprint Set:**
+   $$\mathcal{F}^*(D) = \mathcal{F}(D) \setminus \mathcal{F}(T)$$
+2. **Directional Containment Ratios:**
+   $$C(A \mid B) = \frac{|\mathcal{F}^*(A) \cap \mathcal{F}^*(B)|}{|\mathcal{F}^*(A)|} \times 100\%, \quad C(B \mid A) = \frac{|\mathcal{F}^*(A) \cap \mathcal{F}^*(B)|}{|\mathcal{F}^*(B)|} \times 100\%$$
+3. **Containment-First Similarity Rate ($S_{\max}$):**
+   $$S_{\max} = \max\big(C(A \mid B), C(B \mid A)\big)$$
 
-If containment $C(A, B) \ge 99.0\%$, the system triggers a short-circuit verdict assigning $S_{\text{comb}} = 100.0\%$, recognizing complete code transposition.
+Furthermore, a **Short-Submission Guard ($\le 20$ non-empty lines)** prevents trivial boilerplate solutions from triggering automated zero-score penalties unless corroborated by $\ge 2$ identical structural quirks.
 
 ### B. Institutional Classification Bands
 In accordance with Rule BR-03 and IEEE autograding guidelines, submissions are triaged into three action bands:
-* **Clean Band ($S < 40.0\%$):** Independent work; auto-cleared.
-* **Suspected Band ($40.0\% \le S < 70.0\%$):** Ambiguous overlap; queued for instructor inspection in the Monaco Diff UI.
-* **Flagged Plagiarism Band ($S \ge 70.0\%$):** Formal flag registered in `plagiarism_reports` table; triggers academic misconduct audit.
+* **Clean Band ($S < 50.0\%$):** Independent work; auto-cleared.
+* **Suspected Band ($50.0\% \le S < 80.0\%$):** Ambiguous overlap or short-submission match; queued for instructor inspection in the Monaco Diff UI.
+* **Flagged Plagiarism Band ($S \ge 80.0\%$):** Confirmed plagiarism registered in `plagiarism_reports` table; triggers automated $0.0$ score enforcement under Rule BR-03.
 
 ---
 
@@ -176,18 +176,18 @@ To benchmark the system under controlled adversarial conditions, we utilized the
 All experiments were executed using the deterministic benchmark runner (`run-ast-benchmark.ts`) configured with $k=15, w=10$, and threshold $\tau = 70.0\%$.
 
 #### TABLE I: EMPIRICAL BENCHMARK RESULTS ACROSS 10 ADVERSARIAL PAIRS ($k=15, w=10, \tau=70.0\%$)
-| Pair ID | Obfuscation Archetype | Ground Truth | Measured Similarity ($S_{\text{comb}}$) | Containment | Flagged ($\ge 70\%$) | Empirical Verdict |
+| Pair ID | Obfuscation Archetype | Ground Truth | Measured Similarity ($S_{\max}$) | Jaccard Overlap | Flagged ($\ge 70\%$) | Empirical Verdict |
 | :---: | :--- | :---: | :---: | :---: | :---: | :---: |
 | **P01** | Identifier & Variable Renaming | Plagiarized | **100.00%** | 100.00% | Yes | **PASS (True Positive)** |
-| **P02** | Loop Restructuring (`for` $\to$ `while`) | Plagiarized | **85.26%** | 77.32% | Yes | **PASS (True Positive)** |
-| **P03** | Dead Code & Comment Injection | Plagiarized | **83.49%** | 74.60% | Yes | **PASS (True Positive)** |
-| **P04** | Function Extraction / Inlining | Plagiarized | **78.99%** | 67.68% | Yes | **PASS (True Positive)** |
+| **P02** | Loop Restructuring (`for` $\to$ `while`) | Plagiarized | **75.00%** | 60.00% | Yes | **PASS (True Positive)** |
+| **P03** | Dead Code & Comment Injection | Plagiarized | **100.00%** | 66.67% | Yes | **PASS (True Positive)** |
+| **P04** | Function Extraction / Inlining | Plagiarized | **100.00%** | 75.00% | Yes | **PASS (True Positive)** |
 | **P05** | Branch Inversion & Condition Swap | Plagiarized | **100.00%** | 100.00% | Yes | **PASS (True Positive)** |
-| **P06** | Expression & Operator Rewriting | Plagiarized | **79.51%** | 68.48% | Yes | **PASS (True Positive)** |
+| **P06** | Expression & Operator Rewriting | Plagiarized | **88.24%** | 78.95% | Yes | **PASS (True Positive)** |
 | **P07** | Formatting & Indentation Scrambling | Plagiarized | **100.00%** | 100.00% | Yes | **PASS (True Positive)** |
-| **P08** | ChatGPT-4o Structural Refactor | Plagiarized | **74.39%** | 60.60% | Yes | **PASS (True Positive)** |
-| **P09** | Compound Advanced Obfuscation | Plagiarized | **54.07%** | 29.34% | No | **FAIL (False Negative)** |
-| **P10** | Negative Control (Merge vs QuickSort) | Clean | **51.97%** | 26.11% | No | **PASS (True Negative)** |
+| **P08** | ChatGPT-4o Structural Refactor | Plagiarized | **100.00%** | 88.89% | Yes | **PASS (True Positive)** |
+| **P09** | Compound Advanced Obfuscation | Plagiarized | **0.00%** | 0.00% | No | **FAIL (False Negative)** |
+| **P10** | Negative Control (Merge vs QuickSort) | Clean | **0.00%** | 0.00% | No | **PASS (True Negative)** |
 
 ### B. Statistical Classification Performance
 From the empirical results in Table I, the performance matrix is computed as follows:
@@ -258,7 +258,7 @@ A critical contribution of this research is defending why the threshold should n
 To comply with academic assessment standards, AITA enforces three governance rules:
 1. **No Automated Grade Zeroing Without Human Audit:** A flagged score ($\ge 70\%$) does not immediately zero out a student's mark; it marks the submission as `FLAGGED_PLAGIARISM` and freezes credit pending instructor review.
 2. **Visual Token-Span Inspection:** Faculty utilize the integrated Monaco Diff Viewer, which renders side-by-side color-coded blocks generated from the stored `matchedTokensJson` coordinates.
-3. **Formal Student Appeal Path (UC-06):** Under rule BR-05, students retain the right to submit up to two formal appeals within 48 hours, compelling an independent faculty re-evaluation.
+3. **Formal Student Appeal Path (UC-06):** Under rule BR-05, students retain the right to submit one formal appeal per submission within 48 hours, routed via Conflict-of-Interest prevention and SHA-256 integrity verification to an independent faculty reviewer.
 
 ---
 

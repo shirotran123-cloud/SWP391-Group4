@@ -89,12 +89,11 @@ async function main(): Promise<boolean> {
     gate(!!r1 && r1.status === 'PENDING', 'appeals create #1 PENDING');
     const resolved = await appeals.resolveAppeal(r1.appealId, { status: 'ACCEPTED', reviewerId: 'GV001', resolutionNote: 'Coverage resolution note.', adjustedScore: 8.5 } as any);
     gate(resolved.status === 'ACCEPTED', 'appeals resolve ACCEPTED');
-    await appeals.createAppeal({ submissionId: subId, studentId: 'SE170000', reason: 'Coverage appeal number two, supplementary detail.' } as any);
-    let thirdBlocked = false;
+    let secondBlocked = false;
     try {
-      await appeals.createAppeal({ submissionId: subId, studentId: 'SE170000', reason: 'Coverage appeal number three must be blocked.' } as any);
-    } catch { thirdBlocked = true; }
-    gate(thirdBlocked, 'appeals BR-05 third create blocked');
+      await appeals.createAppeal({ submissionId: subId, studentId: 'SE170000', reason: 'Coverage appeal number two on same submission must be blocked under 1-time policy.' } as any);
+    } catch { secondBlocked = true; }
+    gate(secondBlocked, 'appeals BR-05 second create blocked (1-time appeal policy)');
 
     // ── Teamwork: free-rider flag both sides ──
     const good = await teamwork.recordMetric({ classId: 'COV-CLASS', studentId: `COV-S-${ts}`, commitCount: 9, linesAdded: 400, linesDeleted: 40, contributionPct: 30 });

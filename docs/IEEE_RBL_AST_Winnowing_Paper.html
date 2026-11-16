@@ -552,24 +552,24 @@
 <div class="math-block"><i>g</i><sub><i>i</i></sub> = &lang; <i>t</i><sub><i>i</i></sub>, t<sub>i+1</sub>, ..., t<sub>i+k-1</sub> &rang;</div><p>Each <span class="math-inline">k</span>-gram is hashed using a 64-bit non-cryptographic Murmur3/FNV-1a hash to produce an integer value <span class="math-inline">h(<i>g</i><sub><i>i</i></sub>) &isin; [0, 2<sup>64</sup>-1]</span>.</p>
 <h4>Stage 3: Sliding Window Fingerprint Selection</h4>
 <p>A sliding window of width <span class="math-inline">w</span> selects the minimum hash value. The resulting set of unique fingerprint hashes forms the document signature:</p>
-<div class="math-block">&Fscr;(D) = { (h, span) | h  is selected by Winnowing over  D }</div><h4>Stage 4: Ensemble Similarity Metric</h4>
-<p>To mitigate false positives arising from identical length disparities, AITA computes an ensemble score combining <strong>Containment</strong> and <strong>AST Token Histogram Cosine Similarity</strong>:</p>
+<div class="math-block">&Fscr;(D) = { (h, span) | h  is selected by Winnowing over  D }</div><h4>Stage 4: Asymmetric Containment &amp; Template Filtering Metric</h4>
+<p>To mitigate false positives arising from instructor starter code and dead-code padding disparities, AITA filters out baseline template hashes <span class="math-inline">&Fscr;(T)</span> and computes <strong>Maximum Asymmetric Containment (<span class="math-inline">S<sub>max</sub></span>)</strong> combined with presentation quirk analysis:</p>
 <ol>
-<li><strong>Jaccard Containment:</strong></li>
+<li><strong>Template-Filtered Fingerprint Set:</strong></li>
 </ol>
-<div class="math-block">C(A, B) = <span class="fraction"><span class="top">|&Fscr;(A) &cap; &Fscr;(B)|</span><span class="bottom">min(|&Fscr;(A)|, |&Fscr;(B)|)</span></span> &times; 100%</div><ol start="2">
-<li><strong>AST Token Vector Cosine Similarity:</strong></li>
+<div class="math-block">&Fscr;*(D) = &Fscr;(D) \ &Fscr;(T)</div><ol start="2">
+<li><strong>Directional Containment Ratios:</strong></li>
 </ol>
-<div class="math-block">cos(<b>v</b>_A, <b>v</b>_B) = <span class="fraction"><span class="top"><b>v</b>_A &middot; <b>v</b>_B</span><span class="bottom">&Vert;<b>v</b>_A&Vert; &Vert;<b>v</b>_B&Vert;</span></span> &times; 100%</div><ol start="3">
-<li><strong>Composite Similarity Rate (<span class="math-inline">S<sub>comb</sub></span>):</strong></li>
+<div class="math-block">C(A | B) = <span class="fraction"><span class="top">|&Fscr;*(A) &cap; &Fscr;*(B)|</span><span class="bottom">|&Fscr;*(A)|</span></span> &times; 100%, &emsp; C(B | A) = <span class="fraction"><span class="top">|&Fscr;*(A) &cap; &Fscr;*(B)|</span><span class="bottom">|&Fscr;*(B)|</span></span> &times; 100%</div><ol start="3">
+<li><strong>Containment-First Similarity Rate (<span class="math-inline">S<sub>max</sub></span>):</strong></li>
 </ol>
-<div class="math-block">S<sub>comb</sub> = 0.65 &middot; C(A, B) + 0.35 &middot; cos(<b>v</b>_A, <b>v</b>_B)</div><p>If containment <span class="math-inline">C(A, B) &ge; 99.0%</span>, the system triggers a short-circuit verdict assigning <span class="math-inline">S<sub>comb</sub> = 100.0%</span>, recognizing complete code transposition.</p>
+<div class="math-block">S<sub>max</sub> = max(C(A | B), C(B | A))</div><p>Furthermore, a <strong>Short-Submission Guard (<span class="math-inline">&le; 20</span> non-empty lines)</strong> prevents trivial boilerplate solutions from triggering automated zero-score penalties unless corroborated by <span class="math-inline">&ge; 2</span> identical structural quirks.</p>
 <h3>B. Institutional Classification Bands</h3>
 <p>In accordance with Rule BR-03 and IEEE autograding guidelines, submissions are triaged into three action bands:</p>
 <ul>
-<li><strong>Clean Band (<span class="math-inline">S &lt; 40.0%</span>):</strong> Independent work; auto-cleared.</li>
-<li><strong>Suspected Band (<span class="math-inline">40.0% &le; S &lt; 70.0%</span>):</strong> Ambiguous overlap; queued for instructor inspection in the Monaco Diff UI.</li>
-<li><strong>Flagged Plagiarism Band (<span class="math-inline">S &ge; 70.0%</span>):</strong> Formal flag registered in <code>plagiarism_reports</code> table; triggers academic misconduct audit.</li>
+<li><strong>Clean Band (<span class="math-inline">S &lt; 50.0%</span>):</strong> Independent work; auto-cleared.</li>
+<li><strong>Suspected Band (<span class="math-inline">50.0% &le; S &lt; 80.0%</span>):</strong> Ambiguous overlap or short-submission match; queued for instructor inspection in the Monaco Diff UI.</li>
+<li><strong>Flagged Plagiarism Band (<span class="math-inline">S &ge; 80.0%</span>):</strong> Confirmed plagiarism registered in <code>plagiarism_reports</code> table; triggers automated 0.0 score enforcement under Rule BR-03.</li>
 </ul>
 
 <h2>IV. EXPERIMENTAL BENCHMARK &amp; EVALUATION</h2>
@@ -597,8 +597,8 @@
 <th align="center">Pair ID</th>
 <th align="left">Obfuscation Archetype</th>
 <th align="center">Ground Truth</th>
-<th align="center">Measured Similarity (<span class="math-inline">S<sub>comb</sub></span>)</th>
-<th align="center">Containment</th>
+<th align="center">Measured Similarity (<span class="math-inline">S<sub>max</sub></span>)</th>
+<th align="center">Jaccard Overlap</th>
 <th align="center">Flagged (<span class="math-inline">&ge; 70%</span>)</th>
 <th align="center">Empirical Verdict</th>
 </tr>
@@ -616,8 +616,8 @@
 <td align="center"><strong>P02</strong></td>
 <td align="left">Loop Restructuring (<code>for</code> <span class="math-inline">&rarr;</span> <code>while</code>)</td>
 <td align="center">Plagiarized</td>
-<td align="center"><strong>85.26%</strong></td>
-<td align="center">77.32%</td>
+<td align="center"><strong>75.00%</strong></td>
+<td align="center">60.00%</td>
 <td align="center">Yes</td>
 <td align="center"><strong>PASS (True Positive)</strong></td>
 </tr>
@@ -625,8 +625,8 @@
 <td align="center"><strong>P03</strong></td>
 <td align="left">Dead Code &amp; Comment Injection</td>
 <td align="center">Plagiarized</td>
-<td align="center"><strong>83.49%</strong></td>
-<td align="center">74.60%</td>
+<td align="center"><strong>100.00%</strong></td>
+<td align="center">66.67%</td>
 <td align="center">Yes</td>
 <td align="center"><strong>PASS (True Positive)</strong></td>
 </tr>
@@ -634,8 +634,8 @@
 <td align="center"><strong>P04</strong></td>
 <td align="left">Function Extraction / Inlining</td>
 <td align="center">Plagiarized</td>
-<td align="center"><strong>78.99%</strong></td>
-<td align="center">67.68%</td>
+<td align="center"><strong>100.00%</strong></td>
+<td align="center">75.00%</td>
 <td align="center">Yes</td>
 <td align="center"><strong>PASS (True Positive)</strong></td>
 </tr>
@@ -652,8 +652,8 @@
 <td align="center"><strong>P06</strong></td>
 <td align="left">Expression &amp; Operator Rewriting</td>
 <td align="center">Plagiarized</td>
-<td align="center"><strong>79.51%</strong></td>
-<td align="center">68.48%</td>
+<td align="center"><strong>88.24%</strong></td>
+<td align="center">78.95%</td>
 <td align="center">Yes</td>
 <td align="center"><strong>PASS (True Positive)</strong></td>
 </tr>
@@ -670,8 +670,8 @@
 <td align="center"><strong>P08</strong></td>
 <td align="left">ChatGPT-4o Structural Refactor</td>
 <td align="center">Plagiarized</td>
-<td align="center"><strong>74.39%</strong></td>
-<td align="center">60.60%</td>
+<td align="center"><strong>100.00%</strong></td>
+<td align="center">88.89%</td>
 <td align="center">Yes</td>
 <td align="center"><strong>PASS (True Positive)</strong></td>
 </tr>
@@ -679,8 +679,8 @@
 <td align="center"><strong>P09</strong></td>
 <td align="left">Compound Advanced Obfuscation</td>
 <td align="center">Plagiarized</td>
-<td align="center"><strong>54.07%</strong></td>
-<td align="center">29.34%</td>
+<td align="center"><strong>0.00%</strong></td>
+<td align="center">0.00%</td>
 <td align="center">No</td>
 <td align="center"><strong>FAIL (False Negative)</strong></td>
 </tr>
@@ -688,8 +688,8 @@
 <td align="center"><strong>P10</strong></td>
 <td align="left">Negative Control (Merge vs QuickSort)</td>
 <td align="center">Clean</td>
-<td align="center"><strong>51.97%</strong></td>
-<td align="center">26.11%</td>
+<td align="center"><strong>0.00%</strong></td>
+<td align="center">0.00%</td>
 <td align="center">No</td>
 <td align="center"><strong>PASS (True Negative)</strong></td>
 </tr>
@@ -801,7 +801,7 @@
 <ol>
 <li><strong>No Automated Grade Zeroing Without Human Audit:</strong> A flagged score (<span class="math-inline">&ge; 70%</span>) does not immediately zero out a student&#39;s mark; it marks the submission as <code>FLAGGED_PLAGIARISM</code> and freezes credit pending instructor review.</li>
 <li><strong>Visual Token-Span Inspection:</strong> Faculty utilize the integrated Monaco Diff Viewer, which renders side-by-side color-coded blocks generated from the stored <code>matchedTokensJson</code> coordinates.</li>
-<li><strong>Formal Student Appeal Path (UC-06):</strong> Under rule BR-05, students retain the right to submit up to two formal appeals within 48 hours, compelling an independent faculty re-evaluation.</li>
+<li><strong>Formal Student Appeal Path (UC-06):</strong> Under rule BR-05, students retain the right to submit one formal appeal per submission within 48 hours, routed via Conflict-of-Interest prevention and SHA-256 integrity verification to an independent faculty reviewer.</li>
 </ol>
 
 <h2>VIII. CONCLUSION &amp; FUTURE WORK</h2>
