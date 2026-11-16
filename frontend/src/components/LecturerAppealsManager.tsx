@@ -295,8 +295,8 @@ public class Solution {
 
     const formattedTestcases: TestCaseItem[] | null = rawTestcases
       ? rawTestcases.map((tr: any, idx: number): TestCaseItem => ({
-          id: `TC-${String(idx + 1).padStart(2, '0')}`,
-          title: `Test Case ${idx + 1}: ${tr.isBoundary ? 'Trường hợp biên / Tải dữ liệu lớn' : 'Dữ liệu đầu vào tiêu chuẩn'}`,
+          id: `#${String(idx + 1).padStart(2, '0')}`,
+          title: `Kiểm thử #${idx + 1}: ${tr.isBoundary ? 'Trường hợp biên / Tải dữ liệu lớn' : 'Dữ liệu đầu vào tiêu chuẩn'}`,
           input: tr.input || `Testcase Input #${idx + 1}`,
           expected: tr.expectedOutput || 'Expected Output',
           actual: tr.actualOutput || (tr.verdict === 'PASSED' ? tr.expectedOutput : (tr.error || 'Lỗi thực thi / Sai lệch đầu ra')),
@@ -312,7 +312,7 @@ public class Solution {
     const testcases: TestCaseItem[] = formattedTestcases || (isInvalid
       ? [
           {
-            id: 'TC-01',
+            id: '#01',
             title: 'Mẫu I/O cơ bản (Standard Input / Output)',
             input: 'Standard Test Input Data',
             expected: 'Standard Test Expected Output',
@@ -324,7 +324,7 @@ public class Solution {
             maxScore: 3.5,
           },
           {
-            id: 'TC-02',
+            id: '#02',
             title: 'Trường hợp biên & Tải lớn (Boundary & Scale)',
             input: 'Boundary Test Input Data',
             expected: 'Boundary Test Expected Output',
@@ -338,7 +338,7 @@ public class Solution {
         ]
       : [
           {
-            id: 'TC-01',
+            id: '#01',
             title: 'Mẫu I/O cơ bản (Standard Input / Output)',
             input: 'Standard Test Input Data',
             expected: 'Standard Test Expected Output',
@@ -350,7 +350,7 @@ public class Solution {
             maxScore: 3.5,
           },
           {
-            id: 'TC-02',
+            id: '#02',
             title: 'Trường hợp biên & Tải lớn (Boundary & Scale)',
             input: 'Boundary Test Input Data',
             expected: 'Boundary Test Expected Output',
@@ -1058,7 +1058,7 @@ public class Solution {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{ fontSize: '12px', fontWeight: 600, padding: '2px 8px', borderRadius: '6px', backgroundColor: 'rgba(11, 18, 32, 0.05)', color: 'var(--blue-200)', fontFamily: 'var(--font-mono)' }}>
-                            {tc.id}
+                            {String(tc.id || '').replace(/^TC-?/i, '#')}
                           </span>
                           <strong style={{ fontSize: '13.5px', color: 'var(--text-main)' }}>{tc.title}</strong>
                         </div>

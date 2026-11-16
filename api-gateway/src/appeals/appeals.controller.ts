@@ -24,7 +24,7 @@ export class AppealsController {
     const appeal = await this.appealsService.createAppeal(dto);
     return {
       statusCode: HttpStatus.CREATED,
-      message: 'Đơn phúc khảo đã được tiếp nhận thành công (UC-06).',
+      message: 'Đơn phúc khảo đã được tiếp nhận thành công.',
       data: appeal,
     };
   }

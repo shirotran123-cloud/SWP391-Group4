@@ -666,7 +666,7 @@ export const PlagiarismDiffModal: React.FC<PlagiarismDiffModalProps> = ({
               </span>
             </div>
             <p style={{ fontSize: '11.5px', color: 'var(--text-dim)', margin: '2px 0 0 0' }}>
-              Báo cáo nội bộ Giảng viên / Bộ môn (BR-04) · Số đo AST tách biệt với kết luận, hiển thị lựa chọn cách viết và dấu vết trình bày
+              Báo cáo nội bộ Giảng viên / Bộ môn · Số đo AST tách biệt với kết luận, hiển thị lựa chọn cách viết và dấu vết trình bày
             </p>
           </div>
 

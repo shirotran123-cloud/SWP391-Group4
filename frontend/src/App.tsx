@@ -130,7 +130,7 @@ function upsertStep(prev: GradingStep[], id: string, patch: Partial<GradingStep>
   const n = Number(id.slice(3));
   const newStep: GradingStep = {
     id,
-    label: label || `tc-${n}`,
+    label: label || `Kiểm thử #${n}`,
     status: 'pending',
     detail: '',
     ...patch,
@@ -158,7 +158,7 @@ function syncTestcaseSteps(
         status: result.status === 'PASSED' ? 'passed' : 'failed',
         detail: `Testcase ${result.testcaseIndex}/${results.length}: ${result.status === 'PASSED' ? 'ĐẠT' : 'KHÔNG ĐẠT'} (${result.timeMs}ms)`,
       },
-      id,
+      `Kiểm thử #${result.testcaseIndex}`,
     );
   }, steps);
 }
@@ -588,10 +588,15 @@ export function App() {
       const stepId = `tc-${data.testcaseIndex}`;
       const mem = data.memoryKb ? `, ${(data.memoryKb / 1024).toFixed(1)}MB` : '';
       setSteps((prev) =>
-        upsertStep(prev, stepId, {
-          status: data.status === 'PASSED' ? 'passed' : 'failed',
-          detail: `Testcase ${data.testcaseIndex}/${data.totalTestcases}: ${data.status === 'PASSED' ? 'ĐẠT' : 'KHÔNG ĐẠT'} (${data.timeMs}ms${mem})`,
-        })
+        upsertStep(
+          prev,
+          stepId,
+          {
+            status: data.status === 'PASSED' ? 'passed' : 'failed',
+            detail: `Testcase ${data.testcaseIndex}/${data.totalTestcases}: ${data.status === 'PASSED' ? 'ĐẠT' : 'KHÔNG ĐẠT'} (${data.timeMs}ms${mem})`,
+          },
+          `Kiểm thử #${data.testcaseIndex}`,
+        )
       );
     });
 

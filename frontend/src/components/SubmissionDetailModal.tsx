@@ -151,7 +151,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
     ? [
         ...submission.testCaseResults,
         ...Array.from({ length: Math.max(0, totalTC - submission.testCaseResults.length) }, (_, index) => ({
-          id: `TC-${String(submission.testCaseResults!.length + index + 1).padStart(2, '0')}`,
+          id: `#${String(submission.testCaseResults!.length + index + 1).padStart(2, '0')}`,
           status: 'ERROR' as const,
           errorLog: 'Kết quả testcase không được lưu trong lượt chấm này.',
         })),
@@ -160,10 +160,10 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         const isThisPassed = idx < passedTC;
         const tcNum = String(idx + 1).padStart(2, '0');
         const defaultName = idx === 0
-          ? `Test Case ${tcNum}: Chuẩn hóa dữ liệu đầu vào (Standard Input / Output)`
+          ? `Kiểm thử #${tcNum}: Chuẩn hóa dữ liệu đầu vào (Standard Input / Output)`
           : idx === 1
-            ? `Test Case ${tcNum}: Trường hợp biên & Tải lớn (Boundary & Edge Cases)`
-            : `Test Case ${tcNum}: Kiểm thử tính toàn vẹn & Tối ưu hóa (Integration Case)`;
+            ? `Kiểm thử #${tcNum}: Trường hợp biên & Tải lớn (Boundary & Edge Cases)`
+            : `Kiểm thử #${tcNum}: Kiểm thử tính toàn vẹn & Tối ưu hóa (Integration Case)`;
         const defaultDesc = idx === 0
           ? 'Kiểm tra logic thuật toán với tập dữ liệu quy mô nhỏ và trung bình'
           : idx === 1
@@ -188,7 +188,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         }
 
         return {
-          id: `TC-${tcNum}`,
+          id: `#${tcNum}`,
           name: defaultName,
           description: defaultDesc,
           status: statusStr,
@@ -376,7 +376,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                 Độ tương đồng AST đo được: <strong>{(submission.plagiarismRate ?? simRate).toFixed(1)}%</strong> (chỉ là số đo).{' '}
                 {submission.confirmedPlagiarism
                   ? 'Giảng viên đã thẩm định và xác nhận vi phạm theo quy chế.'
-                  : 'Hệ thống đang áp dụng điểm 0 theo quy chế BR-03, trạng thái: Chờ giảng viên xác nhận.'}
+                  : 'Hệ thống đang áp dụng điểm 0 theo quy chế liêm chính học thuật, trạng thái: Chờ giảng viên xác nhận.'}
               </div>
             </div>
           </div>

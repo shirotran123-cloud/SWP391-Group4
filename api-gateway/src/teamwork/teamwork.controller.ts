@@ -54,7 +54,7 @@ export class TeamworkController {
     const metric = await this.teamworkService.recordMetric(body);
     return {
       statusCode: HttpStatus.CREATED,
-      message: 'Ghi nhận chỉ số đóng góp nhóm thành công (UC-12).',
+      message: 'Ghi nhận chỉ số đóng góp nhóm thành công.',
       data: metric,
     };
   }

@@ -1285,7 +1285,7 @@ if __name__ == '__main__':
       reason: 'Em xin chấm lại vì nộp nhầm file zip cũ.',
       status: 'REJECTED',
       reviewer_id: 'GV001',
-      resolution_note: 'Theo quy chế BR-02, không chấp nhận phúc khảo do nộp nhầm file sau khi đã hết hạn deadline.',
+      resolution_note: 'Theo quy chế khảo thí, không chấp nhận phúc khảo do nộp nhầm file sau khi đã hết hạn deadline.',
       resolved_at: new Date(now.getTime() - 6 * 3600 * 1000),
       created_at: new Date(now.getTime() - 48 * 3600 * 1000),
     },

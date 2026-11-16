@@ -230,7 +230,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
           </div>
         )}
 
-        {/* THÔNG BÁO ÁP DỤNG QUY CHẾ BR-03 (CHỈ HIỂN THỊ CHO GIẢNG VIÊN) */}
+        {/* THÔNG BÁO ÁP DỤNG QUY CHẾ LIÊM CHÍNH (CHỈ HIỂN THỊ CHO GIẢNG VIÊN) */}
         {isCompleted && isSeverePlagiarism && (
           <div
             style={{
@@ -255,7 +255,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                 Số đo AST đạt <strong>{simRate.toFixed(1)}%</strong> so với bài đối chiếu (<strong>{plagiarismMatch?.matchedStudentName || plagiarismMatch?.matchedStudentId}</strong>).{' '}
                 {plagiarismMatch?.confirmedPlagiarism
                   ? 'Giảng viên đã thẩm định và xác nhận áp dụng điểm 0 theo quy chế.'
-                  : 'Hệ thống đang áp dụng điểm 0 theo quy chế BR-03, trạng thái: Chờ giảng viên xác nhận.'}
+                  : 'Hệ thống đang áp dụng điểm 0 theo quy chế liêm chính học thuật, trạng thái: Chờ giảng viên xác nhận.'}
               </p>
             </div>
           </div>
@@ -419,7 +419,7 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
 
                   <div style={{ minWidth: 0 }}>
                     <h4 style={{ fontSize: '13px', fontWeight: isInProgress ? 600 : 500, color: isPending ? 'var(--text-dim)' : 'var(--text-main)' }}>
-                      {step.label}
+                      {step.label.startsWith('tc-') ? `Kiểm thử #${step.label.slice(3)}` : step.label}
                     </h4>
                     {step.detail && (
                       <p style={{ fontSize: '11.5px', color: 'var(--text-dim)', marginTop: '1px' }}>{step.detail}</p>

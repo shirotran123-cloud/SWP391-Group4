@@ -246,7 +246,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
           <div>
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--blue-200)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-              USE CASE 04 &amp; 06 • SINH VIÊN
+              LỊCH SỬ BÀI NỘP • SINH VIÊN
             </span>
             <h1 className="aita-page-title" style={{ marginTop: '6px', marginBottom: '8px' }}>
               Lịch Sử Bài Nộp &amp; Điểm Số
