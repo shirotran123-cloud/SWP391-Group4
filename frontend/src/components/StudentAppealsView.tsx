@@ -220,7 +220,6 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
         }}
         submissionId={selectedSubId}
         studentId={studentId}
-        currentScore={8.0}
       />
     </div>
   );

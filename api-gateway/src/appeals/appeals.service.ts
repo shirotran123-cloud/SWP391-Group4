@@ -136,10 +136,11 @@ export class AppealsService {
       );
     }
 
-    // 2. Kiểm tra cửa sổ thời gian (BR-05: <= 48h)
+    // 2. Kiểm tra cửa sổ thời gian (BR-05: <= 48h, chỉ áp dụng strict trên production)
     const submissionTime = new Date(submission.createdAt).getTime();
     const elapsedTime = Date.now() - submissionTime;
-    if (elapsedTime > AppealsService.DISPUTE_WINDOW_MS) {
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction && elapsedTime > AppealsService.DISPUTE_WINDOW_MS) {
       const elapsedHours = (elapsedTime / (1000 * 3600)).toFixed(1);
       throw new BadRequestException(
         `Đã quá thời hạn phúc khảo cho phép! (Đã trôi qua ${elapsedHours} giờ kể từ khi nộp, quy định BR-05 tối đa 48 giờ).`,

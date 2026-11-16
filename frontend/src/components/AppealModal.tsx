@@ -23,6 +23,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
   onAppealSuccess,
 }) => {
   const [subIdInput, setSubIdInput] = useState(submissionId);
+  const [liveScore, setLiveScore] = useState<number | undefined>(currentScore);
   const [reason, setReason] = useState('');
   const [appeals, setAppeals] = useState<Appeal[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,13 +31,38 @@ export const AppealModal: React.FC<AppealModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  const fetchSubmissionScore = async (sid: string) => {
+    if (!sid.trim()) return;
+    try {
+      const res = await fetch(`${apiBaseUrl}/api/v1/submissions/${encodeURIComponent(sid.trim())}`);
+      if (res.ok) {
+        const json = await res.json();
+        const s = json.data || json;
+        const score = s.score ?? s.details?.score;
+        if (score !== undefined) {
+          setLiveScore(score);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  };
+
+  useEffect(() => {
+    setLiveScore(currentScore);
+  }, [currentScore]);
+
   useEffect(() => {
     if (isOpen) {
+      setErrorMessage(null);
+      setSuccessMessage(null);
       if (submissionId) {
         setSubIdInput(submissionId);
         void fetchAppeals(submissionId);
+        void fetchSubmissionScore(submissionId);
       } else if (subIdInput) {
         void fetchAppeals(subIdInput);
+        void fetchSubmissionScore(subIdInput);
       }
     }
   }, [isOpen, submissionId]);
@@ -72,11 +98,11 @@ export const AppealModal: React.FC<AppealModalProps> = ({
     e.preventDefault();
     const finalSubId = subIdInput.trim();
     if (!finalSubId) {
-      setErrorMessage('Vui lòng nhập mã bài nộp (Submission ID) cần phúc khảo.');
+      setErrorMessage('⚠️ Vui lòng nhập Mã bài nộp (Submission ID) cần phúc khảo.');
       return;
     }
     if (reason.trim().length < 10) {
-      setErrorMessage('Vui lòng nhập lý do khiếu nại cụ thể (tối thiểu 10 ký tự)');
+      setErrorMessage(`⚠️ Lý do khiếu nại quá ngắn (mới có ${reason.trim().length}/10 ký tự). Vui lòng nhập tối thiểu 10 ký tự để trình bày rõ ràng.`);
       return;
     }
 
@@ -224,7 +250,10 @@ export const AppealModal: React.FC<AppealModalProps> = ({
                 setErrorMessage(null);
               }}
               onBlur={() => {
-                if (subIdInput.trim()) void fetchAppeals(subIdInput.trim());
+                if (subIdInput.trim()) {
+                  void fetchAppeals(subIdInput.trim());
+                  void fetchSubmissionScore(subIdInput.trim());
+                }
               }}
               style={{
                 width: '100%',
@@ -241,11 +270,16 @@ export const AppealModal: React.FC<AppealModalProps> = ({
                 cursor: submissionId ? 'default' : 'text',
               }}
             />
+            {!submissionId && !subIdInput.trim() && (
+              <div style={{ fontSize: '11.5px', color: '#e11d48', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                <AlertCircle size={12} /> Bắt buộc: Hãy điền mã bài nộp (ví dụ: SUB-DEMO-1011)
+              </div>
+            )}
           </div>
           <div style={{ padding: '12px 16px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
             <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Điểm hiện tại</div>
             <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--blue-300)', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Award size={18} /> {currentScore !== undefined ? `${currentScore.toFixed(1)} / 10.0` : 'Xem trong bài nộp'}
+              <Award size={18} /> {liveScore !== undefined ? `${liveScore.toFixed(1)} / 10.0` : (subIdInput.trim() ? 'Đang kiểm tra...' : 'Xem trong bài nộp')}
             </div>
           </div>
         </div>
@@ -382,13 +416,28 @@ export const AppealModal: React.FC<AppealModalProps> = ({
                   boxSizing: 'border-box',
                 }}
               />
-              <div style={{ fontSize: '12px', color: 'var(--text-dim)', marginTop: '4px', textAlign: 'right' }}>
-                {reason.length}/1000 ký tự (tối thiểu 10)
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '12px' }}>
+                <div>
+                  {reason.trim().length === 0 ? (
+                    <span style={{ color: 'var(--text-muted)' }}>* Yêu cầu tối thiểu 10 ký tự</span>
+                  ) : reason.trim().length < 10 ? (
+                    <span style={{ color: '#dc2626', fontWeight: 600 }}>
+                      ⚠️ Cần thêm ít nhất {10 - reason.trim().length} ký tự nữa
+                    </span>
+                  ) : (
+                    <span style={{ color: '#16a34a', fontWeight: 600 }}>
+                      ✓ Đã đủ độ dài tối thiểu
+                    </span>
+                  )}
+                </div>
+                <div style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
+                  {reason.length}/1000 ký tự (tối thiểu 10)
+                </div>
               </div>
             </div>
 
             {errorMessage && (
-              <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.06)', border: '1px solid rgba(11, 18, 32, 0.1)', color: 'var(--text-main)', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', color: '#dc2626', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                 <AlertCircle size={16} />
                 <span>{errorMessage}</span>
               </div>
@@ -403,24 +452,24 @@ export const AppealModal: React.FC<AppealModalProps> = ({
 
             <button
               type="submit"
-              disabled={submitting || reason.trim().length < 10}
+              disabled={submitting}
               style={{
                 width: '100%',
                 padding: '14px',
                 borderRadius: '12px',
                 border: 'none',
-                background: reason.trim().length >= 10
+                background: subIdInput.trim() && reason.trim().length >= 10
                   ? 'var(--blue-600)'
-                  : 'rgba(11, 18, 32, 0.05)',
-                color: reason.trim().length >= 10 ? 'var(--on-blue)' : 'var(--text-main)',
+                  : 'rgba(11, 18, 32, 0.08)',
+                color: subIdInput.trim() && reason.trim().length >= 10 ? 'var(--on-blue)' : '#4b5563',
                 fontSize: '15px',
                 fontWeight: 700,
-                cursor: reason.trim().length >= 10 && !submitting ? 'pointer' : 'not-allowed',
+                cursor: submitting ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: reason.trim().length >= 10 ? '0 10px 25px -5px rgba(59, 130, 246, 0.28)' : 'none',
+                boxShadow: subIdInput.trim() && reason.trim().length >= 10 ? '0 10px 25px -5px rgba(59, 130, 246, 0.28)' : 'none',
                 transition: 'all 0.2s ease',
               }}
             >
