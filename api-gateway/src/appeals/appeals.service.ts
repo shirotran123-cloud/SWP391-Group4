@@ -214,6 +214,29 @@ export class AppealsService {
       throw new NotFoundException(`Không tìm thấy đơn phúc khảo: ${appealId}`);
     }
 
+    // 1. Quy chế BR-05: BẮT BUỘC Admin phải phân công trước khi Giảng viên được chấm
+    if (!appeal.reviewerId) {
+      throw new BadRequestException(
+        `Từ chối thao tác: Đơn phúc khảo ${appealId} chưa được Quản trị viên (Admin) phân công Giảng viên thẩm định. Giảng viên không có thẩm quyền tự ý chấm đơn này.`,
+      );
+    }
+
+    // 2. Kiểm tra thẩm quyền: Chỉ Giảng viên được phân công đích danh mới có quyền chấm
+    if (dto.reviewerId && appeal.reviewerId !== dto.reviewerId) {
+      throw new BadRequestException(
+        `Từ chối thẩm quyền: Đơn phúc khảo này đã được phân công cho Giảng viên ${appeal.reviewerId}. Giảng viên ${dto.reviewerId} không có thẩm quyền chấm thay.`,
+      );
+    }
+
+    // 3. Kiểm tra xung đột quyền lợi: Giảng viên phụ trách môn / ra đề không được chấm
+    const { conflictedIds, details } = await this.getConflictedUserIds(appeal.submissionId);
+    if (dto.reviewerId && conflictedIds.includes(dto.reviewerId)) {
+      const reason = details[dto.reviewerId] || 'Giảng viên phụ trách môn / ra đề chấm lần đầu';
+      throw new BadRequestException(
+        `Xung đột quyền lợi (Conflict of Interest): Không thể giải quyết đơn này do là ${reason}.`,
+      );
+    }
+
     const sub = await this.submissionRepo.findById(appeal.submissionId);
     if (!sub) {
       throw new NotFoundException(`Không tìm thấy bài nộp gốc: ${appeal.submissionId}`);

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Scale,
   CheckCircle2,
+  CheckCircle,
+  Eye,
   XCircle,
   Clock,
   AlertCircle,
@@ -513,6 +515,7 @@ public class Solution {
               <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>SINH VIÊN</th>
               <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>BÀI NỘP</th>
               <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>LÝ DO KHIẾU NẠI</th>
+              <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>PHÂN CÔNG</th>
               <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>TRẠNG THÁI</th>
               <th style={{ padding: '16px 20px', color: '#4d5c76', fontWeight: 700 }}>THẨM ĐỊNH &amp; XỬ LÝ</th>
             </tr>
@@ -520,71 +523,148 @@ public class Solution {
           <tbody>
             {filteredAppeals.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <td colSpan={7} style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
                   Không có đơn phúc khảo nào trong danh mục này.
                 </td>
               </tr>
             ) : (
-              filteredAppeals.map((app) => (
-                <tr key={app.appealId} style={{ borderBottom: '1px solid rgba(11, 18, 32, 0.04)' }}>
-                  <td style={{ padding: '16px 20px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--blue-300)' }}>
-                    #{app.appealId}
-                  </td>
-                  <td style={{ padding: '16px 20px', fontWeight: 600, color: 'var(--text-main)' }}>
-                    {app.studentId}
-                  </td>
-                  <td style={{ padding: '16px 20px', color: 'var(--blue-200)', fontFamily: 'var(--font-mono)' }}>
-                    {app.submissionId}
-                  </td>
-                  <td style={{ padding: '16px 20px', maxWidth: '300px', color: '#33415a' }}>
-                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={app.reason}>
-                      {app.reason}
-                    </div>
-                  </td>
-                  <td style={{ padding: '16px 20px' }}>
-                    {app.status === 'ACCEPTED' ? (
-                      <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-300)', fontWeight: 700 }}>
-                        ĐÃ DUYỆT ({app.adjustedScore}đ)
-                      </span>
-                    ) : app.status === 'REJECTED' ? (
-                      <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontWeight: 700 }}>
-                        TỪ CHỐI
-                      </span>
-                    ) : (
-                      <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: '#1e40af', fontWeight: 700 }}>
-                        CHỜ DUYỆT
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ padding: '16px 20px' }}>
-                    <button
-                      onClick={() => {
-                        setSelectedAppeal(app);
-                        setResolveStatus('ACCEPTED');
-                        setResolutionNote(app.resolutionNote || '');
-                        setAdjustedScore(app.adjustedScore || 9.0);
-                        setActiveModalTab('CODE');
-                      }}
-                      style={{
-                        padding: '8px 16px',
-                        borderRadius: '8px',
-                        backgroundColor: app.status === 'PENDING' ? 'rgba(59, 130, 246, 0.16)' : 'rgba(11, 18, 32, 0.04)',
-                        border: '1px solid rgba(59, 130, 246, 0.38)',
-                        color: 'var(--blue-200)',
-                        fontSize: '12.5px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <Scale size={13} />
-                      {app.status === 'PENDING' ? 'Thẩm Định & Xử Lý' : 'Xem Chi Tiết'}
-                    </button>
-                  </td>
-                </tr>
-              ))
+              filteredAppeals.map((app) => {
+                const isAssigned = Boolean(app.reviewerId);
+                const isAssignedToMe = isAssigned && app.reviewerId === lecturerId;
+                const isAssignedToOther = isAssigned && app.reviewerId !== lecturerId;
+                const isPendingOrInReview = app.status === 'PENDING' || app.status === 'IN_REVIEW';
+                const canGrade = isAssignedToMe && isPendingOrInReview;
+                const isResolved = app.status === 'ACCEPTED' || app.status === 'REJECTED';
+
+                return (
+                  <tr key={app.appealId} style={{ borderBottom: '1px solid rgba(11, 18, 32, 0.04)' }}>
+                    <td style={{ padding: '16px 20px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--blue-300)' }}>
+                      #{app.appealId}
+                    </td>
+                    <td style={{ padding: '16px 20px', fontWeight: 600, color: 'var(--text-main)' }}>
+                      {app.studentId}
+                    </td>
+                    <td style={{ padding: '16px 20px', color: 'var(--blue-200)', fontFamily: 'var(--font-mono)' }}>
+                      {app.submissionId}
+                    </td>
+                    <td style={{ padding: '16px 20px', maxWidth: '260px', color: '#33415a' }}>
+                      <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={app.reason}>
+                        {app.reason}
+                      </div>
+                    </td>
+                    <td style={{ padding: '16px 20px' }}>
+                      {!isAssigned ? (
+                        <span style={{ padding: '4px 10px', borderRadius: '8px', backgroundColor: '#fef3c7', color: '#b45309', fontSize: '11.5px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Clock size={12} /> Chờ Admin phân công
+                        </span>
+                      ) : isAssignedToMe ? (
+                        <span style={{ padding: '4px 10px', borderRadius: '8px', backgroundColor: '#dcfce7', color: '#15803d', fontSize: '11.5px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <CheckCircle size={12} /> Giao cho bạn ({app.reviewerId})
+                        </span>
+                      ) : (
+                        <span style={{ padding: '4px 10px', borderRadius: '8px', backgroundColor: 'rgba(11, 18, 32, 0.05)', color: '#475569', fontSize: '11.5px', fontWeight: 600 }}>
+                          Giao cho: {app.reviewerId}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '16px 20px' }}>
+                      {app.status === 'ACCEPTED' ? (
+                        <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-300)', fontWeight: 700 }}>
+                          ĐÃ DUYỆT ({app.adjustedScore}đ)
+                        </span>
+                      ) : app.status === 'REJECTED' ? (
+                        <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(11, 18, 32, 0.06)', color: 'var(--text-main)', fontWeight: 700 }}>
+                          TỪ CHỐI
+                        </span>
+                      ) : (
+                        <span style={{ padding: '4px 10px', borderRadius: '10px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: '#1e40af', fontWeight: 700 }}>
+                          CHỜ DUYỆT
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '16px 20px' }}>
+                      {isResolved ? (
+                        <button
+                          onClick={() => {
+                            setSelectedAppeal(app);
+                            setResolveStatus(app.status as any);
+                            setResolutionNote(app.resolutionNote || '');
+                            setAdjustedScore(app.adjustedScore || 9.0);
+                            setActiveModalTab('CODE');
+                          }}
+                          style={{
+                            padding: '7px 14px',
+                            borderRadius: '8px',
+                            backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                            border: '1px solid rgba(11, 18, 32, 0.1)',
+                            color: '#475569',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                        >
+                          <Eye size={13} /> Xem Chi Tiết
+                        </button>
+                      ) : canGrade ? (
+                        <button
+                          onClick={() => {
+                            setSelectedAppeal(app);
+                            setResolveStatus('ACCEPTED');
+                            setResolutionNote(app.resolutionNote || '');
+                            setAdjustedScore(app.adjustedScore || 9.0);
+                            setActiveModalTab('CODE');
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: '8px',
+                            backgroundColor: '#2563eb',
+                            border: 'none',
+                            color: '#ffffff',
+                            fontSize: '12.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 8px rgba(37, 99, 235, 0.3)',
+                          }}
+                        >
+                          <Scale size={13} /> Thẩm Định &amp; Chấm Điểm
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setSelectedAppeal(app);
+                            setResolveStatus('ACCEPTED');
+                            setResolutionNote(app.resolutionNote || '');
+                            setAdjustedScore(app.adjustedScore || 9.0);
+                            setActiveModalTab('CODE');
+                          }}
+                          style={{
+                            padding: '7px 14px',
+                            borderRadius: '8px',
+                            backgroundColor: 'rgba(11, 18, 32, 0.03)',
+                            border: '1px solid rgba(11, 18, 32, 0.08)',
+                            color: '#64748b',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}
+                          title={!isAssigned ? 'Chờ Admin phân công giảng viên độc lập' : `Được phân công cho ${app.reviewerId}`}
+                        >
+                          <Eye size={13} /> {!isAssigned ? 'Xem Hồ Sơ (Chờ Phân Công)' : 'Xem Tham Khảo'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -1177,191 +1257,376 @@ public class Solution {
             {/* ==================================================================== */}
             {/* KHUNG QUYẾT ĐỊNH CỦA GIẢNG VIÊN                                     */}
             {/* ==================================================================== */}
-            <div
-              style={{
-                marginTop: '24px',
-                paddingTop: '20px',
-                borderTop: '1px solid rgba(11, 18, 32, 0.07)',
-              }}
-            >
-              <h4 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Scale size={18} color="#2563eb" />
-                Quyết Định Xử Lý Của Giảng Viên:
-              </h4>
+            {/* ==================================================================== */}
+            {/* KHUNG QUYẾT ĐỊNH CỦA GIẢNG VIÊN (CHỈ MỞ KHI ĐÃ ĐƯỢC ADMIN PHÂN CÔNG) */}
+            {/* ==================================================================== */}
+            {(() => {
+              const isAppealAssigned = Boolean(selectedAppeal.reviewerId);
+              const isAssignedToMe = isAppealAssigned && selectedAppeal.reviewerId === lecturerId;
+              const isPendingOrInReview = selectedAppeal.status === 'PENDING' || selectedAppeal.status === 'IN_REVIEW';
+              const canCurrentLecturerGrade = isAssignedToMe && isPendingOrInReview;
+              const isResolved = selectedAppeal.status === 'ACCEPTED' || selectedAppeal.status === 'REJECTED';
 
-              <form onSubmit={handleResolve}>
-                {/* 2 Nút Chấp thuận / Từ chối */}
-                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setResolveStatus('ACCEPTED')}
-                    style={{
-                      flex: 1,
-                      padding: '14px',
-                      borderRadius: '12px',
-                      border: resolveStatus === 'ACCEPTED' ? '2px solid #2563eb' : '1px solid rgba(11, 18, 32, 0.08)',
-                      backgroundColor: resolveStatus === 'ACCEPTED' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(11, 18, 32, 0.03)',
-                      color: resolveStatus === 'ACCEPTED' ? '#1d4ed8' : '#4d5c76',
-                      fontWeight: 700,
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <CheckCircle2 size={18} />
-                    Chấp Thuận Phúc Khảo (Cộng / Điều Chỉnh Điểm)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setResolveStatus('REJECTED')}
-                    style={{
-                      flex: 1,
-                      padding: '14px',
-                      borderRadius: '12px',
-                      border: resolveStatus === 'REJECTED' ? '2px solid #dc2626' : '1px solid rgba(11, 18, 32, 0.08)',
-                      backgroundColor: resolveStatus === 'REJECTED' ? 'rgba(220, 38, 38, 0.08)' : 'rgba(11, 18, 32, 0.03)',
-                      color: resolveStatus === 'REJECTED' ? '#dc2626' : '#4d5c76',
-                      fontWeight: 700,
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <XCircle size={18} />
-                    Từ Chối Khiếu Nại (Giữ Nguyên Điểm Gốc)
-                  </button>
-                </div>
-
-                {/* Nếu chấp thuận -> Nhập điểm điều chỉnh */}
-                {resolveStatus === 'ACCEPTED' && (
+              // TRƯỜNG HỢP 1: ADMIN CHƯA PHÂN CÔNG -> GIẢNG VIÊN KHÔNG ĐƯỢC PHÉP CHẤM
+              if (!isAppealAssigned) {
+                return (
                   <div
                     style={{
-                      marginBottom: '16px',
-                      padding: '16px',
-                      borderRadius: '12px',
-                      backgroundColor: 'rgba(37, 99, 235, 0.06)',
-                      border: '1px solid rgba(37, 99, 235, 0.12)',
+                      marginTop: '24px',
+                      paddingTop: '20px',
+                      borderTop: '1px solid rgba(11, 18, 32, 0.07)',
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <label style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--blue-200)' }}>
-                        Điểm số điều chỉnh sau phúc khảo (Thang điểm 0.0 - 10.0):
-                      </label>
-                      <span style={{ fontSize: '12.5px', color: '#1e40af' }}>
-                        Điểm gốc: <strong style={{ color: 'var(--text-main)' }}>{auditData.originalScore}</strong> Điểm mới:{' '}
-                        <strong style={{ color: 'var(--blue-200)' }}>{adjustedScore}</strong>{' '}
-                        ({adjustedScore >= auditData.originalScore ? `+${(adjustedScore - auditData.originalScore).toFixed(1)}` : (adjustedScore - auditData.originalScore).toFixed(1)} đ)
-                      </span>
+                    <div
+                      style={{
+                        padding: '20px 24px',
+                        borderRadius: '12px',
+                        backgroundColor: '#fffbeb',
+                        border: '1px solid #fde68a',
+                        color: '#92400e',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '14px',
+                      }}
+                    >
+                      <Clock size={24} style={{ color: '#d97706', flexShrink: 0, marginTop: '2px' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#78350f', marginBottom: '4px' }}>
+                          Chưa Có Thẩm Quyền Chấm: Đơn Đang Chờ Quản Trị Viên (Admin) Phân Công
+                        </div>
+                        <div style={{ fontSize: '13px', lineHeight: 1.6, color: '#92400e' }}>
+                          Theo quy chế khảo thí: <strong>Chỉ sau khi Quản trị viên chỉ định Giảng viên độc lập</strong> (loại trừ giảng viên ra đề môn học để chống xung đột quyền lợi), giảng viên được phân công mới có thẩm quyền thẩm định và cập nhật điểm.
+                        </div>
+                        <div style={{ marginTop: '8px', fontSize: '12.5px', color: '#b45309', fontStyle: 'italic' }}>
+                          * Giảng viên hiện tại (<code>{lecturerId}</code>) đang xem bài nộp và kết quả ở chế độ <strong>Chỉ Đọc (Read-only)</strong>.
+                        </div>
+                      </div>
                     </div>
 
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="10"
-                      value={adjustedScore}
-                      onChange={(e) => setAdjustedScore(parseFloat(e.target.value) || 0)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        borderRadius: '8px',
-                        backgroundColor: '#ffffff',
-                        border: '1px solid rgba(37, 99, 235, 0.18)',
-                        color: 'var(--blue-200)',
-                        fontSize: '16px',
-                        fontWeight: 600,
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                      }}
-                    />
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAppeal(null)}
+                        style={{
+                          padding: '11px 24px',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(11, 18, 32, 0.12)',
+                          backgroundColor: 'rgba(11, 18, 32, 0.05)',
+                          color: '#33415a',
+                          fontWeight: 600,
+                          fontSize: '13.5px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Đóng Hồ Sơ
+                      </button>
+                    </div>
                   </div>
-                )}
+                );
+              }
 
-                {/* Ô phản hồi sư phạm */}
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
-                    Phản hồi sư phạm / Căn cứ giải quyết (Gửi trực tiếp đến sinh viên):
-                  </label>
-                  <textarea
-                    rows={3}
-                    value={resolutionNote}
-                    onChange={(e) => setResolutionNote(e.target.value)}
-                    placeholder="Ví dụ: Đã đối chiếu mã nguồn và log thực thi trong Docker Sandbox; thuật toán đạt chuẩn xác, không có dấu hiệu gian lận. Chấp thuận cộng điểm..."
+              // TRƯỜNG HỢP 2: ĐÃ ĐƯỢC GIẢI QUYẾT XONG
+              if (isResolved) {
+                return (
+                  <div
                     style={{
-                      width: '100%',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      backgroundColor: '#f7f9fc',
-                      border: '1px solid rgba(11, 18, 32, 0.1)',
-                      color: 'var(--text-main)',
-                      fontSize: '13.5px',
-                      resize: 'vertical',
-                      outline: 'none',
-                      boxSizing: 'border-box',
-                      lineHeight: '1.5',
-                    }}
-                  />
-                </div>
-
-                {/* Nút hành động cuối */}
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedAppeal(null)}
-                    style={{
-                      padding: '11px 20px',
-                      borderRadius: '10px',
-                      border: '1px solid rgba(11, 18, 32, 0.08)',
-                      backgroundColor: 'rgba(11, 18, 32, 0.04)',
-                      color: '#33415a',
-                      fontWeight: 600,
-                      fontSize: '13.5px',
-                      cursor: 'pointer',
+                      marginTop: '24px',
+                      paddingTop: '20px',
+                      borderTop: '1px solid rgba(11, 18, 32, 0.07)',
                     }}
                   >
-                    Đóng / Hủy
-                  </button>
+                    <div
+                      style={{
+                        padding: '18px 22px',
+                        borderRadius: '12px',
+                        backgroundColor: selectedAppeal.status === 'ACCEPTED' ? 'rgba(37, 99, 235, 0.07)' : 'rgba(11, 18, 32, 0.04)',
+                        border: selectedAppeal.status === 'ACCEPTED' ? '1px solid rgba(37, 99, 235, 0.16)' : '1px solid rgba(11, 18, 32, 0.08)',
+                      }}
+                    >
+                      <div style={{ fontSize: '14.5px', fontWeight: 700, color: selectedAppeal.status === 'ACCEPTED' ? '#1d4ed8' : '#33415a', marginBottom: '6px' }}>
+                        {selectedAppeal.status === 'ACCEPTED' ? '✓ ĐÃ CHẤP THUẬN PHÚC KHẢO' : '✕ ĐÃ TỪ CHỐI KHIẾU NẠI'} (Thực hiện bởi: {selectedAppeal.reviewerId || 'Giảng viên chấm'})
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#4d5c76', lineHeight: 1.5 }}>
+                        <strong>Căn cứ phản hồi sư phạm: </strong>{selectedAppeal.resolutionNote || 'Không có ghi chú thêm.'}
+                      </div>
+                      {selectedAppeal.adjustedScore !== undefined && (
+                        <div style={{ marginTop: '8px', fontSize: '14px', fontWeight: 700, color: 'var(--blue-200)' }}>
+                          Điểm số chính thức sau phúc khảo: {selectedAppeal.adjustedScore} / 10.0
+                        </div>
+                      )}
+                    </div>
 
-                  <button
-                    type="submit"
-                    disabled={submitting}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAppeal(null)}
+                        style={{
+                          padding: '11px 24px',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(11, 18, 32, 0.12)',
+                          backgroundColor: 'rgba(11, 18, 32, 0.05)',
+                          color: '#33415a',
+                          fontWeight: 600,
+                          fontSize: '13.5px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Đóng Hồ Sơ
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              // TRƯỜNG HỢP 3: ADMIN ĐÃ PHÂN CÔNG CHO GIẢNG VIÊN KHÁC
+              if (!isAssignedToMe) {
+                return (
+                  <div
                     style={{
-                      padding: '12px 26px',
-                      borderRadius: '10px',
-                      border: 'none',
-                      backgroundColor: resolveStatus === 'ACCEPTED' ? '#16a34a' : '#dc2626',
-                      color: '#ffffff',
-                      fontWeight: 700,
-                      fontSize: '14px',
-                      cursor: submitting ? 'not-allowed' : 'pointer',
-                      opacity: submitting ? 0.7 : 1,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      boxShadow: resolveStatus === 'ACCEPTED'
-                        ? '0 4px 16px rgba(22, 163, 74, 0.35)'
-                        : '0 4px 16px rgba(220, 38, 38, 0.35)',
+                      marginTop: '24px',
+                      paddingTop: '20px',
+                      borderTop: '1px solid rgba(11, 18, 32, 0.07)',
                     }}
                   >
+                    <div
+                      style={{
+                        padding: '20px 24px',
+                        borderRadius: '12px',
+                        backgroundColor: 'rgba(37, 99, 235, 0.06)',
+                        border: '1px solid rgba(37, 99, 235, 0.16)',
+                        color: '#1e40af',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '14px',
+                      }}
+                    >
+                      <ShieldAlert size={24} style={{ color: '#2563eb', flexShrink: 0, marginTop: '2px' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#1e40af', marginBottom: '4px' }}>
+                          Đơn Phúc Khảo Được Phân Công Cho Giảng Viên Khác
+                        </div>
+                        <div style={{ fontSize: '13px', lineHeight: 1.6, color: '#1e3a8a' }}>
+                          Quản trị viên đã chỉ định Giảng viên độc lập: <strong>{selectedAppeal.reviewerId}</strong> thụ lý đơn này. Bạn (<code>{lecturerId}</code>) không có thẩm quyền chấm thay theo quy chế liêm chính.
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAppeal(null)}
+                        style={{
+                          padding: '11px 24px',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(11, 18, 32, 0.12)',
+                          backgroundColor: 'rgba(11, 18, 32, 0.05)',
+                          color: '#33415a',
+                          fontWeight: 600,
+                          fontSize: '13.5px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Đóng Hồ Sơ
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              // TRƯỜNG HỢP 4: ĐƯỢC ADMIN PHÂN CÔNG ĐÍCH DANH CHO GIẢNG VIÊN NÀY -> CHO PHÉP CHẤM
+              return (
+                <div
+                  style={{
+                    marginTop: '24px',
+                    paddingTop: '20px',
+                    borderTop: '1px solid rgba(11, 18, 32, 0.07)',
+                  }}
+                >
+                  <div style={{ marginBottom: '16px', padding: '10px 14px', borderRadius: '8px', backgroundColor: '#dcfce7', border: '1px solid #86efac', color: '#15803d', fontSize: '13px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <CheckCircle2 size={16} />
-                    {submitting
-                      ? 'Đang Lưu Quyết Định...'
-                      : resolveStatus === 'ACCEPTED'
-                        ? 'Xác Nhận Chấp Thuận & Cập Nhật Điểm'
-                        : 'Xác Nhận Từ Chối Khiếu Nại'}
-                  </button>
+                    <span>Bạn là Giảng viên độc lập được Quản trị viên phân công thụ lý đơn này ({lecturerId}).</span>
+                  </div>
+
+                  <h4 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-main)', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Scale size={18} color="#2563eb" />
+                    Quyết Định Xử Lý Của Giảng Viên:
+                  </h4>
+
+                  <form onSubmit={handleResolve}>
+                    {/* 2 Nút Chấp thuận / Từ chối */}
+                    <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setResolveStatus('ACCEPTED')}
+                        style={{
+                          flex: 1,
+                          padding: '14px',
+                          borderRadius: '12px',
+                          border: resolveStatus === 'ACCEPTED' ? '2px solid #2563eb' : '1px solid rgba(11, 18, 32, 0.08)',
+                          backgroundColor: resolveStatus === 'ACCEPTED' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(11, 18, 32, 0.03)',
+                          color: resolveStatus === 'ACCEPTED' ? '#1d4ed8' : '#4d5c76',
+                          fontWeight: 700,
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <CheckCircle2 size={18} />
+                        Chấp Thuận Phúc Khảo (Cộng / Điều Chỉnh Điểm)
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setResolveStatus('REJECTED')}
+                        style={{
+                          flex: 1,
+                          padding: '14px',
+                          borderRadius: '12px',
+                          border: resolveStatus === 'REJECTED' ? '2px solid #dc2626' : '1px solid rgba(11, 18, 32, 0.08)',
+                          backgroundColor: resolveStatus === 'REJECTED' ? 'rgba(220, 38, 38, 0.08)' : 'rgba(11, 18, 32, 0.03)',
+                          color: resolveStatus === 'REJECTED' ? '#dc2626' : '#4d5c76',
+                          fontWeight: 700,
+                          fontSize: '14px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <XCircle size={18} />
+                        Từ Chối Khiếu Nại (Giữ Nguyên Điểm Gốc)
+                      </button>
+                    </div>
+
+                    {/* Nếu chấp thuận -> Nhập điểm điều chỉnh */}
+                    {resolveStatus === 'ACCEPTED' && (
+                      <div
+                        style={{
+                          marginBottom: '16px',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          backgroundColor: 'rgba(37, 99, 235, 0.06)',
+                          border: '1px solid rgba(37, 99, 235, 0.12)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <label style={{ fontSize: '13.5px', fontWeight: 700, color: 'var(--blue-200)' }}>
+                            Điểm số điều chỉnh sau phúc khảo (Thang điểm 0.0 - 10.0):
+                          </label>
+                          <span style={{ fontSize: '12.5px', color: '#1e40af' }}>
+                            Điểm gốc: <strong style={{ color: 'var(--text-main)' }}>{auditData.originalScore}</strong> Điểm mới:{' '}
+                            <strong style={{ color: 'var(--blue-200)' }}>{adjustedScore}</strong>{' '}
+                            ({adjustedScore >= auditData.originalScore ? `+${(adjustedScore - auditData.originalScore).toFixed(1)}` : (adjustedScore - auditData.originalScore).toFixed(1)} đ)
+                          </span>
+                        </div>
+
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="10"
+                          value={adjustedScore}
+                          onChange={(e) => setAdjustedScore(parseFloat(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 14px',
+                            borderRadius: '8px',
+                            backgroundColor: '#ffffff',
+                            border: '1px solid rgba(37, 99, 235, 0.18)',
+                            color: 'var(--blue-200)',
+                            fontSize: '16px',
+                            fontWeight: 600,
+                            outline: 'none',
+                            boxSizing: 'border-box',
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Ô phản hồi sư phạm */}
+                    <div style={{ marginBottom: '20px' }}>
+                      <label style={{ display: 'block', fontSize: '13.5px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '6px' }}>
+                        Phản hồi sư phạm / Căn cứ giải quyết (Gửi trực tiếp đến sinh viên):
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={resolutionNote}
+                        onChange={(e) => setResolutionNote(e.target.value)}
+                        placeholder="Ví dụ: Đã đối chiếu mã nguồn và log thực thi trong Docker Sandbox; thuật toán đạt chuẩn xác, không có dấu hiệu gian lận. Chấp thuận cộng điểm..."
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px',
+                          borderRadius: '10px',
+                          backgroundColor: '#f7f9fc',
+                          border: '1px solid rgba(11, 18, 32, 0.1)',
+                          color: 'var(--text-main)',
+                          fontSize: '13.5px',
+                          resize: 'vertical',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          lineHeight: '1.5',
+                        }}
+                      />
+                    </div>
+
+                    {/* Nút hành động cuối */}
+                    <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAppeal(null)}
+                        style={{
+                          padding: '11px 20px',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(11, 18, 32, 0.08)',
+                          backgroundColor: 'rgba(11, 18, 32, 0.04)',
+                          color: '#33415a',
+                          fontWeight: 600,
+                          fontSize: '13.5px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Đóng / Hủy
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={submitting}
+                        style={{
+                          padding: '12px 26px',
+                          borderRadius: '10px',
+                          border: 'none',
+                          backgroundColor: resolveStatus === 'ACCEPTED' ? '#16a34a' : '#dc2626',
+                          color: '#ffffff',
+                          fontWeight: 700,
+                          fontSize: '14px',
+                          cursor: submitting ? 'not-allowed' : 'pointer',
+                          opacity: submitting ? 0.7 : 1,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          boxShadow: resolveStatus === 'ACCEPTED'
+                            ? '0 4px 16px rgba(22, 163, 74, 0.35)'
+                            : '0 4px 16px rgba(220, 38, 38, 0.35)',
+                        }}
+                      >
+                        <CheckCircle2 size={16} />
+                        {submitting
+                          ? 'Đang Lưu Quyết Định...'
+                          : resolveStatus === 'ACCEPTED'
+                            ? 'Xác Nhận Chấp Thuận & Cập Nhật Điểm'
+                            : 'Xác Nhận Từ Chối Khiếu Nại'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
-              </form>
-            </div>
+              );
+            })()}
           </div>
         </div>
       )}
