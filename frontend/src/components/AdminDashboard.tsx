@@ -297,26 +297,26 @@ export function AdminDashboard({ token }: { token: string }) {
           <div className="aita-grid-3" style={{ marginBottom: 24 }}>
             {statCard(<Users size={20} />, 'Tổng người dùng', users.length, `${users.filter(u => u.role === 'STUDENT').length} sinh viên`, '#0E4274')}
             {statCard(<Activity size={20} />, 'Tổng bài nộp', submissions.length, `${submissions.filter(s => s.status === 'COMPLETED').length} đã chấm xong`, '#0E4274')}
-            {statCard(<Server size={20} />, 'Queue Mode', queueStats?.mode || '—', queueStats?.isRedisAvailable ? 'Redis Online' : 'In-Memory Fallback', '#0E4274')}
-            {statCard(<AlertTriangle size={20} />, 'Dead Letter Queue', queueStats?.dlqCount ?? dlqJobs.length, 'job thất bại', '#b91c1c')}
-            {statCard(<Cpu size={20} />, 'Active Jobs', queueStats?.activeCount ?? 0, `Đang chấm bài`, '#175794')}
-            {statCard(<Database size={20} />, 'Completed', queueStats?.completedCount ?? 0, 'bài đã chấm xong', '#15803d')}
+            {statCard(<Server size={20} />, 'Chế độ hàng đợi', queueStats?.mode === 'REDIS' ? 'Redis phân tán' : 'Bộ nhớ trong (Fallback)', queueStats?.isRedisAvailable ? 'Redis Trực Tuyến' : 'Bộ nhớ đệm dự phòng', '#0E4274')}
+            {statCard(<AlertTriangle size={20} />, 'Hàng đợi lỗi (DLQ)', queueStats?.dlqCount ?? dlqJobs.length, 'tác vụ thất bại', '#b91c1c')}
+            {statCard(<Cpu size={20} />, 'Tác vụ đang chấm', queueStats?.activeCount ?? 0, `Đang chấm trực tiếp`, '#175794')}
+            {statCard(<Database size={20} />, 'Đã hoàn thành', queueStats?.completedCount ?? 0, 'bài đã chấm xong', '#15803d')}
           </div>
 
           {/* Queue Status Card */}
           {queueStats && (
             <div className="glass-panel" style={{ padding: 24, marginBottom: 20 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)' }}>BullMQ Queue Status</h3>
-                {badge(queueStats.mode, '#0E4274')}
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-main)' }}>Trạng thái Hàng đợi BullMQ</h3>
+                {badge(queueStats.mode === 'REDIS' ? 'Redis phân tán' : queueStats.mode, '#0E4274')}
               </div>
               <div className="stat-grid-5" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 14 }}>
                 {[
-                  { label: 'Waiting', val: queueStats.waitingCount, color: '#0E4274', bg: 'rgba(14, 66, 116, 0.06)', border: 'rgba(14, 66, 116, 0.18)' },
-                  { label: 'Active', val: queueStats.activeCount, color: '#1d4ed8', bg: 'rgba(29, 78, 216, 0.07)', border: 'rgba(29, 78, 216, 0.22)' },
-                  { label: 'Completed', val: queueStats.completedCount, color: '#15803d', bg: '#dcfce7', border: '#86efac' },
-                  { label: 'Failed', val: queueStats.failedCount, color: '#b91c1c', bg: '#fee2e2', border: '#fca5a5' },
-                  { label: 'DLQ', val: queueStats.dlqCount, color: '#b45309', bg: '#fef3c7', border: '#fcd34d' },
+                  { label: 'Đang chờ', val: queueStats.waitingCount, color: '#0E4274', bg: 'rgba(14, 66, 116, 0.06)', border: 'rgba(14, 66, 116, 0.18)' },
+                  { label: 'Đang xử lý', val: queueStats.activeCount, color: '#1d4ed8', bg: 'rgba(29, 78, 216, 0.07)', border: 'rgba(29, 78, 216, 0.22)' },
+                  { label: 'Đã hoàn thành', val: queueStats.completedCount, color: '#15803d', bg: '#dcfce7', border: '#86efac' },
+                  { label: 'Thất bại', val: queueStats.failedCount, color: '#b91c1c', bg: '#fee2e2', border: '#fca5a5' },
+                  { label: 'Hàng đợi lỗi (DLQ)', val: queueStats.dlqCount, color: '#b45309', bg: '#fef3c7', border: '#fcd34d' },
                 ].map(({ label, val, color, bg, border }) => (
                   <div key={label} style={{ textAlign: 'center', padding: '14px 12px', background: bg, borderRadius: 12, border: `1px solid ${border}` }}>
                     <div style={{ fontSize: 24, fontWeight: 700, color, lineHeight: 1.1 }}>{val}</div>
@@ -326,7 +326,7 @@ export function AdminDashboard({ token }: { token: string }) {
               </div>
               {queueStats.isCongested && (
                 <div style={{ marginTop: 12, padding: '8px 12px', background: 'rgba(11, 18, 32, 0.05)', border: '1px solid rgba(11, 18, 32, 0.1)', borderRadius: 8, color: 'var(--text-main)', fontSize: 12 }}>
-                  Hàng đợi đang bị tắc nghẽn! Số lượng job đang chờ vượt ngưỡng.
+                  Hàng đợi đang bị tắc nghẽn! Số lượng tác vụ đang chờ vượt ngưỡng.
                 </div>
               )}
             </div>
@@ -338,7 +338,7 @@ export function AdminDashboard({ token }: { token: string }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  {['Submission ID', 'Student ID', 'Language', 'Trạng thái', 'Điểm', 'Thời gian'].map(h => (
+                  {['Mã bài nộp', 'Mã sinh viên', 'Ngôn ngữ', 'Trạng thái', 'Điểm', 'Thời gian'].map(h => (
                     <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>{h}</th>
                   ))}
                 </tr>
@@ -404,9 +404,14 @@ export function AdminDashboard({ token }: { token: string }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
             <h3 style={{ fontSize: 15, fontWeight: 700 }}>Quản lý người dùng</h3>
             <div style={{ display: 'flex', gap: 8 }}>
-              {['TẤT CẢ', 'ADMIN', 'INSTRUCTOR', 'STUDENT'].map(r => (
-                <span key={r} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: 'rgba(59, 130, 246, 0.09)', color: 'var(--blue-300)', cursor: 'pointer' }}>
-                  {r}
+              {[
+                { key: 'ALL', label: 'TẤT CẢ' },
+                { key: 'ADMIN', label: 'QUẢN TRỊ VIÊN' },
+                { key: 'INSTRUCTOR', label: 'GIẢNG VIÊN' },
+                { key: 'STUDENT', label: 'SINH VIÊN' },
+              ].map(r => (
+                <span key={r.key} style={{ padding: '4px 10px', borderRadius: 6, fontSize: 11, fontWeight: 600, background: 'rgba(59, 130, 246, 0.09)', color: 'var(--blue-300)', cursor: 'pointer' }}>
+                  {r.label}
                 </span>
               ))}
             </div>
@@ -415,7 +420,7 @@ export function AdminDashboard({ token }: { token: string }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                {['ID', 'Họ tên', 'Email', 'Vai trò', 'Trạng thái', 'Ngày tạo', 'Hành động'].map(h => (
+                {['Mã người dùng', 'Họ tên', 'Email', 'Vai trò', 'Trạng thái', 'Ngày tạo', 'Hành động'].map(h => (
                   <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>{h}</th>
                 ))}
               </tr>
@@ -426,18 +431,23 @@ export function AdminDashboard({ token }: { token: string }) {
                   <td style={{ padding: '10px 12px', fontFamily: 'monospace', fontSize: 12, color: 'var(--blue-300)' }}>{u.userId}</td>
                   <td style={{ padding: '10px 12px', fontWeight: 600, color: '#0b1220' }}>{u.fullName}</td>
                   <td style={{ padding: '10px 12px', color: 'var(--text-muted)', fontSize: 12 }}>{u.email}</td>
-                  <td style={{ padding: '10px 12px' }}>{badge(u.role, roleColor[u.role] || '#4d5c76')}</td>
+                  <td style={{ padding: '10px 12px' }}>
+                    {badge(
+                      u.role === 'ADMIN' ? 'Quản trị viên' : u.role === 'INSTRUCTOR' ? 'Giảng viên' : u.role === 'HOD' ? 'Trưởng bộ môn' : 'Sinh viên',
+                      roleColor[u.role] || '#4d5c76'
+                    )}
+                  </td>
                   <td style={{ padding: '10px 12px' }}>
                     {u.isActive
-                      ? <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--state-ok)', fontSize: 12, fontWeight: 600 }}><CheckCircle size={12} /> Active</span>
-                      : <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--state-bad)', fontSize: 12, fontWeight: 600 }}><XCircle size={12} /> Inactive</span>}
+                      ? <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--state-ok)', fontSize: 12, fontWeight: 600 }}><CheckCircle size={12} /> Hoạt động</span>
+                      : <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--state-bad)', fontSize: 12, fontWeight: 600 }}><XCircle size={12} /> Vô hiệu hóa</span>}
                   </td>
                   <td style={{ padding: '10px 12px', color: 'var(--text-dim)', fontSize: 12 }}>
                     {new Date(u.createdAt).toLocaleDateString('vi-VN')}
                   </td>
                   <td style={{ padding: '10px 12px' }}>
                     {u.role !== 'ADMIN' && (
-                      <button onClick={() => deleteUser(u.userId)} title="Xóa user"
+                      <button onClick={() => deleteUser(u.userId)} title="Xóa người dùng"
                         style={{ background: 'rgba(11, 18, 32, 0.06)', border: '1px solid rgba(11, 18, 32, 0.1)', borderRadius: 6, color: 'var(--text-main)', padding: '4px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
                         <Trash2 size={12} /> Xóa
                       </button>
@@ -459,7 +469,7 @@ export function AdminDashboard({ token }: { token: string }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                {['Submission ID', 'Student', 'Assignment', 'Language', 'Trạng thái', 'Điểm', 'Thời gian nộp', 'Thao tác'].map(h => (
+                {['Mã bài nộp', 'Sinh viên', 'Đề bài', 'Ngôn ngữ', 'Trạng thái', 'Điểm', 'Thời gian nộp', 'Thao tác'].map(h => (
                   <th key={h} style={{ padding: '8px 12px', textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600 }}>{h}</th>
                 ))}
               </tr>
@@ -500,17 +510,17 @@ export function AdminDashboard({ token }: { token: string }) {
       {activeTab === 'dlq' && (
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700 }}>Dead Letter Queue (DLQ)</h3>
+            <h3 style={{ fontSize: 15, fontWeight: 700 }}>Hàng đợi tác vụ lỗi (DLQ)</h3>
             {dlqJobs.length > 0 && (
               <button onClick={purgeDLQ} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', background: 'rgba(11, 18, 32, 0.06)', border: '1px solid rgba(11, 18, 32, 0.1)', borderRadius: 8, color: 'var(--text-main)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                <Trash2 size={13} /> Purge All DLQ
+                <Trash2 size={13} /> Xóa sạch hàng đợi DLQ
               </button>
             )}
           </div>
           {dlqJobs.length === 0 ? (
             <div className="glass-panel" style={{ padding: 48, textAlign: 'center' }}>
               <CheckCircle size={40} style={{ color: 'var(--blue-300)', margin: '0 auto 12px' }} />
-              <p style={{ color: 'var(--blue-300)', fontWeight: 600 }}>DLQ sạch — Không có job thất bại!</p>
+              <p style={{ color: 'var(--blue-300)', fontWeight: 600 }}>Hàng đợi DLQ sạch — Không có tác vụ lỗi!</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -520,11 +530,11 @@ export function AdminDashboard({ token }: { token: string }) {
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                         <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-main)' }}>{job.dlqId}</span>
-                        {badge(`${job.attemptsMade} attempts`, '#7d4f00')}
-                        {badge(job.status, '#b42318')}
+                        {badge(`${job.attemptsMade} lần thử`, '#7d4f00')}
+                        {badge(job.status === 'FAILED' ? 'Thất bại' : job.status, '#b42318')}
                       </div>
                       <div style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 4 }}>
-                        Submission: <span style={{ color: 'var(--blue-300)' }}>{job.submissionId}</span>
+                        Mã bài nộp: <span style={{ color: 'var(--blue-300)' }}>{job.submissionId}</span>
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text-main)', display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                         <AlertTriangle size={12} style={{ marginTop: 2, flexShrink: 0 }} />
@@ -534,7 +544,7 @@ export function AdminDashboard({ token }: { token: string }) {
                     <div style={{ display: 'flex', gap: 8, marginLeft: 16 }}>
                       <button onClick={() => retryDLQ(job.dlqId)}
                         style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: 'rgba(59, 130, 246, 0.09)', border: '1px solid rgba(59, 130, 246, 0.2)', borderRadius: 6, color: 'var(--blue-300)', cursor: 'pointer', fontSize: 12 }}>
-                        <RotateCcw size={12} /> Retry
+                        <RotateCcw size={12} /> Thử lại
                       </button>
                       <button onClick={() => deleteDLQ(job.dlqId)}
                         style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', background: 'rgba(11, 18, 32, 0.05)', border: '1px solid rgba(11, 18, 32, 0.09)', borderRadius: 6, color: 'var(--text-main)', cursor: 'pointer', fontSize: 12 }}>
@@ -680,7 +690,13 @@ export function AdminDashboard({ token }: { token: string }) {
                               border: `1px solid ${statusColor}33`,
                             }}
                           >
-                            {item.status}
+                            {item.status === 'ACCEPTED'
+                              ? 'Chấp thuận'
+                              : item.status === 'REJECTED'
+                                ? 'Từ chối'
+                                : item.status === 'IN_REVIEW'
+                                  ? 'Đang thẩm định'
+                                  : 'Chờ phân công'}
                           </span>
                         </td>
 
@@ -762,12 +778,12 @@ export function AdminDashboard({ token }: { token: string }) {
           <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 20 }}>Cấu hình hệ thống</h3>
           <div style={{ display: 'grid', gap: 16 }}>
             {[
-              { label: 'JWT Expiry', val: '24 giờ (86400s)', icon: <Shield size={16} /> },
-              { label: 'OTP TTL', val: '5 phút', icon: <Clock size={16} /> },
-              { label: 'Max File Upload', val: '10 MB (.zip)', icon: <Database size={16} /> },
-              { label: 'BullMQ Max Retries', val: '3 lần', icon: <RotateCcw size={16} /> },
-              { label: 'Queue Mode', val: queueStats?.mode || '—', icon: <Server size={16} /> },
-              { label: 'Redis', val: queueStats?.isRedisAvailable ? 'Online' : 'Offline (In-Memory)', icon: <Activity size={16} /> },
+              { label: 'Thời hạn xác thực (JWT)', val: '24 giờ (86400s)', icon: <Shield size={16} /> },
+              { label: 'Thời hạn mã OTP', val: '5 phút', icon: <Clock size={16} /> },
+              { label: 'Dung lượng tệp tối đa', val: '10 MB (.zip)', icon: <Database size={16} /> },
+              { label: 'Số lần thử lại tối đa (Queue)', val: '3 lần', icon: <RotateCcw size={16} /> },
+              { label: 'Chế độ hàng đợi', val: queueStats?.mode === 'REDIS' ? 'Redis phân tán' : 'Bộ nhớ trong (Fallback)', icon: <Server size={16} /> },
+              { label: 'Máy chủ Redis', val: queueStats?.isRedisAvailable ? 'Trực tuyến (Online)' : 'Ngoại tuyến (Bộ nhớ trong)', icon: <Activity size={16} /> },
             ].map(({ label, val, icon }) => (
               <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', background: 'rgba(11, 18, 32, 0.025)', borderRadius: 10, border: '1px solid var(--border-color)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-muted)', fontSize: 13 }}>
@@ -790,7 +806,7 @@ export function AdminDashboard({ token }: { token: string }) {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, borderBottom: '1px solid var(--border-color)', paddingBottom: 12 }}>
               <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-main)' }}>
                 <FileText size={18} color="var(--blue-300)" />
-                Nhật Ký Kiểm Toán (Audit Trail) #{auditAppeal.appealId}
+                Nhật Ký Kiểm Toán #{auditAppeal.appealId}
               </h3>
               <button type="button" onClick={() => setAuditAppeal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-dim)' }}>
                 <X size={18} />
@@ -810,7 +826,7 @@ export function AdminDashboard({ token }: { token: string }) {
               </div>
             </div>
 
-            <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text-main)' }}>Dòng thời gian sự kiện (Timeline)</h4>
+            <h4 style={{ fontSize: 13, fontWeight: 700, marginBottom: 10, color: 'var(--text-main)' }}>Dòng thời gian sự kiện</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {(auditAppeal.events && auditAppeal.events.length > 0 ? auditAppeal.events : [
                 { action: 'CREATED', actorId: auditAppeal.studentId, createdAt: auditAppeal.createdAt, meta: { originalScore: auditAppeal.originalScore } },
@@ -830,7 +846,7 @@ export function AdminDashboard({ token }: { token: string }) {
                         <span>
                           {isCreated && 'Sinh viên gửi đơn khiếu nại'}
                           {isAssigned && `Admin phân công cho Giảng viên ${evt.meta?.reviewerId || ''}`}
-                          {isResolved && `Giảng viên kết luận phúc khảo (${evt.meta?.status || auditAppeal.status})`}
+                          {isResolved && `Giảng viên kết luận phúc khảo (${(evt.meta?.status || auditAppeal.status) === 'ACCEPTED' ? 'Chấp thuận' : 'Từ chối'})`}
                         </span>
                         <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>
                           {evt.createdAt ? new Date(evt.createdAt).toLocaleString('vi-VN') : ''}

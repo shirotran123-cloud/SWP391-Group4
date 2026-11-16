@@ -1076,7 +1076,7 @@ public class Solution {
                               color: tc.status === 'PASSED' ? 'var(--state-ok)' : 'var(--state-bad)',
                             }}
                           >
-                            {tc.status === 'PASSED' ? `PASSED (+${tc.score}đ)` : 'FAILED (0.0đ)'}
+                            {tc.status === 'PASSED' ? `ĐẠT (+${tc.score}đ)` : 'KHÔNG ĐẠT (0.0đ)'}
                           </span>
                         </div>
                       </div>

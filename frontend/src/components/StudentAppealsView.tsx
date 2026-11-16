@@ -67,6 +67,12 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
             <XCircle size={14} /> ĐÃ TỪ CHỐI
           </span>
         );
+      case 'IN_REVIEW':
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-200)', fontSize: '12px', fontWeight: 700 }}>
+            <Clock size={14} /> ĐANG THẨM ĐỊNH
+          </span>
+        );
       default:
         return (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '12px', backgroundColor: 'rgba(37, 99, 235, 0.08)', color: 'var(--blue-200)', fontSize: '12px', fontWeight: 700 }}>
@@ -86,7 +92,7 @@ export const StudentAppealsView: React.FC<StudentAppealsViewProps> = ({
               Cổng dịch vụ sinh viên • Phúc khảo điểm
             </span>
             <h1 style={{ fontSize: '26px', fontWeight: 600, marginTop: '4px', marginBottom: '8px', color: 'var(--text-main)' }}>
-              Theo Dõi Khiếu Nại &amp; Phúc Khảo Điểm (Appeals)
+              Theo Dõi Khiếu Nại &amp; Phúc Khảo Điểm
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px' }}>
               Sinh viên có quyền gửi <strong>1 đơn phúc khảo duy nhất cho mỗi bài nộp</strong> trong vòng <strong>48 giờ</strong> sau khi công bố kết quả. Kết luận của Giảng viên thẩm định là quyết định cuối cùng.

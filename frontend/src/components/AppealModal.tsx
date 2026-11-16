@@ -232,7 +232,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
           <div style={{ padding: '12px 16px', borderRadius: '12px', backgroundColor: 'rgba(11, 18, 32, 0.025)', border: '1px solid rgba(11, 18, 32, 0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
               <label style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                Mã bài nộp (Submission ID) *
+                Mã bài nộp *
               </label>
               {Boolean(submissionId) && (
                 <span style={{ fontSize: '11px', color: 'var(--blue-300)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>

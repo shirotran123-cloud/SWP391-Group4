@@ -580,7 +580,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                 {/* Dòng 2: Tên đề bài & thông tin file */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', backgroundColor: 'rgba(11, 18, 32, 0.02)', padding: '14px 16px', borderRadius: '12px' }}>
                   <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Đề bài / Assignment</div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Đề bài / Bài tập</div>
                     <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-main)', marginTop: '2px' }}>
                       {sub.assignmentId || 'SWP391 - Đồ Án Chuyên Ngành'}
                     </div>

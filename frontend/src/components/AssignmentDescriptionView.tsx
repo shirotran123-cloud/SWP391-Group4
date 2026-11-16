@@ -336,7 +336,7 @@ export const AssignmentDescriptionView: React.FC<AssignmentDescriptionViewProps>
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#1e40af', fontSize: '13.5px', fontWeight: 600, marginBottom: '12px' }}>
           <AlertTriangle size={16} />
-          <span>RÀNG BUỘC KỸ THUẬT &amp; GIỚI HẠN DỮ LIỆU (CONSTRAINTS)</span>
+          <span>RÀNG BUỘC KỸ THUẬT &amp; GIỚI HẠN DỮ LIỆU</span>
         </div>
 
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
