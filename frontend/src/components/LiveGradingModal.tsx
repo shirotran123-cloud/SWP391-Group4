@@ -517,12 +517,12 @@ export const LiveGradingModal: React.FC<LiveGradingModalProps> = ({
                 {aiRating.codeSmells && aiRating.codeSmells.length > 0 ? (
                   <span>
                     Dòng {aiRating.codeSmells[0].line}: {translateCodeSmell(aiRating.codeSmells[0]).description} Nên tách nhỏ phương thức để tuân thủ{' '}
-                    <strong style={{ color: 'var(--text-soft)' }}>Single Responsibility Principle</strong>.
+                    <strong style={{ color: 'var(--text-soft)' }}>Nguyên lý Đơn Trách Nhiệm (SRP)</strong>.
                   </span>
                 ) : (
                   <span>
-                    Không phát hiện code smell. Cách phân tách trách nhiệm giữa các lớp đang tuân thủ tốt nguyên lý{' '}
-                    <strong style={{ color: 'var(--text-soft)' }}>Single Responsibility Principle</strong>.
+                    Không phát hiện code smell. Cách phân tách trách nhiệm giữa các lớp đang tuân thủ tốt{' '}
+                    <strong style={{ color: 'var(--text-soft)' }}>Nguyên lý Đơn Trách Nhiệm (SRP)</strong>.
                   </span>
                 )}
               </p>

@@ -856,11 +856,11 @@ if __name__ == '__main__':
     status: 'COMPLETED',
     aiRating: {
       codeSmells: [
-        { line: 8, rule: 'Dependency Inversion Principle', description: 'Tight Coupling: Consider defining an interface or abstract base class for calculators and injecting dependencies rather than relying strictly on static methods.' },
-        { line: 28, rule: 'Single Responsibility Principle', description: 'Mixed Responsibilities: Separate the input/output IO logic from the algorithmic computation logic to improve modularity.' },
+        { line: 8, rule: 'Nguyên lý Đảo ngược Phụ thuộc (DIP)', description: 'Phụ thuộc chặt chẽ (Tight Coupling): Nên định nghĩa interface hoặc lớp trừu tượng và áp dụng Dependency Injection thay vì chỉ dùng phương thức tĩnh.' },
+        { line: 28, rule: 'Nguyên lý Đơn trách nhiệm (SRP)', description: 'Trộn lẫn trách nhiệm: Hãy tách riêng luồng nhập/xuất (I/O) ra khỏi giải thuật tính toán để tăng tính mô-đun hoá (tuân thủ Single Responsibility Principle).' },
       ],
       solidScore: { d: 6, i: 10, l: 10, o: 8, s: 8 },
-      explanation: 'The submission demonstrates good overall code structure with meaningful naming, type hinting, and proper exception handling. The iterative Fibonacci calculation avoids deep recursion limits. However, the static method usage within a tightly coupled class design reduces dependency inversion, and standard I/O is hardcoded inside the execution flow.',
+      explanation: 'Bài nộp thể hiện cấu trúc mã nguồn tổng thể tốt, đặt tên biến có ý nghĩa và xử lý ngoại lệ hợp lý. Thuật toán lặp Fibonacci tránh được giới hạn đệ quy sâu. Tuy nhiên, việc sử dụng phương thức tĩnh trong lớp có độ phụ thuộc cao làm giảm tính đảo ngược phụ thuộc (DIP), và luồng nhập/xuất chuẩn còn bị gắn cứng (hardcode) trực tiếp.',
       cleanCodeScore: 8.5,
     },
     maxScore: 10,
@@ -917,7 +917,7 @@ if __name__ == '__main__':
     aiRating: {
       codeSmells: [],
       solidScore: { d: 10, i: 10, l: 10, o: 10, s: 10 },
-      explanation: 'The student submission is exceptionally well-written, following Python best practices, PEP 8 guidelines, and strict SOLID principles. The code is clean, well-documented, includes appropriate input validation and error handling, and implements an efficient O(N) time and O(1) space algorithm.',
+      explanation: 'Mã nguồn tuân thủ xuất sắc các tiêu chuẩn Clean Code: các hàm được phân tách mô-đun hoá rõ ràng, quy tắc đặt tên tường minh và áp dụng chuẩn xác 5 nguyên lý thiết kế SOLID. Giải thuật tối ưu hiệu năng O(N) và bộ nhớ O(1).',
       cleanCodeScore: 9.5,
     },
     maxScore: 10,

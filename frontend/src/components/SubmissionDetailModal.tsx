@@ -175,15 +175,15 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
         if (!isThisPassed) {
           if (submission.status?.toUpperCase() === 'TLE' || executionMs >= 2000) {
             statusStr = 'TLE';
-            detailError = 'Time Limit Exceeded (> 2.0s)';
+            detailError = 'Vượt quá thời gian thực thi (> 2.0s)';
           } else if (submission.status?.toUpperCase() === 'MLE') {
             statusStr = 'MLE';
-            detailError = 'Memory Limit Exceeded (> 512MB)';
+            detailError = 'Vượt quá giới hạn bộ nhớ (> 512MB)';
           } else if (submission.status?.toUpperCase() === 'COMPILE_ERROR' || submission.status?.toUpperCase() === 'CE') {
             statusStr = 'ERROR';
-            detailError = 'Compile Error / Syntax Error';
+            detailError = 'Lỗi biên dịch / Cú pháp không hợp lệ';
           } else {
-            detailError = 'Wrong Answer (Kết quả không khớp output mẫu)';
+            detailError = 'Kết quả không chính xác (Không khớp dữ liệu mẫu)';
           }
         }
 
@@ -485,7 +485,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--blue-200)', marginTop: '4px' }}>
                     {passedTC !== undefined && totalTC !== undefined ? (
                       <>
-                        {passedTC}/{totalTC} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>Passed</span>
+                        {passedTC}/{totalTC} <span style={{ fontSize: '14px', fontWeight: 500, color: '#4d5c76' }}>Đạt</span>
                       </>
                     ) : (
                       <span style={{ fontSize: '15px', color: 'var(--text-dim)', fontWeight: 600 }}>—</span>
@@ -500,7 +500,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
 
                 <div style={{ padding: '16px', borderRadius: '12px', backgroundColor: 'rgba(37, 99, 235, 0.07)', border: '1px solid rgba(37, 99, 235, 0.12)' }}>
                   <div style={{ fontSize: '11px', color: 'var(--blue-200)', fontWeight: 700, textTransform: 'uppercase' }}>
-                    Clean Code Score
+                    Điểm Clean Code
                   </div>
                   <div style={{ fontSize: '26px', fontWeight: 900, color: 'var(--blue-300)', marginTop: '4px' }}>
                     {aiRating ? (
@@ -554,7 +554,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: '#4d5c76', flexWrap: 'wrap' }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <Code size={13} color="var(--primary)" /> Compiler: <strong style={{ color: 'var(--primary)' }}>{(submission.language || 'Java 17').toUpperCase()}</strong>
+                      <Code size={13} color="var(--primary)" /> Trình biên dịch: <strong style={{ color: 'var(--primary)' }}>{(submission.language || 'Java 17').toUpperCase()}</strong>
                     </span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                       <Clock size={13} color="#2563eb" /> Thời gian thực thi: <strong>{executionMs} ms</strong>
@@ -563,7 +563,7 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       <Cpu size={13} color="#3b82f6" /> Giới hạn RAM: <strong>512 MB</strong>
                     </span>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--blue-300)' }}>
-                      <ShieldCheck size={13} /> Strict Sandbox Isolation
+                      <ShieldCheck size={13} /> Cô lập Docker Sandbox
                     </span>
                   </div>
                 </div>
@@ -615,12 +615,12 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                             }}
                           >
                             {tc.status === 'PASSED'
-                              ? 'PASSED'
+                              ? 'ĐẠT'
                               : tc.status === 'TLE'
-                                ? 'FAILED (TLE)'
+                                ? 'KHÔNG ĐẠT (TLE)'
                                 : tc.status === 'MLE'
-                                  ? 'FAILED (MLE)'
-                                  : 'FAILED'}
+                                  ? 'KHÔNG ĐẠT (MLE)'
+                                  : 'KHÔNG ĐẠT'}
                           </span>
                           <div style={{ fontSize: '11px', color: '#4d5c76' }}>
                             {tc.timeMs ?? 45}ms • {tc.memoryMb ?? 14}MB
@@ -735,11 +735,11 @@ export const SubmissionDetailModal: React.FC<SubmissionDetailModalProps> = ({
                       {aiRating.codeSmells && aiRating.codeSmells.length > 0 ? (
                         <span>
                           <strong>Phát hiện vi phạm: </strong>
-                          {translateCodeSmell(aiRating.codeSmells[0]).description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử tái cấu trúc (refactor) lại các phương thức để tuân thủ <strong>Single Responsibility Principle (SRP)</strong>.
+                          {translateCodeSmell(aiRating.codeSmells[0]).description} (tại dòng {aiRating.codeSmells[0].line}). Hãy thử tái cấu trúc (refactor) lại các phương thức để tuân thủ <strong>Nguyên lý Đơn Trách Nhiệm (SRP)</strong>.
                         </span>
                       ) : (
                         <span>
-                          <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện Code Smells nào, phân tách trách nhiệm giữa các class/module rõ ràng và tuân thủ tốt nguyên lý <strong>Single Responsibility Principle (SRP)</strong>.
+                          <strong>Đánh giá kiến trúc xuất sắc:</strong> Mã nguồn không phát hiện Code Smells nào, phân tách trách nhiệm giữa các class/module rõ ràng và tuân thủ tốt <strong>Nguyên lý Đơn Trách Nhiệm (SRP)</strong>.
                         </span>
                       )}
                     </p>

@@ -1671,7 +1671,7 @@ export const SubmissionView: React.FC<SubmissionViewProps> = ({
                     taskSubmissions[0]?.details?.totalTestcases ?? 0,
                     selectedTask.testCasesCount ?? 0,
                   );
-                  return p !== undefined && t > 0 ? `${p}/${t} Passed` : 'Đang chấm...';
+                  return p !== undefined && t > 0 ? `${p}/${t} Đạt` : 'Đang chấm...';
                 })()}
               </span>
 

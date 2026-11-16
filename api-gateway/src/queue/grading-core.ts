@@ -186,7 +186,7 @@ export function analyzeSourceCode(
       if (SORT_PATTERNS.srpViolation.some((p) => p.test(line))) {
         codeSmells.push({
           line: idx + 1,
-          rule: 'Single Responsibility Principle',
+          rule: 'Nguyên lý Đơn trách nhiệm (SRP)',
           description: `Phương thức tại dòng ${idx + 1} vi phạm SRP: đang gánh vác nhiều trách nhiệm (sắp xếp + in kết quả + lưu DB).`,
         });
       }
@@ -203,7 +203,7 @@ export function analyzeSourceCode(
   if (magicNumberLines.length > 0) {
     codeSmells.push({
       line: magicNumberLines[0],
-      rule: 'Magic Number',
+      rule: 'Quy chuẩn đặt tên & Hằng số (Clean Code)',
       description: `Phát hiện hằng số cứng tại dòng ${magicNumberLines[0]}. Nên đặt thành hằng số có tên (named constant).`,
     });
   }

@@ -64,10 +64,10 @@ export class MockProvider implements ILLMProvider {
         line_start: 12,
         line_end: 95,
         severity: "CRITICAL",
-        rule: "Single Responsibility Principle (SRP)",
-        smell_type: "God Class / Bloated Controller",
+        rule: "Nguyên lý Đơn Trách Nhiệm (SRP)",
+        smell_type: "Lớp quá tải chức năng (God Class)",
         suggestion:
-          "Split the God Class into separate focused classes: separate business calculation, I/O presentation, and validation logic.",
+          "Hãy tách lớp quá tải chức năng này thành các lớp riêng biệt: phân tách rõ giải thuật tính toán nghiệp vụ, luồng hiển thị nhập/xuất I/O và kiểm tra dữ liệu.",
       });
     }
 
