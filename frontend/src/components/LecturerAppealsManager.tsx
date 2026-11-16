@@ -1199,10 +1199,10 @@ public class Solution {
                       flex: 1,
                       padding: '14px',
                       borderRadius: '12px',
-                      border: resolveStatus === 'ACCEPTED' ? '2px solid #2563eb' : '1px solid rgba(11, 18, 32, 0.06)',
+                      border: resolveStatus === 'ACCEPTED' ? '2px solid #2563eb' : '1px solid rgba(11, 18, 32, 0.08)',
                       backgroundColor: resolveStatus === 'ACCEPTED' ? 'rgba(37, 99, 235, 0.1)' : 'rgba(11, 18, 32, 0.03)',
                       color: resolveStatus === 'ACCEPTED' ? '#1d4ed8' : '#4d5c76',
-                      fontWeight: 600,
+                      fontWeight: 700,
                       fontSize: '14px',
                       cursor: 'pointer',
                       display: 'flex',
@@ -1223,10 +1223,10 @@ public class Solution {
                       flex: 1,
                       padding: '14px',
                       borderRadius: '12px',
-                      border: resolveStatus === 'REJECTED' ? '2px solid #ffffff' : '1px solid rgba(11, 18, 32, 0.06)',
-                      backgroundColor: resolveStatus === 'REJECTED' ? 'rgba(11, 18, 32, 0.07)' : 'rgba(11, 18, 32, 0.03)',
-                      color: resolveStatus === 'REJECTED' ? 'var(--text-main)' : '#4d5c76',
-                      fontWeight: 600,
+                      border: resolveStatus === 'REJECTED' ? '2px solid #dc2626' : '1px solid rgba(11, 18, 32, 0.08)',
+                      backgroundColor: resolveStatus === 'REJECTED' ? 'rgba(220, 38, 38, 0.08)' : 'rgba(11, 18, 32, 0.03)',
+                      color: resolveStatus === 'REJECTED' ? '#dc2626' : '#4d5c76',
+                      fontWeight: 700,
                       fontSize: '14px',
                       cursor: 'pointer',
                       display: 'flex',
@@ -1335,23 +1335,29 @@ public class Solution {
                     type="submit"
                     disabled={submitting}
                     style={{
-                      padding: '11px 24px',
+                      padding: '12px 26px',
                       borderRadius: '10px',
                       border: 'none',
-                      backgroundColor: resolveStatus === 'ACCEPTED' ? '#2563eb' : 'var(--text-main)',
-                      color: 'var(--text-main)',
-                      fontWeight: 600,
-                      fontSize: '13.5px',
+                      backgroundColor: resolveStatus === 'ACCEPTED' ? '#16a34a' : '#dc2626',
+                      color: '#ffffff',
+                      fontWeight: 700,
+                      fontSize: '14px',
                       cursor: submitting ? 'not-allowed' : 'pointer',
                       opacity: submitting ? 0.7 : 1,
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '8px',
-                      boxShadow: resolveStatus === 'ACCEPTED' ? '0 4px 20px rgba(37, 99, 235, 0.16)' : '0 4px 20px rgba(11, 18, 32, 0.108)',
+                      boxShadow: resolveStatus === 'ACCEPTED'
+                        ? '0 4px 16px rgba(22, 163, 74, 0.35)'
+                        : '0 4px 16px rgba(220, 38, 38, 0.35)',
                     }}
                   >
                     <CheckCircle2 size={16} />
-                    {submitting ? 'Đang Lưu Quyết Định...' : 'Xác Nhận Quyết Định Phúc Khảo'}
+                    {submitting
+                      ? 'Đang Lưu Quyết Định...'
+                      : resolveStatus === 'ACCEPTED'
+                        ? 'Xác Nhận Chấp Thuận & Cập Nhật Điểm'
+                        : 'Xác Nhận Từ Chối Khiếu Nại'}
                   </button>
                 </div>
               </form>
