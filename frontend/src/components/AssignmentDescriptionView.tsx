@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   BookOpen, Zap, Terminal, Code, AlertTriangle, CheckCircle,
   Layers, ShieldAlert, Cpu, HardDrive, Sparkles, ChevronDown, ChevronUp, Copy, Check

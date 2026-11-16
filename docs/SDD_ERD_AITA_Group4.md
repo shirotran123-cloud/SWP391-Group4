@@ -286,6 +286,6 @@
 - BullMQ `MAX_RETRIES=3`, backoff 1500 exponential, `CONCURRENCY_LIMIT=4`.
 - Redis down → in-memory queue + `dead_letter_jobs` (`DLQ-*`).
 - Docker down → `RESILIENT_CIRCUIT_BREAKER` with identical verdict tags.
-- Plagiarism `>= 70%` flagged; statuses CLEAN/SUSPECTED/FLAGGED.
+- Plagiarism 3-tier classification: `<50%` CLEAN, `50%–<80%` SUSPECTED, `≥80%` FLAGGED_PLAGIARISM (zero-score rule).
 - Coverage gate 80%; ports 3000 (gateway) / 5173 (vite).
 - Upload `.zip <= 10MB`; SHA-256 dedup via `file_hash` index.

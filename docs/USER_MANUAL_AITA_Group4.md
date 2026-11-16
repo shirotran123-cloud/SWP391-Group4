@@ -4,14 +4,14 @@
 - Audience: Student, Lecturer (GV001/INSTRUCTOR), Admin
 - Frontend: `http://localhost:5173`; Gateway: `http://localhost:3000`
 - Scoring: TC1 3.5 + TC2 3.5 + CleanCode 2.0 + SOLID 1.0 = 10 (mỗi testcase có điểm ngang nhau = 7.0 / N)
-- Plagiarism gate: `>= 70%` flagged (`PLAGIARISM_THRESHOLD = 70.0`)
+- Plagiarism gate: 3-tier policy (<50% Clean, 50%–<80% Suspected/Review, ≥80% Confirmed Plagiarism with zero-score rule)
 
 ## 1. What Is AITA?
 
 - Auto-grades programming `.zip` submissions end to end.
 - Pipeline: queue → Docker sandbox → GenAI review → AST plagiarism check.
 - Live WebSocket modal shows 6 grading steps in real time.
-- Appeals allow grade disputes (max 2 within 48h).
+- Appeals allow grade disputes (max 1 attempt within 48h).
 - Teamwork analytics flags free-riders (`< 10%`).
 - Final score breakdown always sums to 10 with 2 testcases.
 - Vietnamese UI terms preserved verbatim in this manual.
@@ -104,21 +104,24 @@ cd frontend; npm run dev
 - Select benchmark Pair01–Pair10 from `rbl-benchmark-pairs.ts`.
 - Engine display: `Winnowing w=10, k=15` (benchmark setting).
 - Code defaults remain `DEFAULT_K = 5`, `DEFAULT_W = 3`.
-- Result `>= 70%` shows `CẢNH BÁO ĐẠO VĂN` / flagged.
-- Result `< 70%` shows `MÃ NGUỒN AN TOÀN`.
-- Click result opens `MonacoDiffViewer` with `matchedTokensJson` ranges.
-- Lecturer matrix view uses same `>= 70%` gate (`LecturerDashboard`).
+- 3-tier results:
+  - `< 50%`: `MÃ NGUỒN AN TOÀN` / `CLEAN` (tính điểm bình thường).
+  - `50% – < 80%`: `NGHI VẤN ĐẠO VĂN` / `SUSPECTED` (giữ nguyên điểm, gắn cờ để Giảng viên kiểm tra đối soát trực tiếp).
+  - `≥ 80%`: `ĐẠO VĂN XÁC NHẬN` / `FLAGGED_PLAGIARISM` (áp dụng điểm 0 theo quy chế liêm chính học thuật, chờ Giảng viên xác nhận).
+- Click result opens `MonacoDiffViewer` with `matchedTokensJson` ranges (side-by-side AST visualizer).
+- Lecturer matrix view applies the same 3-tier policy with class-wide N×N heatmaps (`LecturerDashboard`).
+- Privacy rule (BR-04): Chi tiết đối soát đạo văn chỉ hiển thị cho Giảng viên/HOD/Admin, không công khai cho sinh viên.
 - Negative control Pair10 correctly stays unflagged (true negative).
 
-## 7. Appeals Flow (max 2, 48h)
+## 7. Appeals Flow (max 1 attempt, 48h)
 
-- Student tab: `Phúc Khảo & Khiếu Nại (UC-06)` (`StudentAppealsView`).
+- Student tab: `Phúc Khảo & Khiếu Nại` (`StudentAppealsView`).
 - Create: `POST /api/v1/appeals {submissionId, studentId, reason}`.
-- Rule BR-05: `<= 2` appeals per submission (`MAX_APPEALS_PER_SUBMISSION = 2`).
+- Rule BR-05: `<= 1` appeal per submission (`MAX_APPEALS_PER_SUBMISSION = 1`).
 - Rule BR-05: window `<= 48h` from submit (`DISPUTE_WINDOW_MS`).
-- Third attempt → 400 `Vượt quá số lần phúc khảo cho phép!`.
+- Subsequent attempt → 400 `Vượt quá số lần phúc khảo cho phép! (Mỗi bài nộp tối đa 1 lượt duy nhất)`.
 - Expired attempt → 400 `Đã quá thời hạn phúc khảo cho phép!` with hours.
-- Lecturer panel: `LecturerAppealsManager`.
+- Admin assigns independent reviewer (khác giảng viên tạo đề); assigned lecturer evaluates on `LecturerAppealsManager`.
 - Resolve: `PUT /api/v1/appeals/:id/resolve`.
 - Statuses: `ACCEPTED` / `REJECTED` / `IN_REVIEW` (from `PENDING`).
 - `ACCEPTED` + `adjustedScore` updates `submissions.score`.

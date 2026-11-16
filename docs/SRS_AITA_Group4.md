@@ -49,9 +49,9 @@
 - `api-gateway/src/queue/grading-worker.consumer.ts` (weights 3.5/3.5/1.5/1.5, equal testcase weights).
 - `api-gateway/src/sandbox/sandbox.service.ts` (DOCKER_SECCOMP / RESILIENT_CIRCUIT_BREAKER).
 - `sandbox/worker/index.ts` (512MB, 2.0s, none, 64).
-- `genai-hub/src/ast-engine/plagiarism-engine.ts` (threshold 70.0, 0.65/0.35).
+- `genai-hub/src/ast-engine/plagiarism-engine.ts` (3-tier AST policy: <50% Clean, 50%–<80% Suspected/Review, ≥80% Zero-Tolerance Plagiarism, ensemble 0.65 Winnowing / 0.35 AST).
 - `genai-hub/samples/rbl-dataset/rbl-benchmark-pairs.ts` (10 pairs).
-- `api-gateway/src/appeals/appeals.service.ts` (max 2, 48h).
+- `api-gateway/src/appeals/appeals.service.ts` (max 1 attempt, 48h window).
 - `api-gateway/src/teamwork/teamwork.service.ts` (free-rider < 10%).
 - `api-gateway/src/auth/auth.service.ts` (JWT HMAC + Google SSO whitelist).
 - `frontend/src/App.tsx` + 15 components.
@@ -92,7 +92,7 @@
 - Max upload 10MB (`MAX_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024`).
 - Exactly 2 testcases per assignment (`testcases_count = 2`).
 - Sandbox quotas non-negotiable (512MB / 2.0s / none / 64).
-- Plagiarism flag fixed at `>= 70%`.
+- 3-tier Plagiarism & Academic Integrity thresholds: `<50%` Clean (normal scoring), `50%–<80%` Suspected/Review (manual lecturer verification), `≥80%` Confirmed Plagiarism (automated zero-score penalty pending lecturer confirmation).
 - Coverage gate 80% for Milestone 3 / Final.
 
 ## 3. Functional Requirements — Use Cases UC-01..UC-12
@@ -170,18 +170,23 @@
 - Weights: CleanCode 2.0 + SOLID 1.0 of final 10.
 - Postcondition: one review row persisted per `submission_id`.
 
-### UC-07 — AST Plagiarism Matrix (>=70% flag)
+### UC-07 — AST Plagiarism Matrix & Multi-Tier Verification (<50% / 50%–<80% / ≥80%)
 
-- Source: `genai-hub/src/ast-engine/plagiarism-engine.ts`.
-- Threshold: `PLAGIARISM_THRESHOLD = 70.0`.
-- Normalizer `ast-normalizer.ts`: identifiers → canonical, drops comments.
+- Source: `genai-hub/src/ast-engine/plagiarism-engine.ts`, `frontend/src/services/ast-engine/plagiarism-engine.ts`.
+- 3-Tier Multi-Level Thresholds (BR-03):
+  - Tier 1 (<50%): `CLEAN` — Bài làm độc lập, an toàn; hệ thống tính điểm bình thường theo barem.
+  - Tier 2 (50% – <80%): `SUSPECTED` / `WARNING` — Nghi vấn trùng lặp; giữ nguyên điểm số, đưa vào danh sách kiểm duyệt để Giảng viên trực tiếp đối soát AST Diff.
+  - Tier 3 (≥80%): `FLAGGED_PLAGIARISM` / `CONFIRMED_ZERO` — Vi phạm đạo văn nghiêm trọng; hệ thống áp dụng điểm 0.0 theo quy chế liêm chính học thuật (chờ Giảng viên thẩm định xác nhận).
+  - Ngoại lệ an toàn (Short code protection): Bài làm ngắn (≤ 20 dòng mã nguồn) giữ nguyên điểm và chuyển Giảng viên trực tiếp đánh giá thủ công.
+- Normalizer `ast-normalizer.ts`: identifiers → canonical, drops comments & formatting artifacts.
 - Fingerprinter `winnowing.ts`: defaults `DEFAULT_K = 5`, `DEFAULT_W = 3`.
 - Ensemble: `0.65 * winnowingContainment + 0.35 * astStructuralSimilarity`.
 - Shortcut: containment `>= 99.0` forces similarity 100.0.
 - `computeClassSimilarityMatrix` returns N×N `similarityMatrix` + `flaggedPairsCount`.
-- `matchedTokensJson` carries line/token segments for `MonacoDiffViewer`.
-- Bands: `CLEAN` (<40), `SUSPECTED` (>=40), `FLAGGED_PLAGIARISM` (>=70).
-- Postcondition: `plagiarism_reports` rows with `flagged_as_fraud`.
+- `matchedTokensJson` carries line/token segments for `MonacoDiffViewer` (side-by-side AST comparison).
+- Bands: `CLEAN` (<50%), `SUSPECTED / REVIEW` (50%–<80%), `FLAGGED_PLAGIARISM / ZERO_SCORE` (≥80%).
+- Privacy rule (BR-04): Toàn bộ ma trận và báo cáo AST chỉ hiển thị cho Giảng viên/HOD/Admin, không công khai cho sinh viên.
+- Postcondition: `plagiarism_reports` rows with `similarity_rate`, `status`, and `flagged_as_fraud`.
 
 ### UC-08 — Assignment & Testcase Management
 
@@ -194,15 +199,16 @@
 - Worker mirrors TC-01 (StdIn/StdOut) + TC-02 (edge/TLE check).
 - Postcondition: exactly 2 testcases enforced per assignment.
 
-### UC-09 — Appeals (max 2 / 48h)
+### UC-09 — Appeals (max 1 attempt / 48h)
 
 - Source: `api-gateway/src/appeals/appeals.service.ts` (BR-05).
-- Constants: `MAX_APPEALS_PER_SUBMISSION = 2`, `DISPUTE_WINDOW_MS = 48h`.
+- Constants: `MAX_APPEALS_PER_SUBMISSION = 1`, `DISPUTE_WINDOW_MS = 48h`.
 - Create `POST /api/v1/appeals` (`submissionId`, `studentId`, `reason`).
 - Check: submission exists, else 404.
-- Check: `countBySubmissionId >= 2` → 400 quota exceeded.
+- Check: `countBySubmissionId >= 1` → 400 quota exceeded (tối đa 1 lượt phúc khảo duy nhất cho mỗi bài nộp).
 - Check: `now - createdAt > 48h` → 400 with elapsed hours.
 - List `GET /api/v1/appeals`; detail `GET /api/v1/appeals/:id`.
+- Reviewer assignment rule: Bắt buộc Quản trị viên (Admin) chỉ định Giảng viên độc lập (khác giảng viên tạo đề/chấm ban đầu) thì Giảng viên đó mới có thẩm quyền chấm thẩm định.
 - Resolve `PUT /api/v1/appeals/:id/resolve` → `ACCEPTED`/`REJECTED`/`IN_REVIEW`.
 - ACCEPTED + `adjustedScore` updates `submissions.score`.
 - Postcondition: audit trail (`APL-*` id, reviewer, timestamps).
@@ -258,7 +264,7 @@
 - NFR-02: Watchdog 2.0s TLE (SIGKILL, exit 138).
 - NFR-03: `--network none` (`NetworkMode: 'none'`).
 - NFR-04: `--pids-limit 64` (`PidsLimit: 64`).
-- NFR-05: flag `similarityRate >= 70%` (`PLAGIARISM_THRESHOLD = 70.0`).
+- NFR-05: 3-tier AST similarity classification (<50% Clean, 50%–<80% Suspected/Review, ≥80% Confirmed Plagiarism / Zero-Score Penalty).
 - NFR-06: coverage ≥ 80% (Milestone 3 / Final gate).
 - NFR-07: acceptance SLA <200ms.
 - NFR-08: `.zip <= 10MB` (`MAX_UPLOAD_SIZE_BYTES`).
@@ -294,12 +300,17 @@
 
 ## 7. Business Rules
 
-- BR-02 (Deadline): after `assignments.due_date` reject; seed +14 days.
-- BR-02: frontend `CountdownTimer` blocks late upload.
-- BR-05 (Appeals): `<= 2` per `submission_id`; `countBySubmissionId >= 2` → 400.
-- BR-05: window `<= 48h` from `createdAt` (`DISPUTE_WINDOW_MS`); expired → 400 + hours.
-- BR-12 (Free-rider): `contribution_pct < 10.0` → `is_free_rider = TRUE`.
-- BR-12: enforced in `recordMetric` + warn log; syllabus P2P/LOC cross-check.
+- BR-02 (Deadline): after `assignments.due_date` reject; seed +14 days. Frontend `CountdownTimer` blocks late upload.
+- BR-03 (Plagiarism Tiers & Penalty Policy):
+  - `< 50%`: Hợp lệ / Clean — Điểm số tính bình thường theo barem kiểm thử và AI Review.
+  - `50% – < 80%`: Nghi vấn / Suspected — Tạm giữ nguyên điểm gốc, đưa vào danh sách kiểm duyệt để Giảng viên trực tiếp đối soát AST Diff.
+  - `≥ 80%`: Đạo văn xác nhận / Confirmed Plagiarism — Áp dụng quy chế liêm chính học thuật (Zero-Tolerance), hệ thống tự động đưa điểm về 0.0 (chờ Giảng viên xác nhận).
+  - Ngoại lệ an toàn: Bài làm ngắn (≤ 20 dòng mã nguồn) giữ nguyên điểm và chuyển Giảng viên thẩm định thủ công.
+- BR-04 (Role-based Plagiarism Privacy): Báo cáo chi tiết, tỷ lệ tương đồng AST và cặp bài đối sánh chỉ hiển thị cho Giảng viên/HOD/Admin, tuyệt đối không công khai cho Sinh viên.
+- BR-05 (Appeals): Tối đa `<= 1` lượt duy nhất per `submission_id`; `countBySubmissionId >= 1` → 400.
+- BR-05 (Window): Thời hạn khiếu nại `<= 48h` kể từ lúc nộp bài (`DISPUTE_WINDOW_MS`); quá hạn → 400 kèm số giờ đã trôi qua.
+- BR-05 (Reviewer Independence): Quản trị viên (Admin) chỉ định Giảng viên độc lập (khác giảng viên tạo đề) chấm thẩm định; giảng viên chưa được phân công chỉ có quyền xem (Read-only).
+- BR-12 (Free-rider): `contribution_pct < 10.0` → `is_free_rider = TRUE`. Enforced in `recordMetric` + warn log; syllabus P2P/LOC cross-check.
 
 ## 8. Activity Flows
 
@@ -315,7 +326,7 @@
 - 8: step 6 AST Winnowing matrix note.
 - 9: `grading:completed` with `scoreBreakdown` 3.5/3.5/clean/solid/total.
 - 10: modal shows total/10 + radar; history in `Lịch Sử Nộp & Điểm Số`.
-- 11: optional appeal (≤2 within 48h) → lecturer `ACCEPTED`/`REJECTED`.
+- 11: optional appeal (≤1 attempt within 48h) → Admin assigns independent lecturer → lecturer `ACCEPTED`/`REJECTED`.
 - 12: ACCEPTED adjusts `submissions.score`.
 
 ### 8.2 Failure paths
@@ -340,8 +351,8 @@
 - Queue acceptance <200ms on `POST /api/v1/submissions`.
 - Sandbox 512MB / 2.0s / `--network none` / `--pids-limit 64`.
 - Weights 3.5/3.5/2.0/1.0 = 10 with 2 testcases (mỗi testcase điểm ngang nhau).
-- Flag `>= 70%` with default config.
-- Appeals `<= 2` per submission within 48h.
+- 3-tier Plagiarism policy: <50% Clean, 50%–<80% Suspected/Review, ≥80% Confirmed Plagiarism with automated 0-point penalty.
+- Appeals `<= 1` attempt per submission within 48h with independent lecturer assignment.
 - Free-rider flagged below 10%.
 - In-memory + DLQ fallback with Redis/Docker offline.
 - 6-step live modal converges to completed/failed.
