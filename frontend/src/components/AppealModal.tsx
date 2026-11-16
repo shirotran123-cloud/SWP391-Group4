@@ -100,7 +100,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
         throw new Error(data.message || 'Gửi đơn khiếu nại thất bại');
       }
 
-      setSuccessMessage(`Đơn phúc khảo lần ${appealsCount + 1}/2 đã được gửi thành công! Giảng viên phụ trách sẽ xem xét trong vòng 48h.`);
+      setSuccessMessage(`Đơn phúc khảo đã được gửi thành công! Giảng viên phụ trách sẽ xem xét trong vòng 48h.`);
       setReason('');
       void fetchAppeals(finalSubId);
       if (onAppealSuccess) {
@@ -299,7 +299,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--blue-200)', backgroundColor: 'rgba(59, 130, 246, 0.09)', padding: '2px 8px', borderRadius: '6px' }}>
-                        Lần {idx + 1}/2
+                        Lần {idx + 1}/{maxAppeals}
                       </span>
                       <code style={{ fontSize: '12px', color: '#33415a' }}>{app.appealId}</code>
                       <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
@@ -362,7 +362,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
           <form onSubmit={handleSubmitAppeal}>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '14px', fontWeight: 700, color: 'var(--text-main)', marginBottom: '8px' }}>
-                Lý do khiếu nại (Lần {appealsCount + 1}/{maxAppeals} của bài nộp này):
+                Lý do khiếu nại (Lượt {appealsCount + 1}/{maxAppeals} của bài nộp này):
               </label>
               <textarea
                 value={reason}
@@ -424,7 +424,7 @@ export const AppealModal: React.FC<AppealModalProps> = ({
                 transition: 'all 0.2s ease',
               }}
             >
-              <Send size={16} /> {submitting ? 'Đang gửi đơn...' : `Gửi Đơn Phúc Khảo (Lần ${appealsCount + 1}/${maxAppeals})`}
+              <Send size={16} /> {submitting ? 'Đang gửi đơn...' : `Gửi Đơn Phúc Khảo (1 lượt duy nhất)`}
             </button>
           </form>
         ) : (

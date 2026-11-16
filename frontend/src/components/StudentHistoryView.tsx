@@ -252,7 +252,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
               Lịch Sử Bài Nộp &amp; Điểm Số
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '14px', margin: 0 }}>
-              Xem danh sách bài tập đã nộp, điểm số chi tiết từng tiêu chí, tải lại mã nguồn gốc (.zip) và quản lý khiếu nại phúc khảo (tối đa 2 lượt độc lập/bài nộp).
+              Xem danh sách bài tập đã nộp, điểm số chi tiết từng tiêu chí, tải lại mã nguồn gốc (.zip) và quản lý khiếu nại phúc khảo (tối đa 1 lượt/bài nộp).
             </p>
           </div>
 
@@ -321,7 +321,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
           <div className="aita-card" style={{ padding: '18px 20px', background: '#FDF6F8', borderColor: 'rgba(14, 66, 116, 0.14)', justifyContent: 'center' }}>
             <div style={{ fontSize: '11.5px', color: 'var(--text-dim)', fontWeight: 700, letterSpacing: '0.04em' }}>QUY ĐỊNH PHÚC KHẢO ĐIỂM</div>
             <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#0E4274', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '7px' }}>
-              <Scale size={17} /> 2 lượt độc lập / mỗi bài tập
+              <Scale size={17} /> 1 lượt duy nhất / mỗi bài nộp
             </div>
           </div>
         </div>
@@ -412,7 +412,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
           {filteredSubmissions.map((sub) => {
             const subAppeals = appealsBySubmission[sub.submissionId] || [];
             const appealsCount = subAppeals.length;
-            const isMaxAppeals = appealsCount >= 2;
+            const isMaxAppeals = appealsCount >= 1;
             const latestAppeal = appealsCount > 0 ? subAppeals[appealsCount - 1] : null;
 
             // Tìm đơn phúc khảo được chấp thuận có điểm điều chỉnh
@@ -542,7 +542,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                           gap: '4px',
                         }}
                       >
-                        <Scale size={12} /> Phúc khảo: {appealsCount}/2 lượt
+                        <Scale size={12} /> Phúc khảo: {appealsCount}/1 lượt
                       </span>
                     )}
                   </div>
@@ -652,7 +652,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Scale size={18} color="#2563eb" />
                         <span style={{ fontSize: '14px', fontWeight: 600, color: '#1e40af' }}>
-                          Thông Tin Phúc Khảo Bài Nộp (Đã sử dụng: {appealsCount}/2 lượt của bài này)
+                          Thông Tin Phúc Khảo Bài Nộp (Đã sử dụng: {appealsCount}/1 lượt của bài này)
                         </span>
                         <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontStyle: 'italic' }}>
                           — Quy chế phúc khảo
@@ -696,7 +696,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--blue-200)', backgroundColor: 'rgba(37, 99, 235, 0.10)', padding: '2px 8px', borderRadius: '6px' }}>
-                                Lần {appIdx + 1}/2
+                                Lần {appIdx + 1}/1
                               </span>
                               <code style={{ fontSize: '12px', color: '#33415a' }}>{app.appealId}</code>
                               <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
@@ -818,7 +818,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                       {downloadingId === sub.submissionId ? 'Đang tải...' : 'Tải lại bài (.zip)'}
                     </button>
 
-                    {/* NÚT PHÚC KHẢO / KHIẾU NẠI ĐIỂM (Làm mờ, vô hiệu hóa nếu đã dùng đủ 2 lượt) */}
+                    {/* NÚT PHÚC KHẢO / KHIẾU NẠI ĐIỂM (Làm mờ, vô hiệu hóa nếu đã dùng đủ 1 lượt) */}
                     <button
                       type="button"
                       onClick={() => !isMaxAppeals && handleOpenAppeal(sub)}
@@ -831,9 +831,7 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                         borderRadius: '9px',
                         backgroundColor: isMaxAppeals
                           ? 'rgba(11, 18, 32, 0.03)'
-                          : appealsCount === 1
-                            ? 'rgba(37, 99, 235, 0.1)'
-                            : 'rgba(37, 99, 235, 0.08)',
+                          : 'rgba(37, 99, 235, 0.08)',
                         border: isMaxAppeals
                           ? '1px dashed rgba(11, 18, 32, 0.1)'
                           : '1px solid rgba(37, 99, 235, 0.18)',
@@ -846,18 +844,14 @@ export const StudentHistoryView: React.FC<StudentHistoryViewProps> = ({
                       }}
                       title={
                         isMaxAppeals
-                          ? 'Bài nộp này đã sử dụng tối đa 2/2 lượt phúc khảo theo quy định. Không thể khiếu nại thêm.'
-                          : appealsCount === 1
-                            ? 'Gửi đơn phúc khảo lần 2 cho riêng bài nộp này (còn 1 lượt)'
-                            : 'Gửi đơn khiếu nại & phúc khảo cho riêng bài nộp này (tối đa 2 lượt)'
+                          ? 'Bài nộp này đã sử dụng tối đa 1/1 lượt phúc khảo theo quy định. Không thể khiếu nại thêm.'
+                          : 'Gửi đơn khiếu nại & phúc khảo cho riêng bài nộp này (tối đa 1 lượt duy nhất)'
                       }
                     >
                       <Scale size={15} />
                       {isMaxAppeals
-                        ? 'Hết lượt phúc khảo (2/2)'
-                        : appealsCount === 1
-                          ? 'Phúc khảo lần 2 (1/2 lượt)'
-                          : 'Phúc khảo bài này (0/2 lượt)'}
+                        ? 'Hết lượt phúc khảo (1/1)'
+                        : 'Phúc khảo bài này (0/1 lượt)'}
                     </button>
                   </div>
                 </div>
